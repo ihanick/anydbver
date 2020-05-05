@@ -9,12 +9,30 @@ Vagrant+Ansible setup to install Percona database products with exact version sp
 * Percona Server for MongoDB
 * Percona Distribution for PostgreSQL
 
+## Installation
+
+```bash
+vagrant plugin install vagrant-lxc
+
+git clone https://github.com/ihanick/anydbver.git ${USER}-anydbver
+cd ${USER}-anydbver
+ENV1=ver ENV2=ver ... vagrant up --provider=lxc
+```
+
+You can also use lxd if you have issues with old lxc version/setup:
+
+```bash
+vagrant plugin install vagrant-lxd
+...
+ENV1=ver ENV2=ver ... vagrant up --provider=lxd
+```
+
 ## Typical usage
 
 Start two "servers" one with Percona Server 8.0, XtraBackup, Percona Monitoring and Management client utility and the second one will run PMM server.
 
 ```bash
-[anydbver]$ PXB=8.0.10-1 PS=8.0.18-9.1 PMM_CLIENT=2.5.0-6 vagrant up --provider=lxc
+[anydbver]$ PT=3.2.0-1 PXB=8.0.10-1 PS=8.0.18-9.1 PMM_CLIENT=2.5.0-6 vagrant up --provider=lxc
 [anydbver]$ PMM_SERVER=2.5.0 vagrant up --provider=lxc node1
 [anydbver]$ vagrant ssh node1 -- sudo podman ps
 CONTAINER ID  IMAGE                               COMMAND               CREATED             STATUS                 PORTS               NAMES
@@ -35,6 +53,6 @@ You can find more examples in `test-all.sh` script.
 * Containters/VM machines using CentOS 7
 * There is no support for configuring replication and sharding, work in progress
 * There is no support for non-Percona database products, work in progress
-* Everything is tested with lxc Vagrant provider (privileged/root), but may also work with other providers like Virtualbox, Azure, AWS
+* Everything is tested with vagrant-lxc (privileged/root) and vagrant-lxd (nesting,privileged) providers, but may also work with other providers like Virtualbox, Azure, AWS
 * The project is intended for fast bugs/issues reproduction, performance issues, security concerns are not primary goals.
 * Currently only percona repositories are configured if you are not specifying any version with environment variable, could be changed in future with other databases support

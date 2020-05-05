@@ -11,17 +11,30 @@ PPGSQL = ENV["PPGSQL"] || "" # "11.7-2"
 PT = ENV["PT"] || "" # "3.2.0-1"
 
 Vagrant.configure("2") do |config|
+  config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.box = "centos/7"
-  config.vm.provider "lxc" do |v, override|
+  config.vm.provider "lxc" do |lxc, override|
     override.vm.box = "visibilityspots/centos-7.x-minimal"
     # https://app.vagrantup.com/visibilityspots/boxes/centos-7.x-minimal
     # override.vm.box_version = "7.7.0"
+    #lxc.backingstore = 'dir'
+    #lxc.backingstore_option '--dir','/bigdisk/lxc'
   end
   config.vm.provider "virtualbox" do |v|
     v.memory = 1024
     v.cpus = 2
   end
+  config.vm.provider "lxd" do |lxd, override|
+    lxd.nesting = true
+    lxd.privileged = true
+    override.vm.box = "visibilityspots/centos-7.x-minimal"
+  end
 
+  config.vm.provision "shell" do |s|
+    s.inline = "(grep -q vagrant /etc/passwd || useradd -m vagrant );mkdir -p /vagrant ; chown vagrant:adm /vagrant; chmod g+w -R /vagrant"
+    s.privileged = true
+  end
+  config.vm.provision "file", source: "playbook.yml", destination: "/vagrant/playbook.yml"
   config.vm.provision "ansible_local" do |ansible|
     ansible.compatibility_mode = "2.0"
     ansible.playbook = "playbook.yml"
