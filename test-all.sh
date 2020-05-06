@@ -8,6 +8,12 @@ for pxcver in "5.6.45-28.36.1" "5.7.22-29.26.1" "8.0.18-9.3"; do
     PXC=$pxcver vagrant up --provider=lxc
     vagrant destroy -f
 done
+
+DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 vagrant up --provider=lxc ; vagrant destroy -f
+DB_USER=root DB_PASS=secret PS=5.7.29-32.1 vagrant up --provider=lxc ; vagrant destroy -f
+DB_USER=root DB_PASS=secret PS=5.6.20-rel68.0 vagrant up --provider=lxc
+DB_USER=root DB_PASS=secret PS=8.0.19-10.1 vagrant up --provider=lxc ; vagrant destroy -f
+DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 vagrant up --provider=lxc ; vagrant destroy -f
  
 # Test separate xtrabackup installation
 PXB=2.3.9-1 vagrant up --provider=lxc; vagrant destroy -f

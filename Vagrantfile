@@ -9,6 +9,8 @@ PMM_SERVER = ENV["PMM_SERVER"] || "" # "2.5.0"
 PMM_CLIENT = ENV["PMM_CLIENT"] || "" # "2.5.0-6"
 PPGSQL = ENV["PPGSQL"] || "" # "11.7-2"
 PT = ENV["PT"] || "" # "3.2.0-1"
+DB_USER = ENV["DB_USER"] || ""
+DB_PASS = ENV["DB_PASS"] || ""
 
 Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", disabled: true
@@ -49,6 +51,8 @@ Vagrant.configure("2") do |config|
       pmm_client_version: PMM_CLIENT,
       percona_postgresql_version: PPGSQL,
       percona_toolkit_version: PT,
+      db_user: DB_USER,
+      db_password: DB_PASS,
     }
   end  
 

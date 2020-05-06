@@ -151,3 +151,14 @@
       package:
         name: "percona-toolkit-{{ percona_toolkit_version }}.el7.x86_64"
         state: present
+
+    - name: Set MySQL 5.6 database password
+      when: (percona_server_56_version != "" or percona_xtradb_cluster_56_version != "") and db_password != ""
+      shell:
+        cmd: "mysqld --user=mysql --loose-wsrep-provider='none' --skip-networking &>/dev/null & mysqladmin --silent --connect-timeout=30 --wait=4 ping ; mysql -e \"SET PASSWORD FOR root@localhost = PASSWORD('{{ db_password }}');GRANT ALL PRIVILEGES ON *.* TO root@'%' IDENTIFIED BY '{{ db_password }}';\" ; echo -e \"[client]\npassword={{ db_password }}\" > /root/.my.cnf;mysqladmin shutdown; while pgrep -x mysqld ; do sleep 1 ; done"
+        creates: /root/.my.cnf
+    - name: Create MySQL Database
+      when: (percona_server_57_version != "" or percona_server_80_version != "" or percona_xtradb_cluster_57_version != "" or percona_xtradb_cluster_80_version != "") and db_password != ""
+      shell:
+        cmd: "mysqld --initialize-insecure --user=mysql;mysqld --user=mysql --loose-wsrep-provider='none' --skip-networking &>/dev/null & mysqladmin --silent --connect-timeout=30 --wait=4 ping ; mysql -e \"ALTER USER root@localhost IDENTIFIED BY '{{ db_password }}';CREATE USER root@'%' IDENTIFIED BY '{{ db_password }}';\" ; echo -e \"[client]\npassword={{ db_password }}\" > /root/.my.cnf;mysqladmin shutdown; while pgrep -x mysqld ; do sleep 1 ; done"
+        creates: /root/.my.cnf

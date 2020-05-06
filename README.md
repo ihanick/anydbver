@@ -32,7 +32,7 @@ ENV1=ver ENV2=ver ... vagrant up --provider=lxd
 Start two "servers" one with Percona Server 8.0, XtraBackup, Percona Monitoring and Management client utility and the second one will run PMM server.
 
 ```bash
-[anydbver]$ PT=3.2.0-1 PXB=8.0.10-1 PS=8.0.18-9.1 PMM_CLIENT=2.5.0-6 vagrant up --provider=lxc
+[anydbver]$ PT=3.2.0-1 PXB=8.0.10-1 PS=8.0.18-9.1 DB_PASS=secret PMM_CLIENT=2.5.0-6 vagrant up --provider=lxc
 [anydbver]$ PMM_SERVER=2.5.0 vagrant up --provider=lxc node1
 [anydbver]$ vagrant ssh node1 -- sudo podman ps
 CONTAINER ID  IMAGE                               COMMAND               CREATED             STATUS                 PORTS               NAMES
