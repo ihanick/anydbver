@@ -145,6 +145,13 @@
       with_items:
         - "percona-postgresql{{ percona_postgresql_major_ver }}-libs-{{ percona_postgresql_version }}.el7.x86_64"
         - "percona-postgresql{{ percona_postgresql_major_ver }}-{{ percona_postgresql_version }}.el7.x86_64"
+        - "percona-postgresql{{ percona_postgresql_major_ver }}-server-{{ percona_postgresql_version }}.el7.x86_64"
+
+    - name: Create Postgres Database
+      when: (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') ) and db_password != ""
+      shell:
+        cmd: "echo {{ db_password }} > /tmp/root-pw.txt;PGSETUP_INITDB_OPTIONS='--pwfile=/tmp/root-pw.txt' /usr/pgsql-{{ percona_postgresql_major_ver }}/bin/postgresql-{{ percona_postgresql_major_ver }}-setup initdb;echo \"listen_addresses = '*'\" >> /var/lib/pgsql/{{ percona_postgresql_major_ver }}/data/postgresql.conf;echo \"host    all             all             0.0.0.0/0            md5\" >> /var/lib/pgsql/{{ percona_postgresql_major_ver }}/data/pg_hba.conf"
+        creates: "/var/lib/pgsql/{{ percona_postgresql_major_ver }}/data/pg_hba.conf"
 
     - name: install Percona Toolkit
       when: percona_toolkit_version != ""

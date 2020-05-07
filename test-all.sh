@@ -36,10 +36,10 @@ PMM_SERVER=1.17.3 vagrant up --provider=lxc ; vagrant destroy -f
 PMM_SERVER=2.5.0 vagrant up --provider=lxc ; vagrant destroy -f
 
 # Postresql
-PPGSQL=11.5-1 vagrant up --provider=lxc ; vagrant destroy -f
-PPGSQL=11.6-2 vagrant up --provider=lxc ;  vagrant destroy -f
-PPGSQL=11.7-2 vagrant up --provider=lxc ; vagrant destroy -f
-PPGSQL=12.2-4 vagrant up --provider=lxc ; vagrant destroy -f
+PPGSQL=11.5-1 DB_PASS=secret vagrant up --provider=lxc ; vagrant destroy -f
+PPGSQL=11.6-2 DB_PASS=secret vagrant up --provider=lxc ;  vagrant destroy -f
+PPGSQL=11.7-2 DB_PASS=secret vagrant up --provider=lxc ; vagrant destroy -f
+PPGSQL=12.2-4 DB_PASS=secret vagrant up --provider=lxc ; vagrant destroy -f
 
 # percona toolkit
 PT=3.2.0-1 vagrant up --provider=lxc ; vagrant destroy -f
