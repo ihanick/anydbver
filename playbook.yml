@@ -169,3 +169,9 @@
       shell:
         cmd: "mysqld --initialize-insecure --user=mysql;mysqld --user=mysql --loose-wsrep-provider='none' --skip-networking &>/dev/null & mysqladmin --silent --connect-timeout=30 --wait=4 ping ; mysql -e \"ALTER USER root@localhost IDENTIFIED BY '{{ db_password }}';CREATE USER root@'%' IDENTIFIED BY '{{ db_password }}';\" ; echo -e \"[client]\npassword={{ db_password }}\" > /root/.my.cnf;mysqladmin shutdown; while pgrep -x mysqld ; do sleep 1 ; done"
         creates: /root/.my.cnf
+
+    - name: Create MongoDB database
+      when: db_password != "" and psmdb_version != ""
+      shell:
+        cmd: "systemctl start mongod;until mongo --eval 'print(\"waited for connection\")' &>/dev/null ; do sleep 2 ; done;/bin/percona-server-mongodb-enable-auth.sh -q;mongo admin --eval 'db.changeUserPassword(\"dba\", \"{{ db_password }}\")';systemctl stop mongod;sed -i -e 's/127.0.0.1/0.0.0.0/g' /etc/mongod.conf;echo 'db = connect(\"mongodb://dba:{{ db_password }}@127.0.0.1:27017/admin\")' > /root/.mongorc.js"
+        creates: /root/.mongorc.js

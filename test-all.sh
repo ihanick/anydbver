@@ -21,9 +21,9 @@ PXB=2.4.14-1 vagrant up --provider=lxc; vagrant destroy -f
 PXB=8.0.10-1 vagrant up --provider=lxc; vagrant destroy -f
 
 # Test mongodb
-PSMDB=3.6.16-3.6 vagrant up --provider=lxc ; vagrant destroy -f
-PSMDB=4.0.17-10 vagrant up --provider=lxc ; vagrant destroy -f
-PSMDB=4.2.3-4 vagrant up --provider=lxc ; vagrant destroy -f
+PSMDB=3.6.16-3.6 DB_PASS=secret vagrant up --provider=lxc ; vagrant destroy -f
+PSMDB=4.0.17-10 DB_PASS=secret vagrant up --provider=lxc ; vagrant destroy -f
+PSMDB=4.2.3-4 DB_PASS=secret vagrant up --provider=lxc ; vagrant destroy -f
 
 PBM=1.1.1-1 vagrant up --provider=lxc ; vagrant destroy -f
 
