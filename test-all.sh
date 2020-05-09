@@ -50,3 +50,8 @@ for i in `seq 1 3` ; do PT=3.2.0-1 PXC=8.0.18-9.3 PMM_CLIENT=2.5.0-6 vagrant up 
 PMM_SERVER=2.5.0 vagrant up --provider=lxc node4 
 for i in default node1 node2 node3 ; do vagrant ssh $i -- 'hostname;/sbin/ip addr ls|grep "inet "|grep -v "inet 127";rpm -qa|grep -i percona|xargs' ; done
 vagrant destroy -f
+
+# Kubernetes, using k3s one-file distribution
+PKO4PXC='1.4.0' vagrant up --provider=lxc
+# cluster creation requires a few minutes
+vagrant destroy -f

@@ -11,6 +11,7 @@ PPGSQL = ENV["PPGSQL"] || "" # "11.7-2"
 PT = ENV["PT"] || "" # "3.2.0-1"
 DB_USER = ENV["DB_USER"] || ""
 DB_PASS = ENV["DB_PASS"] || ""
+PKO4PXC = ENV["PKO4PXC"] || ""
 
 Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", disabled: true
@@ -53,6 +54,7 @@ Vagrant.configure("2") do |config|
       percona_toolkit_version: PT,
       db_user: DB_USER,
       db_password: DB_PASS,
+      percona_k8s_op_pxc_version: PKO4PXC,
     }
   end  
 

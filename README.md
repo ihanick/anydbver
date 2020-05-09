@@ -27,6 +27,25 @@ vagrant plugin install vagrant-lxd
 ENV1=ver ENV2=ver ... vagrant up --provider=lxd
 ```
 
+## Kubernetes, PMM
+
+Nested containers support is required for PMM server and Kubernetes operators.
+If your current setup is not able to run k3s, check https://github.com/corneliusweig/kubernetes-lxd/blob/master/README-k3s.md for lxd
+
+In addition kubernetes requires /etc/sysctl.conf:
+
+```ini
+vm.overcommit_memory = 1
+kernel.panic = 10
+kernel.panic_on_oops = 1
+```
+
+Running Percona Kubernetes Operator for Percona XtraDB Cluster (pxc) in single-k8s-node environment:
+
+```bash
+PKO4PXC='1.4.0' vagrant up --provider=lxc
+```
+
 ## Typical usage
 
 Start two "servers" one with Percona Server 8.0, XtraBackup, Percona Monitoring and Management client utility and the second one will run PMM server.
