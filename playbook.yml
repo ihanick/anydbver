@@ -201,6 +201,7 @@
         dest: /usr/bin/kubectl
         state: link
     - name: Start k3s
+      when: percona_k8s_op_pxc_version != ""
       shell:
         warn: false
         cmd: "touch /etc/systemd/system/k3s.service.env;systemctl daemon-reload; systemctl start k3s"
@@ -211,10 +212,12 @@
         name: git
         state: present
     - name: Install operator
+      when: percona_k8s_op_pxc_version != ""
       shell:
         cmd: "cd /root; git clone -b release-{{ percona_k8s_op_pxc_version }} https://github.com/percona/percona-xtradb-cluster-operator; cd percona-xtradb-cluster-operator; kubectl apply -f deploy/bundle.yaml;kubectl apply -f deploy/secrets.yaml; kubectl apply -f deploy/ssl-secrets.yaml; until kubectl get pod -l name=percona-xtradb-cluster-operator|grep Running &>/dev/null ; do sleep 2 ; done"
         creates: /root/percona-xtradb-cluster-operator/deploy/cr.yaml
     - name: Start single-node cluster
+      when: percona_k8s_op_pxc_version != ""
       shell:
         warn: false
         cmd: "sed -e 's/antiAffinityTopologyKey: .*$/antiAffinityTopologyKey: \"none\"/g' -e 's/allowUnsafeConfigurations: false/allowUnsafeConfigurations: true/' /root/percona-xtradb-cluster-operator/deploy/cr.yaml > /root/percona-xtradb-cluster-operator/deploy/cr-single.yaml; kubectl apply -f /root/percona-xtradb-cluster-operator/deploy/cr-single.yaml"
