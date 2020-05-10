@@ -46,6 +46,11 @@ Running Percona Kubernetes Operator for Percona XtraDB Cluster (pxc) in single-k
 PKO4PXC='1.4.0' vagrant up --provider=lxc
 ```
 
+The same for  Percona server for MongoDB on Kubernetes
+```bash
+PKO4PSMDB="1.4.0" vagrant up --provider=lxc
+```
+
 ## Typical usage
 
 Start two "servers" one with Percona Server 8.0, XtraBackup, Percona Monitoring and Management client utility and the second one will run PMM server.
@@ -65,6 +70,19 @@ vagrant destroy -f
 ```
 
 You can find more examples in `test-all.sh` script.
+
+## Running multiple nodes
+
+You can initialize all containers/VMs at once and configure each node individually by setting proper environment variables for each `vagrant provision _list_of_nodes_` call.
+
+```bash
+# start 4 nodes
+vagrant up default node1 node2 node3 --provider=lxc
+# apply configuration changes individually to each node
+PSMDB=4.2.3-4 DB_PASS=secret PMM_CLIENT=2.5.0-6 vagrant provision node1 node2
+PSMDB=4.0.17-10 PMM_CLIENT=2.5.0-6 vagrant provision node3
+PMM_SERVER=2.5.0  vagrant provision default
+```
 
 ## Known issues and limitation
 
