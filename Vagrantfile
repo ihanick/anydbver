@@ -13,6 +13,7 @@ DB_USER = ENV["DB_USER"] || ""
 DB_PASS = ENV["DB_PASS"] || ""
 PKO4PXC = ENV["PKO4PXC"] || ""
 PKO4PSMDB = ENV["PKO4PSMDB"] || ""
+START = ENV["START"] || "" # START=1 to start systemd service automatically
 
 Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", disabled: true
@@ -57,6 +58,7 @@ Vagrant.configure("2") do |config|
       db_password: DB_PASS,
       percona_k8s_op_pxc_version: PKO4PXC,
       percona_k8s_op_psmdb_version: PKO4PSMDB,
+      start_db: START,
     }
   end  
 

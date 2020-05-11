@@ -23,9 +23,9 @@ PXB=2.4.14-1 vagrant up --provider=$PROV; vagrant destroy -f
 PXB=8.0.10-1 vagrant up --provider=$PROV; vagrant destroy -f
 
 # Test mongodb
-PSMDB=3.6.16-3.6 DB_PASS=secret vagrant up --provider=$PROV ; vagrant destroy -f
-PSMDB=4.0.17-10 DB_PASS=secret vagrant up --provider=$PROV ; vagrant destroy -f
-PSMDB=4.2.3-4 DB_PASS=secret vagrant up --provider=$PROV ; vagrant destroy -f
+PSMDB=3.6.16-3.6 DB_PASS=secret START=1 vagrant up --provider=$PROV ; vagrant destroy -f
+PSMDB=4.0.17-10 DB_PASS=secret START=1 vagrant up --provider=$PROV ; vagrant destroy -f
+PSMDB=4.2.3-4 DB_PASS=secret START=1 vagrant up --provider=$PROV ; vagrant destroy -f
 
 PBM=1.1.1-1 vagrant up --provider=$PROV ; vagrant destroy -f
 
@@ -38,10 +38,10 @@ PMM_SERVER=1.17.3 vagrant up --provider=$PROV ; vagrant destroy -f
 PMM_SERVER=2.5.0 vagrant up --provider=$PROV ; vagrant destroy -f
 
 # Postresql
-PPGSQL=11.5-1 DB_PASS=secret vagrant up --provider=$PROV ; vagrant destroy -f
-PPGSQL=11.6-2 DB_PASS=secret vagrant up --provider=$PROV ;  vagrant destroy -f
-PPGSQL=11.7-2 DB_PASS=secret vagrant up --provider=$PROV ; vagrant destroy -f
-PPGSQL=12.2-4 DB_PASS=secret vagrant up --provider=$PROV ; vagrant destroy -f
+PPGSQL=11.5-1 DB_PASS=secret START=1 vagrant up --provider=$PROV ; vagrant destroy -f
+PPGSQL=11.6-2 DB_PASS=secret START=1 vagrant up --provider=$PROV ;  vagrant destroy -f
+PPGSQL=11.7-2 DB_PASS=secret START=1 vagrant up --provider=$PROV ; vagrant destroy -f
+PPGSQL=12.2-4 DB_PASS=secret START=1 vagrant up --provider=$PROV ; vagrant destroy -f
 
 # percona toolkit
 PT=3.2.0-1 vagrant up --provider=$PROV ; vagrant destroy -f
