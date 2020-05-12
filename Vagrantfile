@@ -14,6 +14,7 @@ DB_PASS = ENV["DB_PASS"] || ""
 PKO4PXC = ENV["PKO4PXC"] || ""
 PKO4PSMDB = ENV["PKO4PSMDB"] || ""
 START = ENV["START"] || "" # START=1 to start systemd service automatically
+DB_OPTS = ENV["DB_OPTS"] || "" # DB_OPTS=mysql/mysql-async-repl-gtid.cnf
 
 Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", disabled: true
@@ -40,6 +41,8 @@ Vagrant.configure("2") do |config|
     s.privileged = true
   end
   config.vm.provision "file", source: "playbook.yml", destination: "/vagrant/playbook.yml"
+  config.vm.provision "file", source: "configs", destination: "/vagrant/configs"
+  config.vm.provision "file", source: "tools", destination: "/vagrant/tools"
   config.vm.provision "ansible_local" do |ansible|
     ansible.compatibility_mode = "2.0"
     ansible.playbook = "playbook.yml"
@@ -59,6 +62,7 @@ Vagrant.configure("2") do |config|
       percona_k8s_op_pxc_version: PKO4PXC,
       percona_k8s_op_psmdb_version: PKO4PSMDB,
       start_db: START,
+      db_opts_file: DB_OPTS,
     }
   end  
 

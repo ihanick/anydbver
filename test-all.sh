@@ -13,9 +13,15 @@ done
 
 DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 vagrant up --provider=$PROV ; vagrant destroy -f
 DB_USER=root DB_PASS=secret PS=5.7.29-32.1 vagrant up --provider=$PROV ; vagrant destroy -f
-DB_USER=root DB_PASS=secret PS=5.6.20-rel68.0 vagrant up --provider=$PROV
+DB_USER=root DB_PASS=secret PS=5.6.20-rel68.0 vagrant up --provider=$PROV ; vagrant destroy -f
 DB_USER=root DB_PASS=secret PS=8.0.19-10.1 vagrant up --provider=$PROV ; vagrant destroy -f
 DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 vagrant up --provider=$PROV ; vagrant destroy -f
+
+# start and config files
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1    DB_OPTS=mysql/async-repl-gtid.cnf vagrant up --provider=$PROV ; vagrant destroy -f
+DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1    DB_OPTS=mysql/async-repl-gtid.cnf vagrant up --provider=$PROV ; vagrant destroy -f
+DB_USER=root DB_PASS=secret START=1 PS=5.6.20-rel68.0 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up --provider=$PROV ; vagrant destroy -f
+DB_USER=root DB_PASS=secret START=1 PS=5.6.23-rel72.1 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up --provider=$PROV ; vagrant destroy -f
  
 # Test separate xtrabackup installation
 PXB=2.3.9-1 vagrant up --provider=$PROV; vagrant destroy -f

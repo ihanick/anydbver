@@ -26,6 +26,7 @@
     percona_k8s_op_name: "percona-{{ 'xtradb-cluster' if percona_k8s_op_pxc_version != '' else 'server-mongodb' if percona_k8s_op_psmdb_version != '' else '' }}-operator"
     percona_k8s_op_version: "{{ percona_k8s_op_pxc_version if percona_k8s_op_pxc_version != '' else percona_k8s_op_psmdb_version }}"
     db_systemd_service: "{{ 'mysqld' if (percona_server_version != '' or percona_xtradb_cluster_version != '') else 'mongod' if psmdb_version != '' else ('postgresql-' + percona_postgresql_major_ver) if percona_postgresql_version != '' else '' }}"
+    percona_server_config_file: "{{ '/etc/my.cnf' if percona_server_80_version != '' or percona_server_56_version != '' else '/etc/percona-server.conf.d/mysqld.cnf' if percona_server_57_version != '' else '' }}"
   tasks:
     - name: install percona yum repo
       yum:
@@ -178,6 +179,13 @@
       shell:
         cmd: "systemctl start mongod;until mongo --eval 'print(\"waited for connection\")' &>/dev/null ; do sleep 2 ; done;/bin/percona-server-mongodb-enable-auth.sh -q;mongo admin --eval 'db.changeUserPassword(\"dba\", \"{{ db_password }}\")';systemctl stop mongod;sed -i -e 's/127.0.0.1/0.0.0.0/g' /etc/mongod.conf;echo 'db = connect(\"mongodb://dba:{{ db_password }}@127.0.0.1:27017/admin\")' > /root/.mongorc.js"
         creates: /root/.mongorc.js
+
+    - name: Apply database options from file
+      when: percona_server_version != '' and db_opts_file != ''
+      shell:
+        cmd: "bash /vagrant/tools/apply_mysql_conf.sh {{ percona_server_config_file }} /vagrant/configs/{{ db_opts_file }}"
+        creates: "/root/{{ db_opts_file | basename }}"
+      
 
     - name: Start database with systemd
       when: db_systemd_service != '' and start_db == '1'

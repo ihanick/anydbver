@@ -71,6 +71,17 @@ vagrant destroy -f
 
 You can find more examples in `test-all.sh` script.
 
+## Custom configuration files
+
+You can use existing database configuration files parts from `configs/dbengine/configfilename`.
+```bash
+DB_USER=root DB_PASS=secret START=1 PS=5.6.47-rel87.0.1 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up --provider=lxc
+# or
+DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up --provider=lxc
+# or
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up --provider=lxc
+```
+
 ## Running multiple nodes
 
 You can initialize all containers/VMs at once and configure each node individually by setting proper environment variables for each `vagrant provision _list_of_nodes_` call.
