@@ -25,6 +25,26 @@ You can also use lxd if you have issues with old lxc version/setup:
 vagrant plugin install vagrant-lxd
 ...
 ENV1=ver ENV2=ver ... vagrant up --provider=lxd
+
+# Select provider:
+# You can select Vagrant provider with several different ways:
+# A) create an environment variable for current session:
+export VAGRANT_DEFAULT_PROVIDER=lxd
+# A) create an environment variable for current all further sessions, add a variable in your .bashrc
+export VAGRANT_DEFAULT_PROVIDER=lxd
+# B) create environment variable for particular vagrant command
+VAGRANT_DEFAULT_PROVIDER=lxd .... vagrant up
+# C) Use --provider= option to up command
+vagrant up --provider=lxd ....
+
+# Specify LXD profile. It's important on servers with shared lxd environment
+# In order to use non-default storage or network you should create a profile:
+lxc storage create $USER dir source=/home/$USER/lxc
+lxc profile copy default $USER
+# replace pool: "your_storage_name", e.g with above $USER suggestion put your unix username instead of your_storage_name
+lxc profile edit $USER
+# it's better to add LXD_PROFILE also to your .bashrc to avoid using default storage pool
+export LXD_PROFILE=$USER
 ```
 
 ## Kubernetes, PMM
@@ -43,12 +63,12 @@ kernel.panic_on_oops = 1
 Running Percona Kubernetes Operator for Percona XtraDB Cluster (pxc) in single-k8s-node environment:
 
 ```bash
-PKO4PXC='1.4.0' vagrant up --provider=lxc
+PKO4PXC='1.4.0' VAGRANT_DEFAULT_PROVIDER=lxc vagrant up
 ```
 
 The same for  Percona server for MongoDB on Kubernetes
 ```bash
-PKO4PSMDB="1.4.0" vagrant up --provider=lxc
+PKO4PSMDB='1.4.0' VAGRANT_DEFAULT_PROVIDER=lxc vagrant up
 ```
 
 ## Typical usage
@@ -56,8 +76,9 @@ PKO4PSMDB="1.4.0" vagrant up --provider=lxc
 Start two "servers" one with Percona Server 8.0, XtraBackup, Percona Monitoring and Management client utility and the second one will run PMM server.
 
 ```bash
-[anydbver]$ PT=3.2.0-1 PXB=8.0.10-1 PS=8.0.18-9.1 DB_PASS=secret PMM_CLIENT=2.5.0-6 vagrant up --provider=lxc
-[anydbver]$ PMM_SERVER=2.5.0 vagrant up --provider=lxc node1
+[anydbver]$ export VAGRANT_DEFAULT_PROVIDER=lxc
+[anydbver]$ PT=3.2.0-1 PXB=8.0.10-1 PS=8.0.18-9.1 DB_PASS=secret PMM_CLIENT=2.5.0-6 vagrant up
+[anydbver]$ PMM_SERVER=2.5.0 vagrant up node1
 [anydbver]$ vagrant ssh node1 -- sudo podman ps
 CONTAINER ID  IMAGE                               COMMAND               CREATED             STATUS                 PORTS               NAMES
 62553a08bdcb  docker.io/percona/pmm-server:2.5.0  /opt/entrypoint.s...  About a minute ago  Up About a minute ago  0.0.0.0:80->80/tcp  pmm-server
@@ -75,11 +96,11 @@ You can find more examples in `test-all.sh` script.
 
 You can use existing database configuration files parts from `configs/dbengine/configfilename`.
 ```bash
-DB_USER=root DB_PASS=secret START=1 PS=5.6.47-rel87.0.1 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up --provider=lxc
+DB_USER=root DB_PASS=secret START=1 PS=5.6.47-rel87.0.1 DB_OPTS=mysql/async-repl-gtid.cnf VAGRANT_DEFAULT_PROVIDER=lxc vagrant up
 # or
-DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up --provider=lxc
+DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1      DB_OPTS=mysql/async-repl-gtid.cnf VAGRANT_DEFAULT_PROVIDER=lxc vagrant up
 # or
-DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up --provider=lxc
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1      DB_OPTS=mysql/async-repl-gtid.cnf VAGRANT_DEFAULT_PROVIDER=lxc vagrant up
 ```
 
 ## Running multiple nodes
@@ -88,7 +109,8 @@ You can initialize all containers/VMs at once and configure each node individual
 
 ```bash
 # start 4 nodes
-vagrant up default node1 node2 node3 --provider=lxc
+export VAGRANT_DEFAULT_PROVIDER=lxc 
+vagrant up default node1 node2 node3
 # apply configuration changes individually to each node
 PSMDB=4.2.3-4 DB_PASS=secret PMM_CLIENT=2.5.0-6 vagrant provision node1 node2
 PSMDB=4.0.17-10 PMM_CLIENT=2.5.0-6 vagrant provision node3

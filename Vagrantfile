@@ -15,6 +15,7 @@ PKO4PXC = ENV["PKO4PXC"] || ""
 PKO4PSMDB = ENV["PKO4PSMDB"] || ""
 START = ENV["START"] || "" # START=1 to start systemd service automatically
 DB_OPTS = ENV["DB_OPTS"] || "" # DB_OPTS=mysql/mysql-async-repl-gtid.cnf
+LXD_PROFILE = ENV["LXD_PROFILE"] || "default"
 
 Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", disabled: true
@@ -33,6 +34,7 @@ Vagrant.configure("2") do |config|
   config.vm.provider "lxd" do |lxd, override|
     lxd.nesting = true
     lxd.privileged = true
+    lxd.profiles = [ LXD_PROFILE ]
     override.vm.box = "visibilityspots/centos-7.x-minimal"
   end
 
