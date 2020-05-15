@@ -16,12 +16,19 @@ PKO4PSMDB = ENV["PKO4PSMDB"] || ""
 START = ENV["START"] || "" # START=1 to start systemd service automatically
 DB_OPTS = ENV["DB_OPTS"] || "" # DB_OPTS=mysql/mysql-async-repl-gtid.cnf
 LXD_PROFILE = ENV["LXD_PROFILE"] || "default"
+OS = ENV["OS"] || "centos/7"
+
+if OS == "centos/7"
+  LXC_BOX = "visibilityspots/centos-7.x-minimal"
+elsif OS == "ubuntu/bionic64"
+  LXC_BOX = "emptybox/ubuntu-bionic-amd64-lxc"
+end
 
 Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", disabled: true
-  config.vm.box = "centos/7"
+  config.vm.box = OS
   config.vm.provider "lxc" do |lxc, override|
-    override.vm.box = "visibilityspots/centos-7.x-minimal"
+    override.vm.box = LXC_BOX
     # https://app.vagrantup.com/visibilityspots/boxes/centos-7.x-minimal
     # override.vm.box_version = "7.7.0"
     #lxc.backingstore = 'dir'
@@ -35,7 +42,7 @@ Vagrant.configure("2") do |config|
     lxd.nesting = true
     lxd.privileged = true
     lxd.profiles = [ LXD_PROFILE ]
-    override.vm.box = "visibilityspots/centos-7.x-minimal"
+    override.vm.box = LXC_BOX
   end
 
   config.vm.provision "shell" do |s|

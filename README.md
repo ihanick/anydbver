@@ -117,6 +117,14 @@ PSMDB=4.0.17-10 PMM_CLIENT=2.5.0-6 vagrant provision node3
 PMM_SERVER=2.5.0  vagrant provision default
 ```
 
+## Initial support for different OS
+
+There is an initial support for Ubuntu 18.04. Only percona-release package is installed.
+```bash
+OS=ubuntu/bionic64 vagrant up # starts Ubuntu 18.04
+vagrant up node1 # starts centos/7
+```
+
 ## Known issues and limitation
 
 * There is no support for outdated branches like Percona Server 5.5

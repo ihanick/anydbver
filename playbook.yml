@@ -28,10 +28,28 @@
     db_systemd_service: "{{ 'mysql' if percona_xtradb_cluster_version.startswith('5.6') else 'mysqld' if (percona_server_version != '' or percona_xtradb_cluster_version != '') else 'mongod' if psmdb_version != '' else ('postgresql-' + percona_postgresql_major_ver) if percona_postgresql_version != '' else '' }}"
     percona_server_config_file: "{{ '/etc/my.cnf' if percona_server_80_version != '' or percona_server_56_version != '' or percona_xtradb_cluster_version.startswith('8.0')  or percona_xtradb_cluster_version.startswith('5.6') else '/etc/percona-server.conf.d/mysqld.cnf' if percona_server_57_version != '' else '/etc/percona-xtradb-cluster.conf.d/mysqld.cnf' if percona_xtradb_cluster_version.startswith('5.7') else '' }}"
   tasks:
-    - name: install percona yum repo
-      yum:
-        name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-        state: present
+    - name: Install Percona yum Repository
+      when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+      block:
+        - name: install percona yum repo
+          yum:
+            name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+            state: present
+    - name: Install Percona apt Repository
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+      block:
+        - name: install percona apt repo
+          get_url:
+            url: "https://repo.percona.com/apt/percona-release_latest.{{ ansible_distribution_release }}_all.deb"
+            dest: "/root/percona-release_latest.{{ ansible_distribution_release }}_all.deb"
+        - name: install percona-release.deb
+          apt:
+            deb: "/root/percona-release_latest.{{ ansible_distribution_release }}_all.deb"
+          register: percona_release_deb_installed
+        - name: refresh apt repo
+          when: percona_release_deb_installed.changed
+          apt:
+            update_cache: yes
     - name: enable Percona Server 8.0 repo
       when: percona_server_80_version != ""
       command:
