@@ -1,0 +1,79 @@
+bionic:
+  repo_pkg: "/root/percona-release_latest.bionic_all.deb"
+  repo_url: "https://repo.percona.com/apt/percona-release_latest.bionic_all.deb"
+  ps80:
+    download_url: "http://repo.percona.com/ps-80/apt/pool/main/p/percona-server"
+    repo_file: "/etc/apt/sources.list.d/percona-ps-80-release.list"
+    repo_enable_str: "ps-80"
+    systemd_service: "mysql"
+    cnf_file: "/etc/mysql/mysql.conf.d/mysqld.cnf"
+    download_packages:
+      - percona-server-common
+      - percona-server-client
+      - libperconaserverclient21
+      - percona-server-rocksdb
+      - percona-server-tokudb
+      - percona-server-server
+      - percona-mysql-router
+    install_packages:
+      - "percona-server-common={{ percona_server_version }}.bionic"
+      - "percona-server-client={{ percona_server_version }}.bionic"
+      - "libperconaserverclient21={{ percona_server_version }}.bionic"
+      - "percona-server-server={{ percona_server_version }}.bionic"
+      - "percona-mysql-router={{ percona_server_version }}.bionic"
+
+el7:
+  repo_url: "https://repo.percona.com/yum/percona-release-latest.noarch.rpm"
+  ps56:
+    systemd_service: "mysqld"
+    cnf_file: "/etc/my.cnf"
+    install_packages:
+      - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
+      - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
+      - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
+  ps57:
+    systemd_service: "mysqld"
+    cnf_file: "/etc/percona-server.conf.d/mysqld.cnf"
+    install_packages:
+      - "{{ percona_mysql_name }}-shared-compat{{ percona_mysql_full_ver }}"            
+      - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
+      - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
+      - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
+  ps80:
+    repo_file: "/etc/yum.repos.d/percona-ps-80-release.repo"
+    repo_enable_str: "ps-80"
+    systemd_service: "mysqld"
+    cnf_file: "/etc/my.cnf"
+    install_packages:
+      - "{{ percona_mysql_name }}-shared-compat{{ percona_mysql_full_ver }}"            
+      - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
+      - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
+      - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
+  pxc56:
+    systemd_service: "mysql"
+    cnf_file: "/etc/my.cnf"
+    install_packages:
+      - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
+      - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
+      - "percona-xtrabackup{{ '-'+percona_xtrabackup_version+'.el7.x86_64' if percona_xtrabackup_version.startswith('2.3') else ''}}"
+      - "Percona-XtraDB-Cluster-galera-{{ percona_xtradb_cluster_56_galera }}.el7.x86_64"
+      - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
+  pxc57:
+    systemd_service: "mysqld"
+    cnf_file: "/etc/percona-xtradb-cluster.conf.d/mysqld.cnf"
+    install_packages:
+      - "{{ percona_mysql_name }}-shared-compat{{ percona_mysql_full_ver }}"            
+      - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
+      - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
+      - "percona-xtrabackup-24{{ '-'+percona_xtrabackup_version if percona_xtrabackup_version !='' else '' }}"
+      - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
+  pxc80:
+    repo_file: "/etc/yum.repos.d/percona-pxc-80-release.repo"
+    repo_enable_str: "pxc-80"
+    systemd_service: "mysqld"
+    cnf_file: "/etc/my.cnf"
+    install_packages:
+      - "{{ percona_mysql_name }}-shared-compat{{ percona_mysql_full_ver }}"            
+      - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
+      - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
+      - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"

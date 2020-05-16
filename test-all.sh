@@ -18,6 +18,8 @@ DB_USER=root DB_PASS=secret PS=5.7.29-32.1 vagrant up ; vagrant destroy -f
 DB_USER=root DB_PASS=secret PS=5.6.20-rel68.0 vagrant up ; vagrant destroy -f
 DB_USER=root DB_PASS=secret PS=8.0.19-10.1 vagrant up ; vagrant destroy -f
 
+DB_USER=root DB_PASS=secret START=1 PXC=5.6.45-28.36.1 PXB=2.3.9-1 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up ; vagrant destroy -f
+# should produce error: DB_USER=root DB_PASS=secret START=1 PXC=5.6.45-28.36.1 PXB=2.4.20-1 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up ; vagrant destroy -f
 DB_USER=root DB_PASS=secret START=1 PXC=5.6.45-28.36.1 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up ; vagrant destroy -f
 DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up ; vagrant destroy -f
 DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3     DB_OPTS=mysql/async-repl-gtid.cnf vagrant up ; vagrant destroy -f

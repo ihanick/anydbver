@@ -52,9 +52,11 @@ Vagrant.configure("2") do |config|
   config.vm.provision "file", source: "playbook.yml", destination: "/vagrant/playbook.yml"
   config.vm.provision "file", source: "configs", destination: "/vagrant/configs"
   config.vm.provision "file", source: "tools", destination: "/vagrant/tools"
+  config.vm.provision "file", source: "common", destination: "/vagrant/common"
   config.vm.provision "ansible_local" do |ansible|
     ansible.compatibility_mode = "2.0"
     ansible.playbook = "playbook.yml"
+    ansible.verbose = false
     ansible.extra_vars = {
       percona_server_version: PS,
       percona_xtrabackup_version: PXB,

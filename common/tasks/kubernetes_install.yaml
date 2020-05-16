@@ -1,0 +1,25 @@
+- name: Download k3s kubernetes distribution
+  get_url:
+    url: https://github.com/rancher/k3s/releases/download/v1.17.5%2Bk3s1/k3s
+    dest: /usr/local/bin/k3s
+    mode: '0755'
+- name: Download k3s systemd service
+  get_url:
+    url: https://raw.githubusercontent.com/rancher/k3s/master/k3s.service
+    dest: /etc/systemd/system/k3s.service
+    mode: '0644'
+- name: Fix k3s /dev/kmsg symlink
+  file:
+    src: /dev/console
+    dest: /dev/kmsg
+    state: link
+- name: Create kubectl symlink
+  file:
+    src: /usr/local/bin/k3s
+    dest: /usr/bin/kubectl
+    state: link
+- name: Start k3s
+  shell:
+    warn: false
+    cmd: "touch /etc/systemd/system/k3s.service.env;systemctl daemon-reload; systemctl start k3s"
+    creates: /etc/systemd/system/k3s.service.env
