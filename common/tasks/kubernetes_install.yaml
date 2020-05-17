@@ -6,7 +6,7 @@
 - name: Download k3s systemd service
   get_url:
     url: https://raw.githubusercontent.com/rancher/k3s/master/k3s.service
-    dest: /etc/systemd/system/k3s.service
+    dest: /etc/systemd/system/k3s{{ '' if k3s_url == '' else '-agent' }}.service
     mode: '0644'
 - name: Fix k3s /dev/kmsg symlink
   file:
@@ -18,8 +18,22 @@
     src: /usr/local/bin/k3s
     dest: /usr/bin/kubectl
     state: link
+- name: Adapt k3s.service for non-master node
+  when: k3s_token != "" and k3s_url != ""
+  block:
+    - name: Fix env file
+      replace:
+        path: /etc/systemd/system/k3s-agent.service
+        regexp: '/etc/systemd/system/k3s.service.env'
+        replace: '/etc/systemd/system/k3s-agent.service.env'
+    - name: Fix service command
+      replace:
+        path: /etc/systemd/system/k3s-agent.service
+        regexp: '/usr/local/bin/k3s server'
+        replace: '/usr/local/bin/k3s agent'
+
 - name: Start k3s
   shell:
     warn: false
-    cmd: "touch /etc/systemd/system/k3s.service.env;systemctl daemon-reload; systemctl start k3s"
-    creates: /etc/systemd/system/k3s.service.env
+    cmd: "echo {{ '' if k3s_url == '' else 'K3S_URL='+k3s_url }} > /etc/systemd/system/k3s{{ '' if k3s_url == '' else '-agent' }}.service.env;echo {{ '' if k3s_token == '' else 'K3S_TOKEN='+k3s_token }} >> /etc/systemd/system/k3s{{ '' if k3s_url == '' else '-agent' }}.service.env;systemctl daemon-reload; systemctl start k3s{{ '' if k3s_url == '' else '-agent' }}"
+    creates: /etc/systemd/system/k3s{{ '' if k3s_url == '' else '-agent' }}.service.env

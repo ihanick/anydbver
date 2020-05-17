@@ -18,10 +18,19 @@ DB_OPTS = ENV["DB_OPTS"] || "" # DB_OPTS=mysql/mysql-async-repl-gtid.cnf
 LXD_PROFILE = ENV["LXD_PROFILE"] || "default"
 OS = ENV["OS"] || "centos/7"
 
+# get token from master k3s node: cat /var/lib/rancher/k3s/server/node-token
+# if node re-added, kubectl delete node node1, and remove old entry from /var/lib/rancher/k3s/server/cred/node-passwd before run
+K3S_TOKEN = ENV["K3S_TOKEN"] || ""
+K3S_URL = ENV["K3S_URL"] || ""
+
 if OS == "centos/7"
   LXC_BOX = "visibilityspots/centos-7.x-minimal"
+elsif OS == "centos/8"
+  LXC_BOX = "visibilityspots/centos-8.x-minimal"
 elsif OS == "ubuntu/bionic64"
   LXC_BOX = "emptybox/ubuntu-bionic-amd64-lxc"
+elsif OS == "ubuntu/focal64"
+  LXC_BOX = "ubuntu/focal64"
 end
 
 Vagrant.configure("2") do |config|
@@ -74,6 +83,8 @@ Vagrant.configure("2") do |config|
       percona_k8s_op_psmdb_version: PKO4PSMDB,
       start_db: START,
       db_opts_file: DB_OPTS,
+      k3s_token: K3S_TOKEN,
+      k3s_url: K3S_URL,
     }
   end  
 

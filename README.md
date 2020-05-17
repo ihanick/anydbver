@@ -71,6 +71,15 @@ The same for  Percona server for MongoDB on Kubernetes
 PKO4PSMDB='1.4.0' VAGRANT_DEFAULT_PROVIDER=lxc vagrant up
 ```
 
+## Kubernetes, Multiple nodes
+
+```bash
+export VAGRANT_DEFAULT_PROVIDER=lxc
+# 4 workers in total
+PKO4PXC='1.4.0' vagrant up
+K3S_TOKEN=$(vagrant ssh default -- sudo cat /var/lib/rancher/k3s/server/node-token) K3S_URL="https://$( vagrant ssh default -- hostname -I | cut -d' ' -f1):6443" vagrant up node1 node2 node3
+```
+
 ## Typical usage
 
 Start two "servers" one with Percona Server 8.0, XtraBackup, Percona Monitoring and Management client utility and the second one will run PMM server.
@@ -121,8 +130,9 @@ PMM_SERVER=2.5.0  vagrant provision default
 
 There is an initial support for Ubuntu 18.04. Only percona-release package is installed.
 ```bash
-OS=ubuntu/bionic64 vagrant up # starts Ubuntu 18.04
+OS=ubuntu/bionic64 DB_USER=root DB_PASS=secret START=1 PS=8.0.16-7-1    DB_OPTS=mysql/async-repl-gtid.cnf vagrant up # starts Ubuntu 18.04
 vagrant up node1 # starts centos/7
+OS=centos/8 vagrant up node2 # start CentOS 8
 ```
 
 ## Known issues and limitation

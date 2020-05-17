@@ -85,7 +85,7 @@
         creates: /etc/yum.repos.d/percona-ppg-12.2-testing.repo
 
     - name: Setup local repo with desired version
-      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+      when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and soft != ''
       block:
         - name: install dpkg-dev
           package:
@@ -95,7 +95,7 @@
           file:
             path: /usr/local/packages
             state: directory
-        - name: download tar.gz with debs
+        - name: download debs manually to local directory
           get_url:
             url: "{{ os[dist][soft].download_url }}/{{ item }}_{{ percona_server_version }}.{{ dist }}_amd64.deb"
             dest: "/usr/local/packages/{{ item }}_{{ percona_server_version }}.{{ dist }}_amd64.deb"
@@ -212,7 +212,7 @@
 
     - name: Install k3s, kubernetes distribution
       include_tasks: common/tasks/kubernetes_install.yaml
-      when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != ""
+      when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != "" or (k3s_url != "" and k3s_token != "")
 
     - name: Install git for Percona Operator setup
       when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != ""
