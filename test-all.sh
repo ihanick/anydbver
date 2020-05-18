@@ -48,11 +48,11 @@ PXB=2.4.14-1 vagrant up;vagrant destroy -f || true
 PXB=8.0.10-1 vagrant up;vagrant destroy -f || true
 
 # Test mongodb
-PSMDB=3.6.16-3.6 DB_PASS=secret START=1 vagrant up
+PSMDB=3.6.16-3.6 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf vagrant up
 vagrant destroy -f || true
-PSMDB=4.0.17-10 DB_PASS=secret START=1 vagrant up
+PSMDB=4.0.17-10 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf vagrant up
 vagrant destroy -f || true
-PSMDB=4.2.3-4 DB_PASS=secret START=1 vagrant up
+PSMDB=4.2.3-4 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf vagrant up
 vagrant destroy -f || true
 
 PBM=1.1.1-1 vagrant up

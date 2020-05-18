@@ -191,6 +191,21 @@
         cmd: /bin/bash /vagrant/tools/create_mysql_db_with_password.sh "{{ db_password }}" "{{ 'oldgrant' if percona_server_version.startswith('5.6') or percona_xtradb_cluster_version.startswith('5.6') else 'no' }}"
         creates: /root/.my.cnf
 
+    - name: Apply Mongo database options from file
+      when: psmdb_version != "" and db_opts_file != ''
+      block:
+        - name: Download yq
+          get_url:
+            url: 'https://github.com/mikefarah/yq/releases/download/3.3.0/yq_linux_amd64'
+            dest: /usr/local/bin/yq
+            mode: '0755'
+        - name: Merge conf file part and main config
+          command:
+            cmd: /usr/local/bin/yq merge -i /etc/mongod.conf "/vagrant/configs/{{ db_opts_file }}"
+            creates: "/root/{{ db_opts_file | basename }}.applied"
+        - name: Avoid re-merge on next runs
+          file: path="/root/{{ db_opts_file | basename }}.applied" state=touch modification_time=preserve access_time=preserve
+
     - name: Create MongoDB database
       when: db_password != "" and psmdb_version != ""
       shell:
