@@ -141,6 +141,8 @@ OS=centos/8 vagrant up node2 # start CentOS 8
 * Containters/VM machines using CentOS 7
 * There is no support for configuring replication and sharding, work in progress
 * There is no support for non-Percona database products, work in progress
-* Everything is tested with vagrant-lxc (privileged/root) and vagrant-lxd (nesting,privileged) providers, but may also work with other providers like Virtualbox, Azure, AWS
+* Everything is tested with vagrant-lxc (privileged/root), vagrant-lxd (nesting,privileged) and virtualbox providers, but may also work with other providers like Azure, AWS
+* Full VM virtualization with VirtualBox requires more memory and usually slower for disk access, please consider LXC or LXD.
+* In order to use multi-node networking with VirtualBox, you can get ip address for each node with `vagrant ssh default -- hostname -I | cut -d' ' -f2`
 * The project is intended for fast bugs/issues reproduction, performance issues, security concerns are not primary goals.
 * Currently only percona repositories are configured if you are not specifying any version with environment variable, could be changed in future with other databases support

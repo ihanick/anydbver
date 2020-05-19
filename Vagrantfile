@@ -43,6 +43,7 @@ Vagrant.configure("2") do |config|
     #lxc.backingstore = 'dir'
     #lxc.backingstore_option '--dir','/bigdisk/lxc'
   end
+
   config.vm.provider "virtualbox" do |v|
     v.memory = 1024
     v.cpus = 2
@@ -90,20 +91,45 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "default", primary: true do |default|
     default.vm.hostname = "default"
+
+    default.vm.provider "virtualbox" do |virtualbox, override|
+      override.vm.network "private_network", ip: "192.168.38.4", virtualbox__intnet: true
+    end
   end
   config.vm.define "node1", autostart: false do |node1|
     node1.vm.hostname = "node1"
+
+    node1.vm.provider "virtualbox" do |virtualbox, override|
+      override.vm.network "private_network", ip: "192.168.38.5", virtualbox__intnet: true
+    end
   end
   config.vm.define "node2", autostart: false do |node2|
     node2.vm.hostname = "node2"
+
+    node2.vm.provider "virtualbox" do |virtualbox, override|
+      override.vm.network "private_network", ip: "192.168.38.6", virtualbox__intnet: true
+    end
   end
   config.vm.define "node3", autostart: false do |node3|
     node3.vm.hostname = "node3"
+
+    node3.vm.provider "virtualbox" do |virtualbox, override|
+      override.vm.network "private_network", ip: "192.168.38.7", virtualbox__intnet: true
+    end
   end
   config.vm.define "node4", autostart: false do |node4|
     node4.vm.hostname = "node4"
+
+    node4.vm.provider "virtualbox" do |virtualbox, override|
+      override.vm.network "private_network", ip: "192.168.38.8", virtualbox__intnet: true
+    end
   end
   config.vm.define "node5", autostart: false do |node5|
     node5.vm.hostname = "node5"
+
+    node5.vm.provider "virtualbox" do |virtualbox, override|
+      override.vm.network "private_network", ip: "192.168.38.9", virtualbox__intnet: true
+    end
   end 
+
 end
