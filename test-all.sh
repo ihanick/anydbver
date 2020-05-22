@@ -79,6 +79,8 @@ PPGSQL=11.7-2 DB_PASS=secret START=1 vagrant up
 vagrant destroy -f || true
 PPGSQL=12.2-4 DB_PASS=secret START=1 vagrant up
 vagrant destroy -f || true
+PPGSQL=12.2-4 DB_PASS=secret START=1 DB_OPTS=postgresql/novacuum.conf vagrant up
+vagrant destroy -f || true
 
 # percona toolkit
 PT=3.2.0-1 vagrant up

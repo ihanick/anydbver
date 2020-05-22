@@ -77,3 +77,9 @@ el7:
       - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
       - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
       - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
+  ppg11:
+    systemd_service: 'postgresql-11'
+    cnf_file: '/var/lib/pgsql/11/data/postgresql.conf'
+  ppg12:
+    systemd_service: 'postgresql-12'
+    cnf_file: '/var/lib/pgsql/12/data/postgresql.conf'    

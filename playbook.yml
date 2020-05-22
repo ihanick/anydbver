@@ -22,8 +22,18 @@
     percona_k8s_op_version: "{{ percona_k8s_op_pxc_version if percona_k8s_op_pxc_version != '' else percona_k8s_op_psmdb_version }}"
     db_systemd_service: "{{ 'mongod' if psmdb_version != '' else ('postgresql-' + percona_postgresql_major_ver) if percona_postgresql_version != '' else '' }}"
     dist: "{{ 'el7' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and ansible_distribution_version.startswith('7') else 'bionic' if ansible_distribution_release == 'bionic' else '' }}"
-    soft: "{{ 'ps80' if percona_server_version.startswith('8.0') else 'pxc80' if percona_xtradb_cluster_version.startswith('8.0') else 'ps57' if percona_server_version.startswith('5.7') else 'pxc57' if percona_xtradb_cluster_version.startswith('5.7') else 'pxc56' if percona_xtradb_cluster_version.startswith('5.6') else 'ps56' if percona_server_version.startswith('5.6') else '' }}"
-
+    soft: >-
+      {{
+      'ps80' if percona_server_version.startswith('8.0') else
+      'pxc80' if percona_xtradb_cluster_version.startswith('8.0') else
+      'ps57' if percona_server_version.startswith('5.7') else
+      'pxc57' if percona_xtradb_cluster_version.startswith('5.7') else
+      'pxc56' if percona_xtradb_cluster_version.startswith('5.6') else
+      'ps56' if percona_server_version.startswith('5.6') else
+      'ppg11' if percona_postgresql_version.startswith('11') else
+      'ppg12' if percona_postgresql_version.startswith('12') else
+      ''
+      }}
   tasks:
     - name: Include package descriptions for each OS
       include_vars:
@@ -213,7 +223,7 @@
         creates: /root/.mongorc.js
 
     - name: Apply database options from file
-      when: (percona_server_version != '' or percona_xtradb_cluster_version != '') and db_opts_file != ''
+      when: (percona_server_version != '' or percona_xtradb_cluster_version != '' or percona_postgresql_version != '') and db_opts_file != ''
       command:
         cmd: /bin/bash /vagrant/tools/apply_mysql_conf.sh "{{ os[dist][soft].cnf_file }}" "/vagrant/configs/{{ db_opts_file }}"
         creates: "/root/{{ db_opts_file | basename }}.applied"
