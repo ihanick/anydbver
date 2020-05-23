@@ -102,3 +102,9 @@ vagrant destroy -f || true
 PKO4PSMDB='1.4.0' vagrant up
 # cluster creation requires a few minutes
 vagrant destroy -f || true
+
+# PXC + pmm
+K3S=latest vagrant up default
+K3S_TOKEN=$(vagrant ssh default -- sudo cat /var/lib/rancher/k3s/server/node-token) K3S_URL="https://$( vagrant ssh default -- hostname -I | cut -d' ' -f1):6443" vagrant up node1 node2 node3
+K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_PASS=secret vagrant provision default
+

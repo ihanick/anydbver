@@ -60,6 +60,13 @@ kernel.panic = 10
 kernel.panic_on_oops = 1
 ```
 
+In case of dns issues inside k8s containers: https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/
+`reply from unexpected source` problem could be solved with loading br_netfilter module
+```
+modprobe br_netfilter
+```
+
+
 Running Percona Kubernetes Operator for Percona XtraDB Cluster (pxc) in single-k8s-node environment:
 
 ```bash
@@ -76,8 +83,12 @@ PKO4PSMDB='1.4.0' VAGRANT_DEFAULT_PROVIDER=lxc vagrant up
 ```bash
 export VAGRANT_DEFAULT_PROVIDER=lxc
 # 4 workers in total
-PKO4PXC='1.4.0' vagrant up
+K3S=latest vagrant up
 K3S_TOKEN=$(vagrant ssh default -- sudo cat /var/lib/rancher/k3s/server/node-token) K3S_URL="https://$( vagrant ssh default -- hostname -I | cut -d' ' -f1):6443" vagrant up node1 node2 node3
+# unmodified cr.yaml
+PKO4PXC='1.4.0' vagrant provision default
+# or with PMM enabled:
+K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_PASS=secret vagrant provision default
 ```
 
 ## Typical usage

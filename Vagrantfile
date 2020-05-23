@@ -17,6 +17,8 @@ START = ENV["START"] || "" # START=1 to start systemd service automatically
 DB_OPTS = ENV["DB_OPTS"] || "" # DB_OPTS=mysql/mysql-async-repl-gtid.cnf
 LXD_PROFILE = ENV["LXD_PROFILE"] || "default"
 OS = ENV["OS"] || "centos/7"
+K3S = ENV["K3S"] || ""
+K8S_PMM = ENV["K8S_PMM"] || ""
 
 # get token from master k3s node: cat /var/lib/rancher/k3s/server/node-token
 # if node re-added, kubectl delete node node1, and remove old entry from /var/lib/rancher/k3s/server/cred/node-passwd before run
@@ -86,6 +88,8 @@ Vagrant.configure("2") do |config|
       db_opts_file: DB_OPTS,
       k3s_token: K3S_TOKEN,
       k3s_url: K3S_URL,
+      k3s_version: K3S,
+      k8s_pmm: K8S_PMM,
     }
   end  
 

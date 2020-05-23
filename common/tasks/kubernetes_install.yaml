@@ -1,12 +1,18 @@
 - name: Download k3s kubernetes distribution
   get_url:
-    url: https://github.com/rancher/k3s/releases/download/v1.17.5%2Bk3s1/k3s
+    url: "{{ 'https://github.com/rancher/k3s/releases/download/v'+k3s_version+'%2Bk3s1/k3s' if k3s_version != '' and k3s_version != 'latest' else os.k3s.latest_url }}"
     dest: /usr/local/bin/k3s
     mode: '0755'
 - name: Download k3s systemd service
   get_url:
     url: https://raw.githubusercontent.com/rancher/k3s/master/k3s.service
-    dest: /etc/systemd/system/k3s{{ '' if k3s_url == '' else '-agent' }}.service
+    dest: "/opt/k3s{{ '' if k3s_url == '' else '-agent' }}.service"
+    mode: '0644'
+- name: Make a copy for downloaded k3s.service
+  copy:
+    src: "/opt/k3s{{ '' if k3s_url == '' else '-agent' }}.service"
+    dest: "/etc/systemd/system/k3s{{ '' if k3s_url == '' else '-agent' }}.service"
+    force: no
     mode: '0644'
 - name: Fix k3s /dev/kmsg symlink
   file:
@@ -18,6 +24,12 @@
     src: /usr/local/bin/k3s
     dest: /usr/bin/kubectl
     state: link
+- name: Reduce overhead, disable traefik
+  when: k3s_url == ""
+  replace:
+    path: /etc/systemd/system/k3s.service
+    regexp: '/usr/local/bin/k3s server$'
+    replace: '/usr/local/bin/k3s server --no-deploy traefik'
 - name: Adapt k3s.service for non-master node
   when: k3s_token != "" and k3s_url != ""
   block:
@@ -37,3 +49,30 @@
     warn: false
     cmd: "echo {{ '' if k3s_url == '' else 'K3S_URL='+k3s_url }} > /etc/systemd/system/k3s{{ '' if k3s_url == '' else '-agent' }}.service.env;echo {{ '' if k3s_token == '' else 'K3S_TOKEN='+k3s_token }} >> /etc/systemd/system/k3s{{ '' if k3s_url == '' else '-agent' }}.service.env;systemctl daemon-reload; systemctl start k3s{{ '' if k3s_url == '' else '-agent' }}"
     creates: /etc/systemd/system/k3s{{ '' if k3s_url == '' else '-agent' }}.service.env
+
+- name: install helm
+  when: k3s_url == ''
+  block:
+    - name: Download helm
+      get_url:
+        url: https://get.helm.sh/helm-v3.2.1-linux-amd64.tar.gz
+        dest: /opt/helm.tar.gz
+    - name: Unpack helm binary
+      unarchive:
+        src: /opt/helm.tar.gz
+        dest: /usr/bin
+        extra_opts:
+          - "--strip-components=1"
+          - "linux-amd64/helm"
+        creates: /usr/bin/helm
+    - name: Install percona helm repo
+      shell:
+        warn: false
+        cmd: mkdir /root/.kube;chmod 0700 /root/.kube;cp /etc/rancher/k3s/k3s.yaml /root/.kube/config; helm repo add percona https://percona-charts.storage.googleapis.com ; helm repo update
+        creates: /root/.cache/helm/repository/percona-index.yaml
+    - name: Install PMM with helm
+      when: k8s_pmm != ''
+      shell:
+        warn: false
+        cmd: helm install monitoring percona/pmm-server --set credentials.username=admin --set credentials.password=admin  --set imageTag=2.6.1 --set platform=kubernetes ; touch /root/k8s-pmm.installed
+        creates: /root/k8s-pmm.installed

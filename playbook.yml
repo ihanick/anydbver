@@ -237,7 +237,7 @@
 
     - name: Install k3s, kubernetes distribution
       include_tasks: common/tasks/kubernetes_install.yaml
-      when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != "" or (k3s_url != "" and k3s_token != "")
+      when: percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or (k3s_url != '' and k3s_token != '') or k3s_version != ''
 
     - name: Install git for Percona Operator setup
       when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != ""
@@ -251,13 +251,14 @@
           cd /root;
           git clone -b release-{{ percona_k8s_op_version }} https://github.com/percona/{{ percona_k8s_op_name }};
           cd {{ percona_k8s_op_name }};
+          until kubectl wait --for=condition=ready -n kube-system pod -l k8s-app=kube-dns &>/dev/null;do sleep 2;done;
           kubectl apply -f deploy/bundle.yaml;
           kubectl apply -f deploy/secrets.yaml;
           kubectl apply -f deploy/ssl-secrets.yaml;
-          until kubectl get pod -l name={{ percona_k8s_op_name }}|grep Running &>/dev/null;do sleep 2;done
+          until kubectl wait --for=condition=ready pod -l name={{ percona_k8s_op_name }} &>/dev/null;do sleep 2;done
         creates: /root/{{ percona_k8s_op_name }}/deploy/cr.yaml
-    - name: Start single-node cluster
-      when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != ""
+    - name: Start database cluster in k8s
+      when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '') and k8s_pmm == ''
       shell:
         warn: false
         cmd: >-
@@ -265,5 +266,31 @@
           -e 's/antiAffinityTopologyKey: .*$/antiAffinityTopologyKey: \"none\"/g'
           -e 's/allowUnsafeConfigurations: false/allowUnsafeConfigurations: true/'
           /root/{{ percona_k8s_op_name }}/deploy/cr.yaml > /root/{{ percona_k8s_op_name }}/deploy/cr-single.yaml;
-          kubectl apply -f /root/{{ percona_k8s_op_name }}/deploy/cr-single.yaml
+          if test $( kubectl get nodes 2>/dev/null|wc -l ) -ge 3 ;
+          then kubectl apply -f /root/{{ percona_k8s_op_name }}/deploy/cr.yaml ;
+          else kubectl apply -f /root/{{ percona_k8s_op_name }}/deploy/cr-single.yaml ;
+          fi
         creates: /root/{{ percona_k8s_op_name }}/deploy/cr-single.yaml
+
+    - name: Download yq
+      when: percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or k8s_pmm != ''
+      get_url:
+        url: 'https://github.com/mikefarah/yq/releases/download/3.3.0/yq_linux_amd64'
+        dest: /usr/local/bin/yq
+        mode: '0755'
+    - name: Start database cluster in k8s with pmm
+      when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '') and k8s_pmm != ''
+      shell:
+        warn: false
+        cmd: >-
+          sed -e 's/c3VwYXxefHBheno=/YWRtaW4=/' /root/{{ percona_k8s_op_name }}/deploy/secrets.yaml  | kubectl apply -f - ;
+          /usr/local/bin/yq merge -x /root/{{ percona_k8s_op_name }}/deploy/cr.yaml /vagrant/configs/k8s/cr-pmm.yaml > /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml;
+          sed
+          -e 's/antiAffinityTopologyKey: .*$/antiAffinityTopologyKey: \"none\"/g'
+          -e 's/allowUnsafeConfigurations: false/allowUnsafeConfigurations: true/'
+          /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml > /root/{{ percona_k8s_op_name }}/deploy/cr-single.yaml;
+          if test $( kubectl get nodes 2>/dev/null|wc -l ) -ge 3 ;
+          then kubectl apply -f /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml ;
+          else kubectl apply -f /root/{{ percona_k8s_op_name }}/deploy/cr-pmm-single.yaml ;
+          fi
+        creates: /root/{{ percona_k8s_op_name }}/deploy/cr-pmm-single.yaml
