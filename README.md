@@ -129,12 +129,20 @@ You can initialize all containers/VMs at once and configure each node individual
 
 ```bash
 # start 4 nodes
-export VAGRANT_DEFAULT_PROVIDER=lxc 
+export VAGRANT_DEFAULT_PROVIDER=lxc
 vagrant up default node1 node2 node3
 # apply configuration changes individually to each node or group several nodes for parallel apply
 PSMDB=4.2.3-4   PMM_CLIENT=2.5.0-6 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf vagrant provision node1 node2
 PSMDB=4.0.17-10 PMM_CLIENT=2.5.0-6 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf vagrant provision node3
 PMM_SERVER=2.5.0  vagrant provision default
+```
+
+## Replication
+
+```bash
+export VAGRANT_DEFAULT_PROVIDER=lxc
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1    DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default node1 node2
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1 node2
 ```
 
 ## Initial support for different OS

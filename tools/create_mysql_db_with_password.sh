@@ -12,7 +12,7 @@ else
     mysqld --user=mysql --loose-wsrep-provider='none' --skip-networking &>/dev/null &
     mysqladmin --silent --connect-timeout=30 --wait=4 ping
 
-    mysql -e "ALTER USER root@localhost IDENTIFIED BY '$PASS';CREATE USER root@'%' IDENTIFIED BY '$PASS';";
+    mysql -e "ALTER USER root@localhost IDENTIFIED BY '$PASS';CREATE USER root@'%' IDENTIFIED BY '$PASS';GRANT ALL PRIVILEGES ON *.* TO root@'%';";
 fi
 cat > /root/.my.cnf << EOF 
 [client]

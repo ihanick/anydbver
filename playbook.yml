@@ -234,6 +234,11 @@
         name: "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
         state: started
 
+    - name: Setup and start GTID replication
+      when: master_ip != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
+      shell:
+        cmd: /bin/bash /vagrant/tools/setup_mysql_replication.sh gtid "{{ master_ip }}" root "{{ db_password }}"
+        creates: /root/replication.configured
 
     - name: Install k3s, kubernetes distribution
       include_tasks: common/tasks/kubernetes_install.yaml

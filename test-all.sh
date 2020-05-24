@@ -107,4 +107,19 @@ vagrant destroy -f || true
 K3S=latest vagrant up default
 K3S_TOKEN=$(vagrant ssh default -- sudo cat /var/lib/rancher/k3s/server/node-token) K3S_URL="https://$( vagrant ssh default -- hostname -I | cut -d' ' -f1):6443" vagrant up node1 node2 node3
 K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_PASS=secret vagrant provision default
+vagrant destroy -f || true
 
+# MySQL replication
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1    DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default node1 node2
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 \
+MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) \
+DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1 node2
+vagrant destroy -f || true
+
+DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1    DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default node1 node2
+DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1 node2
+vagrant destroy -f || true
+
+DB_USER=root DB_PASS=secret START=1 PS=5.6.23-rel72.1    DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default node1 node2
+DB_USER=root DB_PASS=secret START=1 PS=5.6.23-rel72.1 MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1 node2
+vagrant destroy -f || true

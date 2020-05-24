@@ -19,6 +19,7 @@ LXD_PROFILE = ENV["LXD_PROFILE"] || "default"
 OS = ENV["OS"] || "centos/7"
 K3S = ENV["K3S"] || ""
 K8S_PMM = ENV["K8S_PMM"] || ""
+MASTER = ENV["MASTER"] || ""
 
 # get token from master k3s node: cat /var/lib/rancher/k3s/server/node-token
 # if node re-added, kubectl delete node node1, and remove old entry from /var/lib/rancher/k3s/server/cred/node-passwd before run
@@ -90,6 +91,7 @@ Vagrant.configure("2") do |config|
       k3s_url: K3S_URL,
       k3s_version: K3S,
       k8s_pmm: K8S_PMM,
+      master_ip: MASTER,
     }
   end  
 
