@@ -145,6 +145,16 @@ DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1    DB_OPTS=mysql/async-repl-g
 DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1 node2
 ```
 
+## Galera
+
+```bash
+DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3     DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default node1 node2
+vagrant ssh default -- sudo tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem > secret/pxc-cluster-ssl.tar.gz
+DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1
+DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node2
+```
+
+
 ## Initial support for different OS
 
 There is an initial support for Ubuntu 18.04. Only percona-release package is installed.

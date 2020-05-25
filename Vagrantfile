@@ -20,6 +20,7 @@ OS = ENV["OS"] || "centos/7"
 K3S = ENV["K3S"] || ""
 K8S_PMM = ENV["K8S_PMM"] || ""
 MASTER = ENV["MASTER"] || ""
+REPLICATION_TYPE = ENV["REPLICATION_TYPE"] || ""
 
 # get token from master k3s node: cat /var/lib/rancher/k3s/server/node-token
 # if node re-added, kubectl delete node node1, and remove old entry from /var/lib/rancher/k3s/server/cred/node-passwd before run
@@ -66,6 +67,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision "file", source: "configs", destination: "/vagrant/configs"
   config.vm.provision "file", source: "tools", destination: "/vagrant/tools"
   config.vm.provision "file", source: "common", destination: "/vagrant/common"
+  config.vm.provision "file", source: "secret", destination: "/vagrant/secret"
   config.vm.provision "ansible_local" do |ansible|
     ansible.compatibility_mode = "2.0"
     ansible.playbook = "playbook.yml"
@@ -92,6 +94,7 @@ Vagrant.configure("2") do |config|
       k3s_version: K3S,
       k8s_pmm: K8S_PMM,
       master_ip: MASTER,
+      replication_type: REPLICATION_TYPE,
     }
   end  
 
