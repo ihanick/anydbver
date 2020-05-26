@@ -4,15 +4,16 @@ TYPE=$1
 MASTER_IP=$2
 MASTER_USER=$3
 MASTER_PASSWORD=$4
+SOFT=$5
+CNF_FILE=$6
+MYSQLD_UNIT=$7
 CLUSTER_NAME='pxc-cluster'
-CNF_FILE='/etc/my.cnf'
-MYSQLD_UNIT='mysqld'
 
 SERVER_ID=$(ip addr ls|grep 'inet '|grep -v '127.0.0.1'|awk '{print $2}'|cut -d/ -f 1|awk -F '\\.' '{print ($1 * 2^24) + ($2 * 2^16) + ($3 * 2^8) + $4}')
 
-mysql --host $MASTER -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;show master status\G' > "$MINF"
 
 if [[ "x$TYPE" == "xgtid" ]] ; then
+    mysql --host $MASTER -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;show master status\G' > "$MINF"
     GTID=$( awk -F': ' '/Executed_Gtid_Set/ {print $2}' "$MINF" )
 
     mysql << EOF
@@ -23,6 +24,7 @@ if [[ "x$TYPE" == "xgtid" ]] ; then
     START SLAVE;
 EOF
 
+    rm "${MINF}"
     touch /root/replication.configured
 fi
 
@@ -44,6 +46,4 @@ EOF
 
     systemctl start $MYSQLD_UNIT
 fi
-
-rm "${MINF}"
 

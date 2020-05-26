@@ -154,6 +154,13 @@ DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera MASTER=$( vag
 DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node2
 ```
 
+5.7 and 5.6 requires different configuration file for xtrabackup user and password specification:
+```bash
+DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 DB_OPTS=mysql/pxc5657.cnf vagrant up default node1 node2
+DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/pxc5657.cnf vagrant provision node1
+DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/pxc5657.cnf vagrant provision node2
+```
+
 
 ## Initial support for different OS
 
@@ -168,7 +175,7 @@ OS=centos/8 vagrant up node2 # start CentOS 8
 
 * There is no support for outdated branches like Percona Server 5.5
 * Containters/VM machines using CentOS 7
-* There is no support for configuring replication and sharding, work in progress
+* There is no support for configuring replication and sharding in PG and Mongo, work in progress
 * There is no support for non-Percona database products, work in progress
 * Everything is tested with vagrant-lxc (privileged/root), vagrant-lxd (nesting,privileged) and virtualbox providers, but may also work with other providers like Azure, AWS
 * Full VM virtualization with VirtualBox requires more memory and usually slower for disk access, please consider LXC or LXD.

@@ -63,7 +63,7 @@ el7:
       - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
   pxc57:
     systemd_service: "mysqld"
-    cnf_file: "/etc/percona-xtradb-cluster.conf.d/mysqld.cnf"
+    cnf_file: "/etc/percona-xtradb-cluster.conf.d/zz_mysqld.cnf"
     install_packages:
       - "{{ percona_mysql_name }}-shared-compat{{ percona_mysql_full_ver }}"            
       - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
