@@ -21,6 +21,7 @@ K3S = ENV["K3S"] || ""
 K8S_PMM = ENV["K8S_PMM"] || ""
 MASTER = ENV["MASTER"] || ""
 REPLICATION_TYPE = ENV["REPLICATION_TYPE"] || ""
+REPLICA_SET = ENV["REPLICA_SET"] || ""
 
 # get token from master k3s node: cat /var/lib/rancher/k3s/server/node-token
 # if node re-added, kubectl delete node node1, and remove old entry from /var/lib/rancher/k3s/server/cred/node-passwd before run
@@ -95,6 +96,7 @@ Vagrant.configure("2") do |config|
       k8s_pmm: K8S_PMM,
       master_ip: MASTER,
       replication_type: REPLICATION_TYPE,
+      mongo_replicaset: REPLICA_SET,
     }
   end  
 

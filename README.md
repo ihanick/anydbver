@@ -161,6 +161,14 @@ DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 REPLICATION_TYPE=galera MASTER=$(
 DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/pxc5657.cnf vagrant provision node2
 ```
 
+## MongoDB replica set
+
+```bash
+export VAGRANT_DEFAULT_PROVIDER=lxc
+openssl rand -base64 756 > secret/rs0-keyfile
+PSMDB=4.2.3-4 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf REPLICA_SET=rs0 vagrant up default
+PSMDB=4.2.3-4 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf REPLICA_SET=rs0 MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) vagrant up node1 node2
+```
 
 ## Initial support for different OS
 
@@ -175,7 +183,7 @@ OS=centos/8 vagrant up node2 # start CentOS 8
 
 * There is no support for outdated branches like Percona Server 5.5
 * Containters/VM machines using CentOS 7
-* There is no support for configuring replication and sharding in PG and Mongo, work in progress
+* There is no support for configuring replication PG and sharding Mongo, work in progress
 * There is no support for non-Percona database products, work in progress
 * Everything is tested with vagrant-lxc (privileged/root), vagrant-lxd (nesting,privileged) and virtualbox providers, but may also work with other providers like Azure, AWS
 * Full VM virtualization with VirtualBox requires more memory and usually slower for disk access, please consider LXC or LXD.
