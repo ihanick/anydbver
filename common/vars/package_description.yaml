@@ -4,6 +4,41 @@ k3s:
 bionic:
   repo_pkg: "/root/percona-release_latest.bionic_all.deb"
   repo_url: "https://repo.percona.com/apt/percona-release_latest.bionic_all.deb"
+  ps56:
+    download_url: "https://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/bionic/x86_64"
+    repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
+    repo_enable_str: "ps-56"
+    systemd_service: "mysql"
+    cnf_file: "/etc/mysql/percona-server.conf.d/mysqld.cnf"
+    download_packages:
+      - percona-server-common-5.6
+      - libperconaserverclient18.1
+      - percona-server-client-5.6
+      - percona-server-tokudb-5.6
+      - percona-server-server-5.6
+    install_packages:
+      - "percona-server-common-5.6={{ percona_server_version }}.bionic"
+      - "libperconaserverclient18.1={{ percona_server_version }}.bionic"
+      - "percona-server-client-5.6={{ percona_server_version }}.bionic"
+      - "percona-server-server-5.6={{ percona_server_version }}.bionic"
+  ps57:
+    download_url: "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/bionic/x86_64"
+    repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
+    repo_enable_str: "ps-57"
+    systemd_service: "mysql"
+    cnf_file: "/etc/mysql/percona-server.conf.d/mysqld.cnf"
+    download_packages:
+      - percona-server-common-5.7
+      - percona-server-client-5.7
+      - libperconaserverclient20
+      - percona-server-rocksdb-5.7
+      - percona-server-tokudb-5.7
+      - percona-server-server-5.7
+    install_packages:
+      - "percona-server-common-5.7={{ percona_server_version }}.bionic"
+      - "percona-server-client-5.7={{ percona_server_version }}.bionic"
+      - "libperconaserverclient20={{ percona_server_version }}.bionic"
+      - "percona-server-server-5.7={{ percona_server_version }}.bionic"
   ps80:
     download_url: "http://repo.percona.com/ps-80/apt/pool/main/p/percona-server"
     repo_file: "/etc/apt/sources.list.d/percona-ps-80-release.list"
