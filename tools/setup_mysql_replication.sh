@@ -13,7 +13,7 @@ SERVER_ID=$(ip addr ls|grep 'inet '|grep -v '127.0.0.1'|awk '{print $2}'|cut -d/
 
 
 if [[ "x$TYPE" == "xgtid" ]] ; then
-    mysql --host $MASTER -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;show master status\G' > "$MINF"
+    mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;show master status\G' > "$MINF"
     GTID=$( awk -F': ' '/Executed_Gtid_Set/ {print $2}' "$MINF" )
 
     mysql << EOF

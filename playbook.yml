@@ -107,8 +107,8 @@
             state: directory
         - name: download debs manually to local directory
           get_url:
-            url: "{{ os[dist][soft].download_url }}/{{ item }}_{{ percona_server_version }}.{{ dist }}_amd64.deb"
-            dest: "/usr/local/packages/{{ item }}_{{ percona_server_version }}.{{ dist }}_amd64.deb"
+            url: "{{ os[dist][soft].download_url }}/{{ item }}_{{ os[dist][soft].version }}.{{ dist }}_amd64.deb"
+            dest: "/usr/local/packages/{{ item }}_{{ os[dist][soft].version }}.{{ dist }}_amd64.deb"
           with_items: "{{ os[dist][soft].download_packages }}"
             
         - name: generate Packages.gz
