@@ -2,3 +2,4 @@
 secret/*.tar.gz
 secret/*.pem
 secret/*keyfile
+lxdock.yml

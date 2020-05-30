@@ -2,6 +2,30 @@
   hosts: all
   become: yes
   vars:
+    percona_server_version: "{{ lookup('vars', 'extra_percona_server_version', default=lookup('env', 'PS', default='') ) }}"
+    percona_xtrabackup_version: "{{ lookup('vars', 'extra_percona_xtrabackup_version', default=lookup('env','PXB',default='') ) }}"
+    percona_xtradb_cluster_version: "{{ lookup('vars', 'extra_percona_xtradb_cluster_version', default=lookup('env','PXC',default='') ) }}"
+    percona_xtradb_cluster_galera: "{{ lookup('vars', 'extra_percona_xtradb_cluster_galera', default=lookup('env','PXC_GALERA',default='') ) }}"
+    psmdb_version: "{{ lookup('vars', 'extra_psmdb_version', default=lookup('env','PSMDB',default='') ) }}"
+    pbm_version: "{{ lookup('vars', 'extra_pbm_version', default=lookup('env','PBM',default='') ) }}"
+    pmm_server_version: "{{ lookup('vars', 'extra_pmm_server_version', default=lookup('env','PMM_SERVER',default='') ) }}"
+    pmm_client_version: "{{ lookup('vars', 'extra_pmm_client_version', default=lookup('env','PMM_CLIENT',default='') ) }}"
+    percona_postgresql_version: "{{ lookup('vars', 'extra_percona_postgresql_version', default=lookup('env', 'PPGSQL', default='') ) }}"
+    percona_toolkit_version: "{{ lookup('vars', 'extra_percona_toolkit_version', default=lookup('env','PT',default='') ) }}"
+    db_user: "{{ lookup('vars', 'extra_db_user', default=lookup('env','DB_USER',default='') ) }}"
+    db_password: "{{ lookup('vars', 'extra_db_password', default=lookup('env','DB_PASS',default='') ) }}"
+    percona_k8s_op_pxc_version: "{{ lookup('vars', 'extra_percona_k8s_op_pxc_version', default=lookup('env','PKO4PXC',default='') ) }}"
+    percona_k8s_op_psmdb_version: "{{ lookup('vars', 'extra_percona_k8s_op_psmdb_version', default=lookup('env','PKO4PSMDB',default='') ) }}"
+    start_db: "{{ lookup('vars', 'extra_start_db', default=lookup('env','START',default='') ) }}"
+    db_opts_file: "{{ lookup('vars', 'extra_db_opts_file', default=lookup('env','DB_OPTS',default='') ) }}"
+    k3s_token: "{{ lookup('vars', 'extra_k3s_token', default=lookup('env','K3S_TOKEN',default='') ) }}"
+    k3s_url: "{{ lookup('vars', 'extra_k3s_url', default=lookup('env','K3S_URL',default='') ) }}"
+    k3s_version: "{{ lookup('vars', 'extra_k3s_version', default=lookup('env','K3S',default='') ) }}"
+    k8s_pmm: "{{ lookup('vars', 'extra_k8s_pmm', default=lookup('env','K8S_PMM',default='') ) }}"
+    master_ip: "{{ lookup('vars', 'extra_master_ip', default=lookup('env','MASTER',default='') ) }}"
+    replication_type: "{{ lookup('vars', 'extra_replication_type', default=lookup('env','REPLICATION_TYPE',default='') ) }}"
+    mongo_replicaset: "{{ lookup('vars', 'extra_mongo_replicaset', default=lookup('env','REPLICA_SET',default='') ) }}"
+
     percona_server_name: "{{ 'percona-server' if percona_server_version.startswith('8.0') else 'Percona-Server' }}"
     percona_server_major_ver: "{{ '' if percona_server_version.startswith('8.0') else '-57' if percona_server_version.startswith('5.7') else '-56' if percona_server_version.startswith('5.6') else '' }}"
     percona_server_full_ver: "{{ percona_server_major_ver }}-{{ percona_server_version }}.el7.x86_64"
@@ -227,14 +251,14 @@
       block:
         - name: copy keyfile
           copy:
-            src: "/vagrant/secret/{{mongo_replicaset}}-keyfile"
+            src: "{{playbook_dir}}/secret/{{mongo_replicaset}}-keyfile"
             dest: "/etc/{{mongo_replicaset}}-keyfile"
             mode: "0400"
             owner: "mongod"
             group: "mongod"
         - name: create replication template yaml
           template:
-            src: "/vagrant/configs/mongo/replica.conf.j2"
+            src: "{{playbook_dir}}/configs/mongo/replica.conf.j2"
             dest: "/root/replica-{{mongo_replicaset}}.yaml"
         - name: Merge conf file part and main config
           command:

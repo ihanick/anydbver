@@ -13,6 +13,7 @@
     src: "/opt/k3s{{ '' if k3s_url == '' else '-agent' }}.service"
     dest: "/etc/systemd/system/k3s{{ '' if k3s_url == '' else '-agent' }}.service"
     force: no
+    remote_src: yes
     mode: '0644'
 - name: Fix k3s /dev/kmsg symlink
   file:
@@ -59,6 +60,7 @@
         dest: /opt/helm.tar.gz
     - name: Unpack helm binary
       unarchive:
+        remote_src: yes
         src: /opt/helm.tar.gz
         dest: /usr/bin
         extra_opts:

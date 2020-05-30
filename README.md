@@ -179,6 +179,29 @@ vagrant up node1 # starts centos/7
 OS=centos/8 vagrant up node2 # start CentOS 8
 ```
 
+## LXDock
+If you are using LXD and not happy with vagrant performance you can use [LXDock](https://github.com/lxdock/lxdock).
+It has many up-to-date images: https://uk.images.linuxcontainers.org/ and significantly reduces startup time for containers.
+
+```bash
+# ./gen_lxdock.sh container_name_prefix image_name number_of_nodes
+./gen_lxdock.sh anydbver centos/7 2
+# start all at once
+lxdock up
+# or you can start individually: lxdock up node1
+PS=8.0.16-7.1 lxdock provision
+# or provision individually: PS=8.0.16-7.1 lxdock provision node1
+# cleanup
+lxdock destroy -f
+```
+
+You can also setup databases and replication
+```bash
+PSMDB=4.2.3-4 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf REPLICA_SET=rs0 lxdock provision default
+PSMDB=4.2.3-4 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf REPLICA_SET=rs0 MASTER=$( lxdock shell default -c hostname -I | cut -d' ' -f1 ) lxdock provision node1
+lxdock destroy -f
+```
+
 ## Known issues and limitation
 
 * There is no support for outdated branches like Percona Server 5.5
