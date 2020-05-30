@@ -202,6 +202,17 @@ PSMDB=4.2.3-4 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf REPLICA_SET=rs
 lxdock destroy -f
 ```
 
+lxdock command could produce warnings like:
+```
+UserWarning: Attempted to set unknown attribute "type" on instance of "Container"
+```
+Such warnings could be disabled by exporting following variable:
+```
+export PYLXD_WARNINGS=none
+```
+
+In the same way as for vagrant-lxd you may create lxd profile $USER. ./gen_lxdock.sh uses such profiles automatically.
+
 ## Known issues and limitation
 
 * There is no support for outdated branches like Percona Server 5.5

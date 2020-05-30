@@ -1,17 +1,27 @@
 #!/bin/bash
 
-PROJ=${1:-${USER}_anydbver}
+PROJ=${1:-${USER/[._]/}-anydbver}
 OS=${2:-centos/7}
 NODES=${3:-1}
 NODES=$(( NODES - 1 ))
 
 cat > lxdock.yml << EOF
-name: ${PROJ}
+name: "${PROJ}"
 
+EOF
+
+
+if lxc profile show $USER &>/dev/null ; then
+cat >> lxdock.yml << EOF
+profiles:
+  - '$USER'
+EOF
+fi
+
+cat >> lxdock.yml << EOF
 shares:
-  - source: ${PWD}
+  - source: "${PWD}"
     dest: /vagrant
-
 containers:
   - name: default
     image: ${OS}
