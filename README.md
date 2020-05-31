@@ -170,7 +170,14 @@ PSMDB=4.2.3-4 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf REPLICA_SET=rs
 PSMDB=4.2.3-4 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf REPLICA_SET=rs0 MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) vagrant up node1 node2
 ```
 
-## Initial support for different OS
+## ProxySQL
+
+Package installation
+```bash
+PROXYSQL=2.0.12-1 vagrant up default
+```
+
+## Support for different OS
 
 There is an initial support for Ubuntu 18.04. Only percona-release package is installed.
 ```bash

@@ -22,6 +22,7 @@ K8S_PMM = ENV["K8S_PMM"] || ""
 MASTER = ENV["MASTER"] || ""
 REPLICATION_TYPE = ENV["REPLICATION_TYPE"] || ""
 REPLICA_SET = ENV["REPLICA_SET"] || ""
+PROXYSQL = ENV["PROXYSQL"] || ""
 
 # get token from master k3s node: cat /var/lib/rancher/k3s/server/node-token
 # if node re-added, kubectl delete node node1, and remove old entry from /var/lib/rancher/k3s/server/cred/node-passwd before run
@@ -97,6 +98,7 @@ Vagrant.configure("2") do |config|
       extra_master_ip: MASTER,
       extra_replication_type: REPLICATION_TYPE,
       extra_mongo_replicaset: REPLICA_SET,
+      extra_proxysql_version: PROXYSQL,
     }
   end  
 

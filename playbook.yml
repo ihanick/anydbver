@@ -25,6 +25,7 @@
     master_ip: "{{ lookup('vars', 'extra_master_ip', default=lookup('env','MASTER',default='') ) }}"
     replication_type: "{{ lookup('vars', 'extra_replication_type', default=lookup('env','REPLICATION_TYPE',default='') ) }}"
     mongo_replicaset: "{{ lookup('vars', 'extra_mongo_replicaset', default=lookup('env','REPLICA_SET',default='') ) }}"
+    proxysql_version: "{{ lookup('vars', 'extra_proxysql_version', default=lookup('env','PROXYSQL',default='') ) }}"
 
     percona_server_name: "{{ 'percona-server' if percona_server_version.startswith('8.0') else 'Percona-Server' }}"
     percona_server_major_ver: "{{ '' if percona_server_version.startswith('8.0') else '-57' if percona_server_version.startswith('5.7') else '-56' if percona_server_version.startswith('5.6') else '' }}"
@@ -45,7 +46,14 @@
     percona_k8s_op_name: "percona-{{ 'xtradb-cluster' if percona_k8s_op_pxc_version != '' else 'server-mongodb' if percona_k8s_op_psmdb_version != '' else '' }}-operator"
     percona_k8s_op_version: "{{ percona_k8s_op_pxc_version if percona_k8s_op_pxc_version != '' else percona_k8s_op_psmdb_version }}"
     db_systemd_service: "{{ 'mongod' if psmdb_version != '' else ('postgresql-' + percona_postgresql_major_ver) if percona_postgresql_version != '' else '' }}"
-    dist: "{{ 'el7' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and ansible_distribution_version.startswith('7') else 'bionic' if ansible_distribution_release == 'bionic' else '' }}"
+    dist: >-
+      {{
+      'el7' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and ansible_distribution_version.startswith('7') else
+      'el8' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and ansible_distribution_version.startswith('8') else
+      'bionic' if ansible_distribution_release == 'bionic' else
+      'focal' if ansible_distribution_release == 'focal' else
+      ''
+      }}
     soft: >-
       {{
       'ps80' if percona_server_version.startswith('8.0') else
@@ -56,6 +64,7 @@
       'ps56' if percona_server_version.startswith('5.6') else
       'ppg11' if percona_postgresql_version.startswith('11') else
       'ppg12' if percona_postgresql_version.startswith('12') else
+      'proxysql' if proxysql_version != '' else
       ''
       }}
   tasks:
@@ -130,6 +139,7 @@
             path: /usr/local/packages
             state: directory
         - name: download debs manually to local directory
+          when: proxysql_version == ''
           get_url:
             url: "{{ os[dist][soft].download_url }}/{{ item }}_{{ os[dist][soft].version }}.{{ dist }}_amd64.deb"
             dest: "/usr/local/packages/{{ item }}_{{ os[dist][soft].version }}.{{ dist }}_amd64.deb"
@@ -273,6 +283,19 @@
         cmd: /bin/bash /vagrant/tools/apply_mysql_conf.sh "{{ os[dist][soft].cnf_file }}" "/vagrant/configs/{{ db_opts_file }}"
         creates: "/root/{{ db_opts_file | basename }}.applied"
       
+    - name: ProxySQL
+      when: proxysql_version !=''
+      block:
+        - name: install ProxySQL rpm package
+          when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+          yum:
+            name: "{{os[dist][soft].url}}"
+            state: present
+        - name: install ProxySQL deb package
+          when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'
+          apt:
+            deb: "{{os[dist][soft].url}}"
+
     - name: Start database with systemd
       when:  start_db == '1' and (db_systemd_service != '' or os[dist][soft].systemd_service ) 
       systemd:

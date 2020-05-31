@@ -184,3 +184,26 @@ PSMDB=4.2.3-4 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf REPLICA_SET=rs
 lxdock destroy -f
 
 K3S=latest lxdock provision default
+
+
+./gen_lxdock.sh anydbver centos/7
+PROXYSQL=2.0.12-1 lxdock up default
+lxdock destroy -f || true
+
+./gen_lxdock.sh anydbver centos/8
+PROXYSQL=2.0.12-1 lxdock up default
+lxdock destroy -f || true
+
+./gen_lxdock.sh anydbver ubuntu/bionic
+PROXYSQL=2.0.12 lxdock up default
+lxdock destroy -f || true
+
+
+PROXYSQL=2.0.12-1 vagrant up default
+vagrant destroy -f || true
+
+OS=centos/8 PROXYSQL=2.0.12-1 vagrant up default
+vagrant destroy -f || true
+
+OS=ubuntu/bionic64 PROXYSQL=2.0.12 vagrant provision default
+vagrant destroy -f

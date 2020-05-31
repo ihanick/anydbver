@@ -80,6 +80,8 @@ bionic:
       - "percona-xtradb-cluster-client=1:{{ percona_xtradb_cluster_version }}.bionic"
       - "libperconaserverclient21=1:{{ percona_xtradb_cluster_version }}.bionic"
       - "percona-xtradb-cluster-server=1:{{ percona_xtradb_cluster_version }}.bionic"
+  proxysql:
+    url: "https://github.com/sysown/proxysql/releases/download/v{{proxysql_version}}/proxysql_{{proxysql_version}}-ubuntu18_amd64.deb"
 
 el7:
   repo_url: "https://repo.percona.com/yum/percona-release-latest.noarch.rpm"
@@ -141,4 +143,10 @@ el7:
     cnf_file: '/var/lib/pgsql/11/data/postgresql.conf'
   ppg12:
     systemd_service: 'postgresql-12'
-    cnf_file: '/var/lib/pgsql/12/data/postgresql.conf'    
+    cnf_file: '/var/lib/pgsql/12/data/postgresql.conf'
+
+  proxysql:
+    url: "https://github.com/sysown/proxysql/releases/download/v{{ proxysql_version | regex_replace('-[0-9]+$', '') }}/proxysql-{{proxysql_version}}-centos7.x86_64.rpm"
+el8:
+  proxysql:
+    url: "https://github.com/sysown/proxysql/releases/download/v{{ proxysql_version | regex_replace('-[0-9]+$', '') }}/proxysql-{{proxysql_version}}-centos8.x86_64.rpm"
