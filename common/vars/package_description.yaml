@@ -145,8 +145,21 @@ el7:
     systemd_service: 'postgresql-12'
     cnf_file: '/var/lib/pgsql/12/data/postgresql.conf'
 
+  mariadb_server:
+    install_packages:
+      - "MariaDB-common-{{mariadb_version}}.el7.centos.x86_64"
+      - "MariaDB-client-{{mariadb_version}}.el7.centos.x86_64"
+      - "MariaDB-server-{{mariadb_version}}.el7.centos.x86_64"
+
   proxysql:
-    url: "https://github.com/sysown/proxysql/releases/download/v{{ proxysql_version | regex_replace('-[0-9]+$', '') }}/proxysql-{{proxysql_version}}-centos7.x86_64.rpm"
+    install_packages:
+      - "https://github.com/sysown/proxysql/releases/download/v{{ proxysql_version | regex_replace('-[0-9]+$', '') }}/proxysql-{{proxysql_version}}-centos7.x86_64.rpm"
 el8:
   proxysql:
-    url: "https://github.com/sysown/proxysql/releases/download/v{{ proxysql_version | regex_replace('-[0-9]+$', '') }}/proxysql-{{proxysql_version}}-centos8.x86_64.rpm"
+    install_packages:
+      - "https://github.com/sysown/proxysql/releases/download/v{{ proxysql_version | regex_replace('-[0-9]+$', '') }}/proxysql-{{proxysql_version}}-centos8.x86_64.rpm"
+  mariadb_server:
+    install_packages:
+      - "MariaDB-common-{{mariadb_version}}.el8.x86_64"
+      - "MariaDB-client-{{mariadb_version}}.el8.x86_64"
+      - "MariaDB-server-{{mariadb_version}}.el8.x86_64"

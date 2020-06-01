@@ -199,6 +199,7 @@ PROXYSQL=2.0.12 lxdock up default
 lxdock destroy -f || true
 
 
+
 PROXYSQL=2.0.12-1 vagrant up default
 vagrant destroy -f || true
 
@@ -207,3 +208,6 @@ vagrant destroy -f || true
 
 OS=ubuntu/bionic64 PROXYSQL=2.0.12 vagrant provision default
 vagrant destroy -f
+
+# MariaDB
+MARIADB="10.4.12-1" lxdock provision default
