@@ -210,4 +210,5 @@ OS=ubuntu/bionic64 PROXYSQL=2.0.12 vagrant provision default
 vagrant destroy -f
 
 # MariaDB
-MARIADB="10.4.12-1" lxdock provision default
+MARIADB=10.4.12-1 lxdock provision default
+MARIADB=10.4.12-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf lxdock up default

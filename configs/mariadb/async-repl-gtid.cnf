@@ -1,0 +1,8 @@
+[mysqld]
+innodb_buffer_pool_size=512M
+server_id=55
+gtid_domain_id=51
+gtid_strict_mode=1
+log-bin=mysqld-bin
+# required for 5.6
+log-slave-updates

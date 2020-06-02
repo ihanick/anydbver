@@ -161,6 +161,21 @@ DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 REPLICATION_TYPE=galera MASTER=$(
 DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/pxc5657.cnf vagrant provision node2
 ```
 
+## MariaDB
+
+You can install a specific version of MariaDB on CentOS/RHEL 7,8. If DB_PASS is specified you can start daemon with START=1 and specify configuration options with DB_OPTS
+```
+./gen_lxdock.sh anydbver centos/7 2
+MARIADB=10.4.12-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf lxdock up default
+lxdock destroy -f
+```
+
+```
+MARIADB=10.4.12-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf vagrant up default
+vagrant destroy -f
+```
+
+
 ## MongoDB replica set
 
 ```bash

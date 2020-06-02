@@ -249,9 +249,9 @@
         state: present
 
     - name: Create MySQL Database
-      when: (percona_server_version != '' or percona_xtradb_cluster_version != '') and db_password != ''
+      when: (percona_server_version != '' or percona_xtradb_cluster_version != '' or mariadb_version != '') and db_password != ''
       command:
-        cmd: /bin/bash /vagrant/tools/create_mysql_db_with_password.sh "{{ db_password }}" "{{ 'oldgrant' if percona_server_version.startswith('5.6') or percona_xtradb_cluster_version.startswith('5.6') else 'no' }}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
+        cmd: /bin/bash /vagrant/tools/create_mysql_db_with_password.sh "{{ db_password }}" "{{ 'oldgrant' if percona_server_version.startswith('5.6') or percona_xtradb_cluster_version.startswith('5.6') or mariadb_version != '' else 'no' }}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
         creates: /root/.my.cnf
 
     - name: Apply Mongo database options from file
@@ -297,7 +297,7 @@
           file: path="/root/replica-{{mongo_replicaset}}.applied" state=touch modification_time=preserve access_time=preserve
           
     - name: Apply database options from file
-      when: (percona_server_version != '' or percona_xtradb_cluster_version != '' or percona_postgresql_version != '') and db_opts_file != ''
+      when: (percona_server_version != '' or percona_xtradb_cluster_version != '' or percona_postgresql_version != '' or mariadb_version != '') and db_opts_file != ''
       command:
         cmd: /bin/bash /vagrant/tools/apply_mysql_conf.sh "{{ os[dist][soft].cnf_file }}" "/vagrant/configs/{{ db_opts_file }}"
         creates: "/root/{{ db_opts_file | basename }}.applied"
