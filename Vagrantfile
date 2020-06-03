@@ -23,6 +23,7 @@ MASTER = ENV["MASTER"] || ""
 REPLICATION_TYPE = ENV["REPLICATION_TYPE"] || ""
 REPLICA_SET = ENV["REPLICA_SET"] || ""
 PROXYSQL = ENV["PROXYSQL"] || ""
+PERCONA_PROXYSQL = ENV["PERCONA_PROXYSQL"] || ""
 MARIADB = ENV["MARIADB"] || ""
 
 # get token from master k3s node: cat /var/lib/rancher/k3s/server/node-token
@@ -100,6 +101,7 @@ Vagrant.configure("2") do |config|
       extra_replication_type: REPLICATION_TYPE,
       extra_mongo_replicaset: REPLICA_SET,
       extra_proxysql_version: PROXYSQL,
+      extra_percona_proxysql_version: PERCONA_PROXYSQL,
       extra_mariadb_version: MARIADB,
     }
   end  

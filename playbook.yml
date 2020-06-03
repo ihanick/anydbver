@@ -26,6 +26,7 @@
     replication_type: "{{ lookup('vars', 'extra_replication_type', default=lookup('env','REPLICATION_TYPE',default='') ) }}"
     mongo_replicaset: "{{ lookup('vars', 'extra_mongo_replicaset', default=lookup('env','REPLICA_SET',default='') ) }}"
     proxysql_version: "{{ lookup('vars', 'extra_proxysql_version', default=lookup('env','PROXYSQL',default='') ) }}"
+    percona_proxysql_version: "{{ lookup('vars', 'extra_percona_proxysql_version', default=lookup('env','PERCONA_PROXYSQL',default='') ) }}"
     mariadb_version: "{{ lookup('vars', 'extra_mariadb_version', default=lookup('env','MARIADB',default='') ) }}"
 
     percona_server_name: "{{ 'percona-server' if percona_server_version.startswith('8.0') else 'Percona-Server' }}"
@@ -56,7 +57,8 @@
       psmdb_version != '' or
       pbm_version != '' or
       percona_postgresql_version != '' or
-      percona_toolkit_version != ''
+      percona_toolkit_version != '' or
+      percona_proxysql_version != ''
       else ''
       }}
     dist: >-
@@ -78,6 +80,7 @@
       'ppg11' if percona_postgresql_version.startswith('11') else
       'ppg12' if percona_postgresql_version.startswith('12') else
       'proxysql' if proxysql_version != '' else
+      'percona_proxysql' if percona_proxysql_version != '' else
       'mariadb_server' if mariadb_version != '' else
       ''
       }}
@@ -176,7 +179,7 @@
         update_cache: yes
 
     - name: install db packages
-      when: percona_server_version != "" or percona_xtradb_cluster_version != "" or mariadb_version != '' or proxysql_version != ''
+      when: percona_server_version != "" or percona_xtradb_cluster_version != "" or mariadb_version != '' or proxysql_version != '' or percona_proxysql_version != ''
       package:
         name: "{{ item }}"
         state: present
