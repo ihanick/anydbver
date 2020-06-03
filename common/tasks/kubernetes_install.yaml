@@ -1,8 +1,10 @@
 - name: Download k3s kubernetes distribution
-  get_url:
+  uri:
     url: "{{ 'https://github.com/rancher/k3s/releases/download/v'+k3s_version+'%2Bk3s1/k3s' if k3s_version != '' and k3s_version != 'latest' else os.k3s.latest_url }}"
     dest: /usr/local/bin/k3s
     mode: '0755'
+    follow_redirects: all
+    creates: /usr/local/bin/k3s
 - name: Download k3s systemd service
   get_url:
     url: https://raw.githubusercontent.com/rancher/k3s/master/k3s.service
