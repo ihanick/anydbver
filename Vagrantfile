@@ -25,6 +25,7 @@ REPLICA_SET = ENV["REPLICA_SET"] || ""
 PROXYSQL = ENV["PROXYSQL"] || ""
 PERCONA_PROXYSQL = ENV["PERCONA_PROXYSQL"] || ""
 MARIADB = ENV["MARIADB"] || ""
+DEBUG_PACKAGES = ENV["DEBUG_PACKAGES"] || ""
 
 # get token from master k3s node: cat /var/lib/rancher/k3s/server/node-token
 # if node re-added, kubectl delete node node1, and remove old entry from /var/lib/rancher/k3s/server/cred/node-passwd before run
@@ -103,6 +104,7 @@ Vagrant.configure("2") do |config|
       extra_proxysql_version: PROXYSQL,
       extra_percona_proxysql_version: PERCONA_PROXYSQL,
       extra_mariadb_version: MARIADB,
+      extra_debug_packages: DEBUG_PACKAGES,
     }
   end  
 

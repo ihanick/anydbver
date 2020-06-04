@@ -110,6 +110,9 @@ el7:
       - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
       - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
       - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
+    install_debug_packages:
+      - gdb
+      - "{{ percona_mysql_name }}-debuginfo{{ percona_mysql_full_ver }}"
   pxc56:
     systemd_service: "mysql"
     cnf_file: "/etc/my.cnf"
@@ -134,10 +137,14 @@ el7:
     systemd_service: "mysqld"
     cnf_file: "/etc/my.cnf"
     install_packages:
+      - openssl
       - "{{ percona_mysql_name }}-shared-compat{{ percona_mysql_full_ver }}"            
       - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
       - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
       - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
+    install_debug_packages:
+      - gdb
+      - "{{ percona_mysql_name }}-debuginfo{{ percona_mysql_full_ver }}"
   ppg11:
     systemd_service: 'postgresql-11'
     cnf_file: '/var/lib/pgsql/11/data/postgresql.conf'
