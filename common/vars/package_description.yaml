@@ -92,14 +92,20 @@ el7:
       - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
       - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
       - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
+    install_debug_packages:
+      - gdb
+      - "{{ percona_mysql_name }}-debuginfo{{ percona_mysql_full_ver }}"
   ps57:
     systemd_service: "mysqld"
     cnf_file: "/etc/percona-server.conf.d/mysqld.cnf"
     install_packages:
-      - "{{ percona_mysql_name }}-shared-compat{{ percona_mysql_full_ver }}"            
-      - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
-      - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
-      - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
+      - Percona-Server-shared-compat-57-{{ percona_server_version }}.el7.x86_64
+      - Percona-Server-shared-57-{{        percona_server_version }}.el7.x86_64
+      - Percona-Server-client-57-{{        percona_server_version }}.el7.x86_64
+      - Percona-Server-server-57-{{        percona_server_version }}.el7.x86_64
+    install_debug_packages:
+      - gdb
+      - Percona-Server-57-debuginfo-{{ percona_server_version }}.el7.x86_64
   ps80:
     repo_file: "/etc/yum.repos.d/percona-ps-80-release.repo"
     repo_enable_str: "ps-80"

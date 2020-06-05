@@ -61,7 +61,7 @@ kernel.panic_on_oops = 1
 ```
 
 In case of dns issues inside k8s containers: https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/
-`reply from unexpected source` problem could be solved with loading br_netfilter module
+`reply from unexpected source` problem could be solved with loading `br_netfilter` module
 ```
 modprobe br_netfilter
 ```
@@ -98,7 +98,7 @@ Start two "servers" one with Percona Server 8.0, XtraBackup, Percona Monitoring 
 ```bash
 [anydbver]$ export VAGRANT_DEFAULT_PROVIDER=lxc
 [anydbver]$ PT=3.2.0-1 PXB=8.0.10-1 PS=8.0.18-9.1 DB_PASS=secret PMM_CLIENT=2.5.0-6 vagrant up
-[anydbver]$ PMM_SERVER=2.5.0 vagrant up node1
+[anydbver]$ PMM_SERVER=2.6.1 DB_PASS=secret vagrant up node1
 [anydbver]$ vagrant ssh node1 -- sudo podman ps
 CONTAINER ID  IMAGE                               COMMAND               CREATED             STATUS                 PORTS               NAMES
 62553a08bdcb  docker.io/percona/pmm-server:2.5.0  /opt/entrypoint.s...  About a minute ago  Up About a minute ago  0.0.0.0:80->80/tcp  pmm-server
