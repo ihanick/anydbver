@@ -28,6 +28,7 @@
     proxysql_version: "{{ lookup('vars', 'extra_proxysql_version', default=lookup('env','PROXYSQL',default='') ) }}"
     percona_proxysql_version: "{{ lookup('vars', 'extra_percona_proxysql_version', default=lookup('env','PERCONA_PROXYSQL',default='') ) }}"
     mariadb_version: "{{ lookup('vars', 'extra_mariadb_version', default=lookup('env','MARIADB',default='') ) }}"
+    orchestrator_version: "{{ lookup('vars', 'extra_orchestrator_version', default=lookup('env','ORCHESTRATOR',default='') ) }}"
     debug_packages: "{{ lookup('vars', 'extra_debug_packages', default=lookup('env','DEBUG_PACKAGES',default='') ) }}"
 
     percona_server_name: "{{ 'percona-server' if percona_server_version.startswith('8.0') else 'Percona-Server' }}"
@@ -83,6 +84,7 @@
       'proxysql' if proxysql_version != '' else
       'percona_proxysql' if percona_proxysql_version != '' else
       'mariadb_server' if mariadb_version != '' else
+      'orchestrator' if orchestrator_version != '' else
       ''
       }}
   tasks:
@@ -178,9 +180,21 @@
       when: (percona_release_enabled.changed or local_debs_installed.changed) and (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
       apt:
         update_cache: yes
+    
+    - name: Enable EPEL
+      when: orchestrator_version != ''
+      package:
+        name: epel-release
+        state: present
 
     - name: install db packages
-      when: percona_server_version != "" or percona_xtradb_cluster_version != "" or mariadb_version != '' or proxysql_version != '' or percona_proxysql_version != ''
+      when: >
+        percona_server_version != "" or
+        percona_xtradb_cluster_version != "" or
+        mariadb_version != '' or
+        orchestrator_version != '' or
+        proxysql_version != '' or
+        percona_proxysql_version != ''
       package:
         name: "{{ item }}"
         state: present
