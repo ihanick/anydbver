@@ -35,7 +35,6 @@
     percona_server_major_ver: "{{ '' if percona_server_version.startswith('8.0') else '-57' if percona_server_version.startswith('5.7') else '-56' if percona_server_version.startswith('5.6') else '' }}"
     percona_server_full_ver: "{{ percona_server_major_ver }}-{{ percona_server_version }}.el7.x86_64"
     percona_xtradb_cluster_56_version: "{{ percona_xtradb_cluster_version if percona_xtradb_cluster_version.startswith('5.6') else '' }}"
-    percona_xtradb_cluster_56_galera: "{{ percona_xtradb_cluster_galera if percona_xtradb_cluster_galera != '' else ( percona_xtradb_cluster_56_version | regex_replace('^.*\\.([0-9]+)\\.([0-9]+)$', '3-3.\\1-\\2') ) if percona_xtradb_cluster_version.startswith('5.6') else '' }}"
     percona_xtradb_cluster_name: "{{ 'Percona-XtraDB-Cluster' if percona_xtradb_cluster_version.startswith('5.6') or percona_xtradb_cluster_version.startswith('5.7') else 'percona-xtradb-cluster' }}"
     percona_xtradb_cluster_major_ver: "{{ '-56' if percona_xtradb_cluster_version.startswith('5.6') else '-57' if percona_xtradb_cluster_version.startswith('5.7') else '' }}"
     percona_xtradb_cluster_full_ver: "{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el7.x86_64"
@@ -102,13 +101,9 @@
     - name: Install Percona apt Repository
       when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and is_percona_repo_required != ''
       block:
-        - name: install percona apt repo
-          get_url:
-            url: "{{ os[dist].repo_url }}"
-            dest: "{{ os[dist].repo_pkg }}"
         - name: install percona-release.deb
           apt:
-            deb: "{{ os[dist].repo_pkg }}"
+            deb: "{{ os[dist].repo_url }}"
           register: percona_release_deb_installed
         - name: refresh apt repo
           when: percona_release_deb_installed.changed
@@ -152,49 +147,31 @@
       import_tasks:
         file: common/tasks/mariadb.yaml
 
-    - name: Setup local repo with desired version
-      when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and soft != ''
-      block:
-        - name: install dpkg-dev
-          package:
-            name: dpkg-dev
-            state: present
-        - name: ansible create directory example
-          file:
-            path: /usr/local/packages
-            state: directory
-        - name: download debs manually to local directory
-          when: proxysql_version == ''
-          get_url:
-            url: "{{ os[dist][soft].download_url }}/{{ item }}_{{ os[dist][soft].version }}.{{ dist }}_amd64.deb"
-            dest: "/usr/local/packages/{{ item }}_{{ os[dist][soft].version }}.{{ dist }}_amd64.deb"
-          with_items: "{{ os[dist][soft].download_packages }}"
-            
-        - name: generate Packages.gz
-          shell:
-            cmd: "cd /usr/local/packages; dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz; echo 'deb [trusted=yes] file:/usr/local/packages ./' > /etc/apt/sources.list.d/percona-old-local.list"
-            creates: "/etc/apt/sources.list.d/percona-old-local.list"
-          register: local_debs_installed
-
-    - name: refresh apt repo after enable
-      when: (percona_release_enabled.changed or local_debs_installed.changed) and (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
-      apt:
-        update_cache: yes
-    
     - name: Enable EPEL
-      when: orchestrator_version != ''
+      when: >
+        orchestrator_version != '' and
+        (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
       package:
         name: epel-release
         state: present
 
+    - name: install apt db packages
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+      apt:
+        deb: "{{item}}"
+      with_items: "{{ os[dist][soft].install_packages if debug_packages == '' else os[dist][soft].install_packages + os[dist][soft].install_debug_packages }}"
+
     - name: install db packages
       when: >
+        (
         percona_server_version != "" or
         percona_xtradb_cluster_version != "" or
         mariadb_version != '' or
         orchestrator_version != '' or
         proxysql_version != '' or
         percona_proxysql_version != ''
+        ) and
+        (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
       package:
         name: "{{ item }}"
         state: present
