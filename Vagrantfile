@@ -25,6 +25,7 @@ REPLICA_SET = ENV["REPLICA_SET"] || ""
 PROXYSQL = ENV["PROXYSQL"] || ""
 PERCONA_PROXYSQL = ENV["PERCONA_PROXYSQL"] || ""
 MARIADB = ENV["MARIADB"] || ""
+MYSQL = ENV["MYSQL"] || ""
 ORCHESTRATOR = ENV["ORCHESTRATOR"] || ""
 DEBUG_PACKAGES = ENV["DEBUG_PACKAGES"] || ""
 
@@ -105,6 +106,7 @@ Vagrant.configure("2") do |config|
       extra_proxysql_version: PROXYSQL,
       extra_percona_proxysql_version: PERCONA_PROXYSQL,
       extra_mariadb_version: MARIADB,
+      extra_mysql_version: MYSQL,
       extra_orchestrator_version: ORCHESTRATOR,
       extra_debug_packages: DEBUG_PACKAGES,
     }

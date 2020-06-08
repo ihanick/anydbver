@@ -28,6 +28,7 @@
     proxysql_version: "{{ lookup('vars', 'extra_proxysql_version', default=lookup('env','PROXYSQL',default='') ) }}"
     percona_proxysql_version: "{{ lookup('vars', 'extra_percona_proxysql_version', default=lookup('env','PERCONA_PROXYSQL',default='') ) }}"
     mariadb_version: "{{ lookup('vars', 'extra_mariadb_version', default=lookup('env','MARIADB',default='') ) }}"
+    mysql_version: "{{ lookup('vars', 'extra_mysql_version', default=lookup('env','MYSQL',default='') ) }}"
     orchestrator_version: "{{ lookup('vars', 'extra_orchestrator_version', default=lookup('env','ORCHESTRATOR',default='') ) }}"
     debug_packages: "{{ lookup('vars', 'extra_debug_packages', default=lookup('env','DEBUG_PACKAGES',default='') ) }}"
 
@@ -83,6 +84,7 @@
       'proxysql' if proxysql_version != '' else
       'percona_proxysql' if percona_proxysql_version != '' else
       'mariadb_server' if mariadb_version != '' else
+      'mysql' if mysql_version != '' else
       'orchestrator' if orchestrator_version != '' else
       ''
       }}
@@ -141,7 +143,16 @@
       command:
         cmd: /usr/bin/percona-release enable ppg-12.2 testing
         creates: /etc/yum.repos.d/percona-ppg-12.2-testing.repo
-
+    - name: MySQL repo
+      when: mysql_version != ''
+      block:
+        - name: MySQL 8.0 yum repo
+          when: >
+            mysql_version.startswith('8.0') and
+            (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+          yum:
+            name: "{{os[dist][soft].repo_url}}"
+            state: present
     - name: Include MariaDB tasks
       when: mariadb_version != ''
       import_tasks:
@@ -167,6 +178,7 @@
         percona_server_version != "" or
         percona_xtradb_cluster_version != "" or
         mariadb_version != '' or
+        mysql_version != '' or
         orchestrator_version != '' or
         proxysql_version != '' or
         percona_proxysql_version != ''
@@ -244,11 +256,17 @@
     - name: install Percona Toolkit
       when: percona_toolkit_version != ""
       package:
-        name: "percona-toolkit-{{ percona_toolkit_version }}.el7.x86_64"
+        name: "percona-toolkit-{{ percona_toolkit_version }}.{{dist}}.x86_64"
         state: present
 
     - name: Create MySQL Database
-      when: (percona_server_version != '' or percona_xtradb_cluster_version != '' or mariadb_version != '') and db_password != ''
+      when: >
+        (
+        percona_server_version != '' or
+        percona_xtradb_cluster_version != '' or
+        mariadb_version != '' or
+        mysql_version != ''
+        ) and db_password != ''
       command:
         cmd: /bin/bash /vagrant/tools/create_mysql_db_with_password.sh "{{ db_password }}" "{{ 'oldgrant' if percona_server_version.startswith('5.6') or percona_xtradb_cluster_version.startswith('5.6') or mariadb_version != '' else 'no' }}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
         creates: /root/.my.cnf

@@ -157,7 +157,14 @@ el7:
       - "MariaDB-common-{{mariadb_version}}.el7.centos.x86_64"
       - "MariaDB-client-{{mariadb_version}}.el7.centos.x86_64"
       - "MariaDB-server-{{mariadb_version}}.el7.centos.x86_64"
-
+  mysql:
+    repo_url: https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm
+    systemd_service: "mysqld"
+    cnf_file: '/etc/my.cnf'
+    install_packages:
+      - "mysql-community-common-{{mysql_version}}.el7.x86_64"
+      - "mysql-community-client-{{mysql_version}}.el7.x86_64"
+      - "mysql-community-server-{{mysql_version}}.el7.x86_64"
   proxysql:
     install_packages:
       - "https://github.com/sysown/proxysql/releases/download/v{{ proxysql_version | regex_replace('-[0-9]+$', '') }}/proxysql-{{proxysql_version}}-centos7.x86_64.rpm"
@@ -188,6 +195,15 @@ el8:
       - "MariaDB-common-{{mariadb_version}}.el8.x86_64"
       - "MariaDB-client-{{mariadb_version}}.el8.x86_64"
       - "MariaDB-server-{{mariadb_version}}.el8.x86_64"
+  mysql:
+    repo_url: https://dev.mysql.com/get/mysql80-community-release-el8-1.noarch.rpm
+    systemd_service: "mysqld"
+    cnf_file: '/etc/my.cnf'
+    install_packages:
+      - https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-common-{{mysql_version}}.el8.x86_64.rpm
+      - https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-libs-{{mysql_version}}.el8.x86_64.rpm
+      - https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-{{mysql_version}}.el8.x86_64.rpm
+      - https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server-{{mysql_version}}.el8.x86_64.rpm
 
   orchestrator:
     install_packages:

@@ -218,3 +218,12 @@ MARIADB=10.4.12-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl
 K3S=latest lxdock up default
 K3S_TOKEN=$(lxdock shell default -c cat /var/lib/rancher/k3s/server/node-token) K3S_URL="https://$(lxdock shell default -c hostname -I | cut -d' ' -f3):6443" lxdock up node1 node2
 K3S=latest PKO4PXC='1.4.0' lxdock provision default
+
+# Vanilla MySQL 8.0
+./gen_lxdock.sh anydbver centos/7
+MYSQL=8.0.20-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
+lxdock destroy -f
+
+./gen_lxdock.sh anydbver centos/8
+MYSQL=8.0.20-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
+lxdock destroy -f
