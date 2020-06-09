@@ -98,6 +98,8 @@ el7:
     install_debug_packages:
       - gdb
       - Percona-Server-57-debuginfo-{{ percona_server_version }}.el7.x86_64
+    rocksdb_packages:
+      - Percona-Server-rocksdb-57-{{ percona_server_version }}.el7.x86_64
   ps80:
     repo_file: "/etc/yum.repos.d/percona-ps-80-release.repo"
     repo_enable_str: "ps-80"

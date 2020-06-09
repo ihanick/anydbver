@@ -3,6 +3,7 @@
   become: yes
   vars:
     percona_server_version: "{{ lookup('vars', 'extra_percona_server_version', default=lookup('env', 'PS', default='') ) }}"
+    rocksdb_enabled: "{{ lookup('vars', 'extra_rocksdb_enabled', default=lookup('env', 'ROCKSDB', default='') ) }}"
     percona_xtrabackup_version: "{{ lookup('vars', 'extra_percona_xtrabackup_version', default=lookup('env','PXB',default='') ) }}"
     percona_xtradb_cluster_version: "{{ lookup('vars', 'extra_percona_xtradb_cluster_version', default=lookup('env','PXC',default='') ) }}"
     percona_xtradb_cluster_galera: "{{ lookup('vars', 'extra_percona_xtradb_cluster_galera', default=lookup('env','PXC_GALERA',default='') ) }}"
@@ -170,7 +171,14 @@
       when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
       apt:
         deb: "{{item}}"
-      with_items: "{{ os[dist][soft].install_packages if debug_packages == '' else os[dist][soft].install_packages + os[dist][soft].install_debug_packages }}"
+      with_items: >-
+        {{
+          os[dist][soft].install_packages +
+          ( [] if debug_packages == '' else
+            os[dist][soft].install_packages + os[dist][soft].install_debug_packages) +
+          ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else
+            os[dist][soft].rocksdb_packages)
+        }}
 
     - name: install db packages
       when: >
@@ -187,7 +195,14 @@
       package:
         name: "{{ item }}"
         state: present
-      with_items: "{{ os[dist][soft].install_packages if debug_packages == '' else os[dist][soft].install_packages + os[dist][soft].install_debug_packages }}"
+      with_items: >-
+        {{
+          os[dist][soft].install_packages +
+          ( [] if debug_packages == '' else
+            os[dist][soft].install_packages + os[dist][soft].install_debug_packages) +
+          ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else
+            os[dist][soft].rocksdb_packages)
+        }}
 
     - name: install Percona XtraBackup
       when: percona_xtrabackup_version != ""

@@ -1,5 +1,6 @@
 # PXC=5.6.45-28.36.1 PXC56GALERA=3-3.36-1 PXB=2.3.9-1 vagrant up --provider=lxc
 PS = ENV["PS"] || "" # "5.6.47-rel87.0.1" "5.7.29-32.1" "8.0.18-9.1"
+ROCKSDB = ENV["ROCKSDB"] || "" # "1"
 PXC = ENV["PXC"] || "" # "5.6.45-28.36.1" "5.7.22-29.26.1" "8.0.18-9.3"
 PXC_GALERA = ENV["PXC_GALERA"] || "" # "3-3.36-1"
 PXB = ENV["PXB"] || "" # "2.3.9-1"
@@ -81,6 +82,7 @@ Vagrant.configure("2") do |config|
     ansible.verbose = false
     ansible.extra_vars = {
       extra_percona_server_version: PS,
+      extra_rocksdb_enabled: ROCKSDB,
       extra_percona_xtrabackup_version: PXB,
       extra_percona_xtradb_cluster_version: PXC,
       extra_percona_xtradb_cluster_galera: PXC_GALERA,

@@ -227,3 +227,7 @@ lxdock destroy -f
 ./gen_lxdock.sh anydbver centos/8
 MYSQL=8.0.20-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
 lxdock destroy -f
+
+./gen_lxdock.sh anydbver centos/7
+ROCKSDB=1 DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up
+lxdock destroy -f
