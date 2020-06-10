@@ -11,6 +11,7 @@
     pbm_version: "{{ lookup('vars', 'extra_pbm_version', default=lookup('env','PBM',default='') ) }}"
     pmm_server_version: "{{ lookup('vars', 'extra_pmm_server_version', default=lookup('env','PMM_SERVER',default='') ) }}"
     pmm_client_version: "{{ lookup('vars', 'extra_pmm_client_version', default=lookup('env','PMM_CLIENT',default='') ) }}"
+    pmm_url: "{{ lookup('vars', 'extra_pmm_url', default=lookup('env','PMM_URL',default='') ) }}"
     percona_postgresql_version: "{{ lookup('vars', 'extra_percona_postgresql_version', default=lookup('env', 'PPGSQL', default='') ) }}"
     percona_toolkit_version: "{{ lookup('vars', 'extra_percona_toolkit_version', default=lookup('env','PT',default='') ) }}"
     db_user: "{{ lookup('vars', 'extra_db_user', default=lookup('env','DB_USER',default='') ) }}"
@@ -61,6 +62,7 @@
       pbm_version != '' or
       percona_postgresql_version != '' or
       percona_toolkit_version != '' or
+      pmm_client_version != '' or
       percona_proxysql_version != ''
       else ''
       }}
@@ -233,8 +235,15 @@
     - name: install PMM client
       when: pmm_client_version != ""
       package:
-        name: "{{ pmm_client_full_name }}"
+        name: "{{item}}"
         state: present
+      with_items: "{{os[dist].pmm_client.install_packages }}"
+    - name: Setup pmm-admin
+      when: pmm_client_version != '' and pmm_url != ''
+      register: pmm_admin_config
+      changed_when: "'already exists' not in pmm_admin_config.stdout"
+      shell:
+        cmd: '/usr/bin/pmm-admin config --server-insecure-tls --server-url="{{pmm_url}}" || true'
 
     - name: install podman (like docker)
       when: pmm_server_version != ""

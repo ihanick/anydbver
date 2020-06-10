@@ -231,3 +231,8 @@ lxdock destroy -f
 ./gen_lxdock.sh anydbver centos/7
 ROCKSDB=1 DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up
 lxdock destroy -f
+
+./gen_lxdock.sh anydbver centos/7 3
+PMM_SERVER=2.5.0 lxdock up node2
+PMM_CLIENT=2.5.0-6 PMM_URL="https://admin:admin@$(lxdock shell node2 -c hostname -I |cut -d' ' -f 2):443"  lxdock up default
+lxdock destroy -f
