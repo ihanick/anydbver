@@ -33,6 +33,7 @@
     mysql_version: "{{ lookup('vars', 'extra_mysql_version', default=lookup('env','MYSQL',default='') ) }}"
     orchestrator_version: "{{ lookup('vars', 'extra_orchestrator_version', default=lookup('env','ORCHESTRATOR',default='') ) }}"
     debug_packages: "{{ lookup('vars', 'extra_debug_packages', default=lookup('env','DEBUG_PACKAGES',default='') ) }}"
+    sysbench_version: "{{ lookup('vars', 'extra_sysbench_version', default=lookup('env','SYSBENCH',default='') ) }}"
 
     percona_server_name: "{{ 'percona-server' if percona_server_version.startswith('8.0') else 'Percona-Server' }}"
     percona_server_major_ver: "{{ '' if percona_server_version.startswith('8.0') else '-57' if percona_server_version.startswith('5.7') else '-56' if percona_server_version.startswith('5.6') else '' }}"
@@ -63,6 +64,7 @@
       percona_postgresql_version != '' or
       percona_toolkit_version != '' or
       pmm_client_version != '' or
+      sysbench_version != '' or
       percona_proxysql_version != ''
       else ''
       }}
@@ -89,6 +91,7 @@
       'mariadb_server' if mariadb_version != '' else
       'mysql' if mysql_version != '' else
       'orchestrator' if orchestrator_version != '' else
+      'sysbench' if sysbench_version != '' else
       ''
       }}
   tasks:
@@ -191,6 +194,7 @@
         mysql_version != '' or
         orchestrator_version != '' or
         proxysql_version != '' or
+        sysbench_version != '' or
         percona_proxysql_version != ''
         ) and
         (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')

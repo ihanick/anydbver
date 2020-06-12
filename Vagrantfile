@@ -30,6 +30,7 @@ MARIADB = ENV["MARIADB"] || ""
 MYSQL = ENV["MYSQL"] || ""
 ORCHESTRATOR = ENV["ORCHESTRATOR"] || ""
 DEBUG_PACKAGES = ENV["DEBUG_PACKAGES"] || ""
+SYSBENCH = ENV["SYSBENCH"] || ""
 
 # get token from master k3s node: cat /var/lib/rancher/k3s/server/node-token
 # if node re-added, kubectl delete node node1, and remove old entry from /var/lib/rancher/k3s/server/cred/node-passwd before run
@@ -113,6 +114,7 @@ Vagrant.configure("2") do |config|
       extra_mysql_version: MYSQL,
       extra_orchestrator_version: ORCHESTRATOR,
       extra_debug_packages: DEBUG_PACKAGES,
+      extra_sysbench_version: SYSBENCH,
     }
   end  
 
