@@ -184,6 +184,7 @@ el7:
       - "pmm{{'2' if pmm_client_version.startswith('2') else ''}}-client-{{pmm_client_version}}.el7.x86_64"
   sysbench:
     install_packages:
+      - "Percona-Server-client-56"
       - "sysbench-{{sysbench_version}}.el7.x86_64"
 
 el8:

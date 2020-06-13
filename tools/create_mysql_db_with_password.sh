@@ -25,7 +25,7 @@ else
     mysqld --pid-file=/var/lib/mysql/mysqld.pid $S --user=mysql --loose-wsrep-provider='none' --skip-networking --loose-log-error=/var/lib/mysql/default.err --loose-log-error-verbosity=3 &>/dev/null &
     mysqladmin $S --silent --connect-timeout=30 --wait=4 ping
 
-    mysql $S -e "ALTER USER root@localhost IDENTIFIED BY '$PASS';CREATE USER root@'%' IDENTIFIED BY '$PASS';GRANT ALL PRIVILEGES ON *.* TO root@'%';";
+    mysql $S -e "ALTER USER root@localhost IDENTIFIED BY '$PASS';CREATE USER root@'%' IDENTIFIED WITH mysql_native_password BY '$PASS';GRANT ALL PRIVILEGES ON *.* TO root@'%';";
 fi
 cat > /root/.my.cnf << EOF 
 [client]

@@ -241,6 +241,12 @@ lxdock destroy -f
 DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1    DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
 lxdock destroy -f
 
-./gen_lxdock.sh anydbver centos/7 1
-SYSBENCH=1.0.20-6 lxdock provision default
-lxdock destroy -f
+for MVER in 5.7.29-32.1 8.0.19-10.1 ; do
+    ./gen_lxdock.sh anydbver centos/7 2
+    DB_USER=root DB_PASS=secret START=1 PS=$MVER DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
+    SYSBENCH=1.0.20-6 lxdock up node1
+    lxdock shell node1 -c /vagrant/tools/sysbench_oltp_ro.sh $( lxdock shell default -c hostname -I | cut -d' ' -f1 ) root secret sbtest 2 10000 4 100
+    lxdock destroy -f
+done
+# 5.7.29-32.1 queries:                             3281712 (32815.00 per sec.)
+# 8.0.19-10.1 queries:                             2575440 (25752.72 per sec.)
