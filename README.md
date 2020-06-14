@@ -258,6 +258,16 @@ export PYLXD_WARNINGS=none
 
 In the same way as for vagrant-lxd you may create lxd profile $USER. ./gen_lxdock.sh uses such profiles automatically.
 
+## Postgresql
+
+Percona distribution for Postgresql could be installed in the same way as other databases.
+You can also setup streaming physical replication with slots:
+```bash
+./gen_lxdock.sh anydbver centos/7 2
+PPGSQL=12.2-4 DB_PASS=secret START=1 lxdock up default
+PPGSQL=12.2-4 DB_PASS=secret START=1 MASTER=$( lxdock shell default -c hostname -I | cut -d' ' -f1 ) lxdock up node1
+```
+
 ## Known issues and limitation
 
 * There is no support for outdated branches like Percona Server 5.5

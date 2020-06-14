@@ -250,3 +250,8 @@ for MVER in 5.7.29-32.1 8.0.19-10.1 ; do
 done
 # 5.7.29-32.1 queries:                             3281712 (32815.00 per sec.)
 # 8.0.19-10.1 queries:                             2575440 (25752.72 per sec.)
+
+# PG physical replication
+./gen_lxdock.sh anydbver centos/7 2
+PPGSQL=12.2-4 DB_PASS=secret START=1 lxdock up default
+PPGSQL=12.2-4 DB_PASS=secret START=1 MASTER=$( lxdock shell default -c hostname -I | cut -d' ' -f1 ) lxdock up node1
