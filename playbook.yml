@@ -34,6 +34,7 @@
     orchestrator_version: "{{ lookup('vars', 'extra_orchestrator_version', default=lookup('env','ORCHESTRATOR',default='') ) }}"
     debug_packages: "{{ lookup('vars', 'extra_debug_packages', default=lookup('env','DEBUG_PACKAGES',default='') ) }}"
     sysbench_version: "{{ lookup('vars', 'extra_sysbench_version', default=lookup('env','SYSBENCH',default='') ) }}"
+    mysql_random_data_load_version: "{{ lookup('vars', 'extra_mysql_random_data_load_version', default=lookup('env','MYSQL_RANDOM_DATA',default='') ) }}"
 
     percona_server_name: "{{ 'percona-server' if percona_server_version.startswith('8.0') else 'Percona-Server' }}"
     percona_server_major_ver: "{{ '' if percona_server_version.startswith('8.0') else '-57' if percona_server_version.startswith('5.7') else '-56' if percona_server_version.startswith('5.6') else '' }}"
@@ -443,6 +444,14 @@
         url: 'https://github.com/mikefarah/yq/releases/download/3.3.0/yq_linux_amd64'
         dest: /usr/local/bin/yq
         mode: '0755'
+    - name: install mysql_random_data_load
+      when: mysql_random_data_load_version != ''
+      shell:
+        warn: false
+        cmd: >-
+          curl -sL https://github.com/Percona-Lab/mysql_random_data_load/releases/download/v{{mysql_random_data_load_version}}/mysql_random_data_load_{{mysql_random_data_load_version}}_Linux_x86_64.tar.gz
+          | tar -C /usr/local/bin -xz mysql_random_data_load
+        creates: /usr/local/bin/mysql_random_data_load
     - name: Start database cluster in k8s with pmm
       when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '') and k8s_pmm != ''
       shell:

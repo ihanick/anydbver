@@ -255,3 +255,8 @@ done
 ./gen_lxdock.sh anydbver centos/7 2
 PPGSQL=12.2-4 DB_PASS=secret START=1 lxdock up default
 PPGSQL=12.2-4 DB_PASS=secret START=1 MASTER=$( lxdock shell default -c hostname -I | cut -d' ' -f1 ) lxdock up node1
+
+
+# install https://github.com/Percona-Lab/mysql_random_data_load/
+MYSQL_RANDOM_DATA=0.1.12 lxdock up default
+lxdock destroy -f
