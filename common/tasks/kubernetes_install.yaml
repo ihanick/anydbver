@@ -80,3 +80,18 @@
         warn: false
         cmd: helm install monitoring percona/pmm-server --set credentials.username=admin --set credentials.password=admin  --set imageTag=2.6.1 --set platform=kubernetes ; touch /root/k8s-pmm.installed
         creates: /root/k8s-pmm.installed
+    - name: Install minio with helm
+      when: k8s_minio != ''
+      shell:
+        warn: false
+        cmd: >-
+          helm repo add stable https://kubernetes-charts.storage.googleapis.com/ ;
+          helm install minio-service stable/minio
+          --set accessKey=REPLACE-WITH-AWS-ACCESS-KEY
+          --set secretKey=REPLACE-WITH-AWS-SECRET-KEY
+          --set service.type=ClusterIP
+          --set configPath=/tmp/.minio/
+          --set persistence.size=2G
+          --set environment.MINIO_REGION=us-east-1 ;
+          touch /root/k8s-minio.installed
+        creates: /root/k8s-minio.installed

@@ -24,6 +24,7 @@
     k3s_url: "{{ lookup('vars', 'extra_k3s_url', default=lookup('env','K3S_URL',default='') ) }}"
     k3s_version: "{{ lookup('vars', 'extra_k3s_version', default=lookup('env','K3S',default='') ) }}"
     k8s_pmm: "{{ lookup('vars', 'extra_k8s_pmm', default=lookup('env','K8S_PMM',default='') ) }}"
+    k8s_minio: "{{ lookup('vars', 'extra_k8s_minio', default=lookup('env','K8S_MINIO',default='') ) }}"
     master_ip: "{{ lookup('vars', 'extra_master_ip', default=lookup('env','MASTER',default='') ) }}"
     replication_type: "{{ lookup('vars', 'extra_replication_type', default=lookup('env','REPLICATION_TYPE',default='') ) }}"
     mongo_replicaset: "{{ lookup('vars', 'extra_mongo_replicaset', default=lookup('env','REPLICA_SET',default='') ) }}"
