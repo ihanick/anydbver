@@ -16,6 +16,7 @@
     percona_toolkit_version: "{{ lookup('vars', 'extra_percona_toolkit_version', default=lookup('env','PT',default='') ) }}"
     db_user: "{{ lookup('vars', 'extra_db_user', default=lookup('env','DB_USER',default='') ) }}"
     db_password: "{{ lookup('vars', 'extra_db_password', default=lookup('env','DB_PASS',default='') ) }}"
+    db_features: "{{ lookup('vars', 'extra_db_features', default=lookup('env','DB_FEATURES',default='') ) }}"
     percona_k8s_op_pxc_version: "{{ lookup('vars', 'extra_percona_k8s_op_pxc_version', default=lookup('env','PKO4PXC',default='') ) }}"
     percona_k8s_op_psmdb_version: "{{ lookup('vars', 'extra_percona_k8s_op_psmdb_version', default=lookup('env','PKO4PSMDB',default='') ) }}"
     start_db: "{{ lookup('vars', 'extra_start_db', default=lookup('env','START',default='') ) }}"
@@ -459,7 +460,11 @@
         warn: false
         cmd: >-
           sed -e 's/c3VwYXxefHBheno=/YWRtaW4=/' /root/{{ percona_k8s_op_name }}/deploy/secrets.yaml  | kubectl apply -f - ;
-          /usr/local/bin/yq merge -x /root/{{ percona_k8s_op_name }}/deploy/cr.yaml /vagrant/configs/k8s/cr-pmm.yaml > /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml;
+          /usr/local/bin/yq merge -x /root/{{ percona_k8s_op_name }}/deploy/cr.yaml /vagrant/configs/k8s/cr-pmm.yaml
+          {{ '/vagrant/configs/k8s/cr-mysql-gtid.yaml' if 'gtid' in db_features.split(',') else '' }}
+          {{ '/vagrant/configs/k8s/cr-mysql-pxc57.yaml' if 'pxc57' in db_features.split(',') else '' }}
+          > /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml
+          ;
           sed
           -e 's/antiAffinityTopologyKey: .*$/antiAffinityTopologyKey: \"none\"/g'
           -e 's/allowUnsafeConfigurations: false/allowUnsafeConfigurations: true/'

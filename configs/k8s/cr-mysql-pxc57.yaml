@@ -1,0 +1,6 @@
+spec:
+  pxc:
+    image: percona/percona-xtradb-cluster-operator:1.4.0-pxc5.7
+spec:
+  backup:
+    image: percona/percona-xtradb-cluster-operator:1.4.0-pxc5.7-backup

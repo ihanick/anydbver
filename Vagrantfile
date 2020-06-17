@@ -13,6 +13,7 @@ PPGSQL = ENV["PPGSQL"] || "" # "11.7-2"
 PT = ENV["PT"] || "" # "3.2.0-1"
 DB_USER = ENV["DB_USER"] || ""
 DB_PASS = ENV["DB_PASS"] || ""
+DB_FEATURES = ENV["DB_FEATURES"] || ""
 PKO4PXC = ENV["PKO4PXC"] || ""
 PKO4PSMDB = ENV["PKO4PSMDB"] || ""
 START = ENV["START"] || "" # START=1 to start systemd service automatically
@@ -99,6 +100,7 @@ Vagrant.configure("2") do |config|
       extra_percona_toolkit_version: PT,
       extra_db_user: DB_USER,
       extra_db_password: DB_PASS,
+      extra_db_features: DB_FEATURES,
       extra_percona_k8s_op_pxc_version: PKO4PXC,
       extra_percona_k8s_op_psmdb_version: PKO4PSMDB,
       extra_start_db: START,

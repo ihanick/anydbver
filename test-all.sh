@@ -217,7 +217,7 @@ MARIADB=10.4.12-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl
 # lxdock, multi-node k8s cluster
 K3S=latest K8S_MINIO=yes lxdock up default
 K3S_TOKEN=$(lxdock shell default -c cat /var/lib/rancher/k3s/server/node-token) K3S_URL="https://$(lxdock shell default -c hostname -I | cut -d' ' -f3):6443" lxdock up node1 node2
-K3S=latest PKO4PXC='1.4.0' lxdock provision default
+K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_FEATURES="gtid,master,backup" lxdock provision default
 lxdock destroy -f
 
 # Vanilla MySQL 8.0
@@ -261,3 +261,21 @@ PPGSQL=12.2-4 DB_PASS=secret START=1 MASTER=$( lxdock shell default -c hostname 
 # install https://github.com/Percona-Lab/mysql_random_data_load/
 MYSQL_RANDOM_DATA=0.1.12 lxdock up default
 lxdock destroy -f
+
+
+# K8S PXC cluster with slave server outside 
+./gen_lxdock.sh anydbver centos/7 5
+
+K3S=latest K8S_MINIO=yes lxdock up default
+until [ "x" != "x$IP" ]; do
+IP=$(lxdock shell default -c hostname -I | cut -d' ' -f3)
+sleep 1
+done
+echo "K8S master IP: $IP"
+K3S_TOKEN=$(lxdock shell default -c cat /var/lib/rancher/k3s/server/node-token) K3S_URL="https://$(lxdock shell default -c hostname -I | cut -d' ' -f3):6443" lxdock up node1 node2 node3
+# there are dns resolution issues for "too fast start"
+sleep 30
+K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_FEATURES="gtid,master,backup,pxc57" lxdock provision default
+lxdock shell default -c kubectl apply -f /vagrant/configs/k8s/svc-replication-master.yaml
+MASTER=$( lxdock shell default -c bash -c "kubectl get svc cluster1-pxc-0 -o yaml | yq r - 'status.loadBalancer.ingress[0].ip'" ) \
+DB_USER=root DB_PASS=root_password START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up node4

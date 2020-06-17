@@ -1,0 +1,8 @@
+spec:
+  pxc:
+    configuration: |
+      [mysqld]
+      enforce_gtid_consistency=ON
+      gtid_mode=ON
+      log-bin
+      log_slave_updates

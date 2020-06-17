@@ -26,8 +26,6 @@ containers:
   - name: default
     image: ${OS}
     privileged: true
-    hostnames:
-      - default
     provisioning:
       - type: ansible
         playbook: playbook.yml
@@ -40,8 +38,6 @@ cat >> lxdock.yml << EOF
   - name: node${i}
     image: ${OS}
     privileged: true
-    hostnames:
-      - default
     provisioning:
       - type: ansible
         playbook: playbook.yml
