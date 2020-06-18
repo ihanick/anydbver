@@ -26,6 +26,7 @@
     k3s_version: "{{ lookup('vars', 'extra_k3s_version', default=lookup('env','K3S',default='') ) }}"
     k8s_pmm: "{{ lookup('vars', 'extra_k8s_pmm', default=lookup('env','K8S_PMM',default='') ) }}"
     k8s_minio: "{{ lookup('vars', 'extra_k8s_minio', default=lookup('env','K8S_MINIO',default='') ) }}"
+    k3s_flannel_backend: "{{ lookup('vars', 'extra_k3s_flannel_backend', default=lookup('env','K3S_FLANNEL_BACKEND',default='vxlan') ) }}"
     master_ip: "{{ lookup('vars', 'extra_master_ip', default=lookup('env','MASTER',default='') ) }}"
     replication_type: "{{ lookup('vars', 'extra_replication_type', default=lookup('env','REPLICATION_TYPE',default='') ) }}"
     mongo_replicaset: "{{ lookup('vars', 'extra_mongo_replicaset', default=lookup('env','REPLICA_SET',default='') ) }}"
@@ -423,6 +424,7 @@
           kubectl apply -f deploy/bundle.yaml;
           kubectl apply -f deploy/secrets.yaml;
           kubectl apply -f deploy/ssl-secrets.yaml;
+          kubectl apply -f deploy/backup-s3.yaml;
           until kubectl wait --for=condition=ready pod -l name={{ percona_k8s_op_name }} &>/dev/null;do sleep 2;done
         creates: /root/{{ percona_k8s_op_name }}/deploy/cr.yaml
     - name: Start database cluster in k8s
@@ -463,12 +465,13 @@
           /usr/local/bin/yq merge -x /root/{{ percona_k8s_op_name }}/deploy/cr.yaml /vagrant/configs/k8s/cr-pmm.yaml
           {{ '/vagrant/configs/k8s/cr-mysql-gtid.yaml' if 'gtid' in db_features.split(',') else '' }}
           {{ '/vagrant/configs/k8s/cr-mysql-pxc57.yaml' if 'pxc57' in db_features.split(',') else '' }}
+          {{ '/vagrant/configs/k8s/cr-minio.yaml' if 'backup' in db_features.split(',') else '' }}
           > /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml
           ;
           sed
           -e 's/antiAffinityTopologyKey: .*$/antiAffinityTopologyKey: \"none\"/g'
           -e 's/allowUnsafeConfigurations: false/allowUnsafeConfigurations: true/'
-          /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml > /root/{{ percona_k8s_op_name }}/deploy/cr-single.yaml;
+          /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml > /root/{{ percona_k8s_op_name }}/deploy/cr-pmm-single.yaml;
           if test $( kubectl get nodes 2>/dev/null|wc -l ) -ge 3 ;
           then kubectl apply -f /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml ;
           else kubectl apply -f /root/{{ percona_k8s_op_name }}/deploy/cr-pmm-single.yaml ;

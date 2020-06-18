@@ -23,6 +23,7 @@ OS = ENV["OS"] || "centos/7"
 K3S = ENV["K3S"] || ""
 K8S_PMM = ENV["K8S_PMM"] || ""
 K8S_MINIO = ENV["K8S_MINIO"] || ""
+K3S_FLANNEL_BACKEND = ENV["K3S_FLANNEL_BACKEND"] || "vxlan"
 MASTER = ENV["MASTER"] || ""
 REPLICATION_TYPE = ENV["REPLICATION_TYPE"] || ""
 REPLICA_SET = ENV["REPLICA_SET"] || ""
@@ -110,6 +111,7 @@ Vagrant.configure("2") do |config|
       extra_k3s_version: K3S,
       extra_k8s_pmm: K8S_PMM,
       extra_k8s_minio: K8S_MINIO,
+      extra_k3s_flannel_backend: K3S_FLANNEL_BACKEND,
       extra_master_ip: MASTER,
       extra_replication_type: REPLICATION_TYPE,
       extra_mongo_replicaset: REPLICA_SET,

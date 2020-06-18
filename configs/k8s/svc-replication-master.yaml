@@ -19,3 +19,18 @@ spec:
     statefulset.kubernetes.io/pod-name: cluster1-pxc-0
   sessionAffinity: None
   type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-external
+spec:
+  ports:
+  - name: minio
+    port: 9000
+    protocol: TCP
+    targetPort: 9000
+  selector:
+    app: minio
+  sessionAffinity: None
+  type: LoadBalancer

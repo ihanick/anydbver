@@ -1,0 +1,10 @@
+spec:
+  backup:
+    storages:
+      minio:
+        type: s3
+        s3:
+          bucket: operator-testing
+          region: us-east-1
+          credentialsSecret: my-cluster-name-backup-s3
+          endpointUrl: http://minio-service:9000
