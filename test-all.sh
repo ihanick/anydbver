@@ -1,4 +1,5 @@
 #!/bin/bash
+if [[ "x$2" = "" || "x$2" = "xold_tests" ]] ; then
 #export VAGRANT_DEFAULT_PROVIDER=lxc
 # export VAGRANT_DEFAULT_PROVIDER=lxd
 # export LXD_PROFILE=$USER
@@ -279,3 +280,22 @@ K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_FEATURES="gtid,master,backup,pxc57" lxdo
 lxdock shell default -c kubectl apply -f /vagrant/configs/k8s/svc-replication-master.yaml
 MASTER=$( lxdock shell default -c bash -c "kubectl get svc cluster1-pxc-0 -o yaml | yq r - 'status.loadBalancer.ingress[0].ip'" ) \
 DB_USER=root DB_PASS=root_password START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up node4
+
+lxdock destroy -f
+
+fi # endif old tests
+
+# MySQL Connector Java test
+if [[ "x$2" = "" || "x$2" = "xmysql_connector_java" ]] ; then
+if [[ "x$1" = "xlxdock" ]] ; then
+DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
+MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_PASS=secret DB_USER=root MYSQL_JAVA=8.0.17-1 lxdock up node1
+lxdock shell node1 -c bash -c 'cd /srv/java && sudo javac ConnectorTest.java && java -classpath "./:/usr/share/java/mysql-connector-java.jar:/usr/share/java/" ConnectorTest'
+lxdock destroy -f
+else
+DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default
+MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_PASS=secret DB_USER=root MYSQL_JAVA=8.0.17-1 vagrant up node1
+vagrant ssh node1 -c bash -c 'cd /srv/java && sudo javac ConnectorTest.java && java -classpath "./:/usr/share/java/mysql-connector-java.jar:/usr/share/java/" ConnectorTest'
+vagrant destroy -f
+fi
+fi

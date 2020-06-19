@@ -187,6 +187,12 @@ el7:
       - "Percona-Server-client-56"
       - "sysbench-{{sysbench_version}}.el7.x86_64"
 
+  mysql_connector_java:
+    install_packages:
+      - java-1.8.0-openjdk.x86_64
+      - java-1.8.0-openjdk-devel
+      - https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-{{mysql_connector_java_version}}.el7.noarch.rpm
+
 el8:
   proxysql:
     install_packages:

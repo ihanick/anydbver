@@ -38,6 +38,7 @@
     debug_packages: "{{ lookup('vars', 'extra_debug_packages', default=lookup('env','DEBUG_PACKAGES',default='') ) }}"
     sysbench_version: "{{ lookup('vars', 'extra_sysbench_version', default=lookup('env','SYSBENCH',default='') ) }}"
     mysql_random_data_load_version: "{{ lookup('vars', 'extra_mysql_random_data_load_version', default=lookup('env','MYSQL_RANDOM_DATA',default='') ) }}"
+    mysql_connector_java_version: "{{ lookup('vars', 'extra_mysql_connector_java_version', default=lookup('env','MYSQL_JAVA',default='') ) }}"
 
     percona_server_name: "{{ 'percona-server' if percona_server_version.startswith('8.0') else 'Percona-Server' }}"
     percona_server_major_ver: "{{ '' if percona_server_version.startswith('8.0') else '-57' if percona_server_version.startswith('5.7') else '-56' if percona_server_version.startswith('5.6') else '' }}"
@@ -103,6 +104,10 @@
       include_vars:
         file: common/vars/package_description.yaml
         name: os
+    - name: vagrant compat
+      package:
+        name: sudo
+        state: present
     - name: Install Percona yum Repository
       when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and is_percona_repo_required != ''
       block:
@@ -477,3 +482,21 @@
           else kubectl apply -f /root/{{ percona_k8s_op_name }}/deploy/cr-pmm-single.yaml ;
           fi
         creates: /root/{{ percona_k8s_op_name }}/deploy/cr-pmm-single.yaml
+
+    - name: MySQL connector java
+      when: master_ip != '' and mysql_connector_java_version != ''
+      block:
+        - name: Create /srv/java directory
+          file:
+            path: /srv/java
+            state: directory
+        - name: put example file to /srv/java directory
+          template:
+            src: "{{playbook_dir}}/configs/connectors/java/ConnectorTest.java.j2"
+            dest: /srv/java/ConnectorTest.java
+            mode: '0644'
+        - name: MySQL Connector Java packages
+          package:
+            name: "{{ item }}"
+            state: present
+          with_items: "{{os[dist].mysql_connector_java.install_packages}}"

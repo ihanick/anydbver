@@ -35,6 +35,7 @@ ORCHESTRATOR = ENV["ORCHESTRATOR"] || ""
 DEBUG_PACKAGES = ENV["DEBUG_PACKAGES"] || ""
 SYSBENCH = ENV["SYSBENCH"] || ""
 MYSQL_RANDOM_DATA = ENV["MYSQL_RANDOM_DATA"] || ""
+MYSQL_JAVA = ENV["MYSQL_JAVA"] || ""
 
 # get token from master k3s node: cat /var/lib/rancher/k3s/server/node-token
 # if node re-added, kubectl delete node node1, and remove old entry from /var/lib/rancher/k3s/server/cred/node-passwd before run
@@ -122,7 +123,8 @@ Vagrant.configure("2") do |config|
       extra_orchestrator_version: ORCHESTRATOR,
       extra_debug_packages: DEBUG_PACKAGES,
       extra_sysbench_version: SYSBENCH,
-      mysql_random_data_load_version: MYSQL_RANDOM_DATA,
+      extra_mysql_random_data_load_version: MYSQL_RANDOM_DATA,
+      extra_mysql_connector_java_version: MYSQL_JAVA,
     }
   end  
 
