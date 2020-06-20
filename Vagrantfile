@@ -10,6 +10,7 @@ PMM_SERVER = ENV["PMM_SERVER"] || "" # "2.5.0"
 PMM_CLIENT = ENV["PMM_CLIENT"] || "" # "2.5.0-6"
 PMM_URL = ENV["PMM_URL"] || ""
 PPGSQL = ENV["PPGSQL"] || "" # "11.7-2"
+PGPOOL = ENV["PGPOOL"] || "" # "4.1.2-1"
 PT = ENV["PT"] || "" # "3.2.0-1"
 DB_USER = ENV["DB_USER"] || ""
 DB_PASS = ENV["DB_PASS"] || ""
@@ -99,6 +100,7 @@ Vagrant.configure("2") do |config|
       extra_pmm_client_version: PMM_CLIENT,
       extra_pmm_url: PMM_URL,
       extra_percona_postgresql_version: PPGSQL,
+      extra_pgpool_version: PGPOOL,
       extra_percona_toolkit_version: PT,
       extra_db_user: DB_USER,
       extra_db_password: DB_PASS,

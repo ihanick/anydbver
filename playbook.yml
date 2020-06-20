@@ -13,6 +13,7 @@
     pmm_client_version: "{{ lookup('vars', 'extra_pmm_client_version', default=lookup('env','PMM_CLIENT',default='') ) }}"
     pmm_url: "{{ lookup('vars', 'extra_pmm_url', default=lookup('env','PMM_URL',default='') ) }}"
     percona_postgresql_version: "{{ lookup('vars', 'extra_percona_postgresql_version', default=lookup('env', 'PPGSQL', default='') ) }}"
+    pgpool_version: "{{ lookup('vars', 'extra_pgpool_version', default=lookup('env', 'PGPOOL', default='') ) }}"
     percona_toolkit_version: "{{ lookup('vars', 'extra_percona_toolkit_version', default=lookup('env','PT',default='') ) }}"
     db_user: "{{ lookup('vars', 'extra_db_user', default=lookup('env','DB_USER',default='') ) }}"
     db_password: "{{ lookup('vars', 'extra_db_password', default=lookup('env','DB_PASS',default='') ) }}"
@@ -89,6 +90,7 @@
       'pxc57' if percona_xtradb_cluster_version.startswith('5.7') else
       'pxc56' if percona_xtradb_cluster_version.startswith('5.6') else
       'ps56' if percona_server_version.startswith('5.6') else
+      'pgpool' if pgpool_version != '' else
       'ppg11' if percona_postgresql_version.startswith('11') else
       'ppg12' if percona_postgresql_version.startswith('12') else
       'proxysql' if proxysql_version != '' else
@@ -204,7 +206,8 @@
         orchestrator_version != '' or
         proxysql_version != '' or
         sysbench_version != '' or
-        percona_proxysql_version != ''
+        percona_proxysql_version != '' or
+        pgpool_version != ''
         ) and
         (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
       package:

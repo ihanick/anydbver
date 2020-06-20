@@ -193,6 +193,10 @@ el7:
       - java-1.8.0-openjdk-devel
       - https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-{{mysql_connector_java_version}}.el7.noarch.rpm
 
+  pgpool:
+    install_packages:
+      - "https://www.pgpool.net/yum/rpms/{{ pgpool_version | regex_replace('^([0-9]+\\.[0-9]+)\\..*$','\\1') }}/redhat/rhel-7-x86_64/pgpool-II-pg{{ percona_postgresql_version | regex_replace('\\..*$','') }}-{{pgpool_version}}pgdg.rhel7.x86_64.rpm"
+
 el8:
   proxysql:
     install_packages:

@@ -288,6 +288,7 @@ fi # endif old tests
 # MySQL Connector Java test
 if [[ "x$2" = "" || "x$2" = "xmysql_connector_java" ]] ; then
 if [[ "x$1" = "xlxdock" ]] ; then
+./gen_lxdock.sh anydbver centos/7 2
 DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
 MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_PASS=secret DB_USER=root MYSQL_JAVA=8.0.17-1 lxdock up node1
 lxdock shell node1 -c bash -c 'cd /srv/java && sudo javac ConnectorTest.java && java -classpath "./:/usr/share/java/mysql-connector-java.jar:/usr/share/java/" ConnectorTest'
@@ -297,5 +298,16 @@ DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid
 MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_PASS=secret DB_USER=root MYSQL_JAVA=8.0.17-1 vagrant up node1
 vagrant ssh node1 -c bash -c 'cd /srv/java && sudo javac ConnectorTest.java && java -classpath "./:/usr/share/java/mysql-connector-java.jar:/usr/share/java/" ConnectorTest'
 vagrant destroy -f
+fi
+fi
+
+# PGPool II
+if [[ "x$2" = "" || "x$2" = "xpgpool" ]] ; then
+if [[ "x$1" = "xlxdock" ]] ; then
+./gen_lxdock.sh anydbver centos/7 2
+PPGSQL=12.2-4 DB_PASS=secret START=1 lxdock up default
+PGPOOL=4.1.2-1 PPGSQL=12.2-4 lxdock up node1
+lxdock destroy -f
+else
 fi
 fi
