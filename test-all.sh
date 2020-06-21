@@ -311,3 +311,13 @@ lxdock destroy -f
 else
 fi
 fi
+
+# Postgresql Odyssey
+if [[ "x$2" = "" || "x$2" = "xodyssey" ]] ; then
+if [[ "x$1" = "xlxdock" ]] ; then
+./gen_lxdock.sh anydbver centos/8 2
+ODYSSEY=1.1 lxdock up node1
+lxdock destroy -f
+else
+fi
+fi

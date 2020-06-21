@@ -14,6 +14,7 @@
     pmm_url: "{{ lookup('vars', 'extra_pmm_url', default=lookup('env','PMM_URL',default='') ) }}"
     percona_postgresql_version: "{{ lookup('vars', 'extra_percona_postgresql_version', default=lookup('env', 'PPGSQL', default='') ) }}"
     pgpool_version: "{{ lookup('vars', 'extra_pgpool_version', default=lookup('env', 'PGPOOL', default='') ) }}"
+    odyssey_version: "{{ lookup('vars', 'extra_odyssey_version', default=lookup('env', 'ODYSSEY', default='') ) }}"
     percona_toolkit_version: "{{ lookup('vars', 'extra_percona_toolkit_version', default=lookup('env','PT',default='') ) }}"
     db_user: "{{ lookup('vars', 'extra_db_user', default=lookup('env','DB_USER',default='') ) }}"
     db_password: "{{ lookup('vars', 'extra_db_password', default=lookup('env','DB_PASS',default='') ) }}"
@@ -373,7 +374,7 @@
             deb: "{{os[dist][soft].url}}"
 
     - name: Start database with systemd
-      when:  start_db == '1' and (db_systemd_service != '' or os[dist][soft].systemd_service ) 
+      when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
       systemd:
         name: "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
         state: started
@@ -503,3 +504,22 @@
             name: "{{ item }}"
             state: present
           with_items: "{{os[dist].mysql_connector_java.install_packages}}"
+
+    - name: Install Yandex Odyssey
+      when: odyssey_version != ''
+      block:
+        - name: Install tar
+          package:
+            name: tar
+            state: present
+        - name: download and install odyssey
+          shell:
+            warn: false
+            cmd: >-
+              curl -L -s https://github.com/yandex/odyssey/releases |
+              grep -F {{odyssey_version}}|grep linux-amd64|
+              sed -e 's,^.*a href=.,https://github.com,' -e 's,. rel=.nofollow.*$,,' |
+              xargs -n 1 curl -s -L --output /tmp/odyssey.tar.gz;
+              tar -C /usr/local/bin/ -xzf /tmp/odyssey.tar.gz;
+              rm -rf /tmp/odyssey.tar.gz
+            creates: /usr/local/bin/odyssey
