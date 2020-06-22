@@ -309,6 +309,7 @@ PPGSQL=12.2-4 DB_PASS=secret START=1 lxdock up default
 PGPOOL=4.1.2-1 PPGSQL=12.2-4 lxdock up node1
 lxdock destroy -f
 else
+:
 fi
 fi
 
@@ -319,5 +320,18 @@ if [[ "x$1" = "xlxdock" ]] ; then
 ODYSSEY=1.1 lxdock up node1
 lxdock destroy -f
 else
+:
+fi
+fi
+
+# innodb_ruby
+if [[ "x$2" = "" || "x$2" = "xinnodb_ruby" ]] ; then
+if [[ "x$1" = "xlxdock" ]] ; then
+./gen_lxdock.sh anydbver centos/7 1
+DB_USER=root DB_PASS=root_password START=1 PS=5.7.29-32.1 INNODB_RUBY=1 lxdock up default
+lxdock shell default -c innodb_space --help
+lxdock destroy -f
+else
+:
 fi
 fi

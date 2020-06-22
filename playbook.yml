@@ -41,6 +41,7 @@
     sysbench_version: "{{ lookup('vars', 'extra_sysbench_version', default=lookup('env','SYSBENCH',default='') ) }}"
     mysql_random_data_load_version: "{{ lookup('vars', 'extra_mysql_random_data_load_version', default=lookup('env','MYSQL_RANDOM_DATA',default='') ) }}"
     mysql_connector_java_version: "{{ lookup('vars', 'extra_mysql_connector_java_version', default=lookup('env','MYSQL_JAVA',default='') ) }}"
+    innodb_ruby_version: "{{ lookup('vars', 'extra_innodb_ruby_version', default=lookup('env','INNODB_RUBY',default='') ) }}"
 
     percona_server_name: "{{ 'percona-server' if percona_server_version.startswith('8.0') else 'Percona-Server' }}"
     percona_server_major_ver: "{{ '' if percona_server_version.startswith('8.0') else '-57' if percona_server_version.startswith('5.7') else '-56' if percona_server_version.startswith('5.6') else '' }}"
@@ -523,3 +524,14 @@
               tar -C /usr/local/bin/ -xzf /tmp/odyssey.tar.gz;
               rm -rf /tmp/odyssey.tar.gz
             creates: /usr/local/bin/odyssey
+    - name: InnoDB ruby
+      when: innodb_ruby_version != ''
+      block:
+        - name: install ruby and gem
+          package:
+            name: ruby
+            state: present
+        - name: install innodb_ruby
+          command:
+            cmd: /usr/bin/gem install innodb_ruby
+            creates: /usr/local/bin/innodb_space
