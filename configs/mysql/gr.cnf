@@ -1,0 +1,12 @@
+[mysqld]
+innodb_buffer_pool_size=512M
+server_id=55
+report_host=myhost
+log-bin=mysqld-bin
+binlog_checksum=NONE
+enforce_gtid_consistency=ON
+gtid_mode=ON
+log-slave-updates
+transaction_write_set_extraction=XXHASH64
+master_info_repository=TABLE
+relay_log_info_repository=TABLE

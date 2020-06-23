@@ -148,10 +148,10 @@ DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 MASTER=$( vagrant ssh default
 ## Galera
 
 ```bash
-DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3     DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default node1 node2
+DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant up default node1 node2
 vagrant ssh default -- sudo tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem > secret/pxc-cluster-ssl.tar.gz
-DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1
-DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node2
+DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant provision node1
+DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant provision node2
 ```
 
 5.7 and 5.6 requires different configuration file for xtrabackup user and password specification:
@@ -159,6 +159,16 @@ DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera MASTER=$( vag
 DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 DB_OPTS=mysql/pxc5657.cnf vagrant up default node1 node2
 DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/pxc5657.cnf vagrant provision node1
 DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/pxc5657.cnf vagrant provision node2
+```
+
+## InnoDB Cluster
+
+```bash
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf vagrant up default
+MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf vagrant up node1
+MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf vagrant up node2
 ```
 
 ###

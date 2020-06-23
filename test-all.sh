@@ -335,3 +335,41 @@ else
 :
 fi
 fi
+
+# InnoDB Cluster
+if [[ "x$2" = "" || "x$2" = "xinnodb_cluster" ]] ; then
+if [[ "x$1" = "xlxdock" ]] ; then
+./gen_lxdock.sh anydbver centos/7 3
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf lxdock up default
+MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf lxdock up node1
+MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf lxdock up node2
+lxdock destroy -f
+else
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf vagrant up default
+MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf vagrant up node1
+MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf vagrant up node2
+vagrant destroy -f || true
+fi
+fi
+
+# PXC
+if [[ "x$2" = "" || "x$2" = "xpxc8" ]] ; then
+if [[ "x$1" = "xlxdock" ]] ; then
+./gen_lxdock.sh anydbver centos/7 3
+DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc8-repl-gtid.cnf lxdock up default node1 node2
+lxdock shell default -c tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem > secret/pxc-cluster-ssl.tar.gz
+DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf lxdock provision node1
+DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf lxdock provision node2
+lxdock destroy -f
+else
+DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant up default node1 node2
+vagrant ssh default -- sudo tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem > secret/pxc-cluster-ssl.tar.gz
+DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant provision node1
+DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant provision node2
+vagrant destroy -f || true
+fi
+fi

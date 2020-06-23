@@ -31,6 +31,7 @@
     k3s_flannel_backend: "{{ lookup('vars', 'extra_k3s_flannel_backend', default=lookup('env','K3S_FLANNEL_BACKEND',default='vxlan') ) }}"
     master_ip: "{{ lookup('vars', 'extra_master_ip', default=lookup('env','MASTER',default='') ) }}"
     replication_type: "{{ lookup('vars', 'extra_replication_type', default=lookup('env','REPLICATION_TYPE',default='') ) }}"
+    cluster_name:  "{{ lookup('vars', 'extra_cluster_name', default=lookup('env','CLUSTER',default='cluster1') ) }}"
     mongo_replicaset: "{{ lookup('vars', 'extra_mongo_replicaset', default=lookup('env','REPLICA_SET',default='') ) }}"
     proxysql_version: "{{ lookup('vars', 'extra_proxysql_version', default=lookup('env','PROXYSQL',default='') ) }}"
     percona_proxysql_version: "{{ lookup('vars', 'extra_percona_proxysql_version', default=lookup('env','PERCONA_PROXYSQL',default='') ) }}"
@@ -219,7 +220,9 @@
         {{
           os[dist][soft].install_packages +
           ( [] if debug_packages == '' else
-            os[dist][soft].install_packages + os[dist][soft].install_debug_packages) +
+            os[dist][soft].install_debug_packages) +
+          ( [] if replication_type != 'group' else
+            os[dist][soft].mysql_shell_packages) +
           ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else
             os[dist][soft].rocksdb_packages)
         }}
@@ -363,7 +366,7 @@
     - name: Apply database options from file
       when: (percona_server_version != '' or percona_xtradb_cluster_version != '' or percona_postgresql_version != '' or mariadb_version != '') and db_opts_file != ''
       command:
-        cmd: /bin/bash /vagrant/tools/apply_mysql_conf.sh "{{ os[dist][soft].cnf_file }}" "/vagrant/configs/{{ db_opts_file }}"
+        cmd: /bin/bash /vagrant/tools/apply_mysql_conf.sh "{{ os[dist][soft].cnf_file }}" "/vagrant/configs/{{ db_opts_file }}" "{{cluster_name}}"
         creates: "/root/{{ db_opts_file | basename }}.applied"
       
     - name: ProxySQL
@@ -397,7 +400,7 @@
     - name: Setup and start GTID replication
       when: master_ip != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
       shell:
-        cmd: /bin/bash /vagrant/tools/setup_mysql_replication.sh "{{ 'gtid' if replication_type == '' else replication_type }}" "{{ master_ip }}" root "{{ db_password }}" "{{soft}}" "{{ os[dist][soft].cnf_file }}" "{{os[dist][soft].systemd_service}}"
+        cmd: /bin/bash /vagrant/tools/setup_mysql_replication.sh "{{ 'gtid' if replication_type == '' else replication_type }}" "{{ master_ip }}" root "{{ db_password }}" "{{soft}}" "{{ os[dist][soft].cnf_file }}" "{{os[dist][soft].systemd_service}}" "{{'cluster1' if cluster_name == '' else cluster_name}}"
         creates: /root/replication.configured
 
     - name: Setup and start streaming physical replication with slots

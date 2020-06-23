@@ -7,7 +7,7 @@ MASTER_PASSWORD=$4
 SOFT=$5
 CNF_FILE=$6
 MYSQLD_UNIT=$7
-CLUSTER_NAME='pxc-cluster'
+CLUSTER_NAME=${8:-'pxc-cluster'}
 
 SERVER_ID=$(ip addr ls|grep 'inet '|grep -v '127.0.0.1'|awk '{print $2}'|cut -d/ -f 1|awk -F '\\.' '{print ($1 * 2^24) + ($2 * 2^16) + ($3 * 2^8) + $4}')
 
@@ -45,5 +45,18 @@ EOF
     mysqladmin shutdown
 
     systemctl start $MYSQLD_UNIT
+fi
+
+
+# Group Replication aka InnoDB Cluster
+if [[ "x$TYPE" == "xgroup" ]] ; then
+    MYIP=$(/vagrant/tools/node_ip.sh)
+    if ! mysqlsh "${MASTER_USER}:${MASTER_PASSWORD}@$MASTER_IP" \
+        -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null|grep -q "$CLUSTER_NAME" ; then
+        mysqlsh "${MASTER_USER}:${MASTER_PASSWORD}@$MASTER_IP" -e "dba.createCluster('$CLUSTER_NAME', {localAddress: '$MASTER_IP:33061'})"
+    fi
+
+    mysqlsh "${MASTER_USER}:${MASTER_PASSWORD}@$MASTER_IP" \
+        -e "var c=dba.getCluster();c.addInstance('$MASTER_USER:$MASTER_PASSWORD@$MYIP', {localAddress: '$MYIP:33061', recoveryMethod: 'clone', label: '$MYIP'})"
 fi
 
