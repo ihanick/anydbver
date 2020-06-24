@@ -125,23 +125,6 @@ DB_USER=root DB_PASS=secret START=1 PS=5.6.23-rel72.1    DB_OPTS=mysql/async-rep
 DB_USER=root DB_PASS=secret START=1 PS=5.6.23-rel72.1 MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1 node2
 vagrant destroy -f || true
 
-# PXC
-DB_USER=root DB_PASS=secret START=1 PXC=5.6.45-28.36.1 DB_OPTS=mysql/pxc5657.cnf vagrant up default node1 node2
-DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/pxc5657.cnf vagrant provision node1
-DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/pxc5657.cnf vagrant provision node2
-vagrant destroy -f || true
-
-DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 DB_OPTS=mysql/pxc5657.cnf vagrant up default node1 node2
-DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/pxc5657.cnf vagrant provision node1
-DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/pxc5657.cnf vagrant provision node2
-vagrant destroy -f || true
-
-DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3     DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default node1 node2
-vagrant ssh default -- sudo tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem > secret/pxc-cluster-ssl.tar.gz
-DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1
-DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node2
-vagrant destroy -f || true
-
 # MongoDB replicaset
 PSMDB=4.0.17-10 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf REPLICA_SET=rs0 vagrant up default
 PSMDB=4.0.17-10 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf REPLICA_SET=rs0 MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) vagrant up node1 node2
@@ -357,6 +340,36 @@ fi
 fi
 
 # PXC
+if [[ "x$2" = "" || "x$2" = "xpxc56" ]] ; then
+if [[ "x$1" = "xlxdock" ]] ; then
+./gen_lxdock.sh anydbver centos/7 3
+DB_USER=root DB_PASS=secret START=1 PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf lxdock up default node1 node2
+DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node1
+DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node2
+lxdock destroy -f
+else
+DB_USER=root DB_PASS=secret START=1 PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf vagrant up default node1 node2
+DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf vagrant provision node1
+DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf vagrant provision node2
+vagrant destroy -f || true
+fi
+fi
+
+if [[ "x$2" = "" || "x$2" = "xpxc57" ]] ; then
+if [[ "x$1" = "xlxdock" ]] ; then
+./gen_lxdock.sh anydbver centos/7 3
+DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf lxdock up default node1 node2
+DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node1
+DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node2
+lxdock destroy -f
+else
+DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf vagrant up default node1 node2
+DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf vagrant provision node1
+DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf vagrant provision node2
+vagrant destroy -f || true
+fi
+fi
+
 if [[ "x$2" = "" || "x$2" = "xpxc8" ]] ; then
 if [[ "x$1" = "xlxdock" ]] ; then
 ./gen_lxdock.sh anydbver centos/7 3

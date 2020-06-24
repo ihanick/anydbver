@@ -366,7 +366,13 @@
     - name: Apply database options from file
       when: (percona_server_version != '' or percona_xtradb_cluster_version != '' or percona_postgresql_version != '' or mariadb_version != '') and db_opts_file != ''
       command:
-        cmd: /bin/bash /vagrant/tools/apply_mysql_conf.sh "{{ os[dist][soft].cnf_file }}" "/vagrant/configs/{{ db_opts_file }}" "{{cluster_name}}"
+        cmd: >-
+          /bin/bash /vagrant/tools/apply_mysql_conf.sh
+          "{{ os[dist][soft].cnf_file }}"
+          "/vagrant/configs/{{ db_opts_file }}"
+          "{{cluster_name}}"
+          "{{db_user}}"
+          "{{db_password}}"
         creates: "/root/{{ db_opts_file | basename }}.applied"
       
     - name: ProxySQL
@@ -397,7 +403,7 @@
             cmd: /bin/bash /vagrant/tools/setup_mongo_replication.sh "{{mongo_replicaset}}" "dba" "{{db_password}}" "{{master_ip}}"
             creates: /root/{{mongo_replicaset}}.init
 
-    - name: Setup and start GTID replication
+    - name: Setup and start replication
       when: master_ip != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
       shell:
         cmd: /bin/bash /vagrant/tools/setup_mysql_replication.sh "{{ 'gtid' if replication_type == '' else replication_type }}" "{{ master_ip }}" root "{{ db_password }}" "{{soft}}" "{{ os[dist][soft].cnf_file }}" "{{os[dist][soft].systemd_service}}" "{{'cluster1' if cluster_name == '' else cluster_name}}"

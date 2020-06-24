@@ -119,6 +119,7 @@ el7:
     systemd_service: "mysql"
     cnf_file: "/etc/my.cnf"
     install_packages:
+      - which
       - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
       - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
       - "percona-xtrabackup{{ '-'+percona_xtrabackup_version+'.el7.x86_64' if percona_xtrabackup_version.startswith('2.3') else ''}}"
