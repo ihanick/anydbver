@@ -284,18 +284,6 @@ vagrant destroy -f
 fi
 fi
 
-# PGPool II
-if [[ "x$2" = "" || "x$2" = "xpgpool" ]] ; then
-if [[ "x$1" = "xlxdock" ]] ; then
-./gen_lxdock.sh anydbver centos/7 2
-PPGSQL=12.2-4 DB_PASS=secret START=1 lxdock up default
-PGPOOL=4.1.2-1 PPGSQL=12.2-4 lxdock up node1
-lxdock destroy -f
-else
-:
-fi
-fi
-
 # Postgresql Odyssey
 if [[ "x$2" = "" || "x$2" = "xodyssey" ]] ; then
 if [[ "x$1" = "xlxdock" ]] ; then
@@ -384,5 +372,24 @@ vagrant ssh default -- sudo tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.p
 DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant provision node1
 DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant provision node2
 vagrant destroy -f || true
+fi
+fi
+
+# Postgresql 12 with PGPool-II
+if [[ "x$2" = "" || "x$2" = "xpgpool" ]] ; then
+if [[ "x$1" = "xlxdock" ]] ; then
+./gen_lxdock.sh anydbver centos/7 3
+# PGPool II
+if [[ "x$2" = "" || "x$2" = "xpgpool" ]] ; then
+if [[ "x$1" = "xlxdock" ]] ; then
+./gen_lxdock.sh anydbver centos/7 2
+PPGSQL=12.2-4 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 lxdock up default
+PPGSQL=12.2-4 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) lxdock up node1
+PGPOOL=4.1.2-1 PPGSQL=12.2-4 DB_PASS=secret START=1 MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) lxdock up node2
+lxdock destroy -f
+else
+PPGSQL=12.2-4 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 vagrant up default
+PPGSQL=12.2-4 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) vagrant up node1
+PGPOOL=4.1.2-1 PPGSQL=12.2-4 DB_PASS=secret START=1 MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) vagrant up node2
 fi
 fi
