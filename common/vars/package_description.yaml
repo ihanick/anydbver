@@ -170,6 +170,8 @@ el7:
       - "mysql-community-common-{{mysql_version}}.el7.x86_64"
       - "mysql-community-client-{{mysql_version}}.el7.x86_64"
       - "mysql-community-server-{{mysql_version}}.el7.x86_64"
+    mysql_shell_packages:
+      - "https://dev.mysql.com/get/Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el7.x86_64.rpm"
   proxysql:
     install_packages:
       - "https://github.com/sysown/proxysql/releases/download/v{{ proxysql_version | regex_replace('-[0-9]+$', '') }}/proxysql-{{proxysql_version}}-centos7.x86_64.rpm"

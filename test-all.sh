@@ -327,6 +327,26 @@ vagrant destroy -f || true
 fi
 fi
 
+# InnoDB cluster MySQL Community
+if [[ "x$2" = "" || "x$2" = "xmysql_innodb_cluster" ]] ; then
+if [[ "x$1" = "xlxdock" ]] ; then
+./gen_lxdock.sh anydbver centos/7 3
+DB_USER=root DB_PASS=secret START=1 MYSQL=8.0.20-1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf lxdock up default
+MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+DB_USER=root DB_PASS=secret START=1 MYSQL=8.0.20-1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf lxdock up node1
+MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+DB_USER=root DB_PASS=secret START=1 MYSQL=8.0.20-1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf lxdock up node2
+lxdock destroy -f
+else
+DB_USER=root DB_PASS=secret START=1 MYSQL=8.0.20-1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf vagrant up default
+MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+DB_USER=root DB_PASS=secret START=1 MYSQL=8.0.20-1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf vagrant up node1
+MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+DB_USER=root DB_PASS=secret START=1 MYSQL=8.0.20-1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf vagrant up node2
+vagrant destroy -f || true
+fi
+fi
+
 # PXC
 if [[ "x$2" = "" || "x$2" = "xpxc56" ]] ; then
 if [[ "x$1" = "xlxdock" ]] ; then

@@ -371,7 +371,7 @@
           file: path="/root/replica-{{mongo_replicaset}}.applied" state=touch modification_time=preserve access_time=preserve
           
     - name: Apply database options from file
-      when: (percona_server_version != '' or percona_xtradb_cluster_version != '' or percona_postgresql_version != '' or mariadb_version != '') and db_opts_file != ''
+      when: (percona_server_version != '' or percona_xtradb_cluster_version != '' or percona_postgresql_version != '' or mariadb_version != '' or mysql_version != '') and db_opts_file != ''
       command:
         cmd: >-
           /bin/bash /vagrant/tools/apply_mysql_conf.sh
@@ -411,7 +411,7 @@
             creates: /root/{{mongo_replicaset}}.init
 
     - name: Setup and start replication
-      when: master_ip != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
+      when: master_ip != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != '')
       shell:
         cmd: /bin/bash /vagrant/tools/setup_mysql_replication.sh "{{ 'gtid' if replication_type == '' else replication_type }}" "{{ master_ip }}" root "{{ db_password }}" "{{soft}}" "{{ os[dist][soft].cnf_file }}" "{{os[dist][soft].systemd_service}}" "{{'cluster1' if cluster_name == '' else cluster_name}}"
         creates: /root/replication.configured
