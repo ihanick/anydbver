@@ -163,6 +163,11 @@
       command:
         cmd: /usr/bin/percona-release enable ppg-12.2 testing
         creates: /etc/yum.repos.d/percona-ppg-12.2-testing.repo
+    - name: enable Percona Distribution for PostgreSQL 12.3
+      when: percona_postgresql_version.startswith('12.3')
+      command:
+        cmd: /usr/bin/percona-release enable ppg-12.3 testing
+        creates: /etc/yum.repos.d/percona-ppg-12.3-testing.repo
     - name: MySQL repo
       when: mysql_version != ''
       block:
@@ -291,6 +296,7 @@
         - "percona-postgresql{{ percona_postgresql_major_ver }}-libs-{{ percona_postgresql_version }}.el7.x86_64"
         - "percona-postgresql{{ percona_postgresql_major_ver }}-{{ percona_postgresql_version }}.el7.x86_64"
         - "percona-postgresql{{ percona_postgresql_major_ver }}-server-{{ percona_postgresql_version }}.el7.x86_64"
+        - "percona-postgresql{{ percona_postgresql_major_ver }}-contrib-{{ percona_postgresql_version }}.el7.x86_64"
 
     - name: Create Postgres Database
       when: (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') ) and db_password != ""
@@ -429,6 +435,11 @@
           /var/lib/pgsql/{{percona_postgresql_major_ver}}/data
           postgresql-{{percona_postgresql_major_ver}}
         creates: /root/replication.configured
+    - name: Setup PMM client with postgres
+      when: pmm_url != '' and percona_postgresql_version != ''
+      shell:
+        cmd: /vagrant/tools/setup_pmm.sh "{{soft}}" postgres "{{db_password}}" pmm_user "{{db_password}}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
+        creates: /root/pmm-postgresql.applied
 
     - name: Install k3s, kubernetes distribution
       include_tasks: common/tasks/kubernetes_install.yaml

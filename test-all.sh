@@ -1,4 +1,5 @@
 #!/bin/bash
+DESTROY=${3:-yes}
 if [[ "x$2" = "" || "x$2" = "xold_tests" ]] ; then
 #export VAGRANT_DEFAULT_PROVIDER=lxc
 # export VAGRANT_DEFAULT_PROVIDER=lxd
@@ -165,22 +166,22 @@ vagrant destroy -f || true
 # lxdock
 PSMDB=4.2.3-4 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf REPLICA_SET=rs0 lxdock provision default
 PSMDB=4.2.3-4 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf REPLICA_SET=rs0 MASTER=$( lxdock shell default -c hostname -I | cut -d' ' -f1 ) lxdock provision node1
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 
 K3S=latest lxdock provision default
 
 
 ./gen_lxdock.sh anydbver centos/7
 PROXYSQL=2.0.12-1 lxdock up default
-lxdock destroy -f || true
+test $DESTROY = yes && lxdock destroy -f || true
 
 ./gen_lxdock.sh anydbver centos/8
 PROXYSQL=2.0.12-1 lxdock up default
-lxdock destroy -f || true
+test $DESTROY = yes && lxdock destroy -f || true
 
 ./gen_lxdock.sh anydbver ubuntu/bionic
 PROXYSQL=2.0.12 lxdock up default
-lxdock destroy -f || true
+test $DESTROY = yes && lxdock destroy -f || true
 
 
 
@@ -202,36 +203,36 @@ MARIADB=10.4.12-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl
 K3S=latest K8S_MINIO=yes lxdock up default
 K3S_TOKEN=$(lxdock shell default -c cat /var/lib/rancher/k3s/server/node-token) K3S_URL="https://$(lxdock shell default -c hostname -I | cut -d' ' -f3):6443" lxdock up node1 node2
 K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_FEATURES="gtid,master,backup" lxdock provision default
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 
 # Vanilla MySQL 8.0
 ./gen_lxdock.sh anydbver centos/7
 MYSQL=8.0.20-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 
 ./gen_lxdock.sh anydbver centos/8
 MYSQL=8.0.20-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 
 ./gen_lxdock.sh anydbver centos/7
 ROCKSDB=1 DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 
 ./gen_lxdock.sh anydbver centos/7 3
 PMM_SERVER=2.5.0 lxdock up node2
 PMM_CLIENT=2.5.0-6 PMM_URL="https://admin:admin@$(lxdock shell node2 -c hostname -I |cut -d' ' -f 2):443"  lxdock up default
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 
 ./gen_lxdock.sh anydbver centos/7 1
 DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1    DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 
 for MVER in 5.7.29-32.1 8.0.19-10.1 ; do
     ./gen_lxdock.sh anydbver centos/7 2
     DB_USER=root DB_PASS=secret START=1 PS=$MVER DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
     SYSBENCH=1.0.20-6 lxdock up node1
     lxdock shell node1 -c /vagrant/tools/sysbench_oltp_ro.sh $( lxdock shell default -c hostname -I | cut -d' ' -f1 ) root secret sbtest 2 10000 4 100
-    lxdock destroy -f
+    test $DESTROY = yes && lxdock destroy -f
 done
 # 5.7.29-32.1 queries:                             3281712 (32815.00 per sec.)
 # 8.0.19-10.1 queries:                             2575440 (25752.72 per sec.)
@@ -244,7 +245,7 @@ PPGSQL=12.2-4 DB_PASS=secret START=1 MASTER=$( lxdock shell default -c hostname 
 
 # install https://github.com/Percona-Lab/mysql_random_data_load/
 MYSQL_RANDOM_DATA=0.1.12 lxdock up default
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 
 
 # K8S PXC cluster with slave server outside 
@@ -264,7 +265,7 @@ lxdock shell default -c kubectl apply -f /vagrant/configs/k8s/svc-replication-ma
 MASTER=$( lxdock shell default -c bash -c "kubectl get svc cluster1-pxc-0 -o yaml | yq r - 'status.loadBalancer.ingress[0].ip'" ) \
 DB_USER=root DB_PASS=root_password START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up node4
 
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 
 fi # endif old tests
 
@@ -275,7 +276,7 @@ if [[ "x$1" = "xlxdock" ]] ; then
 DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
 MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_PASS=secret DB_USER=root MYSQL_JAVA=8.0.17-1 lxdock up node1
 lxdock shell node1 -c bash -c 'cd /srv/java && sudo javac ConnectorTest.java && java -classpath "./:/usr/share/java/mysql-connector-java.jar:/usr/share/java/" ConnectorTest'
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 else
 DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default
 MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_PASS=secret DB_USER=root MYSQL_JAVA=8.0.17-1 vagrant up node1
@@ -289,7 +290,7 @@ if [[ "x$2" = "" || "x$2" = "xodyssey" ]] ; then
 if [[ "x$1" = "xlxdock" ]] ; then
 ./gen_lxdock.sh anydbver centos/8 2
 ODYSSEY=1.1 lxdock up node1
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 else
 :
 fi
@@ -301,7 +302,7 @@ if [[ "x$1" = "xlxdock" ]] ; then
 ./gen_lxdock.sh anydbver centos/7 1
 DB_USER=root DB_PASS=root_password START=1 PS=5.7.29-32.1 INNODB_RUBY=1 lxdock up default
 lxdock shell default -c innodb_space --help
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 else
 :
 fi
@@ -316,7 +317,7 @@ MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
 DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf lxdock up node1
 MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
 DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf lxdock up node2
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 else
 DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf vagrant up default
 MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
@@ -336,7 +337,7 @@ MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
 DB_USER=root DB_PASS=secret START=1 MYSQL=8.0.20-1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf lxdock up node1
 MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
 DB_USER=root DB_PASS=secret START=1 MYSQL=8.0.20-1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf lxdock up node2
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 else
 DB_USER=root DB_PASS=secret START=1 MYSQL=8.0.20-1 REPLICATION_TYPE=group CLUSTER=cluster1 DB_OPTS=mysql/gr.cnf vagrant up default
 MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
@@ -354,7 +355,7 @@ if [[ "x$1" = "xlxdock" ]] ; then
 DB_USER=root DB_PASS=secret START=1 PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf lxdock up default node1 node2
 DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node1
 DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node2
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 else
 DB_USER=root DB_PASS=secret START=1 PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf vagrant up default node1 node2
 DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf vagrant provision node1
@@ -369,7 +370,7 @@ if [[ "x$1" = "xlxdock" ]] ; then
 DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf lxdock up default node1 node2
 DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node1
 DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node2
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 else
 DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf vagrant up default node1 node2
 DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf vagrant provision node1
@@ -385,7 +386,7 @@ DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3 CLUSTER=pxc-cluster DB_OPTS=m
 lxdock shell default -c tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem > secret/pxc-cluster-ssl.tar.gz
 DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf lxdock provision node1
 DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf lxdock provision node2
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 else
 DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant up default node1 node2
 vagrant ssh default -- sudo tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem > secret/pxc-cluster-ssl.tar.gz
@@ -399,17 +400,27 @@ fi
 if [[ "x$2" = "" || "x$2" = "xpgpool" ]] ; then
 if [[ "x$1" = "xlxdock" ]] ; then
 ./gen_lxdock.sh anydbver centos/7 3
-# PGPool II
-if [[ "x$2" = "" || "x$2" = "xpgpool" ]] ; then
-if [[ "x$1" = "xlxdock" ]] ; then
-./gen_lxdock.sh anydbver centos/7 2
 PPGSQL=12.2-4 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 lxdock up default
 PPGSQL=12.2-4 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) lxdock up node1
 PGPOOL=4.1.2-1 PPGSQL=12.2-4 DB_PASS=secret START=1 MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) lxdock up node2
-lxdock destroy -f
+test $DESTROY = yes && lxdock destroy -f
 else
 PPGSQL=12.2-4 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 vagrant up default
 PPGSQL=12.2-4 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) vagrant up node1
 PGPOOL=4.1.2-1 PPGSQL=12.2-4 DB_PASS=secret START=1 MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) vagrant up node2
+fi
+fi
+
+# Postgresql 12 with PMM
+if [[ "x$2" = "" || "x$2" = "xpgpmm" ]] ; then
+if [[ "x$1" = "xlxdock" ]] ; then
+./gen_lxdock.sh anydbver centos/7 3
+PMM_SERVER=2.8.0 DB_PASS=secret lxdock up node2
+PPGSQL=12.3-1 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 PMM_CLIENT=2.8.0-6 PMM_URL="https://admin:secret@$(lxdock shell node2 -c hostname -I |cut -d' ' -f 2):443"  lxdock up default
+test $DESTROY = yes && lxdock destroy -f
+else
+PMM_SERVER=2.8.0 DB_PASS=secret vagrant up node2
+PPGSQL=12.3-1 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 PMM_CLIENT=2.8.0-6 PMM_URL="https://admin:secret@$(vagrant ssh node2 -c hostname -I |cut -d' ' -f 2):443"  vagrant up default
+vagrant destroy -f || true
 fi
 fi
