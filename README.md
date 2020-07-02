@@ -234,6 +234,15 @@ vagrant up node1 # starts centos/7
 OS=centos/8 vagrant up node2 # start CentOS 8
 ```
 
+## Podman
+Podman is a daemonless container engine for developing, managing, and running OCI Containers on your Linux System. It's simialr to docker, can use Dockerfile and have same command line arguments.
+Unlike to docker you can use systemd inside.
+
+```bash
+./start_podman.sh
+DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 DB_OPTS=mysql/async-repl-gtid.cnf ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+```
+
 ## LXDock
 If you are using LXD and not happy with vagrant performance you can use [LXDock](https://github.com/lxdock/lxdock).
 It has many up-to-date images: https://uk.images.linuxcontainers.org/ and significantly reduces startup time for containers.

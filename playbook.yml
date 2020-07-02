@@ -2,6 +2,7 @@
   hosts: all
   become: yes
   vars:
+    sync_is_required: "{{ lookup('vars', 'extra_sync_is_required', default=lookup('env', 'SYNC', default='') ) }}"
     percona_server_version: "{{ lookup('vars', 'extra_percona_server_version', default=lookup('env', 'PS', default='') ) }}"
     rocksdb_enabled: "{{ lookup('vars', 'extra_rocksdb_enabled', default=lookup('env', 'ROCKSDB', default='') ) }}"
     percona_xtrabackup_version: "{{ lookup('vars', 'extra_percona_xtrabackup_version', default=lookup('env','PXB',default='') ) }}"
@@ -113,6 +114,14 @@
       package:
         name: sudo
         state: present
+    - name: Check if /vagrant directory is mounted
+      stat:
+        path: /vagrant/tools/node_ip.sh
+      register: vagrant_dir_mounted
+    - name: sync configs and tools
+      when: (not vagrant_dir_mounted.stat.exists) or sync_is_required != ''
+      include_tasks: common/tasks/copy_files.yaml
+
     - name: Install Percona yum Repository
       when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and is_percona_repo_required != ''
       block:
@@ -307,13 +316,13 @@
           echo "listen_addresses = '*'" >> /var/lib/pgsql/{{ percona_postgresql_major_ver }}/data/postgresql.conf;
           echo 'host    all             all             0.0.0.0/0            md5' >> /var/lib/pgsql/{{ percona_postgresql_major_ver }}/data/pg_hba.conf;
           echo 'host    replication     all             0.0.0.0/0            md5' >> /var/lib/pgsql/{{ percona_postgresql_major_ver }}/data/pg_hba.conf;
-          echo $(/vagrant/tools/node_ip.sh):5432:*:postgres:{{db_password}} > ~/.pgpass ;
+          echo $(/bin/bash /vagrant/tools/node_ip.sh):5432:*:postgres:{{db_password}} > ~/.pgpass ;
           chmod 0600 ~/.pgpass
         creates: "/var/lib/pgsql/{{ percona_postgresql_major_ver }}/data/pg_hba.conf"
     - name: Setup PGPool
       when: pgpool_version != '' and master_ip != ''
       shell:
-        cmd: /vagrant/tools/setup_pg_pool.sh "{{master_ip}}" "{{db_password}}"
+        cmd: /bin/bash /vagrant/tools/setup_pg_pool.sh "{{master_ip}}" "{{db_password}}"
         creates: /root/pgpool.applied
 
     - name: install Percona Toolkit
@@ -426,7 +435,7 @@
       when: master_ip != '' and percona_postgresql_version != ''
       shell:
         cmd: >-
-          /vagrant/tools/setup_postgresql_replication.sh
+          /bin/bash /vagrant/tools/setup_postgresql_replication.sh
           streaming_physical_slots
           {{master_ip}}
           postgres
@@ -438,7 +447,7 @@
     - name: Setup PMM client with postgres
       when: pmm_url != '' and percona_postgresql_version != ''
       shell:
-        cmd: /vagrant/tools/setup_pmm.sh "{{soft}}" postgres "{{db_password}}" pmm_user "{{db_password}}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
+        cmd: /bin/bash /vagrant/tools/setup_pmm.sh "{{soft}}" postgres "{{db_password}}" pmm_user "{{db_password}}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
         creates: /root/pmm-postgresql.applied
 
     - name: Install k3s, kubernetes distribution
