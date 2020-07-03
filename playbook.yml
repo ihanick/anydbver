@@ -44,6 +44,8 @@
     mysql_random_data_load_version: "{{ lookup('vars', 'extra_mysql_random_data_load_version', default=lookup('env','MYSQL_RANDOM_DATA',default='') ) }}"
     mysql_connector_java_version: "{{ lookup('vars', 'extra_mysql_connector_java_version', default=lookup('env','MYSQL_JAVA',default='') ) }}"
     innodb_ruby_version: "{{ lookup('vars', 'extra_innodb_ruby_version', default=lookup('env','INNODB_RUBY',default='') ) }}"
+    ldap_server: "{{ lookup('vars', 'extra_ldap_server', default=lookup('env','LDAP_SERVER',default='') ) }}"
+    ldap_server_ip: "{{ lookup('vars', 'extra_ldap_server_ip', default=lookup('env','LDAP_IP',default='') ) }}"
 
     percona_server_name: "{{ 'percona-server' if percona_server_version.startswith('8.0') else 'Percona-Server' }}"
     percona_server_major_ver: "{{ '' if percona_server_version.startswith('8.0') else '-57' if percona_server_version.startswith('5.7') else '-56' if percona_server_version.startswith('5.6') else '' }}"
@@ -103,6 +105,7 @@
       'mysql' if mysql_version != '' else
       'orchestrator' if orchestrator_version != '' else
       'sysbench' if sysbench_version != '' else
+      'ldap_server' if ldap_server != '' else
       ''
       }}
   tasks:
@@ -223,6 +226,7 @@
         orchestrator_version != '' or
         proxysql_version != '' or
         sysbench_version != '' or
+        ldap_server != '' or
         percona_proxysql_version != '' or
         pgpool_version != ''
         ) and
@@ -265,7 +269,19 @@
       yum:
         name: "https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-{{ pbm_version_short }}/binary/redhat/7/x86_64/percona-backup-mongodb-{{pbm_version}}.el7.x86_64.rpm"
         state: present
-    
+
+    - name: Setup LDAP server
+      when: ldap_server != ''
+      command:
+        cmd: /bin/bash /vagrant/tools/setup_ldap_server.sh "{{db_user}}" "{{db_password}}"
+        creates: /root/ldaprootpasswd.ldif
+
+    - name: Setup LDAP on client
+      when: ldap_server_ip != ''
+      command:
+        cmd: /bin/bash /vagrant/tools/setup_ldap_client.sh "{{ldap_server_ip}}"
+        creates: /etc/nslcd.conf
+
     # PMM
     - name: install PMM client
       when: pmm_client_version != ""

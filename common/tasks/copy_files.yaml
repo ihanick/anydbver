@@ -1,5 +1,5 @@
 - file: path=/vagrant state=directory mode='0755'
-- copy: src="{{playbook_dir}}/tools/" dest="/vagrant/tools"
-- copy: src="{{playbook_dir}}/configs/" dest="/vagrant/configs"
-- copy: src="{{playbook_dir}}/secret/" dest="/vagrant/secret"
+- synchronize: src="{{playbook_dir}}/tools/" dest="/vagrant/tools"
+- synchronize: src="{{playbook_dir}}/configs/" dest="/vagrant/configs"
+- synchronize: src="{{playbook_dir}}/secret/" dest="/vagrant/secret"
 - package: name=iproute state=present

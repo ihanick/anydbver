@@ -4,3 +4,5 @@ secret/*.pem
 secret/*keyfile
 lxdock.yml
 ansible_hosts
+secret/id_rsa
+secret/id_rsa.pub

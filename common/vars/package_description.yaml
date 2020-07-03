@@ -207,6 +207,17 @@ el7:
     install_packages:
       - "https://www.pgpool.net/yum/rpms/{{ pgpool_version | regex_replace('^([0-9]+\\.[0-9]+)\\..*$','\\1') }}/redhat/rhel-7-x86_64/pgpool-II-pg{{ percona_postgresql_version | regex_replace('\\..*$','') }}-{{pgpool_version}}pgdg.rhel7.x86_64.rpm"
 
+  ldap_server:
+    systemd_service: slapd
+    install_packages:
+      - openssl
+      - openldap
+      - openldap-clients
+      - openldap-servers
+      - openldap-servers-sql
+      - openldap-devel
+      - compat-openldap
+
 el8:
   proxysql:
     install_packages:

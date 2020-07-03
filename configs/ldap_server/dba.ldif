@@ -1,0 +1,17 @@
+dn: uid=dba,ou=People,dc=percona,dc=local
+objectClass: top
+objectClass: account
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: dba
+uid: dba
+uidNumber: 9999
+gidNumber: 100
+homeDirectory: /home/dba
+loginShell: /bin/bash
+gecos: DBA [info (at) example]
+userPassword: {crypt}x
+shadowLastChange: 17058
+shadowMin: 0
+shadowMax: 99999
+shadowWarning: 7
