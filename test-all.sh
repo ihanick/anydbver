@@ -199,12 +199,6 @@ MARIADB=10.4.12-1 lxdock provision default
 MARIADB=10.4.12-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf lxdock up default
 
 
-# lxdock, multi-node k8s cluster
-K3S=latest K8S_MINIO=yes lxdock up default
-K3S_TOKEN=$(lxdock shell default -c cat /var/lib/rancher/k3s/server/node-token) K3S_URL="https://$(lxdock shell default -c hostname -I | cut -d' ' -f3):6443" lxdock up node1 node2
-K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_FEATURES="gtid,master,backup" lxdock provision default
-test $DESTROY = yes && lxdock destroy -f
-
 # Vanilla MySQL 8.0
 ./gen_lxdock.sh anydbver centos/7
 MYSQL=8.0.20-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
@@ -430,17 +424,39 @@ if [[ "x$2" = "" || "x$2" = "xldap" ]] ; then
 if [[ "x$1" = "xlxdock" ]] ; then
 ./gen_lxdock.sh anydbver centos/7 3
 DB_USER=dba DB_PASS=secret LDAP_SERVER=1 DB_PASS=secret lxdock up node2
-LDAP_IP=$(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null)  lxdock up default
+LDAP_IP=$(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+  PPGSQL=12.3-1 DB_USER=dba DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
+  lxdock up default
 test $DESTROY = yes && lxdock destroy -f
 elif [[ "x$1" = "xpodman" ]] ; then
 ./start_podman.sh
 LDAP_SERVER=1 DB_USER=dba DB_PASS=secret ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
-LDAP_IP=$(grep $USER.node2 ansible_hosts |sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}') ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+LDAP_IP=$(grep $USER.node2 ansible_hosts |sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}') \
+  PPGSQL=12.3-1 DB_USER=dba DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
+  ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
 # check: ldapsearch -x cn=dba -b dc=percona,dc=local
 test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.node2
 else
 LDAP_SERVER=1 DB_USER=dba DB_PASS=secret vagrant up node2
-LDAP_IP=$(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) vagrant up default
+LDAP_IP=$(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+  PPGSQL=12.3-1 DB_USER=dba DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
+  vagrant up default
+test $DESTROY = yes && vagrant destroy -f || true
+fi
+fi
+
+
+# multi-node k8s cluster
+if [[ "x$2" = "" || "x$2" = "xk8spmmminio" ]] ; then
+if [[ "x$1" = "xlxdock" ]] ; then
+K3S=latest K8S_MINIO=yes lxdock up default
+K3S_TOKEN=$(lxdock shell default -c cat /var/lib/rancher/k3s/server/node-token) K3S_URL="https://$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null):6443" lxdock up node1 node2
+K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_FEATURES="gtid,master,backup" lxdock provision default
+test $DESTROY = yes && lxdock destroy -f
+else
+K3S=latest K8S_MINIO=yes vagrant up default
+K3S_TOKEN=$(vagrant ssh default -- cat /var/lib/rancher/k3s/server/node-token) K3S_URL="https://$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null):6443" vagrant up node1 node2
+K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_FEATURES="gtid,master,backup" vagrant provision default
 test $DESTROY = yes && vagrant destroy -f || true
 fi
 fi

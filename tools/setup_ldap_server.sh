@@ -63,6 +63,27 @@ ldapmodify -Y EXTERNAL  -H ldapi:/// -f /vagrant/configs/ldap_server/monitor.ldi
 ldapadd -x -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" -f /vagrant/configs/ldap_server/base.ldif
 
 # Add users
+ldapadd -x -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" <<EOF
+dn: uid=postgres,ou=People,dc=percona,dc=local
+objectClass: top
+objectClass: account
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: postgres
+uid: postgres
+uidNumber: 26
+gidNumber: 26
+homeDirectory: /var/lib/pgsql
+loginShell: /bin/bash
+gecos: DBA [info (at) example]
+userPassword: {crypt}x
+shadowLastChange: 17058
+shadowMin: 0
+shadowMax: 99999
+shadowWarning: 7
+EOF
+ldappasswd -s $PASSWORD -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" -x "uid=postgres,ou=People,dc=percona,dc=local"
+
 ldapadd -x -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" -f /vagrant/configs/ldap_server/dba.ldif
 
 ldappasswd -s $PASSWORD -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" -x "uid=dba,ou=People,dc=percona,dc=local"

@@ -330,7 +330,7 @@
           echo {{ db_password }} > /tmp/root-pw.txt;
           PGSETUP_INITDB_OPTIONS='--pwfile=/tmp/root-pw.txt' /usr/pgsql-{{ percona_postgresql_major_ver }}/bin/postgresql-{{ percona_postgresql_major_ver }}-setup initdb;
           echo "listen_addresses = '*'" >> /var/lib/pgsql/{{ percona_postgresql_major_ver }}/data/postgresql.conf;
-          echo 'host    all             all             0.0.0.0/0            md5' >> /var/lib/pgsql/{{ percona_postgresql_major_ver }}/data/pg_hba.conf;
+          echo 'host    all             all             0.0.0.0/0            {{'md5' if ldap_server_ip == '' else 'ldap ldapurl="ldap://'+ldap_server_ip+':389/dc=percona,dc=local?uid?sub"' }}' >> /var/lib/pgsql/{{ percona_postgresql_major_ver }}/data/pg_hba.conf;
           echo 'host    replication     all             0.0.0.0/0            md5' >> /var/lib/pgsql/{{ percona_postgresql_major_ver }}/data/pg_hba.conf;
           echo $(/bin/bash /vagrant/tools/node_ip.sh):5432:*:postgres:{{db_password}} > ~/.pgpass ;
           chmod 0600 ~/.pgpass
@@ -460,6 +460,12 @@
           /var/lib/pgsql/{{percona_postgresql_major_ver}}/data
           postgresql-{{percona_postgresql_major_ver}}
         creates: /root/replication.configured
+    - name: Create LDAP user in postgres
+      when: percona_postgresql_version != '' and ldap_server_ip != '' and db_user != ''
+      shell:
+        cmd: >-
+          sudo -u postgres createuser "{{db_user}}";
+          sudo -u postgres psql -c 'grant all on database postgres to {{db_user}}';
     - name: Setup PMM client with postgres
       when: pmm_url != '' and percona_postgresql_version != ''
       shell:
