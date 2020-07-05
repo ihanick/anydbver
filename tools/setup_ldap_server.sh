@@ -83,6 +83,27 @@ shadowMax: 99999
 shadowWarning: 7
 EOF
 ldappasswd -s $PASSWORD -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" -x "uid=postgres,ou=People,dc=percona,dc=local"
+ldapadd -x -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" <<EOF
+dn: uid=perconaro,ou=People,dc=percona,dc=local
+objectClass: top
+objectClass: account
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: dba
+uid: dba
+uidNumber: 9998
+gidNumber: 100
+homeDirectory: /home/perconaro
+loginShell: /bin/bash
+gecos: perconaro [info (at) example]
+userPassword: {crypt}x
+shadowLastChange: 17058
+shadowMin: 0
+shadowMax: 99999
+shadowWarning: 7
+EOF
+ldappasswd -s $PASSWORD -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" -x "uid=perconaro,ou=People,dc=percona,dc=local"
+
 
 ldapadd -x -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" -f /vagrant/configs/ldap_server/dba.ldif
 

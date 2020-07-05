@@ -420,7 +420,7 @@ fi
 fi
 
 # LDAP
-if [[ "x$2" = "" || "x$2" = "xldap" ]] ; then
+if [[ "x$2" = "" || "x$2" = "xpgldap" ]] ; then
 if [[ "x$1" = "xlxdock" ]] ; then
 ./gen_lxdock.sh anydbver centos/7 3
 DB_USER=dba DB_PASS=secret LDAP_SERVER=1 DB_PASS=secret lxdock up node2
@@ -440,6 +440,31 @@ else
 LDAP_SERVER=1 DB_USER=dba DB_PASS=secret vagrant up node2
 LDAP_IP=$(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
   PPGSQL=12.3-1 DB_USER=dba DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
+  vagrant up default
+test $DESTROY = yes && vagrant destroy -f || true
+fi
+fi
+
+if [[ "x$2" = "" || "x$2" = "xmongoldap" ]] ; then
+if [[ "x$1" = "xlxdock" ]] ; then
+./gen_lxdock.sh anydbver centos/7 3
+DB_USER=dba DB_PASS=secret LDAP_SERVER=1 DB_PASS=secret lxdock up node2
+LDAP_IP=$(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+  PSMDB=4.2.3-4 DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf \
+  lxdock up default
+test $DESTROY = yes && lxdock destroy -f
+elif [[ "x$1" = "xpodman" ]] ; then
+./start_podman.sh
+LDAP_SERVER=1 DB_USER=dba DB_PASS=secret ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+LDAP_IP=$(grep $USER.node2 ansible_hosts |sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}') \
+  PSMDB=4.2.3-4 DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf \
+  ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+# check: ldapsearch -x cn=dba -b dc=percona,dc=local
+test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.node2
+else
+LDAP_SERVER=1 DB_USER=dba DB_PASS=secret vagrant up node2
+LDAP_IP=$(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+  PSMDB=4.2.3-4 DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf \
   vagrant up default
 test $DESTROY = yes && vagrant destroy -f || true
 fi
