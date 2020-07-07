@@ -111,21 +111,6 @@ K3S_TOKEN=$(vagrant ssh default -- sudo cat /var/lib/rancher/k3s/server/node-tok
 K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_PASS=secret vagrant provision default
 vagrant destroy -f || true
 
-# MySQL replication
-DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1    DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default node1 node2
-DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 \
-MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) \
-DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1 node2
-vagrant destroy -f || true
-
-DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1    DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default node1 node2
-DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1 node2
-vagrant destroy -f || true
-
-DB_USER=root DB_PASS=secret START=1 PS=5.6.23-rel72.1    DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default node1 node2
-DB_USER=root DB_PASS=secret START=1 PS=5.6.23-rel72.1 MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1 node2
-vagrant destroy -f || true
-
 # MongoDB replicaset
 PSMDB=4.0.17-10 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf REPLICA_SET=rs0 vagrant up default
 PSMDB=4.0.17-10 DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf REPLICA_SET=rs0 MASTER=$( vagrant ssh default -- hostname -I | cut -d' ' -f1 ) vagrant up node1 node2
@@ -484,4 +469,86 @@ K3S_TOKEN=$(vagrant ssh default -- cat /var/lib/rancher/k3s/server/node-token) K
 K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_FEATURES="gtid,master,backup" vagrant provision default
 test $DESTROY = yes && vagrant destroy -f || true
 fi
+fi
+
+
+# MySQL Async replication
+if [[ "x$2" = "" || "x$2" = "xps56arep" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    DB_USER=root DB_PASS=secret START=1 PS=5.6.23-rel72.1 \
+      DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default node1 node2
+    DB_USER=root DB_PASS=secret START=1 PS=5.6.23-rel72.1 \
+      MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_OPTS=mysql/async-repl-gtid.cnf lxdock provision node1 node2
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh
+    DB_USER=root DB_PASS=secret START=1 PS=5.6.23-rel72.1 \
+      DB_OPTS=mysql/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    DB_USER=root DB_PASS=secret START=1 PS=5.6.23-rel72.1 \
+    MASTER=$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      DB_OPTS=mysql/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.node1 playbook.yml
+    test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.node2
+  else
+    DB_USER=root DB_PASS=secret START=1 PS=5.6.23-rel72.1    DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default node1 node2
+    DB_USER=root DB_PASS=secret START=1 PS=5.6.23-rel72.1 \
+      MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1 node2
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
+fi
+
+if [[ "x$2" = "" || "x$2" = "xps57arep" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 \
+      DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default node1 node2
+    DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 \
+      MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_OPTS=mysql/async-repl-gtid.cnf lxdock provision node1 node2
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh
+    DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 \
+      DB_OPTS=mysql/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 \
+    MASTER=$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      DB_OPTS=mysql/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.node1 playbook.yml
+    test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.node2
+  else
+    DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1    DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default node1 node2
+    DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 \
+      MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1 node2
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
+fi
+if [[ "x$2" = "" || "x$2" = "xps80arep" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 \
+      DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default node1 node2
+    DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 \
+      MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_OPTS=mysql/async-repl-gtid.cnf lxdock provision node1 node2
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh
+    DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 \
+      DB_OPTS=mysql/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 \
+    MASTER=$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      DB_OPTS=mysql/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.node1 playbook.yml
+    test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.node2
+  else
+    DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1    DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default node1 node2
+    DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 \
+      MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1 node2
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
 fi
