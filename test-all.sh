@@ -329,50 +329,110 @@ fi
 
 # PXC
 if [[ "x$2" = "" || "x$2" = "xpxc56" ]] ; then
-if [[ "x$1" = "xlxdock" ]] ; then
-./gen_lxdock.sh anydbver centos/7 3
-DB_USER=root DB_PASS=secret START=1 PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf lxdock up default node1 node2
-DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node1
-DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node2
-test $DESTROY = yes && lxdock destroy -f
-else
-DB_USER=root DB_PASS=secret START=1 PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf vagrant up default node1 node2
-DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf vagrant provision node1
-DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf vagrant provision node2
-vagrant destroy -f || true
-fi
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 3
+    DB_USER=root DB_PASS=secret START=1 PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf lxdock up default node1 node2
+    DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node1
+    DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node2
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh
+    DB_USER=root DB_PASS=secret START=1 PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf \
+      ansible-playbook -i ansible_hosts playbook.yml
+    DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera \
+    MASTER=$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      DB_OPTS=mysql/pxc5657.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.node1 playbook.yml
+    DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera \
+    MASTER=$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      DB_OPTS=mysql/pxc5657.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+    test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.node2
+  else
+    DB_USER=root DB_PASS=secret START=1 PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf \
+      vagrant up default node1 node2
+    DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera \
+      MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf vagrant provision node1
+    DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera \
+      MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf vagrant provision node2
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
 fi
 
 if [[ "x$2" = "" || "x$2" = "xpxc57" ]] ; then
-if [[ "x$1" = "xlxdock" ]] ; then
-./gen_lxdock.sh anydbver centos/7 3
-DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf lxdock up default node1 node2
-DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node1
-DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node2
-test $DESTROY = yes && lxdock destroy -f
-else
-DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf vagrant up default node1 node2
-DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf vagrant provision node1
-DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf vagrant provision node2
-vagrant destroy -f || true
-fi
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 3
+    DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf \
+      lxdock up default node1 node2
+    DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera \
+      MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_OPTS=mysql/pxc5657.cnf \
+      lxdock provision node1
+    DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera \
+      MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node2
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh
+    DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf \
+      ansible-playbook -i ansible_hosts playbook.yml
+    DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera \
+    MASTER=$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      DB_OPTS=mysql/pxc5657.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.node1 playbook.yml
+    DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera \
+    MASTER=$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      DB_OPTS=mysql/pxc5657.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+    test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.node2
+  else
+    DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf \
+      vagrant up default node1 node2
+    DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera \
+      MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_OPTS=mysql/pxc5657.cnf \
+      vagrant provision node1
+    DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf vagrant provision node2
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
 fi
 
 if [[ "x$2" = "" || "x$2" = "xpxc8" ]] ; then
-if [[ "x$1" = "xlxdock" ]] ; then
-./gen_lxdock.sh anydbver centos/7 3
-DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc8-repl-gtid.cnf lxdock up default node1 node2
-lxdock shell default -c tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem > secret/pxc-cluster-ssl.tar.gz
-DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf lxdock provision node1
-DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf lxdock provision node2
-test $DESTROY = yes && lxdock destroy -f
-else
-DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant up default node1 node2
-vagrant ssh default -- sudo tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem > secret/pxc-cluster-ssl.tar.gz
-DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant provision node1
-DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant provision node2
-vagrant destroy -f || true
-fi
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 3
+    DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc8-repl-gtid.cnf lxdock up default node1 node2
+    lxdock shell default -c tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem > secret/pxc-cluster-ssl.tar.gz
+    DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster \
+      MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_OPTS=mysql/pxc8-repl-gtid.cnf \
+      lxdock provision node1
+    DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster \
+      MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_OPTS=mysql/pxc8-repl-gtid.cnf \
+      lxdock provision node2
+     test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh
+    DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc8-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts playbook.yml
+    sudo podman exec -i $USER.default tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem > secret/pxc-cluster-ssl.tar.gz
+    DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster \
+      MASTER=$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      DB_OPTS=mysql/pxc8-repl-gtid.cnf \
+      SYNC=1 \
+      ansible-playbook -i ansible_hosts --limit $USER.node1 playbook.yml
+    DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster \
+      MASTER=$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      DB_OPTS=mysql/pxc8-repl-gtid.cnf \
+      SYNC=1 \
+      ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+    test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.node2
+  else
+    DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant up default node1 node2
+    vagrant ssh default -- sudo tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem > secret/pxc-cluster-ssl.tar.gz
+    DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant provision node1
+    DB_USER=root DB_PASS=secret PXC=8.0.18-9.3 REPLICATION_TYPE=galera CLUSTER=pxc-cluster MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc8-repl-gtid.cnf vagrant provision node2
+    vagrant destroy -f || true
+  fi
 fi
 
 # Postgresql 12 with PGPool-II
