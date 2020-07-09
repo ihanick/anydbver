@@ -452,16 +452,22 @@ fi
 
 # Postgresql 12 with PMM
 if [[ "x$2" = "" || "x$2" = "xpgpmm" ]] ; then
-if [[ "x$1" = "xlxdock" ]] ; then
-./gen_lxdock.sh anydbver centos/7 3
-PMM_SERVER=2.8.0 DB_PASS=secret lxdock up node2
-PPGSQL=12.3-1 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 PMM_CLIENT=2.8.0-6 PMM_URL="https://admin:secret@$(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null):443"  lxdock up default
-test $DESTROY = yes && lxdock destroy -f
-else
-PMM_SERVER=2.8.0 DB_PASS=secret vagrant up node2
-PPGSQL=12.3-1 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 PMM_CLIENT=2.8.0-6 PMM_URL="https://admin:secret@$(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null):443"  vagrant up default
-vagrant destroy -f || true
-fi
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 3
+    PMM_SERVER=2.8.0 DB_PASS=secret lxdock up node2
+    PPGSQL=12.3-1 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 PMM_CLIENT=2.8.0-6 PMM_URL="https://admin:secret@$(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null):443"  lxdock up default
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh --pmm 2.8.0
+    PMM_URL="https://admin:admin@"$(sudo podman inspect $USER.pmm-server |grep IPAddress|awk '{print $2}'|sed -e 's/[",]//g')":443" \
+    PPGSQL=12.3-1 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 PMM_CLIENT=2.8.0-6 \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.pmm-server
+  else
+    PMM_SERVER=2.8.0 DB_PASS=secret vagrant up node2
+    PPGSQL=12.3-1 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 PMM_CLIENT=2.8.0-6 PMM_URL="https://admin:secret@$(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null):443"  vagrant up default
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
 fi
 
 # LDAP
