@@ -46,6 +46,7 @@
     innodb_ruby_version: "{{ lookup('vars', 'extra_innodb_ruby_version', default=lookup('env','INNODB_RUBY',default='') ) }}"
     ldap_server: "{{ lookup('vars', 'extra_ldap_server', default=lookup('env','LDAP_SERVER',default='') ) }}"
     ldap_server_ip: "{{ lookup('vars', 'extra_ldap_server_ip', default=lookup('env','LDAP_IP',default='') ) }}"
+    mydumper_version: "{{ lookup('vars', 'extra_mydumper_version', default=lookup('env','MYDUMPER',default='') ) }}"
 
     percona_server_name: "{{ 'percona-server' if percona_server_version.startswith('8.0') else 'Percona-Server' }}"
     percona_server_major_ver: "{{ '' if percona_server_version.startswith('8.0') else '-57' if percona_server_version.startswith('5.7') else '-56' if percona_server_version.startswith('5.6') else '' }}"
@@ -599,3 +600,8 @@
           command:
             cmd: /usr/bin/gem install innodb_ruby
             creates: /usr/local/bin/innodb_space
+    - name: Install mydumper
+      when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and mydumper_version != ''
+      yum:
+        name: "{{os[dist].mydumper.install_packages}}"
+        state: present

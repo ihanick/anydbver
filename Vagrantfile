@@ -41,6 +41,7 @@ MYSQL_JAVA = ENV["MYSQL_JAVA"] || ""
 INNODB_RUBY = ENV["INNODB_RUBY"] || ""
 LDAP_SERVER = ENV["LDAP_SERVER"] || ""
 LDAP_IP = ENV["LDAP_IP"] || ""
+MYDUMPER = ENV["MYDUMPER"] || "" # 0.9.5-2
 
 # get token from master k3s node: cat /var/lib/rancher/k3s/server/node-token
 # if node re-added, kubectl delete node node1, and remove old entry from /var/lib/rancher/k3s/server/cred/node-passwd before run
@@ -135,6 +136,7 @@ Vagrant.configure("2") do |config|
       extra_innodb_ruby_version: INNODB_RUBY,
       extra_ldap_server: LDAP_SERVER,
       extra_ldap_server_ip: LDAP_IP,
+      extra_mydumper_version: MYDUMPER,
     }
   end  
 

@@ -217,6 +217,9 @@ el7:
       - openldap-servers-sql
       - openldap-devel
       - compat-openldap
+  mydumper:
+    install_packages:
+      - "https://github.com/maxbube/mydumper/releases/download/v{{mydumper_version|regex_replace('-[0-9]+$')}}/mydumper-{{mydumper_version}}.el7.x86_64.rpm"
 
 el8:
   proxysql:

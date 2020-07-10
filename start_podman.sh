@@ -37,7 +37,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ $DESTROY -eq 1 ] ; then
-  sudo podman rm -f $USER.pmm-server $USER.default $USER.node1 $USER.node2
+  sudo podman rm -f $USER.pmm-server $USER.default $USER.node1 $USER.node2 &>/dev/null
   exit 0
 fi
 

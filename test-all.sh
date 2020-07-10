@@ -594,6 +594,7 @@ if [[ "x$2" = "" || "x$2" = "xps57arep" ]] ; then
 fi
 if [[ "x$2" = "" || "x$2" = "xps80arep" ]] ; then
   if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 3
     DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 \
       DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default node1 node2
     DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 \
@@ -615,6 +616,23 @@ if [[ "x$2" = "" || "x$2" = "xps80arep" ]] ; then
     DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 \
       MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
       DB_OPTS=mysql/async-repl-gtid.cnf vagrant provision node1 node2
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
+fi
+
+
+if [[ "x$2" = "" || "x$2" = "xmydumper" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7
+    MYDUMPER=0.9.5-2 lxdock up default
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh
+    MYDUMPER=0.9.5-2 \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./start_podman.sh --destroy
+  else
+    MYDUMPER=0.9.5-2 vagrant up default
     test $DESTROY = yes && vagrant destroy -f || true
   fi
 fi
