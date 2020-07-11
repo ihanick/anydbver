@@ -636,3 +636,57 @@ if [[ "x$2" = "" || "x$2" = "xmydumper" ]] ; then
     test $DESTROY = yes && vagrant destroy -f || true
   fi
 fi
+
+# Postgresql 12 with PGPool-II and sybench
+if [[ "x$2" = "" || "x$2" = "xpgpoolsysbench" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 3
+    PPGSQL=12.2-4 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
+      lxdock up default
+    SYSBENCH=1.0.20-6 lxdock up node1
+    PGPOOL=4.1.2-1 PPGSQL=12.2-4 DB_PASS=secret START=1 \
+      MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      lxdock up node2
+	  lxdock shell node1 -c \
+      /bin/bash /vagrant/tools/sysbench_pg_oltp_ro.sh \
+        $(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+        postgres secret postgres 2 10000 4 100
+    echo "benchmarking with pgpool"
+    lxdock shell node1 -c \
+      /bin/bash /vagrant/tools/sysbench_pg_oltp_ro.sh \
+        $(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+        postgres secret postgres 2 10000 4 100
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh
+    PPGSQL=12.2-4 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    SYSBENCH=1.0.20-6 \
+      ansible-playbook -i ansible_hosts --limit $USER.node1 playbook.yml
+    PGPOOL=4.1.2-1 PPGSQL=12.2-4 DB_PASS=secret START=1 \
+      MASTER=$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+    ansible -i ansible_hosts $USER.node1 -a "/bin/bash /vagrant/tools/sysbench_pg_oltp_ro.sh "$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)" postgres secret postgres 2 10000 4 100"
+    echo "benchmarking with pgpool"
+    ansible -i ansible_hosts $USER.node1 -a "/bin/bash /vagrant/tools/sysbench_pg_oltp_ro.sh "$(sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)" postgres secret postgres 2 10000 4 100"
+    test $DESTROY = yes && ./start_podman.sh --destroy
+  else
+    PPGSQL=12.2-4 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
+      vagrant up default
+    SYSBENCH=1.0.20-6 vagrant up node1
+    PGPOOL=4.1.2-1 PPGSQL=12.2-4 DB_PASS=secret START=1 \
+      MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      vagrant up node2
+    vagrant ssh node1 -- \
+      /bin/bash /vagrant/tools/sysbench_pg_oltp_ro.sh \
+        $(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+        postgres secret postgres 2 10000 4 100
+    echo "benchmarking with pgpool"
+    vagrant ssh node1 -- \
+      /bin/bash /vagrant/tools/sysbench_pg_oltp_ro.sh \
+        $(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+        postgres secret postgres 2 10000 4 100
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
+fi
+
