@@ -683,7 +683,7 @@ if [[ "x$2" = "" || "x$2" = "xpgpoolsysbench" ]] ; then
         postgres secret postgres 2 10000 4 100
     echo "benchmarking with pgpool"
     vagrant ssh node1 -- \
-      /bin/bash /vagrant/tools/sysbench_pg_oltp_ro.sh \
+      sudo /bin/bash /vagrant/tools/sysbench_pg_oltp_ro.sh \
         $(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
         postgres secret postgres 2 10000 4 100
     test $DESTROY = yes && vagrant destroy -f || true
