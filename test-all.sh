@@ -690,3 +690,21 @@ if [[ "x$2" = "" || "x$2" = "xpgpoolsysbench" ]] ; then
   fi
 fi
 
+# Community Postgresql 12
+if [[ "x$2" = "" || "x$2" = "xpg12" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 3
+    PG=12.2 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
+      lxdock up default
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh
+    PG=12.2 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./start_podman.sh --destroy
+  else
+    PG=12.2 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
+      vagrant up default
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
+fi

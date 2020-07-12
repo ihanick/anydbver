@@ -78,6 +78,6 @@ for i in ${USER}.default $(seq 1 2|sed -e s/^/${USER}.node/); do
   echo "$i ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=/usr/bin/python2.7 ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ansible_hosts
 done
 
-if [ $USER != "" ] ; then
+if [ "x$PMM" != "x" ] ; then
   sudo podman run -d -p $PMM_PORT:443 --name $USER.pmm-server percona/pmm-server:$PMM
 fi
