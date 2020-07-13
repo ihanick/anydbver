@@ -6,7 +6,7 @@ DESTROY=0
 K8S=0
 # read arguments
 opts=$(getopt \
-    --longoptions "pmm:,pmm-port:,os:,destroy" \
+    --longoptions "pmm:,pmm-port:,os:,destroy,k8s" \
     --name "$(basename "$0")" \
     --options "" \
     -- "$@"
