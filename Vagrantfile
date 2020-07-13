@@ -25,6 +25,7 @@ K3S = ENV["K3S"] || ""
 K8S_PMM = ENV["K8S_PMM"] || ""
 K8S_MINIO = ENV["K8S_MINIO"] || ""
 K3S_FLANNEL_BACKEND = ENV["K3S_FLANNEL_BACKEND"] || "vxlan"
+KUBE_CONFIG = ENV["KUBE_CONFIG"] || ""
 MASTER = ENV["MASTER"] || ""
 REPLICATION_TYPE = ENV["REPLICATION_TYPE"] || ""
 CLUSTER = ENV["CLUSTER"] || "cluster1"
@@ -121,6 +122,7 @@ Vagrant.configure("2") do |config|
       extra_k8s_pmm: K8S_PMM,
       extra_k8s_minio: K8S_MINIO,
       extra_k3s_flannel_backend: K3S_FLANNEL_BACKEND,
+      extra_kube_config: KUBE_CONFIG,
       extra_master_ip: MASTER,
       extra_replication_type: REPLICATION_TYPE,
       extra_cluster_name: CLUSTER,

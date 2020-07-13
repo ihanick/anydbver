@@ -3,6 +3,7 @@ OS=el7
 PMM=""
 PMM_PORT=$(( 8443 + $UID ))
 DESTROY=0
+K8S=0
 # read arguments
 opts=$(getopt \
     --longoptions "pmm:,pmm-port:,os:,destroy" \
@@ -26,6 +27,10 @@ while [[ $# -gt 0 ]]; do
       OS=$2
       shift 2
       ;;
+    --k8s)
+      K8S=1
+      shift
+      ;;
     --destroy)
       DESTROY=1
       shift
@@ -37,8 +42,22 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ $DESTROY -eq 1 ] ; then
-  sudo podman rm -f $USER.pmm-server $USER.default $USER.node1 $USER.node2 &>/dev/null
+  sudo podman rm -f $USER.pmm-server $USER.default $USER.node1 $USER.node2 \
+    $USER.k8sm $USER.k8sw1 $USER.k8sw3 $USER.k8sw2 &>/dev/null
   exit 0
+fi
+
+if [ $K8S -eq 1 ] ; then
+  sudo podman run -d --privileged --tmpfs /run --tmpfs /var/run --name $USER.k8sm rancher/k3s:latest server --no-deploy traefik --flannel-backend=vxlan
+  sleep 30
+  MIP=$(sudo podman inspect $USER.k8sm|grep -F IPAddress|perl -ne '/"([0-9.]+)"/ and print $1')
+  K3S_URL="https://$MIP:6443"
+  K3S_TOKEN="$( sudo podman exec -i $USER.k8sm cat /var/lib/rancher/k3s/server/node-token)"
+  sudo podman run -d --privileged --tmpfs /run --tmpfs /var/run --name $USER.k8sw1 -e K3S_URL="$K3S_URL" -e K3S_TOKEN="$K3S_TOKEN" rancher/k3s:latest
+  sudo podman run -d --privileged --tmpfs /run --tmpfs /var/run --name $USER.k8sw2 -e K3S_URL="$K3S_URL" -e K3S_TOKEN="$K3S_TOKEN" rancher/k3s:latest
+  sudo podman run -d --privileged --tmpfs /run --tmpfs /var/run --name $USER.k8sw3 -e K3S_URL="$K3S_URL" -e K3S_TOKEN="$K3S_TOKEN" rancher/k3s:latest
+
+  sudo podman exec -i $USER.k8sm cat /etc/rancher/k3s/k3s.yaml | sed "s,server: https://127.0.0.1:6443,server: https://$MIP:6443," > secret/kube.config
 fi
 
 IMG="centos:7"

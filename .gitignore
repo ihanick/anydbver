@@ -6,3 +6,4 @@ lxdock.yml
 ansible_hosts
 secret/id_rsa
 secret/id_rsa.pub
+secret/kube.config

@@ -708,3 +708,47 @@ if [[ "x$2" = "" || "x$2" = "xpg12" ]] ; then
     test $DESTROY = yes && vagrant destroy -f || true
   fi
 fi
+
+# Percona K8S Operator for PXC
+if [[ "x$2" = "" || "x$2" = "xpopxc" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 4
+    K3S=latest K8S_MINIO=yes lxdock up default
+    until [ "x" != "x$IP" ]; do
+      IP=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null)
+      sleep 1
+    done
+    echo "K8S master IP: $IP"
+    K3S_TOKEN=$(lxdock shell default -c cat /var/lib/rancher/k3s/server/node-token) \
+      K3S_URL="https://$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null):6443" \
+      lxdock up node1 node2 node3
+    # there are dns resolution issues for "too fast start"
+    sleep 30
+    K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_FEATURES="backup" lxdock provision default
+    lxdock shell default -c kubectl apply -f /vagrant/configs/k8s/svc-replication-master.yaml
+
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh --k8s
+    KUBE_CONFIG=kube.config PKO4PXC='1.4.0' K8S_PMM=1 K8S_MINIO=1 \
+      DB_FEATURES="backup" \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && sudo podman rm -f ihanick.node2 ihanick.default ihanick.k8sw1 ihanick.k8sw3 ihanick.k8sm ihanick.node1 ihanick.k8sw2
+    test $DESTROY = yes && ./start_podman.sh --destroy
+  else
+    K3S=latest K8S_MINIO=yes vagrant up default
+    until [ "x" != "x$IP" ]; do
+      IP=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null)
+      sleep 1
+    done
+    echo "K8S master IP: $IP"
+    K3S_TOKEN=$(vagrant ssh default -c cat /var/lib/rancher/k3s/server/node-token) \
+      K3S_URL="https://$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null):6443" \
+      vagrant up node1 node2 node3
+    # there are dns resolution issues for "too fast start"
+    sleep 30
+    K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_FEATURES="backup" vagrant provision default
+    vagrant default -c kubectl apply -f /vagrant/configs/k8s/svc-replication-master.yaml
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
+fi

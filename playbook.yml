@@ -30,6 +30,7 @@
     k8s_pmm: "{{ lookup('vars', 'extra_k8s_pmm', default=lookup('env','K8S_PMM',default='') ) }}"
     k8s_minio: "{{ lookup('vars', 'extra_k8s_minio', default=lookup('env','K8S_MINIO',default='') ) }}"
     k3s_flannel_backend: "{{ lookup('vars', 'extra_k3s_flannel_backend', default=lookup('env','K3S_FLANNEL_BACKEND',default='vxlan') ) }}"
+    kube_config: "{{ lookup('vars', 'extra_kube_config', default=lookup('env','KUBE_CONFIG',default='') ) }}"
     master_ip: "{{ lookup('vars', 'extra_master_ip', default=lookup('env','MASTER',default='') ) }}"
     replication_type: "{{ lookup('vars', 'extra_replication_type', default=lookup('env','REPLICATION_TYPE',default='') ) }}"
     cluster_name:  "{{ lookup('vars', 'extra_cluster_name', default=lookup('env','CLUSTER',default='cluster1') ) }}"
@@ -492,7 +493,23 @@
 
     - name: Install k3s, kubernetes distribution
       include_tasks: common/tasks/kubernetes_install.yaml
-      when: percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or (k3s_url != '' and k3s_token != '') or k3s_version != ''
+      when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or (k3s_url != '' and k3s_token != '') or k3s_version != '') and kube_config == ''
+
+    - name: Install kubectl
+      when: kube_config != ''
+      block:
+        - file: path=/root/.kube state=directory mode='0755'
+        - copy:
+            src: "{{playbook_dir}}/secret/{{kube_config}}"
+            dest: /root/.kube/config
+            mode: "0600"
+            owner: root
+            group: root
+        - shell:
+            warn: false
+            cmd: curl -o /usr/bin/kubectl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl; chmod +x /usr/bin/kubectl
+            creates: /usr/bin/kubectl
+        - include_tasks: common/tasks/helm_install.yaml
 
     - name: Install git for Percona Operator setup
       when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != ""
