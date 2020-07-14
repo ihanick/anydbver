@@ -522,6 +522,33 @@ fi
 fi
 
 
+if [[ "x$2" = "" || "x$2" = "xpsldap" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 3
+    DB_USER=dba DB_PASS=secret LDAP_SERVER=1 DB_PASS=secret lxdock up node2
+    LDAP_IP=$(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1    DB_OPTS=mysql/async-repl-gtid.cnf \
+      lxdock up default
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh
+    LDAP_SERVER=1 DB_USER=dba DB_PASS=secret ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+    LDAP_IP=$(grep $USER.node2 ansible_hosts |sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}') \
+      DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1    DB_OPTS=mysql/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    # check: ldapsearch -x cn=dba -b dc=percona,dc=local
+    test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.node2
+  else
+    LDAP_SERVER=1 DB_USER=dba DB_PASS=secret vagrant up node2
+    LDAP_IP=$(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1    DB_OPTS=mysql/async-repl-gtid.cnf \
+      vagrant up default
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
+fi
+
+
+
 # multi-node k8s cluster
 if [[ "x$2" = "" || "x$2" = "xk8spmmminio" ]] ; then
 if [[ "x$1" = "xlxdock" ]] ; then

@@ -89,8 +89,8 @@ objectClass: top
 objectClass: account
 objectClass: posixAccount
 objectClass: shadowAccount
-cn: dba
-uid: dba
+cn: perconaro
+uid: perconaro
 uidNumber: 9998
 gidNumber: 100
 homeDirectory: /home/perconaro
