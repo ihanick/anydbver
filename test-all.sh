@@ -779,3 +779,23 @@ if [[ "x$2" = "" || "x$2" = "xpopxc" ]] ; then
     test $DESTROY = yes && vagrant destroy -f || true
   fi
 fi
+
+
+if [[ "x$2" = "" || "x$2" = "xc8my8" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/8
+    MYSQL=8.0.21-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      lxdock up default
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh --os centos8
+    MYSQL=8.0.21-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./start_podman.sh --destroy
+  else
+    MYSQL=8.0.21-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      OS=centos/8 \
+      vagrant up default
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
+fi

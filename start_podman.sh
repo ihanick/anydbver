@@ -4,6 +4,8 @@ PMM=""
 PMM_PORT=$(( 8443 + $UID ))
 DESTROY=0
 K8S=0
+PACKAGES=''
+PYTHON_INT=/usr/bin/python2.7
 # read arguments
 opts=$(getopt \
     --longoptions "pmm:,pmm-port:,os:,destroy,k8s" \
@@ -69,10 +71,13 @@ fi
 
 if [ $OS = el8 -o $OS = centos8 ] ; then
   IMG=centos:8
-fi
+  PYTHON_INT=/usr/bin/python3
 
-if [ $OS = el8 -o $OS = centos8 ] && sudo podman images | grep centos|grep -q 7-systemd ; then
-  IMG=centos:8-systemd
+  if [ $OS = el8 -o $OS = centos8 ] && sudo podman images | grep centos|grep -q 8-systemd ; then
+    IMG=centos:8-systemd
+  else
+    PACKAGES="$PACKAGES python3"
+  fi
 fi
 
 if [ $OS = bionic ] ; then
@@ -90,11 +95,11 @@ for i in ${USER}.default $(seq 1 2|sed -e s/^/${USER}.node/); do
   sudo podman run -d --name $i $IMG /sbin/init
   sudo podman cp $PWD/secret/id_rsa.pub $i:/root/.ssh/authorized_keys
   sudo podman cp $PWD/tools/node_ip.sh $i:/usr/bin/node_ip.sh
-  sudo podman exec $i bash -c "test -f /usr/bin/rsync || yum install -y sudo openssh-server iproute rsync; chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd;systemctl enable sshd;systemctl restart sshd"
+  sudo podman exec $i bash -c "test -f /usr/bin/rsync || yum install -y sudo openssh-server iproute rsync $PACKAGES; chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd;systemctl enable sshd;systemctl restart sshd"
 
   IP=$(sudo podman exec $i /bin/bash /usr/bin/node_ip.sh)
   #echo "$i ansible_connection=podman ansible_python_interpreter=/usr/bin/python2.7" >> ansible_hosts
-  echo "$i ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=/usr/bin/python2.7 ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ansible_hosts
+  echo "$i ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ansible_hosts
 done
 
 if [ "x$PMM" != "x" ] ; then
