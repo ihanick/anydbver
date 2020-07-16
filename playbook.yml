@@ -59,7 +59,6 @@
     percona_xtradb_cluster_full_ver: "{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el7.x86_64"
     percona_mysql_name: "{{ percona_server_name if percona_server_version != '' else percona_xtradb_cluster_name if percona_xtradb_cluster_version != '' else '' }}"
     percona_mysql_full_ver: "{{ percona_server_full_ver if percona_server_version != '' else percona_xtradb_cluster_full_ver if percona_xtradb_cluster_version != '' else '' }}"
-    percona_xtrabackup_full_name: "percona-xtrabackup{{ '-24' if percona_xtrabackup_version.startswith('2.4') else '-80' if percona_xtrabackup_version.startswith('8.0')  else '' }}-{{ percona_xtrabackup_version }}.el7.x86_64"
     psmdb_major_ver: "{{ '-36' if psmdb_version.startswith('3.6') else '' }}"
     psmdb_name: "{{ 'Percona-Server-MongoDB' if psmdb_version.startswith('3.6') else 'percona-server-mongodb' }}"
     pbm_version_short: "{{ pbm_version | regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1') }}"
@@ -259,7 +258,7 @@
     - name: install Percona XtraBackup
       when: percona_xtrabackup_version != ""
       package:
-        name: "{{ percona_xtrabackup_full_name }}"
+        name: "percona-xtrabackup{{ '-24' if percona_xtrabackup_version.startswith('2.4') else '-80' if percona_xtrabackup_version.startswith('8.0')  else '' }}-{{ percona_xtrabackup_version }}.{{dist}}.x86_64"
         state: present
         
     # MongoDB
