@@ -250,18 +250,18 @@ fi # endif old tests
 
 # MySQL Connector Java test
 if [[ "x$2" = "" || "x$2" = "xmysql_connector_java" ]] ; then
-if [[ "x$1" = "xlxdock" ]] ; then
-./gen_lxdock.sh anydbver centos/7 2
-DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
-MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_PASS=secret DB_USER=root MYSQL_JAVA=8.0.17-1 lxdock up node1
-lxdock shell node1 -c bash -c 'cd /srv/java && sudo javac ConnectorTest.java && java -classpath "./:/usr/share/java/mysql-connector-java.jar:/usr/share/java/" ConnectorTest'
-test $DESTROY = yes && lxdock destroy -f
-else
-DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default
-MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_PASS=secret DB_USER=root MYSQL_JAVA=8.0.17-1 vagrant up node1
-vagrant ssh node1 -c bash -c 'cd /srv/java && sudo javac ConnectorTest.java && java -classpath "./:/usr/share/java/mysql-connector-java.jar:/usr/share/java/" ConnectorTest'
-vagrant destroy -f
-fi
+  if [[ "x$1" = "xlxdock" ]] ; then
+  ./gen_lxdock.sh anydbver centos/7 2
+  DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf lxdock up default
+  MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_PASS=secret DB_USER=root MYSQL_JAVA=8.0.17-1 lxdock up node1
+  lxdock shell node1 -c bash -c 'cd /srv/java && sudo javac ConnectorTest.java && java -classpath "./:/usr/share/java/mysql-connector-java.jar:/usr/share/java/" ConnectorTest'
+  test $DESTROY = yes && lxdock destroy -f
+  else
+  DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 DB_OPTS=mysql/async-repl-gtid.cnf vagrant up default
+  MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_PASS=secret DB_USER=root MYSQL_JAVA=8.0.17-1 vagrant up node1
+  vagrant ssh node1 -c bash -c 'cd /srv/java && sudo javac ConnectorTest.java && java -classpath "./:/usr/share/java/mysql-connector-java.jar:/usr/share/java/" ConnectorTest'
+  vagrant destroy -f
+  fi
 fi
 
 # Postgresql Odyssey
@@ -819,5 +819,49 @@ if [[ "x$2" = "" || "x$2" = "xc8my8pxb8" ]] ; then
       OS=centos/8 \
       vagrant up default
     test $DESTROY = yes && vagrant destroy -f || true
+  fi
+fi
+
+# MySQL Connector Java test LDAP
+if [[ "x$2" = "" || "x$2" = "xmysql_connector_java_ldap" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 3
+    LDAP_SERVER=1 DB_USER=dba DB_PASS=secret \
+      lxdock up node2
+    LDAP_IP=$(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_USER=dba DB_PASS=secret START=1 PS=5.7.26-29.1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      lxdock up default
+    LDAP_IP=$( lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      MASTER=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_PASS=secret DB_USER=dba MYSQL_JAVA=8.0.17-1 \
+      lxdock up node1
+    lxdock shell node1 -c bash -c 'cd /srv/java && sudo javac ConnectorTest.java && java -classpath "./:/usr/share/java/mysql-connector-java.jar:/usr/share/java/" ConnectorTest'
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh
+    LDAP_SERVER=1 DB_USER=dba DB_PASS=secret ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+    LDAP_IP=$(sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      DB_USER=dba DB_PASS=secret START=1 PS=5.7.26-29.1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    LDAP_IP=$(sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+    MASTER=$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      DB_USER=dba DB_PASS=secret MYSQL_JAVA=8.0.17-1 \
+      ansible-playbook -i ansible_hosts --limit $USER.node1 playbook.yml
+    ssh -i secret/id_rsa \
+      root@$(sed -ne '/node1/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      bash -c 'cd /srv/java && sudo javac ConnectorTest.java && java -classpath "./:/usr/share/java/mysql-connector-java.jar:/usr/share/java/" ConnectorTest'
+    test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.node2
+  else
+    LDAP_SERVER=1 DB_USER=dba DB_PASS=secret \
+      vagrant up node2
+    LDAP_IP=$(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_USER=dba DB_PASS=secret START=1 PS=5.7.26-29.1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      vagrant up default
+    LDAP_IP=$(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      MASTER=$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      DB_PASS=secret DB_USER=dba MYSQL_JAVA=8.0.17-1 \
+      vagrant up node1
+    vagrant ssh node1 -c bash -c 'cd /srv/java && sudo javac ConnectorTest.java && java -classpath "./:/usr/share/java/mysql-connector-java.jar:/usr/share/java/" ConnectorTest'
+    test $DESTROY = yes && vagrant destroy -f
   fi
 fi
