@@ -262,3 +262,14 @@ el8:
     install_packages:
       - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-cli-{{orchestrator_version}}.x86_64.rpm"
       - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-{{orchestrator_version}}.x86_64.rpm"
+
+  postgresql:
+    systemd_service: "postgresql-{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}"
+    cnf_file: "/var/lib/pgsql/{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}/data/postgresql.conf"
+    repo_url: https://yum.postgresql.org/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+    install_packages:
+      - glibc-langpack-en
+      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-libs-{{postgresql_version}}"
+      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-{{postgresql_version}}"
+      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-server-{{postgresql_version}}"
+      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-contrib-{{postgresql_version}}"

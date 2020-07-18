@@ -198,12 +198,6 @@
       import_tasks:
         file: common/tasks/mariadb.yaml
     
-    - name: Postgresql repo
-      when: postgresql_version != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
-      yum:
-        name: "{{os[dist][soft].repo_url}}"
-        state: present
-
     - name: Enable EPEL
       when: >
         orchestrator_version != '' and
@@ -211,6 +205,19 @@
       package:
         name: epel-release
         state: present
+
+    - name: Postgresql repo
+      when: postgresql_version != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+      yum:
+        name: "{{os[dist][soft].repo_url}}"
+        state: present
+
+    - name: Postgresql repo on el8, disable dnf module postgresql
+      when: postgresql_version != '' and dist == 'el8'
+      shell:
+        warn: false
+        cmd: dnf -qy module disable postgresql ; touch /root/dist-postgresql.disabled
+        creates: /root/dist-postgresql.disabled
 
     - name: install apt db packages
       when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'

@@ -264,17 +264,6 @@ if [[ "x$2" = "" || "x$2" = "xmysql_connector_java" ]] ; then
   fi
 fi
 
-# Postgresql Odyssey
-if [[ "x$2" = "" || "x$2" = "xodyssey" ]] ; then
-if [[ "x$1" = "xlxdock" ]] ; then
-./gen_lxdock.sh anydbver centos/8 2
-ODYSSEY=1.1 lxdock up node1
-test $DESTROY = yes && lxdock destroy -f
-else
-:
-fi
-fi
-
 # innodb_ruby
 if [[ "x$2" = "" || "x$2" = "xinnodb_ruby" ]] ; then
 if [[ "x$1" = "xlxdock" ]] ; then
@@ -862,6 +851,32 @@ if [[ "x$2" = "" || "x$2" = "xmysql_connector_java_ldap" ]] ; then
       DB_PASS=secret DB_USER=dba MYSQL_JAVA=8.0.17-1 \
       vagrant up node1
     vagrant ssh node1 -c bash -c 'cd /srv/java && sudo javac ConnectorTest.java && java -classpath "./:/usr/share/java/mysql-connector-java.jar:/usr/share/java/" ConnectorTest'
+    test $DESTROY = yes && vagrant destroy -f
+  fi
+fi
+
+
+# Postgresql Odyssey + PG
+if [[ "x$2" = "" || "x$2" = "xodyssey" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/8 3
+    PG=12.2 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
+      lxdock up default
+    ODYSSEY=1.1 \
+      lxdock up node2
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh --os centos8
+    PG=12.2 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    ODYSSEY=1.1 \
+      ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+    test $DESTROY = yes && ./start_podman.sh --destroy
+  else
+    PG=12.2 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
+      vagrant up default
+    ODYSSEY=1.1 \
+      vagrant up node2
     test $DESTROY = yes && vagrant destroy -f
   fi
 fi
