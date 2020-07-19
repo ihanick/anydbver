@@ -7,16 +7,23 @@ TBLS=${5:-2}
 ROWS=${6:-10000}
 THREADS=${7:-4}
 BENCH_TIME=${8:-100}
+DISABLE_PREPARED=${9:-no}
 SYSBENCH_TEST=/usr/share/sysbench/oltp_read_only.lua
 
 echo "$HOST:5432:*:$USR:$PASS" >> ~/.pgpass
 chmod 0600 ~/.pgpass
 
 [ -f /usr/bin/psql ] || yum install -y postgresql
+if [ "x$DISABLE_PREPARED" == "xyes" ] ; then
+  PREPARED="--db-ps-mode=disable"
+else
+  PREPARED=""
+fi
 
 psql -U $USR -d $DB -h $HOST -c 'DROP TABLE IF EXISTS sbtest1;DROP TABLE IF EXISTS sbtest2'
 
 sysbench $SYSBENCH_TEST \
+  $PREPARED \
   --db-driver=pgsql \
   --threads=$THREADS \
   --pgsql-host="$HOST" \
@@ -28,6 +35,7 @@ sysbench $SYSBENCH_TEST \
   prepare
 
 sysbench $SYSBENCH_TEST \
+  $PREPARED \
   --db-driver=pgsql \
   --threads=$THREADS \
   --events=0 \

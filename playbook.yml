@@ -31,7 +31,7 @@
     k8s_minio: "{{ lookup('vars', 'extra_k8s_minio', default=lookup('env','K8S_MINIO',default='') ) }}"
     k3s_flannel_backend: "{{ lookup('vars', 'extra_k3s_flannel_backend', default=lookup('env','K3S_FLANNEL_BACKEND',default='vxlan') ) }}"
     kube_config: "{{ lookup('vars', 'extra_kube_config', default=lookup('env','KUBE_CONFIG',default='') ) }}"
-    master_ip: "{{ lookup('vars', 'extra_master_ip', default=lookup('env','MASTER',default='') ) }}"
+    master_ip: "{{ lookup('vars', 'extra_master_ip', default=lookup('env','DB_IP',default='') ) }}"
     replication_type: "{{ lookup('vars', 'extra_replication_type', default=lookup('env','REPLICATION_TYPE',default='') ) }}"
     cluster_name:  "{{ lookup('vars', 'extra_cluster_name', default=lookup('env','CLUSTER',default='cluster1') ) }}"
     mongo_replicaset: "{{ lookup('vars', 'extra_mongo_replicaset', default=lookup('env','REPLICA_SET',default='') ) }}"
@@ -440,6 +440,31 @@
           apt:
             deb: "{{os[dist][soft].url}}"
 
+    - name: Install Yandex Odyssey
+      when: odyssey_version != ''
+      block:
+        - name: Install tar
+          package:
+            name: tar
+            state: present
+        - name: download and install odyssey
+          shell:
+            warn: false
+            cmd: >-
+              curl -L -s https://github.com/yandex/odyssey/releases |
+              grep -F {{odyssey_version}}|grep linux-amd64|
+              sed -e 's,^.*a href=.,https://github.com,' -e 's,. rel=.nofollow.*$,,' |
+              xargs -n 1 curl -s -L --output /tmp/odyssey.tar.gz;
+              tar -C /usr/bin/ -xzf /tmp/odyssey.tar.gz;
+              rm -rf /tmp/odyssey.tar.gz
+            creates: /usr/bin/odyssey
+
+    - name: Setup Odyssey
+      when: odyssey_version != '' and master_ip != ''
+      shell:
+        cmd: /bin/bash /vagrant/tools/setup_pg_odyssey.sh "{{master_ip}}" "{{db_password}}"
+        creates: /etc/odyssey/odyssey.conf
+
     - name: Start database with systemd
       when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
       systemd:
@@ -619,24 +644,6 @@
             state: present
           with_items: "{{os[dist].mysql_connector_java.install_packages}}"
 
-    - name: Install Yandex Odyssey
-      when: odyssey_version != ''
-      block:
-        - name: Install tar
-          package:
-            name: tar
-            state: present
-        - name: download and install odyssey
-          shell:
-            warn: false
-            cmd: >-
-              curl -L -s https://github.com/yandex/odyssey/releases |
-              grep -F {{odyssey_version}}|grep linux-amd64|
-              sed -e 's,^.*a href=.,https://github.com,' -e 's,. rel=.nofollow.*$,,' |
-              xargs -n 1 curl -s -L --output /tmp/odyssey.tar.gz;
-              tar -C /usr/local/bin/ -xzf /tmp/odyssey.tar.gz;
-              rm -rf /tmp/odyssey.tar.gz
-            creates: /usr/local/bin/odyssey
     - name: InnoDB ruby
       when: innodb_ruby_version != ''
       block:

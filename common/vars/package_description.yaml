@@ -258,6 +258,11 @@ el8:
       - https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-{{mysql_version}}.el8.x86_64.rpm
       - https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server-{{mysql_version}}.el8.x86_64.rpm
 
+  sysbench:
+    install_packages:
+      - "Percona-Server-client-56"
+      - "sysbench-{{sysbench_version}}.el8.x86_64"
+
   orchestrator:
     install_packages:
       - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-cli-{{orchestrator_version}}.x86_64.rpm"
