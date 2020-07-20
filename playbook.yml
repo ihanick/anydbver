@@ -16,6 +16,7 @@
     percona_postgresql_version: "{{ lookup('vars', 'extra_percona_postgresql_version', default=lookup('env', 'PPGSQL', default='') ) }}"
     pgpool_version: "{{ lookup('vars', 'extra_pgpool_version', default=lookup('env', 'PGPOOL', default='') ) }}"
     odyssey_version: "{{ lookup('vars', 'extra_odyssey_version', default=lookup('env', 'ODYSSEY', default='') ) }}"
+    walg_version:  "{{ lookup('vars', 'extra_walg_version', default=lookup('env', 'WALG', default='') ) }}"
     percona_toolkit_version: "{{ lookup('vars', 'extra_percona_toolkit_version', default=lookup('env','PT',default='') ) }}"
     db_user: "{{ lookup('vars', 'extra_db_user', default=lookup('env','DB_USER',default='') ) }}"
     db_password: "{{ lookup('vars', 'extra_db_password', default=lookup('env','DB_PASS',default='') ) }}"
@@ -439,6 +440,26 @@
           when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'
           apt:
             deb: "{{os[dist][soft].url}}"
+
+    - name: Install WAL-G
+      when: walg_version != ''
+      block:
+        - name: Install tar
+          package:
+            name: tar
+            state: present
+        - name: download and install wal-g
+          shell:
+            warn: false
+            cmd: >-
+              curl -L -s https://github.com/wal-g/wal-g/releases |
+              grep -F {{walg_version}}|grep linux-amd64|
+              sed -e 's,^.*a href=.,https://github.com,' -e 's,. rel=.nofollow.*$,,' |
+              head -n 1 |
+              xargs -n 1 curl -s -L --output /tmp/walg.tar.gz;
+              tar -C /usr/bin/ -xzf /tmp/walg.tar.gz;
+              rm -rf /tmp/walg.tar.gz
+            creates: /usr/bin/wal-g
 
     - name: Install Yandex Odyssey
       when: odyssey_version != ''

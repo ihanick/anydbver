@@ -909,4 +909,21 @@ if [[ "x$2" = "" || "x$2" = "xmysql_connector_java_ldap" ]] ; then
   fi
 fi
 
-
+# WAL-G
+if [[ "x$2" = "" || "x$2" = "xwalg" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 1
+    WALG=0.2.16 \
+      lxdock up default
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh
+    WALG=0.2.16 \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./start_podman.sh --destroy
+  else
+    WALG=0.2.16 \
+      vagrant up default
+    test $DESTROY = yes && vagrant destroy -f
+  fi
+fi
