@@ -42,6 +42,7 @@ MYSQL_JAVA = ENV["MYSQL_JAVA"] || ""
 INNODB_RUBY = ENV["INNODB_RUBY"] || ""
 LDAP_SERVER = ENV["LDAP_SERVER"] || ""
 LDAP_IP = ENV["LDAP_IP"] || ""
+SAMBA_AD = ENV["SAMBA_AD"] || ""
 MYDUMPER = ENV["MYDUMPER"] || "" # 0.9.5-2
 PG = ENV["PG"] || ""
 ODYSSEY = ENV["ODYSSEY"] || ""
@@ -141,6 +142,7 @@ Vagrant.configure("2") do |config|
       extra_innodb_ruby_version: INNODB_RUBY,
       extra_ldap_server: LDAP_SERVER,
       extra_ldap_server_ip: LDAP_IP,
+      extra_samba_ad: SAMBA_AD,
       extra_mydumper_version: MYDUMPER,
       extra_postgresql_version: PG,
       extra_odyssey_version: ODYSSEY,

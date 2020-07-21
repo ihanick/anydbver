@@ -927,3 +927,22 @@ if [[ "x$2" = "" || "x$2" = "xwalg" ]] ; then
     test $DESTROY = yes && vagrant destroy -f
   fi
 fi
+
+# Samba
+if [[ "x$2" = "" || "x$2" = "xsamba" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 1
+    SAMBA_AD=1 \
+      lxdock up default
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh
+    SAMBA_AD=1 \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./start_podman.sh --destroy
+  else
+    SAMBA_AD=1 \
+      vagrant up default
+    test $DESTROY = yes && vagrant destroy -f
+  fi
+fi

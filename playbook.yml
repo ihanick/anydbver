@@ -48,6 +48,7 @@
     innodb_ruby_version: "{{ lookup('vars', 'extra_innodb_ruby_version', default=lookup('env','INNODB_RUBY',default='') ) }}"
     ldap_server: "{{ lookup('vars', 'extra_ldap_server', default=lookup('env','LDAP_SERVER',default='') ) }}"
     ldap_server_ip: "{{ lookup('vars', 'extra_ldap_server_ip', default=lookup('env','LDAP_IP',default='') ) }}"
+    samba_ad: "{{ lookup('vars', 'extra_samba_ad', default=lookup('env','SAMBA_AD',default='') ) }}"
     mydumper_version: "{{ lookup('vars', 'extra_mydumper_version', default=lookup('env','MYDUMPER',default='') ) }}"
     postgresql_version: "{{ lookup('vars', 'extra_postgresql_version', default=lookup('env','PG',default='') ) }}"
 
@@ -262,6 +263,12 @@
           ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else
             os[dist][soft].rocksdb_packages)
         }}
+
+    - name: Install Samba Active Directory server
+      when: samba_ad != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+      shell:
+        cmd: /bin/bash /vagrant/tools/install_samba_ad.sh
+        creates: /opt/samba/sbin/samba
 
     - name: install Percona XtraBackup
       when: percona_xtrabackup_version != ""
