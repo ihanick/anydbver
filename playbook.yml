@@ -49,6 +49,9 @@
     ldap_server: "{{ lookup('vars', 'extra_ldap_server', default=lookup('env','LDAP_SERVER',default='') ) }}"
     ldap_server_ip: "{{ lookup('vars', 'extra_ldap_server_ip', default=lookup('env','LDAP_IP',default='') ) }}"
     samba_ad: "{{ lookup('vars', 'extra_samba_ad', default=lookup('env','SAMBA_AD',default='') ) }}"
+    samba_ip: "{{ lookup('vars', 'extra_samba_ip', default=lookup('env','SAMBA_IP',default='') ) }}"
+    samba_sid: "{{ lookup('vars', 'extra_samba_sid', default=lookup('env','SAMBA_SID',default='') ) }}"
+    samba_pass: "{{ lookup('vars', 'extra_samba_pass', default=lookup('env','SAMBA_PASS',default='') ) }}"
     mydumper_version: "{{ lookup('vars', 'extra_mydumper_version', default=lookup('env','MYDUMPER',default='') ) }}"
     postgresql_version: "{{ lookup('vars', 'extra_postgresql_version', default=lookup('env','PG',default='') ) }}"
 
@@ -269,6 +272,12 @@
       shell:
         cmd: /bin/bash /vagrant/tools/install_samba_ad.sh
         creates: /opt/samba/sbin/samba
+
+    - name: Setup Samba Active Directory server
+      when: samba_ad != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+      shell:
+        cmd: /bin/bash /vagrant/tools/setup_samba_ad.sh
+        creates: /root/samba.configured
 
     - name: install Percona XtraBackup
       when: percona_xtrabackup_version != ""
@@ -538,6 +547,11 @@
           shell:
             cmd: /bin/bash /vagrant/tools/setup_ldap_mysql.sh "{{db_user}}"
             creates: /root/mysql-ldap.applied
+
+    - name: MySQL Samba Active Directory
+      when: samba_ip != '' and samba_pass != '' and samba_sid != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
+      shell:
+        cmd: /bin/bash /vagrant/tools/setup_samba_ldap_client.sh "{{samba_ip}}" "{{samba_pass}}" "{{samba_sid}}" mysql
 
     - name: Setup and start streaming physical replication with slots
       when: master_ip != '' and percona_postgresql_version != ''

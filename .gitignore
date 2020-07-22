@@ -7,3 +7,4 @@ ansible_hosts
 secret/id_rsa
 secret/id_rsa.pub
 secret/kube.config
+Docker/centos7-samba/install_samba_ad.sh

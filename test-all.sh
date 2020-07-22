@@ -931,17 +931,36 @@ fi
 # Samba
 if [[ "x$2" = "" || "x$2" = "xsamba" ]] ; then
   if [[ "x$1" = "xlxdock" ]] ; then
-    ./gen_lxdock.sh anydbver centos/7 1
+    ./gen_lxdock.sh anydbver centos/7 3
     SAMBA_AD=1 \
+      lxdock up node2
+    SAMBA_IP=$(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      SAMBA_SID=$(lxdock shell node2 -c bash -c "/opt/samba/bin/wbinfo -D PERCONA|grep SID|awk '{print \$3}'") \
+      SAMBA_PASS="verysecretpassword1^" \
+      DB_USER=dba DB_PASS=secret START=1 \
+      PS=5.7.26-29.1 DB_OPTS=mysql/async-repl-gtid.cnf \
       lxdock up default
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh
+    ./start_podman.sh --samba=node2
     SAMBA_AD=1 \
+      ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+
+    SAMBA_IP="$(sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)" \
+      SAMBA_SID="$(ssh -i secret/id_rsa root@$(sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) -o StrictHostKeyChecking=no /opt/samba/bin/wbinfo -D PERCONA|grep SID|awk '{print $3}')" \
+      SAMBA_PASS="verysecretpassword1^" \
+      DB_USER=dba DB_PASS=secret START=1 \
+      PS=5.7.26-29.1 DB_OPTS=mysql/async-repl-gtid.cnf \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
     test $DESTROY = yes && ./start_podman.sh --destroy
   else
     SAMBA_AD=1 \
+      vagrant up node2
+    SAMBA_IP=$(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+      SAMBA_SID=$(vagrant ssh node2 -- "/opt/samba/bin/wbinfo -D PERCONA|grep SID|awk '{print \$3}'" ) \
+      SAMBA_PASS="verysecretpassword1^" \
+      DB_USER=dba DB_PASS=secret START=1 \
+      PS=5.7.26-29.1 DB_OPTS=mysql/async-repl-gtid.cnf \
       vagrant up default
     test $DESTROY = yes && vagrant destroy -f
   fi
