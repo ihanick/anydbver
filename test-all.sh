@@ -553,6 +553,29 @@ test $DESTROY = yes && vagrant destroy -f || true
 fi
 fi
 
+# Standalone MySQL
+if [[ "x$2" = "" || "x$2" = "xps57" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 1
+    DB_USER=root DB_PASS=secret START=1 PS=5.7.30-33.1 \
+      DB_OPTS=mysql/async-repl-gtid.cnf \
+      lxdock up default
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh --nodes 1
+    DB_USER=root DB_PASS=secret START=1 PS=5.7.30-33.1 \
+      DB_OPTS=mysql/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./start_podman.sh --destroy
+  else
+    DB_USER=root DB_PASS=secret START=1 PS=5.7.30-33.1 \
+      DB_OPTS=mysql/async-repl-gtid.cnf \
+      vagrant up default
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
+fi
+
+
 
 # MySQL Async replication
 if [[ "x$2" = "" || "x$2" = "xps56arep" ]] ; then

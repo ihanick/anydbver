@@ -7,9 +7,10 @@ K8S=0
 PACKAGES=''
 SAMBA_NODES=''
 PYTHON_INT=/usr/bin/python2.7
+NUM_NODES=3
 # read arguments
 opts=$(getopt \
-    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:" \
+    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:" \
     --name "$(basename "$0")" \
     --options "" \
     -- "$@"
@@ -20,6 +21,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --pmm)
       PMM=$2
+      shift 2
+      ;;
+    --nodes)
+      NUM_NODES=$2
       shift 2
       ;;
     --pmm-port)
@@ -95,6 +100,7 @@ fi
 
 
 :> ansible_hosts
+N=0
 for i in ${USER}.default $(seq 1 2|sed -e s/^/${USER}.node/); do
   #sudo podman run -d --security-opt label=type:spc_t --security-opt seccomp=unconfined --name $i centos:7 /sbin/init
   if [ "x$USER.$SAMBA_NODE" = "x$i" ] && [ $OS = el7 ] && sudo podman images | grep centos|grep -q 7-samba ; then
@@ -110,6 +116,8 @@ for i in ${USER}.default $(seq 1 2|sed -e s/^/${USER}.node/); do
   IP=$(sudo podman exec $i /bin/bash /usr/bin/node_ip.sh)
   #echo "$i ansible_connection=podman ansible_python_interpreter=/usr/bin/python2.7" >> ansible_hosts
   echo "$i ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ansible_hosts
+  ((N=N+1))
+  if [ $N -eq $NUM_NODES ] ; then break ; fi
 done
 
 if [ "x$PMM" != "x" ] ; then
