@@ -988,3 +988,27 @@ if [[ "x$2" = "" || "x$2" = "xsamba" ]] ; then
     test $DESTROY = yes && vagrant destroy -f
   fi
 fi
+
+if [[ "x$2" = "" || "x$2" = "xperconatoolkit" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 1
+    PT=3.2.0-1 \
+      PS=5.7.30-33.1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      DB_USER=dba DB_PASS=secret START=1 \
+      lxdock up default
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh --nodes 1
+    PT=3.2.0-1 \
+      PS=5.7.30-33.1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      DB_USER=dba DB_PASS=secret START=1 \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./start_podman.sh --destroy
+  else
+    PT=3.2.0-1 \
+      PS=5.7.30-33.1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      DB_USER=dba DB_PASS=secret START=1 \
+      vagrant up default
+    test $DESTROY = yes && vagrant destroy -f
+  fi
+fi
