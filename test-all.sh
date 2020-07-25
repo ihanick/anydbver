@@ -1012,3 +1012,15 @@ if [[ "x$2" = "" || "x$2" = "xperconatoolkit" ]] ; then
     test $DESTROY = yes && vagrant destroy -f
   fi
 fi
+
+# Set hostnames for containers
+if [[ "x$2" = "" || "x$2" = "xdns" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh --hostname default=dns.percona.local --hostname node2=pdc.percona.local
+    test $DESTROY = yes && ./start_podman.sh --destroy
+  else
+    test $DESTROY = yes && vagrant destroy -f
+  fi
+fi

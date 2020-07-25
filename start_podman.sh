@@ -10,11 +10,13 @@ PYTHON_INT=/usr/bin/python2.7
 NUM_NODES=3
 # read arguments
 opts=$(getopt \
-    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:" \
+    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:,hostname:" \
     --name "$(basename "$0")" \
     --options "" \
     -- "$@"
 )
+
+declare -A HOSTNAMES
 
 eval set --$opts
 while [[ $# -gt 0 ]]; do
@@ -41,6 +43,12 @@ while [[ $# -gt 0 ]]; do
       ;;
     --samba)
       SAMBA_NODE=$2
+      shift 2
+      ;;
+    --hostname)
+      NODE_NAME=$(echo "$2"|cut -d= -f 1)
+      NODE_HOST=$(echo "$2"|cut -d= -f 2)
+      HOSTNAMES[$USER.$NODE_NAME]="$NODE_HOST"
       shift 2
       ;;
     --destroy)
@@ -102,12 +110,20 @@ fi
 :> ansible_hosts
 N=0
 for i in ${USER}.default $(seq 1 2|sed -e s/^/${USER}.node/); do
+  CAP_ADMIN=''
+  NODE_HOSTNAME=''
+
+  if [ "x${HOSTNAMES[$i]}" != "x" ] ; then
+    NODE_HOSTNAME="--hostname=${HOSTNAMES[$i]}"
+  fi
+
   #sudo podman run -d --security-opt label=type:spc_t --security-opt seccomp=unconfined --name $i centos:7 /sbin/init
   if [ "x$USER.$SAMBA_NODE" = "x$i" ] && [ $OS = el7 ] && sudo podman images | grep centos|grep -q 7-samba ; then
-    sudo podman run -d --cap-add SYS_ADMIN --name $i centos:7-samba /sbin/init
-  else
-    sudo podman run -d --name $i $IMG /sbin/init
+    IMG=centos:7-samba
+    CAP_ADMIN='--cap-add SYS_ADMIN'
   fi
+
+  sudo podman run -d $CAP_ADMIN $NODE_HOSTNAME --name $i $IMG /sbin/init
 
   sudo podman cp $PWD/secret/id_rsa.pub $i:/root/.ssh/authorized_keys
   sudo podman cp $PWD/tools/node_ip.sh $i:/usr/bin/node_ip.sh
