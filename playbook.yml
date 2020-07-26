@@ -52,6 +52,8 @@
     samba_ip: "{{ lookup('vars', 'extra_samba_ip', default=lookup('env','SAMBA_IP',default='') ) }}"
     samba_sid: "{{ lookup('vars', 'extra_samba_sid', default=lookup('env','SAMBA_SID',default='') ) }}"
     samba_pass: "{{ lookup('vars', 'extra_samba_pass', default=lookup('env','SAMBA_PASS',default='') ) }}"
+    kerberos_server: "{{ lookup('vars', 'extra_kerberos_server', default=lookup('env','KERBEROS',default='') ) }}"
+    kerberos_client: "{{ lookup('vars', 'extra_kerberos_client', default=lookup('env','KERBEROS_CLIENT',default='') ) }}"
     mydumper_version: "{{ lookup('vars', 'extra_mydumper_version', default=lookup('env','MYDUMPER',default='') ) }}"
     postgresql_version: "{{ lookup('vars', 'extra_postgresql_version', default=lookup('env','PG',default='') ) }}"
 
@@ -113,6 +115,7 @@
       'orchestrator' if orchestrator_version != '' else
       'sysbench' if sysbench_version != '' else
       'ldap_server' if ldap_server != '' else
+      'kerberos_server' if kerberos_server != '' else
       'postgresql' if postgresql_version != '' else
       ''
       }}
@@ -248,6 +251,7 @@
         proxysql_version != '' or
         sysbench_version != '' or
         ldap_server != '' or
+        kerberos_server != '' or
         percona_proxysql_version != '' or
         postgresql_version != '' or
         pgpool_version != ''
@@ -315,6 +319,18 @@
       command:
         cmd: /bin/bash /vagrant/tools/setup_ldap_client.sh "{{ldap_server_ip}}"
         creates: /etc/nslcd.conf
+
+    - name: Setup Kerberos server
+      when: kerberos_server != ''
+      command:
+        cmd: /bin/bash /vagrant/tools/setup_kerberos_server.sh "{{db_user}}" "{{db_password}}"
+        creates: /root/kerberos.configured
+
+    - name: Setup Kerberos client
+      when: kerberos_client != ''
+      command:
+        cmd: /bin/bash /vagrant/tools/setup_kerberos_client.sh "{{db_user}}" "{{db_password}}"
+        creates: /root/kerberos-client.configured
 
     # PMM
     - name: install PMM client
@@ -527,6 +543,12 @@
           command:
             cmd: /bin/bash /vagrant/tools/setup_mongo_replication.sh "{{mongo_replicaset}}" "dba" "{{db_password}}" "{{master_ip}}"
             creates: /root/{{mongo_replicaset}}.init
+
+    - name: Setup Kerberos for PG
+      when: kerberos_client != '' and (percona_postgresql_version != '' or postgresql_version != '')
+      command:
+        cmd: /bin/bash /vagrant/tools/setup_pg_kerberos.sh "{{db_user}}" "{{db_password}}"
+        creates: /etc/sysconfig/pgsql/krb5.keytab
 
     - name: Setup and start replication
       when: master_ip != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != '')

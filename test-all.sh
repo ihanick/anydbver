@@ -1024,3 +1024,28 @@ if [[ "x$2" = "" || "x$2" = "xdns" ]] ; then
     test $DESTROY = yes && vagrant destroy -f
   fi
 fi
+
+# Kerberos and PG
+if [[ "x$2" = "" || "x$2" = "xkerberos" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./start_podman.sh \
+      --hostname default=pg.percona.local \
+      --hostname node1=client.percona.local \
+      --hostname node2=kdc.percona.local
+    KERBEROS=1 \
+      DB_USER=dba DB_PASS=secret \
+      ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+
+    KERBEROS_CLIENT=1 \
+      PG=12.2 DB_USER=dba DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    KERBEROS_CLIENT=1 \
+      DB_USER=dba DB_PASS=secret \
+      ansible-playbook -i ansible_hosts --limit $USER.node1 playbook.yml
+    test $DESTROY = yes && ./start_podman.sh --destroy
+  else
+    test $DESTROY = yes && vagrant destroy -f
+  fi
+fi

@@ -217,6 +217,12 @@ el7:
       - openldap-servers-sql
       - openldap-devel
       - compat-openldap
+
+  kerberos_server:
+    systemd_service: krb5kdc
+    install_packages:
+      - krb5-server
+      - krb5-workstation
   mydumper:
     install_packages:
       - "https://github.com/maxbube/mydumper/releases/download/v{{mydumper_version|regex_replace('-[0-9]+$')}}/mydumper-{{mydumper_version}}.el7.x86_64.rpm"

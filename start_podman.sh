@@ -80,6 +80,8 @@ if [ $K8S -eq 1 ] ; then
   sudo podman exec -i $USER.k8sm cat /etc/rancher/k3s/k3s.yaml | sed "s,server: https://127.0.0.1:6443,server: https://$MIP:6443," > secret/kube.config
 fi
 
+:> configs/hosts
+
 IMG="centos:7"
 test -f secret/id_rsa || ssh-keygen -t rsa -f secret/id_rsa -P '' && chmod 0600 secret/id_rsa
 
@@ -132,6 +134,13 @@ for i in ${USER}.default $(seq 1 2|sed -e s/^/${USER}.node/); do
   IP=$(sudo podman exec $i /bin/bash /usr/bin/node_ip.sh)
   #echo "$i ansible_connection=podman ansible_python_interpreter=/usr/bin/python2.7" >> ansible_hosts
   echo "$i ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ansible_hosts
+
+
+  if [ "x${HOSTNAMES[$i]}" != "x" ] ; then
+    SHORT_NAME=$(echo "${HOSTNAMES[$i]}" | cut -d. -f 1)
+    echo "$IP ${HOSTNAMES[$i]} $SHORT_NAME" >> configs/hosts
+  fi
+
   ((N=N+1))
   if [ $N -eq $NUM_NODES ] ; then break ; fi
 done
