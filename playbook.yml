@@ -52,6 +52,7 @@
     samba_ip: "{{ lookup('vars', 'extra_samba_ip', default=lookup('env','SAMBA_IP',default='') ) }}"
     samba_sid: "{{ lookup('vars', 'extra_samba_sid', default=lookup('env','SAMBA_SID',default='') ) }}"
     samba_pass: "{{ lookup('vars', 'extra_samba_pass', default=lookup('env','SAMBA_PASS',default='') ) }}"
+    samba_kerberos: "{{ lookup('vars', 'extra_samba_kerberos', default=lookup('env','SAMBA_KERBEROS',default='') ) }}"
     kerberos_server: "{{ lookup('vars', 'extra_kerberos_server', default=lookup('env','KERBEROS',default='') ) }}"
     kerberos_client: "{{ lookup('vars', 'extra_kerberos_client', default=lookup('env','KERBEROS_CLIENT',default='') ) }}"
     mydumper_version: "{{ lookup('vars', 'extra_mydumper_version', default=lookup('env','MYDUMPER',default='') ) }}"
@@ -329,7 +330,7 @@
     - name: Setup Kerberos client
       when: kerberos_client != ''
       command:
-        cmd: /bin/bash /vagrant/tools/setup_kerberos_client.sh "{{db_user}}" "{{db_password}}"
+        cmd: /bin/bash /vagrant/tools/setup_kerberos_client.sh "{{db_user}}" "{{db_password}}" "{{ 'yes' if samba_kerberos != '' else 'no' }}"
         creates: /root/kerberos-client.configured
 
     # PMM
