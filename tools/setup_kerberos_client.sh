@@ -8,7 +8,7 @@ yum -y install openssh-clients
 
 cat /vagrant/configs/hosts >> /etc/hosts
 
-if [ "x$SAMBA" = "xno"] ; then
+if [ "x$SAMBA" = "xno" ] ; then
 cat > /etc/krb5.conf << EOF
 includedir /etc/krb5.conf.d/
 
@@ -71,7 +71,7 @@ Host *.percona.local
 EOF
 
 
-if [ "x$SAMBA" = "xno"] ; then
+if [ "x$SAMBA" = "xno" ] ; then
   kadmin -p root/admin -w "$PASS" addprinc -randkey host/$( hostname )
   kadmin -p root/admin -w "$PASS" ktadd host/$( hostname )
 
