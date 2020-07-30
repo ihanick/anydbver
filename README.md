@@ -239,7 +239,7 @@ Podman is a daemonless container engine for developing, managing, and running OC
 Unlike to docker you can use systemd inside.
 
 ```bash
-./start_podman.sh
+./podmanctl
 DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 DB_OPTS=mysql/async-repl-gtid.cnf ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
 ```
 

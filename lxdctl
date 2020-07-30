@@ -1,0 +1,96 @@
+#!/bin/bash
+OS=el7
+IMG="images:centos/7"
+PACKAGES=''
+PYTHON_INT=/usr/bin/python2.7
+NUM_NODES=3
+DESTROY=0
+
+# read arguments
+opts=$(getopt \
+    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:,hostname:" \
+    --name "$(basename "$0")" \
+    --options "" \
+    -- "$@"
+)
+
+declare -A HOSTNAMES
+
+eval set --$opts
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --pmm)
+      PMM=$2
+      shift 2
+      ;;
+    --nodes)
+      NUM_NODES=$2
+      shift 2
+      ;;
+    --pmm-port)
+      PMM_PORT=$2
+      shift 2
+      ;;
+    --os)
+      OS=$2
+      shift 2
+      ;;
+    --k8s)
+      K8S=1
+      shift
+      ;;
+    --samba)
+      SAMBA_NODE=$2
+      shift 2
+      ;;
+    --hostname)
+      NODE_NAME=$(echo "$2"|cut -d= -f 1)
+      NODE_HOST=$(echo "$2"|cut -d= -f 2)
+      HOSTNAMES[$USER.$NODE_NAME]="$NODE_HOST"
+      shift 2
+      ;;
+    --destroy)
+      DESTROY=1
+      shift
+      ;;
+      *)
+      break
+      ;;
+  esac
+done
+
+if [ $DESTROY -eq 1 ] ; then
+  for i in ${USER}.default $(seq 1 2|sed -e s/^/${USER}.node/); do
+    c=${i//./-}
+    lxc delete -f $c &>/dev/null
+  done
+  exit 0
+fi
+
+
+:> ansible_hosts
+N=0
+for i in ${USER}.default $(seq 1 2|sed -e s/^/${USER}.node/); do
+  c=${i//./-}
+  lxc launch $IMG $c
+  lxc exec $c -- mkdir /root/.ssh
+  lxc file push secret/id_rsa.pub $c/root/.ssh/authorized_keys
+  lxc file push tools/node_ip.sh $c/usr/bin/node_ip.sh
+  lxc exec $c -- bash -c "test -f /usr/bin/rsync || (until ping  -c 1 percona.com &>/dev/null ; do sleep 1; done;yum install -y sudo openssh-server iproute rsync $PACKAGES); chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd;systemctl enable sshd;systemctl restart sshd; chmod 0600 /root/.ssh/authorized_keys; chmod 0700 /root/.ssh; chown root:root -R /root/.ssh"
+
+  IP=$(lxc exec $c -- /bin/bash /usr/bin/node_ip.sh)
+  echo "$i ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ansible_hosts
+
+  if [ "x${HOSTNAMES[$i]}" != "x" ] ; then
+    lxc exec $c -- hostnamectl set-hostname "${HOSTNAMES[$i]}"
+  fi
+
+  if [ "x${HOSTNAMES[$i]}" != "x" ] ; then
+    SHORT_NAME=$(echo "${HOSTNAMES[$i]}" | cut -d. -f 1)
+    echo "$IP ${HOSTNAMES[$i]} $SHORT_NAME" >> configs/hosts
+  fi
+
+  ((N=N+1))
+  if [ $N -eq $NUM_NODES ] ; then break ; fi
+done
+

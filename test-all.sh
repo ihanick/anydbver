@@ -325,7 +325,7 @@ if [[ "x$2" = "" || "x$2" = "xpxc56" ]] ; then
     DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera DB_IP=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node2
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh
+    ./podmanctl
     DB_USER=root DB_PASS=secret START=1 PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf \
       ansible-playbook -i ansible_hosts playbook.yml
     DB_USER=root DB_PASS=secret PXC=5.6.45-28.36.1 CLUSTER=pxc-cluster REPLICATION_TYPE=galera \
@@ -361,7 +361,7 @@ if [[ "x$2" = "" || "x$2" = "xpxc57" ]] ; then
       DB_IP=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null) DB_OPTS=mysql/pxc5657.cnf lxdock provision node2
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh
+    ./podmanctl
     DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf \
       ansible-playbook -i ansible_hosts playbook.yml
     DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera \
@@ -400,7 +400,7 @@ if [[ "x$2" = "" || "x$2" = "xpxc8" ]] ; then
       lxdock provision node2
      test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh
+    ./podmanctl
     DB_USER=root DB_PASS=secret START=1 PXC=8.0.18-9.3 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc8-repl-gtid.cnf \
       ansible-playbook -i ansible_hosts playbook.yml
     sudo podman exec -i $USER.default tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem > secret/pxc-cluster-ssl.tar.gz
@@ -447,7 +447,7 @@ if [[ "x$2" = "" || "x$2" = "xpgpmm" ]] ; then
     PPGSQL=12.3-1 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 PMM_CLIENT=2.8.0-6 PMM_URL="https://admin:secret@$(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null):443"  lxdock up default
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh --pmm 2.8.0
+    ./podmanctl --pmm 2.8.0
     PMM_URL="https://admin:admin@"$(sudo podman inspect $USER.pmm-server |grep IPAddress|awk '{print $2}'|sed -e 's/[",]//g')":443" \
     PPGSQL=12.3-1 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 PMM_CLIENT=2.8.0-6 \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
@@ -469,7 +469,7 @@ LDAP_IP=$(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
   lxdock up default
 test $DESTROY = yes && lxdock destroy -f
 elif [[ "x$1" = "xpodman" ]] ; then
-./start_podman.sh
+./podmanctl
 LDAP_SERVER=1 DB_USER=dba DB_PASS=secret ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
 LDAP_IP=$(grep $USER.node2 ansible_hosts |sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}') \
   PPGSQL=12.3-1 DB_USER=dba DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
@@ -494,7 +494,7 @@ LDAP_IP=$(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
   lxdock up default
 test $DESTROY = yes && lxdock destroy -f
 elif [[ "x$1" = "xpodman" ]] ; then
-./start_podman.sh
+./podmanctl
 LDAP_SERVER=1 DB_USER=dba DB_PASS=secret ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
 LDAP_IP=$(grep $USER.node2 ansible_hosts |sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}') \
   PSMDB=4.2.3-4 DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf \
@@ -520,7 +520,7 @@ if [[ "x$2" = "" || "x$2" = "xpsldap" ]] ; then
       lxdock up default
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh
+    ./podmanctl
     LDAP_SERVER=1 DB_USER=dba DB_PASS=secret ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
     LDAP_IP=$(grep $USER.node2 ansible_hosts |sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}') \
       DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1    DB_OPTS=mysql/async-repl-gtid.cnf \
@@ -562,11 +562,11 @@ if [[ "x$2" = "" || "x$2" = "xps57" ]] ; then
       lxdock up default
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh --nodes 1
+    ./podmanctl --nodes 1
     DB_USER=root DB_PASS=secret START=1 PS=5.7.30-33.1 \
       DB_OPTS=mysql/async-repl-gtid.cnf \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     DB_USER=root DB_PASS=secret START=1 PS=5.7.30-33.1 \
       DB_OPTS=mysql/async-repl-gtid.cnf \
@@ -583,11 +583,11 @@ if [[ "x$2" = "" || "x$2" = "xps80" ]] ; then
       lxdock up default
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh --nodes 1
+    ./podmanctl --nodes 1
     DB_USER=root DB_PASS=secret START=1 PS=8.0.20-11.1 \
       DB_OPTS=mysql/async-repl-gtid.cnf \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     DB_USER=root DB_PASS=secret START=1 PS=8.0.20-11.1 \
       DB_OPTS=mysql/async-repl-gtid.cnf \
@@ -607,7 +607,7 @@ if [[ "x$2" = "" || "x$2" = "xps56arep" ]] ; then
       DB_OPTS=mysql/async-repl-gtid.cnf lxdock provision node1 node2
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh
+    ./podmanctl
     DB_USER=root DB_PASS=secret START=1 PS=5.6.23-rel72.1 \
       DB_OPTS=mysql/async-repl-gtid.cnf \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
@@ -634,7 +634,7 @@ if [[ "x$2" = "" || "x$2" = "xps57arep" ]] ; then
       DB_OPTS=mysql/async-repl-gtid.cnf lxdock provision node1 node2
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh
+    ./podmanctl
     DB_USER=root DB_PASS=secret START=1 PS=5.7.29-32.1 \
       DB_OPTS=mysql/async-repl-gtid.cnf \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
@@ -661,7 +661,7 @@ if [[ "x$2" = "" || "x$2" = "xps80arep" ]] ; then
       DB_OPTS=mysql/async-repl-gtid.cnf lxdock provision node1 node2
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh
+    ./podmanctl
     DB_USER=root DB_PASS=secret START=1 PS=8.0.19-10.1 \
       DB_OPTS=mysql/async-repl-gtid.cnf \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
@@ -686,10 +686,10 @@ if [[ "x$2" = "" || "x$2" = "xmydumper" ]] ; then
     MYDUMPER=0.9.5-2 lxdock up default
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh
+    ./podmanctl
     MYDUMPER=0.9.5-2 \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     MYDUMPER=0.9.5-2 vagrant up default
     test $DESTROY = yes && vagrant destroy -f || true
@@ -717,7 +717,7 @@ if [[ "x$2" = "" || "x$2" = "xpgpoolsysbench" ]] ; then
         postgres secret postgres 2 10000 4 100
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh
+    ./podmanctl
     PPGSQL=12.2-4 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
     SYSBENCH=1.0.20-6 \
@@ -728,7 +728,7 @@ if [[ "x$2" = "" || "x$2" = "xpgpoolsysbench" ]] ; then
     ansible -i ansible_hosts $USER.node1 -a "/bin/bash /vagrant/tools/sysbench_pg_oltp_ro.sh "$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)" postgres secret postgres 2 10000 4 100"
     echo "benchmarking with pgpool"
     ansible -i ansible_hosts $USER.node1 -a "/bin/bash /vagrant/tools/sysbench_pg_oltp_ro.sh "$(sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)" postgres secret postgres 2 10000 4 100"
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     PPGSQL=12.2-4 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
       vagrant up default
@@ -770,7 +770,7 @@ if [[ "x$2" = "" || "x$2" = "xodyssey" ]] ; then
         postgres secret postgres 2 10000 4 100 yes
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh --os centos8
+    ./podmanctl --os centos8
     PG=12.2 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
     SYSBENCH=1.0.20-6 \
@@ -781,7 +781,7 @@ if [[ "x$2" = "" || "x$2" = "xodyssey" ]] ; then
     ansible -i ansible_hosts $USER.node1 -a "/bin/bash /vagrant/tools/sysbench_pg_oltp_ro.sh "$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)" postgres secret postgres 2 10000 4 100 yes"
     echo "benchmarking with odyssey"
     ansible -i ansible_hosts $USER.node1 -a "/bin/bash /vagrant/tools/sysbench_pg_oltp_ro.sh "$(sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)" postgres secret postgres 2 10000 4 100 yes"
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     PG=12.2 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
       vagrant up default
@@ -811,10 +811,10 @@ if [[ "x$2" = "" || "x$2" = "xpg12" ]] ; then
       lxdock up default
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh
+    ./podmanctl
     PG=12.2 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     PG=12.2 DB_PASS=secret DB_OPTS=postgresql/logical.conf START=1 \
       vagrant up default
@@ -842,12 +842,12 @@ if [[ "x$2" = "" || "x$2" = "xpopxc" ]] ; then
 
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh --k8s
+    ./podmanctl --k8s
     KUBE_CONFIG=kube.config PKO4PXC='1.4.0' K8S_PMM=1 K8S_MINIO=1 \
       DB_FEATURES="backup" \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
     test $DESTROY = yes && sudo podman rm -f ihanick.node2 ihanick.default ihanick.k8sw1 ihanick.k8sw3 ihanick.k8sm ihanick.node1 ihanick.k8sw2
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     K3S=latest K8S_MINIO=yes vagrant up default
     until [ "x" != "x$IP" ]; do
@@ -874,10 +874,10 @@ if [[ "x$2" = "" || "x$2" = "xc8my8" ]] ; then
       lxdock up default
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh --os centos8
+    ./podmanctl --os centos8
     MYSQL=8.0.21-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     MYSQL=8.0.21-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf \
       OS=centos/8 \
@@ -894,11 +894,11 @@ if [[ "x$2" = "" || "x$2" = "xc8my8pxb8" ]] ; then
       lxdock up default
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh --os centos8
+    ./podmanctl --os centos8
     MYSQL=8.0.21-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf \
       PXB=8.0.13-1 \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     MYSQL=8.0.21-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf \
       PXB=8.0.13-1 \
@@ -924,7 +924,7 @@ if [[ "x$2" = "" || "x$2" = "xmysql_connector_java_ldap" ]] ; then
     lxdock shell node1 -c bash -c 'cd /srv/java && sudo javac ConnectorTest.java && java -classpath "./:/usr/share/java/mysql-connector-java.jar:/usr/share/java/" ConnectorTest'
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh
+    ./podmanctl
     LDAP_SERVER=1 DB_USER=dba DB_PASS=secret ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
     LDAP_IP=$(sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
       DB_USER=dba DB_PASS=secret START=1 PS=5.7.26-29.1 DB_OPTS=mysql/async-repl-gtid.cnf \
@@ -960,10 +960,10 @@ if [[ "x$2" = "" || "x$2" = "xwalg" ]] ; then
       lxdock up default
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh
+    ./podmanctl
     WALG=0.2.16 \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     WALG=0.2.16 \
       vagrant up default
@@ -985,7 +985,7 @@ if [[ "x$2" = "" || "x$2" = "xsamba" ]] ; then
       lxdock up default
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh --samba=node2
+    ./podmanctl --samba=node2
     SAMBA_AD=1 \
       ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
 
@@ -995,7 +995,7 @@ if [[ "x$2" = "" || "x$2" = "xsamba" ]] ; then
       DB_USER=dba DB_PASS=secret START=1 \
       PS=5.7.26-29.1 DB_OPTS=mysql/async-repl-gtid.cnf \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     SAMBA_AD=1 \
       vagrant up node2
@@ -1018,12 +1018,12 @@ if [[ "x$2" = "" || "x$2" = "xperconatoolkit" ]] ; then
       lxdock up default
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh --nodes 1
+    ./podmanctl --nodes 1
     PT=3.2.0-1 \
       PS=5.7.30-33.1 DB_OPTS=mysql/async-repl-gtid.cnf \
       DB_USER=dba DB_PASS=secret START=1 \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     PT=3.2.0-1 \
       PS=5.7.30-33.1 DB_OPTS=mysql/async-repl-gtid.cnf \
@@ -1038,8 +1038,8 @@ if [[ "x$2" = "" || "x$2" = "xdns" ]] ; then
   if [[ "x$1" = "xlxdock" ]] ; then
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh --hostname default=dns.percona.local --hostname node2=pdc.percona.local
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    ./podmanctl --hostname default=dns.percona.local --hostname node2=pdc.percona.local
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     test $DESTROY = yes && vagrant destroy -f
   fi
@@ -1050,7 +1050,7 @@ if [[ "x$2" = "" || "x$2" = "xkerberos" ]] ; then
   if [[ "x$1" = "xlxdock" ]] ; then
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh \
+    ./podmanctl \
       --hostname default=pg.percona.local \
       --hostname node1=client.percona.local \
       --hostname node2=kdc.percona.local
@@ -1064,7 +1064,7 @@ if [[ "x$2" = "" || "x$2" = "xkerberos" ]] ; then
     KERBEROS_CLIENT=1 \
       DB_USER=dba DB_PASS=secret \
       ansible-playbook -i ansible_hosts --limit $USER.node1 playbook.yml
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     test $DESTROY = yes && vagrant destroy -f
   fi
@@ -1075,7 +1075,7 @@ if [[ "x$2" = "" || "x$2" = "xkerberos" ]] ; then
   if [[ "x$1" = "xlxdock" ]] ; then
     test $DESTROY = yes && lxdock destroy -f
   elif [[ "x$1" = "xpodman" ]] ; then
-    ./start_podman.sh \
+    ./podmanctl \
       --hostname default=pg.percona.local \
       --hostname node1=client.percona.local \
       --hostname node2=pdc.percona.local \
@@ -1087,7 +1087,7 @@ if [[ "x$2" = "" || "x$2" = "xkerberos" ]] ; then
     KERBEROS_CLIENT=1 SAMBA_KERBEROS=1 \
       DB_USER=dba DB_PASS=secret \
       ansible-playbook -i ansible_hosts --limit $USER.node1 playbook.yml
-    test $DESTROY = yes && ./start_podman.sh --destroy
+    test $DESTROY = yes && ./podmanctl --destroy
   else
     test $DESTROY = yes && vagrant destroy -f
   fi
