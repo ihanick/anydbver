@@ -1092,3 +1092,28 @@ if [[ "x$2" = "" || "x$2" = "xkerberos" ]] ; then
     test $DESTROY = yes && vagrant destroy -f
   fi
 fi
+
+
+# MariaDB
+if [[ "x$2" = "" || "x$2" = "xmariadb" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    MARIADB=10.4.12-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf \
+      lxdock up default
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./podmanctl --nodes 1
+    MARIADB=10.4.12-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./podmanctl --destroy
+  elif [[ "x$1" = "xlxd" ]] ; then
+    ./lxdctl --nodes 1
+    MARIADB=10.4.12-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./lxdctl --destroy
+  else
+    MARIADB=10.4.12-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf \
+      vagrant up default
+    test $DESTROY = yes && vagrant destroy -f
+  fi
+fi
+

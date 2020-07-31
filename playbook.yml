@@ -137,6 +137,11 @@
       when: (not vagrant_dir_mounted.stat.exists) or sync_is_required != ''
       include_tasks: common/tasks/copy_files.yaml
 
+    - name: MariaDB Role
+      when: mariadb_version != ''
+      include_role:
+        name: mariadb
+
     - name: Install Percona yum Repository
       when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and is_percona_repo_required != ''
       block:
@@ -202,10 +207,6 @@
           yum:
             name: "{{os[dist][soft].repo_url}}"
             state: present
-    - name: Include MariaDB tasks
-      when: mariadb_version != ''
-      import_tasks:
-        file: common/tasks/mariadb.yaml
     
     - name: Enable EPEL
       when: >
@@ -228,49 +229,9 @@
         cmd: dnf -qy module disable postgresql ; touch /root/dist-postgresql.disabled
         creates: /root/dist-postgresql.disabled
 
-    - name: install apt db packages
-      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
-      apt:
-        deb: "{{item}}"
-      with_items: >-
-        {{
-          os[dist][soft].install_packages +
-          ( [] if debug_packages == '' else
-            os[dist][soft].install_packages + os[dist][soft].install_debug_packages) +
-          ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else
-            os[dist][soft].rocksdb_packages)
-        }}
+    - name: Install db packages
+      include_tasks: common/tasks/install_db_packages.yml
 
-    - name: install db packages
-      when: >
-        (
-        percona_server_version != "" or
-        percona_xtradb_cluster_version != "" or
-        mariadb_version != '' or
-        mysql_version != '' or
-        orchestrator_version != '' or
-        proxysql_version != '' or
-        sysbench_version != '' or
-        ldap_server != '' or
-        kerberos_server != '' or
-        percona_proxysql_version != '' or
-        postgresql_version != '' or
-        pgpool_version != ''
-        ) and
-        (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
-      package:
-        name: "{{ item }}"
-        state: present
-      with_items: >-
-        {{
-          os[dist][soft].install_packages +
-          ( [] if debug_packages == '' else
-            os[dist][soft].install_debug_packages) +
-          ( [] if replication_type != 'group' else
-            os[dist][soft].mysql_shell_packages) +
-          ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else
-            os[dist][soft].rocksdb_packages)
-        }}
 
     - name: Install Samba Active Directory server
       when: samba_ad != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
@@ -405,11 +366,10 @@
         (
         percona_server_version != '' or
         percona_xtradb_cluster_version != '' or
-        mariadb_version != '' or
         mysql_version != ''
         ) and db_password != ''
       command:
-        cmd: /bin/bash /vagrant/tools/create_mysql_db_with_password.sh "{{ db_password }}" "{{ 'oldgrant' if percona_server_version.startswith('5.6') or percona_xtradb_cluster_version.startswith('5.6') or mariadb_version != '' else 'no' }}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
+        cmd: /bin/bash /vagrant/tools/create_mysql_db_with_password.sh "{{ db_password }}" "{{ 'oldgrant' if percona_server_version.startswith('5.6') or percona_xtradb_cluster_version.startswith('5.6') else 'no' }}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
         creates: /root/.my.cnf
 
     - name: Apply Mongo database options from file
@@ -455,7 +415,7 @@
           file: path="/root/replica-{{mongo_replicaset}}.applied" state=touch modification_time=preserve access_time=preserve
           
     - name: Apply database options from file
-      when: (percona_server_version != '' or percona_xtradb_cluster_version != '' or percona_postgresql_version != '' or postgresql_version != '' or mariadb_version != '' or mysql_version != '') and db_opts_file != ''
+      when: (percona_server_version != '' or percona_xtradb_cluster_version != '' or percona_postgresql_version != '' or postgresql_version != '' or mysql_version != '') and db_opts_file != ''
       command:
         cmd: >-
           /bin/bash /vagrant/tools/apply_mysql_conf.sh

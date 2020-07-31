@@ -1,0 +1,55 @@
+---
+# tasks file for mariadb
+- name: Setup yum repository
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+  copy:
+    content: |
+      [mariadb]
+      name = MariaDB
+      baseurl = http://yum.mariadb.org/{{ mariadb_version | regex_replace('^([0-9]+)\.([0-9]+)\..*$', '\1.\2') }}/{{ 'centos' if ansible_distribution == 'CentOS' else 'rhel' }}{{ ansible_distribution_version  | regex_replace('^([0-9]+)\..*$', '\1') }}-amd64
+      gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+      gpgcheck=1
+      module_hotfixes=1
+    dest: /etc/yum.repos.d/MariaDB.repo
+
+- name: install db packages
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+  yum:
+    state: present
+    name: >-
+      {{
+        os[dist][soft].install_packages +
+        ( [] if debug_packages == '' else
+          os[dist][soft].install_debug_packages) +
+        ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else
+          os[dist][soft].rocksdb_packages)
+      }}
+
+- name: Apply database options from file
+  when: db_opts_file != ''
+  command:
+    cmd: >-
+      /bin/bash /vagrant/tools/apply_mysql_conf.sh
+      "{{ os[dist][soft].cnf_file }}"
+      "/vagrant/configs/{{ db_opts_file }}"
+      "{{cluster_name}}"
+      "{{db_user}}"
+      "{{db_password}}"
+    creates: "/root/{{ db_opts_file | basename }}.applied"
+
+- name: Create data directory
+  when: db_password != ''
+  command:
+    cmd: >-
+      /bin/bash /vagrant/tools/create_mysql_db_with_password.sh
+      "{{ db_password }}"
+      "oldgrant"
+      "{{os[dist][soft].systemd_service}}"
+    creates: /root/.my.cnf
+
+- name: Start systemd unit
+  when:  start_db == '1'
+  systemd:
+    name: "{{os[dist][soft].systemd_service}}"
+    state: started
+
