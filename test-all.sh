@@ -680,6 +680,24 @@ if [[ "x$2" = "" || "x$2" = "xps80arep" ]] ; then
 fi
 
 
+
+if [[ "x$2" = "" || "x$2" = "xpxc57-focal" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./podmanctl --os focal --nodes 1
+    DB_USER=root DB_PASS=secret \
+      START=1 \
+      PXC=5.7.28-31.41.2 \
+      DB_OPTS=mysql/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./podmanctl --destroy
+  else
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
+fi
+
+
 if [[ "x$2" = "" || "x$2" = "xmydumper" ]] ; then
   if [[ "x$1" = "xlxdock" ]] ; then
     ./gen_lxdock.sh anydbver centos/7
@@ -848,6 +866,20 @@ if [[ "x$2" = "" || "x$2" = "xpopxc" ]] ; then
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
     test $DESTROY = yes && sudo podman rm -f ihanick.node2 ihanick.default ihanick.k8sw1 ihanick.k8sw3 ihanick.k8sm ihanick.node1 ihanick.k8sw2
     test $DESTROY = yes && ./podmanctl --destroy
+  elif [[ "x$1" = "xlxd" ]] ; then
+   ./lxdctl --nodes 4 --privileged
+    K3S=latest K8S_MINIO=yes ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    K3S_TOKEN="$(ssh -i secret/id_rsa root@$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) -o StrictHostKeyChecking=no cat /var/lib/rancher/k3s/server/node-token)" \
+      K3S_URL="https://$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts):6443" \
+      ansible-playbook -i ansible_hosts --limit "$USER.node1,$USER.node2,$USER.node3" playbook.yml
+    sleep 30
+    K3S=latest PKO4PXC='1.4.0' K8S_PMM=1 DB_FEATURES="backup" \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    ssh -i secret/id_rsa \
+      root@$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      -o StrictHostKeyChecking=no \
+      kubectl apply -f /vagrant/configs/k8s/svc-replication-master.yaml
+    test $DESTROY = yes && ./lxdctl --destroy
   else
     K3S=latest K8S_MINIO=yes vagrant up default
     until [ "x" != "x$IP" ]; do

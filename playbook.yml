@@ -152,6 +152,11 @@
     - name: Install Percona apt Repository
       when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and is_percona_repo_required != ''
       block:
+        - name: install unlisted deps for percona release
+          apt:
+            pkg:
+              - gnupg2
+              - curl
         - name: install percona-release.deb
           apt:
             deb: "{{ os[dist].repo_url }}"

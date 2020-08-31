@@ -108,10 +108,14 @@ if [ $OS = focal ] ; then
   IMG=ubuntu:focal
 fi
 
+if [ $OS = focal -o $OS = "ubuntu:focal" ] && sudo podman images | grep ubuntu|grep -q focal-systemd ; then
+  IMG=ubuntu:focal-systemd
+  PYTHON_INT=/usr/bin/python3
+fi
 
 :> ansible_hosts
 N=0
-for i in ${USER}.default $(seq 1 2|sed -e s/^/${USER}.node/); do
+for i in ${USER}.default $(seq 1 20|sed -e s/^/${USER}.node/); do
   CAP_ADMIN=''
   NODE_HOSTNAME=''
 
@@ -129,7 +133,7 @@ for i in ${USER}.default $(seq 1 2|sed -e s/^/${USER}.node/); do
 
   sudo podman cp $PWD/secret/id_rsa.pub $i:/root/.ssh/authorized_keys
   sudo podman cp $PWD/tools/node_ip.sh $i:/usr/bin/node_ip.sh
-  sudo podman exec $i bash -c "test -f /usr/bin/rsync || yum install -y sudo openssh-server iproute rsync $PACKAGES; chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd;systemctl enable sshd;systemctl restart sshd"
+  sudo podman exec $i bash -c "test -f /usr/bin/rsync || yum install -y sudo openssh-server iproute rsync $PACKAGES; chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS .*$/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd;mkdir /etc/systemd/system/systemd-logind.service.d;echo '[Service]'>/etc/systemd/system/systemd-logind.service.d/override.conf;echo ProtectHostname=no >> /etc/systemd/system/systemd-logind.service.d/override.conf;systemctl daemon-reload;systemctl restart systemd-logind;systemctl enable sshd &>/dev/null;systemctl restart sshd &>/dev/null ; systemctl enable ssh &>/dev/null;systemctl restart ssh &> /dev/null ; true"
 
   IP=$(sudo podman exec $i /bin/bash /usr/bin/node_ip.sh)
   #echo "$i ansible_connection=podman ansible_python_interpreter=/usr/bin/python2.7" >> ansible_hosts
