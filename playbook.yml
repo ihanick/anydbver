@@ -172,16 +172,6 @@
         creates: "{{ os[dist][soft].repo_file }}"
       register: percona_release_enabled
       
-    - name: enable Percona Server for MongoDB 4.0
-      when: psmdb_version.startswith('4.0')
-      command:
-        cmd: /usr/bin/percona-release enable psmdb-40
-        creates: /etc/yum.repos.d/percona-psmdb-40-release.repo
-    - name: enable Percona Server for MongoDB 4.2
-      when: psmdb_version.startswith('4.2')
-      command:
-        cmd: /usr/bin/percona-release enable psmdb-42
-        creates: /etc/yum.repos.d/percona-psmdb-42-release.repo
     - name: MySQL repo
       when: mysql_version != ''
       block:
@@ -207,6 +197,11 @@
       include_role:
         name: postgresql
 
+    - name: MongoDB Role
+      when: psmdb_version != '' or pbm_version != ""
+      include_role:
+        name: mongodb
+
     - name: Install db packages
       include_tasks: common/tasks/install_db_packages.yml
 
@@ -228,25 +223,6 @@
         name: "percona-xtrabackup{{ '-24' if percona_xtrabackup_version.startswith('2.4') else '-80' if percona_xtrabackup_version.startswith('8.0')  else '' }}-{{ percona_xtrabackup_version }}.{{dist}}.x86_64"
         state: present
         
-    # MongoDB
-    - name: install Percona Server for MongoDB
-      when: psmdb_version.startswith('3.6') or psmdb_version.startswith('4.0') or psmdb_version.startswith('4.2')
-      package:
-        name: "{{ item }}"
-        state: present
-      with_items:
-        - "{{ psmdb_name }}{{ psmdb_major_ver }}-tools-{{ psmdb_version }}.el7.x86_64"
-        - "{{ psmdb_name }}{{ psmdb_major_ver }}-shell-{{ psmdb_version }}.el7.x86_64"
-        - "{{ psmdb_name }}{{ psmdb_major_ver }}-server-{{ psmdb_version }}.el7.x86_64"
-        - "{{ psmdb_name }}{{ psmdb_major_ver }}-mongos-{{ psmdb_version }}.el7.x86_64"
-        - "{{ psmdb_name }}{{ psmdb_major_ver }}-{{ psmdb_version }}.el7.x86_64"
-    
-    - name: install Percona Backup for MongoDB
-      when: pbm_version != ""
-      yum:
-        name: "https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-{{ pbm_version_short }}/binary/redhat/7/x86_64/percona-backup-mongodb-{{pbm_version}}.el7.x86_64.rpm"
-        state: present
-
     - name: Setup LDAP server
       when: ldap_server != ''
       command:
@@ -323,48 +299,7 @@
         cmd: /bin/bash /vagrant/tools/create_mysql_db_with_password.sh "{{ db_password }}" "{{ 'oldgrant' if percona_server_version.startswith('5.6') or percona_xtradb_cluster_version.startswith('5.6') else 'no' }}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
         creates: /root/.my.cnf
 
-    - name: Apply Mongo database options from file
-      when: psmdb_version != "" and db_opts_file != ''
-      block:
-        - name: Download yq
-          get_url:
-            url: 'https://github.com/mikefarah/yq/releases/download/3.3.0/yq_linux_amd64'
-            dest: /usr/local/bin/yq
-            mode: '0755'
-        - name: Merge conf file part and main config
-          command:
-            cmd: /usr/local/bin/yq merge -i /etc/mongod.conf "/vagrant/configs/{{ db_opts_file }}"
-            creates: "/root/{{ db_opts_file | basename }}.applied"
-        - name: Avoid re-merge on next runs
-          file: path="/root/{{ db_opts_file | basename }}.applied" state=touch modification_time=preserve access_time=preserve
 
-    - name: Create MongoDB database
-      when: db_password != "" and psmdb_version != ""
-      shell:
-        cmd: "systemctl start mongod;until mongo --eval 'print(\"waited for connection\")' &>/dev/null ; do sleep 2 ; done;/bin/percona-server-mongodb-enable-auth.sh -q;mongo admin --eval 'db.changeUserPassword(\"dba\", \"{{ db_password }}\")';systemctl stop mongod;sed -i -e 's/127.0.0.1/0.0.0.0/g' /etc/mongod.conf;echo 'db = connect(\"mongodb://dba:{{ db_password }}@127.0.0.1:27017/admin\")' > /root/.mongorc.js"
-        creates: /root/.mongorc.js
-
-    - name: configure MongoDB replica options
-      when: db_password != '' and psmdb_version != '' and mongo_replicaset != ''
-      block:
-        - name: copy keyfile
-          copy:
-            src: "{{playbook_dir}}/secret/{{mongo_replicaset}}-keyfile"
-            dest: "/etc/{{mongo_replicaset}}-keyfile"
-            mode: "0400"
-            owner: "mongod"
-            group: "mongod"
-        - name: create replication template yaml
-          template:
-            src: "{{playbook_dir}}/configs/mongo/replica.conf.j2"
-            dest: "/root/replica-{{mongo_replicaset}}.yaml"
-        - name: Merge conf file part and main config
-          command:
-            cmd: /usr/local/bin/yq merge -i /etc/mongod.conf "/root/replica-{{mongo_replicaset}}.yaml"
-            creates: "/root/replica-{{mongo_replicaset}}.applied"
-        - name: Avoid re-merge on next runs
-          file: path="/root/replica-{{mongo_replicaset}}.applied" state=touch modification_time=preserve access_time=preserve
-          
     - name: Apply database options from file
       when: (percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != '') and db_opts_file != ''
       command:
@@ -376,7 +311,7 @@
           "{{db_user}}"
           "{{db_password}}"
         creates: "/root/{{ db_opts_file | basename }}.applied"
-      
+
     - name: ProxySQL
       when: proxysql_version !=''
       block:
@@ -435,26 +370,6 @@
       systemd:
         name: "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
         state: started
-
-    - name: Setup Mongo for LDAP
-      when: psmdb_version != '' and db_password != '' and ldap_server_ip != ''
-      shell:
-        cmd: /bin/bash /vagrant/tools/setup_mongo_ldap.sh perconaro secret "{{ldap_server_ip}}"
-        creates: /etc/sasl2/mongodb.conf
-
-    - name: Init or join Mongo replicaset  
-      when: db_password != '' and psmdb_version != '' and mongo_replicaset != ''
-      block:
-        - name: init replicaset
-          when: master_ip == ''
-          command:
-            cmd: /bin/bash /vagrant/tools/setup_mongo_replication.sh "{{mongo_replicaset}}" "dba" "{{db_password}}"
-            creates: /root/{{mongo_replicaset}}.init
-        - name: Add secondary to set
-          when: master_ip != ''
-          command:
-            cmd: /bin/bash /vagrant/tools/setup_mongo_replication.sh "{{mongo_replicaset}}" "dba" "{{db_password}}" "{{master_ip}}"
-            creates: /root/{{mongo_replicaset}}.init
 
     - name: Setup and start replication
       when: master_ip != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != '')

@@ -486,28 +486,37 @@ fi
 fi
 
 if [[ "x$2" = "" || "x$2" = "xmongoldap" ]] ; then
-if [[ "x$1" = "xlxdock" ]] ; then
-./gen_lxdock.sh anydbver centos/7 3
-DB_USER=dba DB_PASS=secret LDAP_SERVER=1 DB_PASS=secret lxdock up node2
-LDAP_IP=$(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
-  PSMDB=4.2.3-4 DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf \
-  lxdock up default
-test $DESTROY = yes && lxdock destroy -f
-elif [[ "x$1" = "xpodman" ]] ; then
-./podmanctl
-LDAP_SERVER=1 DB_USER=dba DB_PASS=secret ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
-LDAP_IP=$(grep $USER.node2 ansible_hosts |sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}') \
-  PSMDB=4.2.3-4 DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf \
-  ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
-# check: ldapsearch -x cn=dba -b dc=percona,dc=local
-test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.node2
-else
-LDAP_SERVER=1 DB_USER=dba DB_PASS=secret vagrant up node2
-LDAP_IP=$(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
-  PSMDB=4.2.3-4 DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf \
-  vagrant up default
-test $DESTROY = yes && vagrant destroy -f || true
-fi
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 3
+    DB_USER=dba DB_PASS=secret LDAP_SERVER=1 DB_PASS=secret \
+      lxdock up node2
+    LDAP_IP=$(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+    PSMDB=4.2.3-4 DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf \
+      lxdock up default
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+      ./podmanctl
+      LDAP_SERVER=1 DB_USER=dba DB_PASS=secret ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+      LDAP_IP=$(grep $USER.node2 ansible_hosts |sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}') \
+        PSMDB=4.2.3-4 DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf \
+        ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+      # check: ldapsearch -x cn=dba -b dc=percona,dc=local
+      test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.node2
+    elif [[ "x$1" = "xlxd" ]] ; then
+      ./lxdctl --nodes 3
+      LDAP_SERVER=1 DB_USER=dba DB_PASS=secret \
+        ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+      LDAP_IP=$(grep $USER.node2 ansible_hosts |sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}') \
+        PSMDB=4.2.3-4 DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf \
+        ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+      test $DESTROY = yes && ./lxdctl --destroy
+  else
+  LDAP_SERVER=1 DB_USER=dba DB_PASS=secret vagrant up node2
+  LDAP_IP=$(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null) \
+    PSMDB=4.2.3-4 DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf \
+    vagrant up default
+  test $DESTROY = yes && vagrant destroy -f || true
+  fi
 fi
 
 
@@ -1144,6 +1153,33 @@ if [[ "x$2" = "" || "x$2" = "xmariadb" ]] ; then
     test $DESTROY = yes && ./lxdctl --destroy
   else
     MARIADB=10.4.12-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf \
+      vagrant up default
+    test $DESTROY = yes && vagrant destroy -f
+  fi
+fi
+
+# Percona XtraBackup
+if [[ "x$2" = "" || "x$2" = "xpxb8" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    PS=8.0.20-11.1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      PXB=8.0.9-1 \
+      lxdock up default
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./podmanctl --nodes 1
+    PS=8.0.20-11.1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      PXB=8.0.9-1 \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./podmanctl --destroy
+  elif [[ "x$1" = "xlxd" ]] ; then
+    ./lxdctl --nodes 1
+    PS=8.0.20-11.1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      PXB=8.0.9-1 \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./lxdctl --destroy
+  else
+    PS=8.0.20-11.1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      PXB=8.0.9-1 \
       vagrant up default
     test $DESTROY = yes && vagrant destroy -f
   fi
