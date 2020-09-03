@@ -1,0 +1,15 @@
+[mysqld]
+innodb_buffer_pool_size=512M
+server_id=55
+report_host=myhost
+log-bin=mysqld-bin
+enforce_gtid_consistency=ON
+gtid_mode=ON
+# required for 5.6
+log-slave-updates
+# slow log settings
+long_query_time=0
+slow_query_log_file=/var/lib/mysql/slow.log
+slow_query_log=ON
+log_slow_admin_statements=ON
+log_slow_verbosity=full

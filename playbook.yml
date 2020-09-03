@@ -520,3 +520,11 @@
       yum:
         name: "{{os[dist].mydumper.install_packages}}"
         state: present
+
+    - name: Setup pmm client mysql
+      when: pmm_client_version != '' and pmm_url != '' and percona_server_version != ''
+      register: pmm_admin_mysql_config
+      changed_when: "'already exists' not in pmm_admin_mysql_config.stdout"
+      shell:
+        cmd: '/usr/bin/pmm-admin add mysql --query-source=slowlog --username="{{db_user}}" --password="{{db_password}}"'
+

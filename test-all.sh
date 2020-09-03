@@ -1185,3 +1185,37 @@ if [[ "x$2" = "" || "x$2" = "xpxb8" ]] ; then
   fi
 fi
 
+
+# PS8 with PMM
+if [[ "x$2" = "" || "x$2" = "xps8pmm" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 3
+    PMM_SERVER=2.9.1 DB_PASS=secret lxdock up node2
+    PS=8.0.20-11.1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/full-slow.cnf \
+      PMM_CLIENT=2.9.1-6 PMM_URL="https://admin:secret@$(lxdock shell node2 -c /vagrant/tools/node_ip.sh 2>/dev/null):443" \
+      lxdock up default
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./podmanctl --pmm 2.9.1
+    PMM_URL="https://admin:admin@"$(sudo podman inspect $USER.pmm-server |grep IPAddress|awk '{print $2}'|sed -e 's/[",]//g')":443" \
+      PS=8.0.20-11.1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/full-slow.cnf \
+      PMM_CLIENT=2.9.1-6 PMM_URL="https://admin:secret@$(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null):443" \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.pmm-server
+  elif [[ "x$1" = "xlxd" ]] ; then
+    ./lxdctl --nodes 3 --privileged
+    PMM_SERVER=2.9.1 DB_PASS=secret \
+      ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+    PS=8.0.20-11.1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/full-slow.cnf \
+      PMM_CLIENT=2.9.1-6 PMM_URL="https://admin:secret@$(sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts):443" \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./lxdctl --destroy
+  else
+    PMM_SERVER=2.9.1 DB_PASS=secret vagrant up node2
+    PS=8.0.20-11.1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/full-slow.cnf \
+      PMM_CLIENT=2.9.1-6 PMM_URL="https://admin:secret@$(vagrant ssh node2 -c /vagrant/tools/node_ip.sh 2>/dev/null):443" \
+      vagrant up default
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
+fi
+
