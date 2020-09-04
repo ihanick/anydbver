@@ -1219,3 +1219,39 @@ if [[ "x$2" = "" || "x$2" = "xps8pmm" ]] ; then
   fi
 fi
 
+# MariaDB replication
+if [[ "x$2" = "" || "x$2" = "xmariarep" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 2
+    MARIADB=10.4.13-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf \
+      lxdock up default
+    MARIADB=10.4.13-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf \
+      DB_IP="$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null)" \
+      lxdock up node1
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./podmanctl --nodes 2
+    MARIADB=10.4.13-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    MARIADB=10.4.13-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf \
+      DB_IP="$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)" \
+      ansible-playbook -i ansible_hosts --limit $USER.node1 playbook.yml
+    test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.pmm-server
+  elif [[ "x$1" = "xlxd" ]] ; then
+    ./lxdctl --nodes 2
+    MARIADB=10.4.13-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    MARIADB=10.4.13-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf \
+      DB_IP="$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)" \
+      ansible-playbook -i ansible_hosts --limit $USER.node1 playbook.yml
+    test $DESTROY = yes && ./lxdctl --destroy
+  else
+    MARIADB=10.4.13-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf \
+      vagrant up default
+    MARIADB=10.4.13-1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mariadb/async-repl-gtid.cnf \
+      DB_IP="$(vagrant ssh default -c /vagrant/tools/node_ip.sh 2>/dev/null)" \
+      lxdock up node1
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
+fi
+

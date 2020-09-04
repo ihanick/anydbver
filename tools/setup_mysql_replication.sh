@@ -12,20 +12,39 @@ CLUSTER_NAME=${8:-'pxc-cluster'}
 SERVER_ID=$(ip addr ls|grep 'inet '|grep -v '127.0.0.1'|awk '{print $2}'|cut -d/ -f 1|awk -F '\\.' '{print ($1 * 2^24) + ($2 * 2^16) + ($3 * 2^8) + $4}')
 
 
-if [[ "x$TYPE" == "xgtid" ]] ; then
-    mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;show master status\G' > "$MINF"
-    GTID=$( awk -F': ' '/Executed_Gtid_Set/ {print $2}' "$MINF" )
+if [ "x$SOFT" = "xmariadb_server" ] ; then
+  if [[ "x$TYPE" == "xgtid" ]] ; then
+      mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;show master status\G' > "$MINF"
+      GTID=$(mysql --host $MASTER_IP -N -e "SELECT @@GLOBAL.gtid_current_pos")
 
-    mysql << EOF
-    RESET MASTER;
-    SET GLOBAL GTID_PURGED='${GTID}';
-    STOP SLAVE;
-    CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;
-    START SLAVE;
+      mysql << EOF
+      RESET MASTER;
+      STOP SLAVE;
+      RESET SLAVE ALL;
+      SET GLOBAL gtid_slave_pos = '${GTID}';
+      CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_USE_GTID=slave_pos;
+      START SLAVE;
 EOF
 
-    rm "${MINF}"
-    touch /root/replication.configured
+      rm "${MINF}"
+      touch /root/replication.configured
+  fi
+else
+  if [[ "x$TYPE" == "xgtid" ]] ; then
+      mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;show master status\G' > "$MINF"
+      GTID= $( awk -F': ' '/Executed_Gtid_Set/ {print $2}' "$MINF" )
+
+      mysql << EOF
+      RESET MASTER;
+      SET GLOBAL GTID_PURGED='${GTID}';
+      STOP SLAVE;
+      CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;
+      START SLAVE;
+EOF
+
+      rm "${MINF}"
+      touch /root/replication.configured
+  fi
 fi
 
 if [[ "x$TYPE" == "xgalera" ]] ; then
@@ -59,4 +78,3 @@ if [[ "x$TYPE" == "xgroup" ]] ; then
     mysqlsh "${MASTER_USER}:${MASTER_PASSWORD}@$MASTER_IP" \
         -e "var c=dba.getCluster();c.addInstance('$MASTER_USER:$MASTER_PASSWORD@$MYIP', {localAddress: '$MYIP:33061', recoveryMethod: 'clone', label: '$MYIP'})"
 fi
-

@@ -7,6 +7,30 @@ NUM_NODES=3
 DESTROY=0
 LXD_PRIVILEGED_CONTAINERS=''
 
+if [ "x$1" = "xssh" ] ; then
+  shift
+  IP="$(sed -ne '/'$1'/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)"
+  shift
+  exec ssh -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP "$@"
+  exit 0
+fi
+if [ "x$1" = "xdestroy" ] ; then
+  shift
+  if [ "x$1" = "x" ] ; then
+    i=${USER}.default
+    c=${i//./-}
+    lxc delete -f $c
+  fi
+  while (( "$#" )); do
+    i=${USER}.$1
+    c=${i//./-}
+    lxc delete -f $c
+    shift
+  done
+  exit 0
+fi
+
+
 # read arguments
 opts=$(getopt \
     --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:,hostname:,privileged" \
