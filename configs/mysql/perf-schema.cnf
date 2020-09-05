@@ -1,0 +1,13 @@
+[mysqld]
+innodb_buffer_pool_size=512M
+server_id=55
+report_host=myhost
+log-bin=mysqld-bin
+enforce_gtid_consistency=ON
+gtid_mode=ON
+# required for 5.6
+log-slave-updates
+# performance schema
+performance_schema=ON
+performance-schema-instrument='%=on'
+
