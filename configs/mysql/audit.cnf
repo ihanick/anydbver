@@ -1,0 +1,2 @@
+[mysqld]
+loose-audit_log_format=JSON

@@ -1185,6 +1185,37 @@ if [[ "x$2" = "" || "x$2" = "xpxb8" ]] ; then
   fi
 fi
 
+# PS8 audit plugin
+if [[ "x$2" = "" || "x$2" = "xps8audit" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 1
+    PS=8.0.20-11.1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/audit.cnf \
+      DB_FEATURES=audit \
+      lxdock up default
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    ./podmanctl --nodes 1
+    PS=8.0.20-11.1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/audit.cnf \
+      DB_FEATURES=audit \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.pmm-server
+  elif [[ "x$1" = "xlxd" ]] ; then
+    ./lxdctl --nodes 1
+    PS=8.0.20-11.1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/audit.cnf \
+      DB_FEATURES=audit \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./lxdctl --destroy
+  else
+    PMM_SERVER=2.9.1 DB_PASS=secret vagrant up node2
+    PS=8.0.20-11.1 DB_USER=root DB_PASS=secret START=1 DB_OPTS=mysql/audit.cnf \
+      DB_FEATURES=audit \
+      vagrant up default
+    test $DESTROY = yes && vagrant destroy -f || true
+  fi
+fi
+
+
+
 
 # PS8 with PMM
 if [[ "x$2" = "" || "x$2" = "xps8pmm" ]] ; then

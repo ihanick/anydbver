@@ -528,3 +528,7 @@
       shell:
         cmd: /usr/bin/pmm-admin add mysql --query-source="{{ 'perfschema' if 'pmm_perfschema' in db_features.split(',') else 'slowlog' }}" --username="{{db_user}}" --password="{{db_password}}"
 
+    - name: Enable MySQL Audit plugin
+      when: percona_server_version != '' and start_db != '' and ('audit' in db_features.split(','))
+      shell:
+        cmd: mysql -e "INSTALL PLUGIN audit_log SONAME 'audit_log.so'"
