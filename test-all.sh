@@ -373,6 +373,19 @@ if [[ "x$2" = "" || "x$2" = "xpxc57" ]] ; then
       DB_OPTS=mysql/pxc5657.cnf \
       ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
     test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.node2
+  elif [[ "x$1" = "xlxd" ]] ; then
+    ./lxdctl --nodes 3
+    DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf \
+      ansible-playbook -i ansible_hosts playbook.yml
+    DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera \
+    DB_IP=$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      DB_OPTS=mysql/pxc5657.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.node1 playbook.yml
+    DB_USER=root DB_PASS=secret PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster REPLICATION_TYPE=galera \
+    DB_IP=$(sed -ne '/default/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) \
+      DB_OPTS=mysql/pxc5657.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+    test $DESTROY = yes && ./lxdctl --destroy
   else
     DB_USER=root DB_PASS=secret START=1 PXC=5.7.28-31.41.2 CLUSTER=pxc-cluster DB_OPTS=mysql/pxc5657.cnf \
       vagrant up default node1 node2
