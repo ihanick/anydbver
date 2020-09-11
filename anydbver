@@ -1,12 +1,41 @@
 #!/bin/bash
+[ -f .anydbver ] && source .anydbver
 
 if [ "x$1" = "xhelp" ] ; then
   echo "Use: "
   echo "$0 ssh default or $0 ssh node1"
   echo "$0 deploy percona-server:8.0.16 or $0 deploy percona-server:8.0 or $0 deploy percona-server"
+  exit 0
 fi
 
-[ -f .anydbver ] && source .anydbver
+if [ "x$1" = "xconfigure" ] ; then
+  while (( "$#" )); do
+    if [[ "$1" == provider:* ]] ; then
+      PROVIDER=$(echo "$1"|cut -d: -f 2)
+      case "$PROVIDER" in
+        vagrant)
+          ;;
+        lxdock)
+          ;;
+        podman)
+          ;;
+        lxd)
+          ;;
+        *)
+          echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
+          exit 1
+      esac
+    fi
+    shift
+  done
+
+  :> .anydbver
+  echo "PROVIDER=$PROVIDER" >> .anydbver
+  echo "LXD_PROFILE=$LXD_PROFILE" >> .anydbver
+
+  exit 0
+fi
+
 
 if [ "x$1" = "xssh" ] ; then
   shift
@@ -29,10 +58,37 @@ if [ "x$1" = "xssh" ] ; then
       exec ./lxdctl ssh "$NODE" "$@"
       ;;
     *)
-      echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
+      echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
       exit 1
   esac
 fi
+if [ "x$1" = "xdestroy" ] ; then
+  shift
+  NODE="$1"
+  if [ "x$NODE" = "x" ] ; then
+    NODE=default
+  else
+    shift
+  fi
+  case "$PROVIDER" in
+    vagrant)
+      exec vagrant destroy -f
+      ;;
+    lxdock)
+      exec lxdock destroy -f
+      ;;
+    podman)
+      exec ./podmanctl --destroy
+      ;;
+    lxd)
+      exec ./lxdctl --destroy
+      ;;
+    *)
+      echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
+      exit 1
+  esac
+fi
+
 
 get_version() {
   if [[ $i == *':'* ]] ; then
@@ -61,7 +117,6 @@ deploy_node() {
   arr=("$@")
   for i in "${arr[@]}";
   do
-    echo "deploy at $NODE: $i"
     if [[ $i == "percona-server" ]] || [[ $i == "percona-server:"* ]] || [[ $i == "ps" ]] || [[ $i == "ps:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
@@ -85,16 +140,16 @@ deploy_node() {
 
   case "$PROVIDER" in
     vagrant)
-      bash -c "$DEP_ENV vagrant provision $NODE"
+      echo "$DEP_ENV vagrant provision $NODE"
       ;;
     lxdock)
-      bash -c "$DEP_ENV lxdock provision $NODE"
+      echo "$DEP_ENV lxdock provision $NODE"
       ;;
     podman)
-      bash -c "$DEP_ENV ansible-playbook -i ansible_hosts --limit $USER.$NODE playbook.yml"
+      echo "$DEP_ENV ansible-playbook -i ansible_hosts --limit $USER.$NODE playbook.yml"
       ;;
     lxd)
-      bash -c "$DEP_ENV ansible-playbook -i ansible_hosts --limit $USER.$NODE playbook.yml"
+      echo "$DEP_ENV ansible-playbook -i ansible_hosts --limit $USER.$NODE playbook.yml"
       ;;
     *)
       echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
@@ -104,14 +159,29 @@ deploy_node() {
 
 if [ "x$1" = "xdeploy" ] ; then
   DEPLARGS=()
+  DEPLOY_CMDS=()
   NODE=default
   shift
-  while (( "$#" )); do
-    if [[ "$1" == node* ]] ; then
-      break;
-    fi
-    DEPLARGS+="$1"
+  if [[ "$1" == default ]] ; then
     shift
+  fi
+
+  while (( "$#" )); do
+    while (( "$#" )); do
+      if [[ "$1" == node* ]] ; then
+        break
+      fi
+      DEPLARGS+="$1"
+      shift
+    done
+    DEPCMD=$(deploy_node $NODE "${DEPLARGS[@]}")
+    DEPLOY_CMDS+=("$DEPCMD")
+    if [[ "$1" == node* ]] ; then
+      NODE="$1"
+      shift
+    fi
+
+    DEPLARGS=()
   done
 
   case "$PROVIDER" in
@@ -120,15 +190,20 @@ if [ "x$1" = "xdeploy" ] ; then
     lxdock)
       ;;
     podman)
+      ./podmanctl --destroy
+      ./podmanctl --nodes ${#DEPLOY_CMDS[@]}
       ;;
     lxd)
       ./lxdctl --destroy
-      ./lxdctl --nodes 1
+      ./lxdctl --nodes ${#DEPLOY_CMDS[@]}
       ;;
     *)
       echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
       exit 1
   esac
 
-  deploy_node $NODE "${DEPLARGS[@]}"
+  for i in "${DEPLOY_CMDS[@]}"; do
+    bash -c "$i"
+  done
+
 fi
