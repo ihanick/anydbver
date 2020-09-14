@@ -99,7 +99,7 @@ get_version() {
 }
 
 refresh_percona_server_version_info() {
-  [ -d .version-info] || mkdir .version-info
+  [ -d .version-info ] || mkdir .version-info
   curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/|perl -ne '/Percona-Server-server-\d\d-([^"]*).el7.x86_64.rpm/ and print "$1\n"' > .version-info/percona-server.el7.txt
 
   curl -sL https://www.percona.com/downloads/Percona-Server-LATEST/ > .version-info/percona-server-80.html
@@ -107,7 +107,18 @@ refresh_percona_server_version_info() {
     curl -sL https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-"$VER"/binary/redhat/7/ |grep "$VER"|perl -ne '/percona-server-server-(.*?).el7.x86_64.rpm/ and print "$1\n"'
   done >> .version-info/percona-server.el7.txt
   rm -f .version-info/percona-server-80.html
+
+  :> .version-info/mariadb.el7.txt
+  for maver in 10.3 10.4 10.5 ; do
+    curl -sL http://yum.mariadb.org/$maver/centos7-amd64/rpms/| perl -ne '/MariaDB-server-(\d[^"]*).el7.centos.x86_64.rpm/ and print "$1\n"' >> .version-info/mariadb.el7.txt
+  done
 }
+
+
+if [ "x$1" = "xupdate" ] ; then
+  refresh_percona_server_version_info
+  exit 0
+fi
 
 deploy_node() {
   [ -f .version-info/percona-server.el7.txt ] || refresh_percona_server_version_info
@@ -127,6 +138,24 @@ deploy_node() {
         DEP_ENV="$DEP_ENV PS=$VER"
       fi
     fi
+    if [[ $i == "mariadb" ]] || [[ $i == "mariadb:"* ]] || [[ $i == "maria" ]] || [[ $i == "maria:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "$VER" .version-info/mariadb.el7.txt |tail -n 1)
+        DEP_ENV="$DEP_ENV MARIADB=$VER"
+      else
+        VER=$(tail -n 1 .version-info/mariadb.el7.txt)
+        DEP_ENV="$DEP_ENV MARIADB=$VER"
+      fi
+    fi
+    if [[ $i == "master_ip" ]] || [[ $i == "master_ip:"* ]] || [[ $i == "master" ]] || [[ $i == "master:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        MASTER_NODE=$(get_version "$i")
+        DEP_ENV="$DEP_ENV DB_IP=$MASTER_NODE "
+      else
+        DEP_ENV="$DEP_ENV DB_IP=default "
+      fi
+    fi
   done
 
   [[ "$DEP_ENV" == *DB_USER* ]] || DEP_ENV="$DEP_ENV DB_USER=root"
@@ -136,6 +165,8 @@ deploy_node() {
     :
   elif [[ "$DEP_ENV" == *'PS='* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mysql/async-repl-gtid.cnf"
+  elif [[ "$DEP_ENV" == *'MARIADB='* ]] ; then
+    DEP_ENV="$DEP_ENV DB_OPTS=mariadb/async-repl-gtid.cnf"
   fi
 
   case "$PROVIDER" in
@@ -157,6 +188,27 @@ deploy_node() {
   esac
 }
 
+find_node_ip() {
+  NODE="$1"
+  case "$PROVIDER" in
+    vagrant)
+      vagrant ssh $NODE -c /vagrant/tools/node_ip.sh 2>/dev/null
+      ;;
+    lxdock)
+      lxdock shell $NODE -c /vagrant/tools/node_ip.sh 2>/dev/null
+      ;;
+    podman)
+      sed -ne '/'$NODE'/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts
+      ;;
+    lxd)
+      sed -ne '/'$NODE'/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts
+      ;;
+    *)
+      echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
+      exit 1
+  esac
+}
+
 if [ "x$1" = "xdeploy" ] ; then
   DEPLARGS=()
   DEPLOY_CMDS=()
@@ -171,7 +223,7 @@ if [ "x$1" = "xdeploy" ] ; then
       if [[ "$1" == node* ]] ; then
         break
       fi
-      DEPLARGS+="$1"
+      DEPLARGS+=("$1")
       shift
     done
     DEPCMD=$(deploy_node $NODE "${DEPLARGS[@]}")
@@ -203,6 +255,12 @@ if [ "x$1" = "xdeploy" ] ; then
   esac
 
   for i in "${DEPLOY_CMDS[@]}"; do
+    if echo "$i" | grep -q DB_IP ; then
+      MASTER_NODE=$(echo "$i" | perl -ne '/DB_IP=(\S*) / and print $1')
+      MASTER_IP=$(find_node_ip $MASTER_NODE)
+      i=$(echo "$i"|sed -e "s/DB_IP=$MASTER_NODE/DB_IP=$MASTER_IP/g")
+    fi
+
     bash -c "$i"
   done
 
