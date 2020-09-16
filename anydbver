@@ -126,12 +126,13 @@ deploy_node() {
   DEP_ENV=""
   shift
   arr=("$@")
+  ROW_REPLICATION=0
   for i in "${arr[@]}";
   do
     if [[ $i == "percona-server" ]] || [[ $i == "percona-server:"* ]] || [[ $i == "ps" ]] || [[ $i == "ps:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
-        VER=$(grep "$VER" .version-info/percona-server.el7.txt |tail -n 1)
+        VER=$(grep "^$VER" .version-info/percona-server.el7.txt |tail -n 1)
         DEP_ENV="$DEP_ENV PS=$VER"
       else
         VER=$(tail -n 1 .version-info/percona-server.el7.txt)
@@ -156,6 +157,9 @@ deploy_node() {
         DEP_ENV="$DEP_ENV DB_IP=default "
       fi
     fi
+    if [[ $i == "rbr" ]] || [[ $i == "row" ]] || [[ $i == "row-based-replication" ]] || [[ $i == "row_based_replication" ]] ; then
+      ROW_REPLICATION=1
+    fi
   done
 
   [[ "$DEP_ENV" == *DB_USER* ]] || DEP_ENV="$DEP_ENV DB_USER=root"
@@ -163,8 +167,12 @@ deploy_node() {
   [[ "$DEP_ENV" == *START* ]] || DEP_ENV="$DEP_ENV START=1"
   if  [[ "$DEP_ENV" == *DB_OPTS* ]] ; then
     :
+  elif [[ "$DEP_ENV" == *'PS='* && $ROW_REPLICATION == 1 ]] ; then
+    DEP_ENV="$DEP_ENV DB_OPTS=mysql/async-repl-gtid-row.cnf"
   elif [[ "$DEP_ENV" == *'PS='* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mysql/async-repl-gtid.cnf"
+  elif [[ "$DEP_ENV" == *'MARIADB='* && $ROW_REPLICATION == 1 ]] ; then
+    DEP_ENV="$DEP_ENV DB_OPTS=mariadb/async-repl-gtid-row.cnf"
   elif [[ "$DEP_ENV" == *'MARIADB='* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mariadb/async-repl-gtid.cnf"
   fi
