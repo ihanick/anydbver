@@ -4,9 +4,24 @@
 if [ "x$1" = "xhelp" ] ; then
   echo "Use: "
   echo "$0 ssh default or $0 ssh node1"
-  echo "$0 deploy percona-server:8.0.16 or $0 deploy percona-server:8.0 or $0 deploy percona-server"
+  echo "$0 deploy help"
   exit 0
 fi
+
+if [ "x$2" = "xhelp" ] ; then
+  if [ "x$1" = "xdeploy" ] ; then
+    echo "Deploy: "
+    echo "$0 deploy percona-server:8.0.16
+    echo "$0 deploy percona-server:8.0
+    echo "$0 deploy percona-server"
+    echo "$0 deploy ps:5.7"
+    echo "$0 deploy mariadb:10.4"
+    echo "$0 deploy maria:10.4"
+    echo "$0 deploy mariadb node1 mariadb master:default"
+    exit 0
+  fi
+fi
+
 
 if [ "x$1" = "xconfigure" ] ; then
   while (( "$#" )); do
@@ -112,6 +127,28 @@ refresh_percona_server_version_info() {
   for maver in 10.3 10.4 10.5 ; do
     curl -sL http://yum.mariadb.org/$maver/centos7-amd64/rpms/| perl -ne '/MariaDB-server-(\d[^"]*).el7.centos.x86_64.rpm/ and print "$1\n"' >> .version-info/mariadb.el7.txt
   done
+
+  cat > .version-info/pmm-server.txt <<EOF
+1.17.1
+1.17.2
+1.17.3
+1.17.4
+2.0.0
+2.0.1
+2.1.0
+2.2.0
+2.2.1
+2.2.2
+2.3.0
+2.4.0
+2.5.0
+2.6.0
+2.6.1
+2.8.0
+2.9.1
+2.10.0
+latest
+EOF
 }
 
 
@@ -159,6 +196,15 @@ deploy_node() {
     fi
     if [[ $i == "rbr" ]] || [[ $i == "row" ]] || [[ $i == "row-based-replication" ]] || [[ $i == "row_based_replication" ]] ; then
       ROW_REPLICATION=1
+    fi
+    if [[ $i == "pmm" ]] || [[ $i == "pmm:"* ]] || [[ $i == "pmm-server" ]] || [[ $i == "pmm-server:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "$VER" .version-info/pmm-server.txt |tail -n 1)
+      else
+        VER=$(tail -n 1 .version-info/pmm-server.txt)
+      fi
+      DEP_ENV="$DEP_ENV PMM_SERVER=$VER DB_PASS=secret"
     fi
   done
 
@@ -218,6 +264,7 @@ find_node_ip() {
 }
 
 if [ "x$1" = "xdeploy" ] ; then
+  PRIV_CONTAINER_REQUIRED=0
   DEPLARGS=()
   DEPLOY_CMDS=()
   NODE=default
@@ -235,6 +282,7 @@ if [ "x$1" = "xdeploy" ] ; then
       shift
     done
     DEPCMD=$(deploy_node $NODE "${DEPLARGS[@]}")
+    echo "$DEPCMD"|egrep -q 'PMM_SERVER|K8S|PKO' && PRIV_CONTAINER_REQUIRED=1
     DEPLOY_CMDS+=("$DEPCMD")
     if [[ "$1" == node* ]] ; then
       NODE="$1"
@@ -255,7 +303,11 @@ if [ "x$1" = "xdeploy" ] ; then
       ;;
     lxd)
       ./lxdctl --destroy
-      ./lxdctl --nodes ${#DEPLOY_CMDS[@]}
+      if [[ $PRIV_CONTAINER_REQUIRED == 1 ]] ; then
+        ./lxdctl --nodes ${#DEPLOY_CMDS[@]} --privileged
+      else
+        ./lxdctl --nodes ${#DEPLOY_CMDS[@]}
+      fi
       ;;
     *)
       echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"

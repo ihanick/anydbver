@@ -59,3 +59,31 @@
     cmd: /bin/bash /vagrant/tools/setup_mysql_replication.sh "{{ 'gtid' if replication_type == '' else replication_type }}" "{{ master_ip }}" root "{{ db_password }}" "{{soft}}" "{{ os[dist][soft].cnf_file }}" "{{os[dist][soft].systemd_service}}" "{{'cluster1' if cluster_name == '' else cluster_name}}"
     creates: /root/replication.configured
 
+# PMM
+- name: Install Percona yum Repository
+  when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and pmm_client_version != ""
+  block:
+    - name: install percona yum repo
+      yum:
+        name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+        state: present
+
+- name: install PMM client
+  when: pmm_client_version != ""
+  package:
+    name: "{{item}}"
+    state: present
+  with_items: "{{os[dist].pmm_client.install_packages }}"
+- name: Setup pmm-admin
+  when: pmm_client_version != '' and pmm_url != ''
+  register: pmm_admin_config
+  changed_when: "'already exists' not in pmm_admin_config.stdout"
+  shell:
+    cmd: '/usr/bin/pmm-admin config --server-insecure-tls --server-url="{{pmm_url}}" || true'
+
+- name: Setup pmm client mysql
+  when: pmm_client_version != '' and pmm_url != '' and ( percona_server_version != '' or mariadb_version != '' )
+  register: pmm_admin_mysql_config
+  changed_when: "'already exists' not in pmm_admin_mysql_config.stdout"
+  shell:
+    cmd: /usr/bin/pmm-admin add mysql --query-source="{{ 'perfschema' if 'pmm_perfschema' in db_features.split(',') else 'slowlog' }}" --username="{{db_user}}" --password="{{db_password}}"
