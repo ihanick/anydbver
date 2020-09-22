@@ -1,6 +1,6 @@
 k3s:
-  latest_version: '1.18.3'
-  latest_url: "https://github.com/rancher/k3s/releases/download/v1.18.3%2Bk3s1/k3s"
+  latest_version: '1.19.2'
+  latest_url: "https://github.com/rancher/k3s/releases/download/v1.19.2%2Bk3s1/k3s"
 bionic:
   repo_pkg: "/root/percona-release_latest.bionic_all.deb"
   repo_url: "https://repo.percona.com/apt/percona-release_latest.bionic_all.deb"

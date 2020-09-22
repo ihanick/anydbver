@@ -18,6 +18,9 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy mariadb:10.4"
     echo "$0 deploy maria:10.4"
     echo "$0 deploy mariadb node1 mariadb master:default"
+    echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1"
+    echo "$0 deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row"
+    echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default"
     exit 0
   fi
 fi
@@ -164,6 +167,7 @@ deploy_node() {
   shift
   arr=("$@")
   ROW_REPLICATION=0
+  UTF8ENC=1
   for i in "${arr[@]}";
   do
     if [[ $i == "percona-server" ]] || [[ $i == "percona-server:"* ]] || [[ $i == "ps" ]] || [[ $i == "ps:"* ]] ; then
@@ -197,6 +201,9 @@ deploy_node() {
     if [[ $i == "rbr" ]] || [[ $i == "row" ]] || [[ $i == "row-based-replication" ]] || [[ $i == "row_based_replication" ]] ; then
       ROW_REPLICATION=1
     fi
+    if [[ $i == "utf8" ]] || [[ $i == "utf8mb3" ]] ; then
+      UTF8ENC=1
+    fi
     if [[ $i == "pmm" ]] || [[ $i == "pmm:"* ]] || [[ $i == "pmm-server" ]] || [[ $i == "pmm-server:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
@@ -205,6 +212,17 @@ deploy_node() {
         VER=$(tail -n 1 .version-info/pmm-server.txt)
       fi
       DEP_ENV="$DEP_ENV PMM_SERVER=$VER DB_PASS=secret"
+    fi
+    if [[ $i == "k3s-master" ]] || [[ $i == "k3s-master"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        MASTER_NODE=$(get_version "$i")
+      else
+        MASTER_NODE=default
+      fi
+      DEP_ENV="$DEP_ENV K3S_URL=$MASTER_NODE "
+    fi
+    if [[ $i == "k3s" ]] || [[ $i == "k3s:"* ]] || [[ $i == "k8s" ]] || [[ $i == "kubernetes" ]] ; then
+      DEP_ENV="$DEP_ENV K3S=latest"
     fi
   done
 
@@ -215,6 +233,8 @@ deploy_node() {
     :
   elif [[ "$DEP_ENV" == *'PS='* && $ROW_REPLICATION == 1 ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mysql/async-repl-gtid-row.cnf"
+  elif [[ "$DEP_ENV" == *'PS='* && $UTF8ENC == 1 ]] ; then
+    DEP_ENV="$DEP_ENV DB_OPTS=mysql/async-repl-gtid-utf8.cnf"
   elif [[ "$DEP_ENV" == *'PS='* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mysql/async-repl-gtid.cnf"
   elif [[ "$DEP_ENV" == *'MARIADB='* && $ROW_REPLICATION == 1 ]] ; then
@@ -263,6 +283,22 @@ find_node_ip() {
   esac
 }
 
+find_node_token() {
+  NODE="$1"
+  case "$PROVIDER" in
+    lxdock)
+      lxdock shell $NODE -c cat /var/lib/rancher/k3s/server/node-token
+      ;;
+    lxd)
+      MASTER_IP=$(find_node_ip $NODE)
+      ssh -i secret/id_rsa root@$MASTER_IP -o StrictHostKeyChecking=no cat /var/lib/rancher/k3s/server/node-token
+      ;;
+    *)
+      echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
+      exit 1
+  esac
+}
+
 if [ "x$1" = "xdeploy" ] ; then
   PRIV_CONTAINER_REQUIRED=0
   DEPLARGS=()
@@ -282,7 +318,7 @@ if [ "x$1" = "xdeploy" ] ; then
       shift
     done
     DEPCMD=$(deploy_node $NODE "${DEPLARGS[@]}")
-    echo "$DEPCMD"|egrep -q 'PMM_SERVER|K8S|PKO' && PRIV_CONTAINER_REQUIRED=1
+    echo "$DEPCMD"|egrep -q 'PMM_SERVER|K8S|K3S|PKO' && PRIV_CONTAINER_REQUIRED=1
     DEPLOY_CMDS+=("$DEPCMD")
     if [[ "$1" == node* ]] ; then
       NODE="$1"
@@ -319,6 +355,12 @@ if [ "x$1" = "xdeploy" ] ; then
       MASTER_NODE=$(echo "$i" | perl -ne '/DB_IP=(\S*) / and print $1')
       MASTER_IP=$(find_node_ip $MASTER_NODE)
       i=$(echo "$i"|sed -e "s/DB_IP=$MASTER_NODE/DB_IP=$MASTER_IP/g")
+    fi
+    if echo "$i" | grep -q K3S_URL ; then
+      MASTER_NODE=$(echo "$i" | perl -ne '/K3S_URL=(\S*) / and print $1')
+      MASTER_IP=$(find_node_ip $MASTER_NODE)
+      MASTER_TOKEN=$(find_node_token $MASTER_NODE)
+      i=$(echo "$i"|sed -e "s,K3S_URL=$MASTER_NODE,K3S_URL=https://$MASTER_IP:6443 K3S_TOKEN=$MASTER_TOKEN,g")
     fi
 
     bash -c "$i"
