@@ -1,6 +1,41 @@
 # anydbver
 Vagrant+Ansible setup to install Percona database products with exact version specified. Best experience LXC provider
 
+## Simple usage:
+
+Select VM/Container provider:
+```bash
+./anydbver configure provider:lxd
+```
+
+Update version information:
+```bash
+./anydbver update
+```
+
+Start the database with required server type and version:
+```bash
+./anydbver deploy help
+Deploy:
+./anydbver deploy percona-server:8.0.16
+./anydbver deploy percona-server:8.0
+./anydbver deploy percona-server
+./anydbver deploy ps:5.7
+./anydbver deploy mariadb:10.4
+./anydbver deploy maria:10.4
+./anydbver deploy mariadb node1 mariadb master:default
+./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1
+./anydbver deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row
+./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default
+./anydbver deploy pg:12.3
+```
+
+Connect to selected node via ssh:
+```bash
+./anydbver ssh # connects to default node
+./anydbver ssh node1
+```
+
 ## Allows to install a specific version of:
 
 * Percona Server
@@ -8,6 +43,8 @@ Vagrant+Ansible setup to install Percona database products with exact version sp
 * PMM Server and clients
 * Percona Server for MongoDB
 * Percona Distribution for PostgreSQL
+* Community Postgresql Server
+* K3S kubernetes distribution
 
 ## Installation
 

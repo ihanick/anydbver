@@ -3,7 +3,9 @@
 
 if [ "x$1" = "xhelp" ] ; then
   echo "Use: "
+  echo "$0 configure provider:lxd"
   echo "$0 ssh default or $0 ssh node1"
+  echo "$0 update # refresh version information"
   echo "$0 deploy help"
   exit 0
 fi
@@ -11,8 +13,8 @@ fi
 if [ "x$2" = "xhelp" ] ; then
   if [ "x$1" = "xdeploy" ] ; then
     echo "Deploy: "
-    echo "$0 deploy percona-server:8.0.16
-    echo "$0 deploy percona-server:8.0
+    echo "$0 deploy percona-server:8.0.16"
+    echo "$0 deploy percona-server:8.0"
     echo "$0 deploy percona-server"
     echo "$0 deploy ps:5.7"
     echo "$0 deploy mariadb:10.4"
@@ -21,6 +23,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1"
     echo "$0 deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default"
+    echo "$0 deploy pg:12.3"
     exit 0
   fi
 fi
@@ -152,6 +155,20 @@ refresh_percona_server_version_info() {
 2.10.0
 latest
 EOF
+  cat > .version-info/pg.el7.txt <<EOF
+9.5.15
+9.5.23
+12.1
+12.2
+12.3
+12.4
+EOF
+  cat > .version-info/pg.el8.txt <<EOF
+12.1
+12.2
+12.3
+12.4
+EOF
 }
 
 
@@ -188,6 +205,16 @@ deploy_node() {
       else
         VER=$(tail -n 1 .version-info/mariadb.el7.txt)
         DEP_ENV="$DEP_ENV MARIADB=$VER"
+      fi
+    fi
+    if [[ $i == "postgresql" ]] || [[ $i == "postgresql:"* ]] || [[ $i == "pg" ]] || [[ $i == "pg:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "$VER" .version-info/pg.el7.txt |tail -n 1)
+        DEP_ENV="$DEP_ENV PG=$VER"
+      else
+        VER=$(tail -n 1 .version-info/pg.el7.txt)
+        DEP_ENV="$DEP_ENV PG=$VER"
       fi
     fi
     if [[ $i == "master_ip" ]] || [[ $i == "master_ip:"* ]] || [[ $i == "master" ]] || [[ $i == "master:"* ]] ; then
@@ -241,6 +268,8 @@ deploy_node() {
     DEP_ENV="$DEP_ENV DB_OPTS=mariadb/async-repl-gtid-row.cnf"
   elif [[ "$DEP_ENV" == *'MARIADB='* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mariadb/async-repl-gtid.cnf"
+  elif [[ "$DEP_ENV" == *'PG='* ]] ; then
+    DEP_ENV="$DEP_ENV DB_OPTS=postgresql/logical.conf"
   fi
 
   case "$PROVIDER" in
