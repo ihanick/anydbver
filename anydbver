@@ -167,7 +167,7 @@ deploy_node() {
   shift
   arr=("$@")
   ROW_REPLICATION=0
-  UTF8ENC=1
+  UTF8ENC=0
   for i in "${arr[@]}";
   do
     if [[ $i == "percona-server" ]] || [[ $i == "percona-server:"* ]] || [[ $i == "ps" ]] || [[ $i == "ps:"* ]] ; then
