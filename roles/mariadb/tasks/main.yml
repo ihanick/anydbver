@@ -18,7 +18,7 @@
     state: present
     name: >-
       {{
-        os[dist][soft].install_packages +
+        (os[dist][soft][mariadb_version].install_packages if mariadb_version in os[dist][soft] else os[dist][soft].install_packages) +
         ( [] if debug_packages == '' else
           os[dist][soft].install_debug_packages) +
         ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else

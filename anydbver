@@ -130,6 +130,10 @@ refresh_percona_server_version_info() {
   rm -f .version-info/percona-server-80.html
 
   :> .version-info/mariadb.el7.txt
+  cat > .version-info/mariadb.el7.txt <<EOF
+10.1.29
+EOF
+
   for maver in 10.3 10.4 10.5 ; do
     curl -sL http://yum.mariadb.org/$maver/centos7-amd64/rpms/| perl -ne '/MariaDB-server-(\d[^"]*).el7.centos.x86_64.rpm/ and print "$1\n"' >> .version-info/mariadb.el7.txt
   done
@@ -158,16 +162,44 @@ EOF
   cat > .version-info/pg.el7.txt <<EOF
 9.5.15
 9.5.23
+10.7
+10.8
+10.9
+10.10
+10.11
+10.12
+10.13
+10.14
+11.0
+11.2
+11.3
+11.4
+11.5
+11.6
+11.7
+11.8
+11.9
 12.1
 12.2
 12.3
 12.4
+13.0
 EOF
   cat > .version-info/pg.el8.txt <<EOF
+11.0
+11.2
+11.3
+11.4
+11.5
+11.6
+11.7
+11.8
+11.9
 12.1
 12.2
 12.3
 12.4
+13.0
 EOF
 }
 

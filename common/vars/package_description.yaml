@@ -181,6 +181,11 @@ el7:
       - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos7-amd64/rpms/MariaDB-common-{{mariadb_version}}.el7.centos.x86_64.rpm"
       - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos7-amd64/rpms/MariaDB-client-{{mariadb_version}}.el7.centos.x86_64.rpm"
       - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos7-amd64/rpms/MariaDB-server-{{mariadb_version}}.el7.centos.x86_64.rpm"
+    10.1.29:
+      install_packages:
+        - "https://downloads.mariadb.com/MariaDB/mariadb-10.1.29/yum/centos7-amd64/rpms/MariaDB-10.1.29-centos7-x86_64-common.rpm"
+        - "https://downloads.mariadb.com/MariaDB/mariadb-10.1.29/yum/centos7-amd64/rpms/MariaDB-10.1.29-centos7-x86_64-client.rpm"
+        - "https://downloads.mariadb.com/MariaDB/mariadb-10.1.29/yum/centos7-amd64/rpms/MariaDB-10.1.29-centos7-x86_64-server.rpm"
   mysql:
     repo_url: https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm
     systemd_service: "mysqld"
