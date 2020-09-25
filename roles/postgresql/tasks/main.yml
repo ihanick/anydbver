@@ -84,7 +84,9 @@
     creates: /etc/sysconfig/pgsql/krb5.keytab
 
 - name: Setup and start streaming physical replication with slots
-  when: master_ip != '' and percona_postgresql_version != ''
+  when: master_ip != '' and ( percona_postgresql_version != '' or postgresql_version != '')
+  vars:
+    maj: "{{ postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1') if postgresql_version != '' else percona_postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')   }}"
   shell:
     cmd: >-
       /bin/bash /vagrant/tools/setup_postgresql_replication.sh
@@ -93,9 +95,10 @@
       postgres
       {{db_password}}
       postgres
-      /var/lib/pgsql/{{percona_postgresql_major_ver}}/data
-      postgresql-{{percona_postgresql_major_ver}}
+      /var/lib/pgsql/{{maj}}/data
+      postgresql-{{maj}}
     creates: /root/replication.configured
+
 - name: Create LDAP user in postgres
   when: percona_postgresql_version != '' and ldap_server_ip != '' and db_user != ''
   shell:

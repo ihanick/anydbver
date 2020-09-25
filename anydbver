@@ -285,7 +285,11 @@ deploy_node() {
     fi
   done
 
-  [[ "$DEP_ENV" == *DB_USER* ]] || DEP_ENV="$DEP_ENV DB_USER=root"
+  if [[ "$DEP_ENV" != *DB_USER* && "$DEP_ENV" == *'PG='* ]] ; then
+    DEP_ENV="$DEP_ENV DB_USER=postgres"
+  elif [[ "$DEP_ENV" != *DB_USER* ]] ; then
+    DEP_ENV="$DEP_ENV DB_USER=root"
+  fi
   [[ "$DEP_ENV" == *DB_PASS* ]] || DEP_ENV="$DEP_ENV DB_PASS=secret"
   [[ "$DEP_ENV" == *START* ]] || DEP_ENV="$DEP_ENV START=1"
   if  [[ "$DEP_ENV" == *DB_OPTS* ]] ; then
