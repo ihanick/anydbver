@@ -426,7 +426,7 @@
       shell:
         cmd: >-
           cd /root;
-          git clone -b release-{{ percona_k8s_op_version }} https://github.com/percona/{{ percona_k8s_op_name }};
+          git clone -b v{{ percona_k8s_op_version }} https://github.com/percona/{{ percona_k8s_op_name }};
           cd {{ percona_k8s_op_name }};
           until kubectl wait --for=condition=ready -n kube-system pod -l k8s-app=kube-dns &>/dev/null;do sleep 2;done;
           kubectl apply -f deploy/bundle.yaml;
