@@ -14,17 +14,31 @@ SERVER_ID=$(ip addr ls|grep 'inet '|grep -v '127.0.0.1'|awk '{print $2}'|cut -d/
 
 if [ "x$SOFT" = "xmariadb_server" ] ; then
   if [[ "x$TYPE" == "xgtid" ]] ; then
-      mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;show master status\G' > "$MINF"
       GTID=$(mysql --host $MASTER_IP -N -e "SELECT @@GLOBAL.gtid_current_pos")
+      GTID_CUR=$(mysql -N -e "SELECT @@GLOBAL.gtid_current_pos")
 
-      mysql << EOF
-      RESET MASTER;
-      STOP SLAVE;
-      RESET SLAVE ALL;
-      SET GLOBAL gtid_slave_pos = '${GTID}';
-      CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_USE_GTID=slave_pos;
-      START SLAVE;
+      if [ "x$GTID" != "x" -a "x$GTID" == "x$GTID_CUR" ] ; then
+	      mysql << EOF
+STOP SLAVE;
+RESET SLAVE ALL;
+SET GLOBAL gtid_slave_pos = '${GTID}';
+CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_USE_GTID=slave_pos;
+START SLAVE;
 EOF
+      else
+	      mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;show master status\G' > "$MINF"
+	      GTID=$(mysql --host $MASTER_IP -N -e "SELECT @@GLOBAL.gtid_current_pos")
+	      GTID_CUR=$(mysql -N -e "SELECT @@GLOBAL.gtid_current_pos")
+
+	      mysql << EOF
+RESET MASTER;
+STOP SLAVE;
+RESET SLAVE ALL;
+SET GLOBAL gtid_slave_pos = '${GTID}';
+CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_USE_GTID=slave_pos;
+START SLAVE;
+EOF
+      fi
 
       rm "${MINF}"
       touch /root/replication.configured

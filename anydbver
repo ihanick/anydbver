@@ -20,6 +20,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy mariadb:10.4"
     echo "$0 deploy maria:10.4"
     echo "$0 deploy mariadb node1 mariadb master:default"
+    echo "$0 deploy mariadb node1 mariadb master:default default mariadb master:node1 node2 mariadb master:node1"
     echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1"
     echo "$0 deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default"
