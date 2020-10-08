@@ -36,6 +36,7 @@
     creates: /root/dist-postgresql.disabled
 
 - name: Install db packages
+  when: postgresql_version != '' or percona_postgresql_version != ''
   include_tasks: common/tasks/install_db_packages.yml
 
 - name: install Percona Distribution for PostgreSQL
@@ -66,7 +67,7 @@
     creates: "/var/lib/pgsql/{{maj}}/data/pg_hba.conf"
 
 - name: Apply database options from file
-  when: db_opts_file != ''
+  when: db_opts_file != '' and (postgresql_version != '' or percona_postgresql_version != '')
   command:
     cmd: >-
       /bin/bash /vagrant/tools/apply_mysql_conf.sh
@@ -78,7 +79,7 @@
     creates: "/root/{{ db_opts_file | basename }}.applied"
 
 - name: Setup Kerberos for PG
-  when: kerberos_client != ''
+  when: kerberos_client != '' and (postgresql_version != '' or percona_postgresql_version != '')
   command:
     cmd: /bin/bash /vagrant/tools/setup_pg_kerberos.sh "{{db_user}}" "{{db_password}}"
     creates: /etc/sysconfig/pgsql/krb5.keytab
@@ -100,13 +101,60 @@
     creates: /root/replication.configured
 
 - name: Create LDAP user in postgres
-  when: percona_postgresql_version != '' and ldap_server_ip != '' and db_user != ''
+  when: (postgresql_version != '' or percona_postgresql_version != '') and ldap_server_ip != '' and db_user != ''
   shell:
     cmd: >-
       sudo -u postgres createuser "{{db_user}}";
       sudo -u postgres psql -c 'grant all on database postgres to {{db_user}}';
 - name: Setup PMM client with postgres
-  when: pmm_url != '' and percona_postgresql_version != ''
+  when: pmm_url != '' and (postgresql_version != '' or percona_postgresql_version != '')
   shell:
     cmd: /bin/bash /vagrant/tools/setup_pmm.sh "{{soft}}" postgres "{{db_password}}" pmm_user "{{db_password}}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
     creates: /root/pmm-postgresql.applied
+
+- name: Install Yandex Odyssey
+  when: odyssey_version != ''
+  block:
+    - name: Install tar
+      package:
+        name: tar
+        state: present
+    - name: download and install odyssey
+      shell:
+        warn: false
+        cmd: >-
+          curl -L -s https://github.com/yandex/odyssey/releases |
+          grep -F {{odyssey_version}}|grep linux-amd64|
+          sed -e 's,^.*a href=.,https://github.com,' -e 's,. rel=.nofollow.*$,,' |
+          xargs -n 1 curl -s -L --output /tmp/odyssey.tar.gz;
+          tar -C /usr/bin/ -xzf /tmp/odyssey.tar.gz;
+          rm -rf /tmp/odyssey.tar.gz
+        creates: /usr/bin/odyssey
+
+- name: Setup Odyssey
+  when: odyssey_version != '' and master_ip != ''
+  shell:
+    cmd: /bin/bash /vagrant/tools/setup_pg_odyssey.sh "{{master_ip}}" "{{db_password}}"
+    creates: /etc/odyssey/odyssey.conf
+
+- name: Install WAL-G
+  when: walg_version != ''
+  block:
+    - name: Install tar
+      package:
+        name: tar
+        state: present
+    - name: download and install wal-g
+      shell:
+        warn: false
+        cmd: >-
+          curl -L -s https://github.com/wal-g/wal-g/releases |
+          grep -F {{walg_version}}|grep linux-amd64|
+          sed -e 's,^.*a href=.,https://github.com,' -e 's,. rel=.nofollow.*$,,' |
+          head -n 1 |
+          xargs -n 1 curl -s -L --output /tmp/walg.tar.gz;
+          tar -C /usr/bin/ -xzf /tmp/walg.tar.gz;
+          rm -rf /tmp/walg.tar.gz
+        creates: /usr/bin/wal-g
+
+

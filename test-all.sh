@@ -1407,3 +1407,24 @@ if [[ "x$2" = "" || "x$2" = "xmariarep" ]] ; then
   fi
 fi
 
+
+if [[ "x$2" = "" || "x$2" = "xpopsmdb" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    ./gen_lxdock.sh anydbver centos/7 4
+    K3S=latest lxdock up default
+    until [ "x" != "x$IP" ]; do
+      IP=$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null)
+      sleep 1
+    done
+    echo "K8S master IP: $IP"
+    K3S_TOKEN=$(lxdock shell default -c cat /var/lib/rancher/k3s/server/node-token) \
+      K3S_URL="https://$(lxdock shell default -c /vagrant/tools/node_ip.sh 2>/dev/null):6443" \
+      lxdock up node1 node2 node3
+    # there are dns resolution issues for "too fast start"
+    sleep 30
+    K3S=latest PKO4PSMDB='1.5.0' lxdock provision default
+    lxdock shell default -c kubectl apply -f /vagrant/configs/k8s/svc-replication-master.yaml
+
+    test $DESTROY = yes && lxdock destroy -f
+  fi
+fi

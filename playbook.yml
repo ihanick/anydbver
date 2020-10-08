@@ -193,7 +193,7 @@
 
 
     - name: Postgresql Role
-      when: postgresql_version != '' or percona_postgresql_version != ''
+      when: postgresql_version != '' or percona_postgresql_version != '' or odyssey_version != '' or walg_version != ''
       include_role:
         name: postgresql
 
@@ -320,51 +320,6 @@
           apt:
             deb: "{{os[dist][soft].url}}"
 
-    - name: Install WAL-G
-      when: walg_version != ''
-      block:
-        - name: Install tar
-          package:
-            name: tar
-            state: present
-        - name: download and install wal-g
-          shell:
-            warn: false
-            cmd: >-
-              curl -L -s https://github.com/wal-g/wal-g/releases |
-              grep -F {{walg_version}}|grep linux-amd64|
-              sed -e 's,^.*a href=.,https://github.com,' -e 's,. rel=.nofollow.*$,,' |
-              head -n 1 |
-              xargs -n 1 curl -s -L --output /tmp/walg.tar.gz;
-              tar -C /usr/bin/ -xzf /tmp/walg.tar.gz;
-              rm -rf /tmp/walg.tar.gz
-            creates: /usr/bin/wal-g
-
-    - name: Install Yandex Odyssey
-      when: odyssey_version != ''
-      block:
-        - name: Install tar
-          package:
-            name: tar
-            state: present
-        - name: download and install odyssey
-          shell:
-            warn: false
-            cmd: >-
-              curl -L -s https://github.com/yandex/odyssey/releases |
-              grep -F {{odyssey_version}}|grep linux-amd64|
-              sed -e 's,^.*a href=.,https://github.com,' -e 's,. rel=.nofollow.*$,,' |
-              xargs -n 1 curl -s -L --output /tmp/odyssey.tar.gz;
-              tar -C /usr/bin/ -xzf /tmp/odyssey.tar.gz;
-              rm -rf /tmp/odyssey.tar.gz
-            creates: /usr/bin/odyssey
-
-    - name: Setup Odyssey
-      when: odyssey_version != '' and master_ip != ''
-      shell:
-        cmd: /bin/bash /vagrant/tools/setup_pg_odyssey.sh "{{master_ip}}" "{{db_password}}"
-        creates: /etc/odyssey/odyssey.conf
-
     - name: Start database with systemd
       when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
       systemd:
@@ -431,7 +386,6 @@
           until kubectl wait --for=condition=ready -n kube-system pod -l k8s-app=kube-dns &>/dev/null;do sleep 2;done;
           kubectl apply -f deploy/bundle.yaml;
           kubectl apply -f deploy/secrets.yaml;
-          kubectl apply -f deploy/ssl-secrets.yaml;
           kubectl apply -f deploy/backup-s3.yaml;
           until kubectl wait --for=condition=ready pod -l name={{ percona_k8s_op_name }} &>/dev/null;do sleep 2;done
         creates: /root/{{ percona_k8s_op_name }}/deploy/cr.yaml

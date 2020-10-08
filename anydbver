@@ -25,6 +25,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-mongo"
+    echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pxc"
     echo "$0 deploy pg:12.3"
     exit 0
   fi
@@ -215,6 +216,17 @@ EOF
 1.4.0
 1.5.0
 EOF
+  cat > .version-info/pko4pxc.txt <<EOF
+0.1.0
+0.2.0
+0.3.0
+1.0.0
+1.1.0
+1.2.0
+1.3.0
+1.4.0
+1.5.0
+EOF
 }
 
 
@@ -271,6 +283,16 @@ deploy_node() {
       else
         VER=$(tail -n 1 .version-info/pko4psmdb.txt)
         DEP_ENV="$DEP_ENV PKO4PSMDB=$VER"
+      fi
+    fi
+    if [[ $i == "k8s-pxc" ]] || [[ $i == "k8s-pxc:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "$VER" .version-info/pko4pxc.txt |tail -n 1)
+        DEP_ENV="$DEP_ENV PKO4PXC=$VER"
+      else
+        VER=$(tail -n 1 .version-info/pko4pxc.txt)
+        DEP_ENV="$DEP_ENV PKO4PXC=$VER"
       fi
     fi
     if [[ $i == "master_ip" ]] || [[ $i == "master_ip:"* ]] || [[ $i == "master" ]] || [[ $i == "master:"* ]] ; then
@@ -393,6 +415,7 @@ if [ "x$1" = "xdeploy" ] ; then
   DEPLARGS=()
   DEPLOY_CMDS=()
   NODE=default
+  declare -A ALL_NODES
   shift
   if [[ "$1" == default ]] ; then
     shift
@@ -409,6 +432,7 @@ if [ "x$1" = "xdeploy" ] ; then
     DEPCMD=$(deploy_node $NODE "${DEPLARGS[@]}")
     echo "$DEPCMD"|egrep -q 'PMM_SERVER|K8S|K3S|PKO' && PRIV_CONTAINER_REQUIRED=1
     DEPLOY_CMDS+=("$DEPCMD")
+    ALL_NODES[$NODE]=1
     if [[ "$1" == node* || "$1" == default ]] ; then
       NODE="$1"
       shift
@@ -424,14 +448,14 @@ if [ "x$1" = "xdeploy" ] ; then
       ;;
     podman)
       ./podmanctl --destroy
-      ./podmanctl --nodes ${#DEPLOY_CMDS[@]}
+      ./podmanctl --nodes ${#ALL_NODES[@]}
       ;;
     lxd)
       ./lxdctl --destroy
       if [[ $PRIV_CONTAINER_REQUIRED == 1 ]] ; then
-        ./lxdctl --nodes ${#DEPLOY_CMDS[@]} --privileged
+        ./lxdctl --nodes ${#ALL_NODES[@]} --privileged
       else
-        ./lxdctl --nodes ${#DEPLOY_CMDS[@]}
+        ./lxdctl --nodes ${#ALL_NODES[@]}
       fi
       ;;
     *)
@@ -452,6 +476,7 @@ if [ "x$1" = "xdeploy" ] ; then
       i=$(echo "$i"|sed -e "s,K3S_URL=$MASTER_NODE,K3S_URL=https://$MASTER_IP:6443 K3S_TOKEN=$MASTER_TOKEN,g")
     fi
 
+    printf "%s\n" "$i"
     bash -c "$i"
   done
 
