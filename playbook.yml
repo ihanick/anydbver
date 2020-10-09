@@ -23,6 +23,7 @@
     db_features: "{{ lookup('vars', 'extra_db_features', default=lookup('env','DB_FEATURES',default='') ) }}"
     percona_k8s_op_pxc_version: "{{ lookup('vars', 'extra_percona_k8s_op_pxc_version', default=lookup('env','PKO4PXC',default='') ) }}"
     percona_k8s_op_psmdb_version: "{{ lookup('vars', 'extra_percona_k8s_op_psmdb_version', default=lookup('env','PKO4PSMDB',default='') ) }}"
+    zalando_pg_op_version: "{{ lookup('vars', 'extra_zalando_pg_op_version', default=lookup('env','K8S_PG',default='') ) }}"
     start_db: "{{ lookup('vars', 'extra_start_db', default=lookup('env','START',default='') ) }}"
     db_opts_file: "{{ lookup('vars', 'extra_db_opts_file', default=lookup('env','DB_OPTS',default='') ) }}"
     k3s_token: "{{ lookup('vars', 'extra_k3s_token', default=lookup('env','K3S_TOKEN',default='') ) }}"
@@ -353,7 +354,7 @@
 
     - name: Install k3s, kubernetes distribution
       include_tasks: common/tasks/kubernetes_install.yaml
-      when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or (k3s_url != '' and k3s_token != '') or k3s_version != '') and kube_config == ''
+      when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or zalando_pg_op_version != '' or (k3s_url != '' and k3s_token != '') or k3s_version != '') and kube_config == ''
 
     - name: Install kubectl
       when: kube_config != ''
@@ -372,7 +373,7 @@
         - include_tasks: common/tasks/helm_install.yaml
 
     - name: Install git for Percona Operator setup
-      when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != ""
+      when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != "" or zalando_pg_op_version != ""
       package:
         name: git
         state: present
@@ -381,7 +382,7 @@
       shell:
         cmd: >-
           cd /root;
-          git clone -b v{{ percona_k8s_op_version }} https://github.com/percona/{{ percona_k8s_op_name }};
+          git clone -b v{{ percona_k8s_op_version }} https://github.com/percona/{{ percona_k8s_op_name }}.git;
           cd {{ percona_k8s_op_name }};
           until kubectl wait --for=condition=ready -n kube-system pod -l k8s-app=kube-dns &>/dev/null;do sleep 2;done;
           kubectl apply -f deploy/bundle.yaml;
@@ -403,6 +404,28 @@
           else kubectl apply -f /root/{{ percona_k8s_op_name }}/deploy/cr-single.yaml ;
           fi
         creates: /root/{{ percona_k8s_op_name }}/deploy/cr-single.yaml
+
+    - name: install Zalando Postgresql Operator
+      when: zalando_pg_op_version != ''
+      shell:
+        cmd: >-
+          cd /root;
+          git clone -b v{{ zalando_pg_op_version }} https://github.com/zalando/postgres-operator.git;
+          cd postgres-operator;
+          until kubectl wait --for=condition=ready -n kube-system pod -l k8s-app=kube-dns &>/dev/null;do sleep 2;done;
+          kubectl apply -k manifests/;
+          until kubectl wait --for=condition=ready pod -l name=postgres-operator &>/dev/null;do sleep 2;done
+        creates: /root/postgres-operator/manifests/minimal-postgres-manifest.yaml
+
+    - name: Start Postgresql cluster in k8s
+      when: zalando_pg_op_version != ''
+      shell:
+        warn: false
+        cmd: >-
+          cd /root/postgres-operator;
+          kubectl apply -f manifests/minimal-postgres-manifest.yaml;
+          touch /root/zalando_pg.applied
+        creates: /root/zalando_pg.applied
 
     - name: Download yq
       when: percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or k8s_pmm != ''
