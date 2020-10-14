@@ -3,7 +3,7 @@
   block:
     - name: Download helm
       get_url:
-        url: https://get.helm.sh/helm-v3.2.1-linux-amd64.tar.gz
+        url: https://get.helm.sh/helm-v3.3.4-linux-amd64.tar.gz
         dest: /opt/helm.tar.gz
     - name: Unpack helm binary
       unarchive:

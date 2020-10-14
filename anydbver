@@ -228,6 +228,7 @@ EOF
 1.3.0
 1.4.0
 1.5.0
+1.6.0
 EOF
   cat > .version-info/zalando_pg.txt <<EOF
 1.0.0
@@ -246,6 +247,9 @@ if [ "x$1" = "xupdate" ] ; then
   exit 0
 fi
 
+
+join_ws()  { local IFS=; local s="${*/#/$1}"; echo "${s#"$1$1$1"}"; }
+
 deploy_node() {
   [ -f .version-info/percona-server.el7.txt ] || refresh_percona_server_version_info
   NODE="$1"
@@ -254,6 +258,7 @@ deploy_node() {
   arr=("$@")
   ROW_REPLICATION=0
   UTF8ENC=0
+  FEATURES=()
   for i in "${arr[@]}";
   do
     if [[ $i == "percona-server" ]] || [[ $i == "percona-server:"* ]] || [[ $i == "ps" ]] || [[ $i == "ps:"* ]] ; then
@@ -330,6 +335,15 @@ deploy_node() {
     if [[ $i == "rbr" ]] || [[ $i == "row" ]] || [[ $i == "row-based-replication" ]] || [[ $i == "row_based_replication" ]] ; then
       ROW_REPLICATION=1
     fi
+    if [[ $i == "backup" ]] ; then
+      FEATURES+=( backup )
+    fi
+    if [[ $i == "gtid" ]] ; then
+      FEATURES+=( gtid )
+    fi
+    if [[ $i == "master" ]] ; then
+      FEATURES+=( master )
+    fi
     if [[ $i == "utf8" ]] || [[ $i == "utf8mb3" ]] ; then
       UTF8ENC=1
     fi
@@ -377,6 +391,12 @@ deploy_node() {
   elif [[ "$DEP_ENV" == *'PG='* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=postgresql/logical.conf"
   fi
+
+  if [[ ${#arr[@]} != 0 ]] ; then
+    DB_FEATURES=$( join_ws , "${FEATURES[@]}" )
+    DEP_ENV="$DEP_ENV DB_FEATURES=$DB_FEATURES"
+  fi
+
 
   case "$PROVIDER" in
     vagrant)
