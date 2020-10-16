@@ -22,6 +22,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy mariadb node1 mariadb master:default"
     echo "$0 deploy mariadb node1 mariadb master:default default mariadb master:node1 node2 mariadb master:node1"
     echo "$0 deploy mariadb-cluster:10.4 node1 mariadb-cluster:10.4 galera-master:default node2 mariadb-cluster:10.4 galera-master:default"
+    echo "$0 deploy deploy ldap node1 ldap-master:default ps:5.7"
     echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1"
     echo "$0 deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row"
     echo "$0 deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default"
@@ -395,6 +396,17 @@ deploy_node() {
       fi
       DEP_ENV="$DEP_ENV PMM_SERVER=$VER DB_PASS=secret"
     fi
+    if [[ $i == "ldap" ]] || [[ $i == "ldap-server"* ]] ; then
+      DEP_ENV="$DEP_ENV LDAP_SERVER=1 DB_USER=dba DB_PASS=secret"
+    fi
+    if [[ $i == "ldap-master" ]] || [[ $i == "ldap-master"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        LDAP_NODE=$(get_version "$i")
+      else
+        LDAP_NODE=default
+      fi
+      DEP_ENV="$DEP_ENV LDAP_IP=$LDAP_NODE DB_USER=dba DB_PASS=secret"
+    fi
     if [[ $i == "k3s-master" ]] || [[ $i == "k3s-master"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         MASTER_NODE=$(get_version "$i")
@@ -555,6 +567,11 @@ if [ "x$1" = "xdeploy" ] ; then
       MASTER_NODE=$(echo "$i" | perl -ne '/DB_IP=(\S*) / and print $1')
       MASTER_IP=$(find_node_ip $MASTER_NODE)
       i=$(echo "$i"|sed -e "s/DB_IP=$MASTER_NODE/DB_IP=$MASTER_IP/g")
+    fi
+    if echo "$i" | grep -q LDAP_IP ; then
+      LDAP_NODE=$(echo "$i" | perl -ne '/LDAP_IP=(\S*) / and print $1')
+      LDAP_IP=$(find_node_ip $LDAP_NODE)
+      i=$(echo "$i"|sed -e "s/LDAP_IP=$LDAP_NODE/LDAP_IP=$LDAP_IP/g")
     fi
     if echo "$i" | grep -q K3S_URL ; then
       MASTER_NODE=$(echo "$i" | perl -ne '/K3S_URL=(\S*) / and print $1')
