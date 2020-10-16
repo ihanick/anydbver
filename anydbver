@@ -21,8 +21,10 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy maria:10.4"
     echo "$0 deploy mariadb node1 mariadb master:default"
     echo "$0 deploy mariadb node1 mariadb master:default default mariadb master:node1 node2 mariadb master:node1"
+    echo "$0 deploy mariadb-cluster:10.4 node1 mariadb-cluster:10.4 galera-master:default node2 mariadb-cluster:10.4 galera-master:default"
     echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1"
     echo "$0 deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row"
+    echo "$0 deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-mongo"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-mongo"
@@ -134,6 +136,9 @@ refresh_percona_server_version_info() {
   done >> .version-info/percona-server.el7.txt
   rm -f .version-info/percona-server-80.html
 
+  curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/|perl -ne '/Percona-XtraDB-Cluster-\d\d-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' > .version-info/percona-xtradb-cluster.el7.txt
+  curl -sL https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/|perl -ne '/Percona-XtraDB-Cluster-\d\d-([0-9.-]*).el8.x86_64.rpm/ and print "$1\n"' > .version-info/percona-xtradb-cluster.el8.txt
+
   :> .version-info/mariadb.el7.txt
   cat > .version-info/mariadb.el7.txt <<EOF
 10.1.29
@@ -142,6 +147,10 @@ EOF
   for maver in 10.3 10.4 10.5 ; do
     curl -sL http://yum.mariadb.org/$maver/centos7-amd64/rpms/| perl -ne '/MariaDB-server-(\d[^"]*).el7.centos.x86_64.rpm/ and print "$1\n"' >> .version-info/mariadb.el7.txt
   done
+
+  cat > .version-info/mariadb-galera.el7.txt <<EOF
+10.4.15-1 26.4.5-1
+EOF
 
   cat > .version-info/pmm-server.txt <<EOF
 1.17.1
@@ -271,6 +280,16 @@ deploy_node() {
         DEP_ENV="$DEP_ENV PS=$VER"
       fi
     fi
+    if [[ $i == "percona-xtradb-cluster" ]] || [[ $i == "percona-xtradb-cluster:"* ]] || [[ $i == "pxc" ]] || [[ $i == "pxc:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "^$VER" .version-info/percona-xtradb-cluster.el7.txt |tail -n 1)
+        DEP_ENV="$DEP_ENV PXC=$VER CLUSTER=cluster1"
+      else
+        VER=$(tail -n 1 .version-info/percona-xtradb-cluster.el7.txt)
+        DEP_ENV="$DEP_ENV PXC=$VER CLUSTER=cluster1"
+      fi
+    fi
     if [[ $i == "mariadb" ]] || [[ $i == "mariadb:"* ]] || [[ $i == "maria" ]] || [[ $i == "maria:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
@@ -279,6 +298,18 @@ deploy_node() {
       else
         VER=$(tail -n 1 .version-info/mariadb.el7.txt)
         DEP_ENV="$DEP_ENV MARIADB=$VER"
+      fi
+    fi
+    if [[ $i == "mariadb-galera" ]] || [[ $i == "mariadb-galera:"* ]] || [[ $i == "mariadb-cluster" ]] || [[ $i == "mariadb-cluster:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "$VER" .version-info/mariadb.el7.txt |tail -n 1)
+	GALERA_VER=$(grep "10.4.15-1" .version-info/mariadb-galera.el7.txt|cut -d' ' -f2|tail -n 1 )
+        DEP_ENV="$DEP_ENV MARIADB=$VER GALERA=$GALERA_VER CLUSTER=cluster1"
+      else
+        VER=$(tail -n 1 .version-info/mariadb.el7.txt)
+	GALERA_VER=$(grep "10.4.15-1" .version-info/mariadb-galera.el7.txt|cut -d' ' -f2|tail -n 1 )
+        DEP_ENV="$DEP_ENV MARIADB=$VER GALERA=$GALERA_VER CLUSTER=cluster1"
       fi
     fi
     if [[ $i == "postgresql" ]] || [[ $i == "postgresql:"* ]] || [[ $i == "pg" ]] || [[ $i == "pg:"* ]] ; then
@@ -332,6 +363,14 @@ deploy_node() {
         DEP_ENV="$DEP_ENV DB_IP=default "
       fi
     fi
+    if [[ $i == "galera-master" ]] || [[ $i == "galera-master:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        MASTER_NODE=$(get_version "$i")
+        DEP_ENV="$DEP_ENV DB_IP=$MASTER_NODE REPLICATION_TYPE=galera "
+      else
+        DEP_ENV="$DEP_ENV DB_IP=default REPLICATION_TYPE=galera "
+      fi
+    fi
     if [[ $i == "rbr" ]] || [[ $i == "row" ]] || [[ $i == "row-based-replication" ]] || [[ $i == "row_based_replication" ]] ; then
       ROW_REPLICATION=1
     fi
@@ -378,6 +417,10 @@ deploy_node() {
   [[ "$DEP_ENV" == *START* ]] || DEP_ENV="$DEP_ENV START=1"
   if  [[ "$DEP_ENV" == *DB_OPTS* ]] ; then
     :
+  elif [[ "$DEP_ENV" == *'GALERA='* ]] ; then
+    DEP_ENV="$DEP_ENV DB_OPTS=mariadb/galera.cnf"
+  elif [[ "$DEP_ENV" == *'PXC=5'* ]] ; then
+    DEP_ENV="$DEP_ENV DB_OPTS=mysql/pxc5657.cnf"
   elif [[ "$DEP_ENV" == *'PS='* && $ROW_REPLICATION == 1 ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mysql/async-repl-gtid-row.cnf"
   elif [[ "$DEP_ENV" == *'PS='* && $UTF8ENC == 1 ]] ; then
@@ -392,7 +435,7 @@ deploy_node() {
     DEP_ENV="$DEP_ENV DB_OPTS=postgresql/logical.conf"
   fi
 
-  if [[ ${#arr[@]} != 0 ]] ; then
+  if [[ ${#FEATURES[@]} != 0 ]] ; then
     DB_FEATURES=$( join_ws , "${FEATURES[@]}" )
     DEP_ENV="$DEP_ENV DB_FEATURES=$DB_FEATURES"
   fi

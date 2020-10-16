@@ -181,6 +181,8 @@ el7:
       - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos7-amd64/rpms/MariaDB-common-{{mariadb_version}}.el7.centos.x86_64.rpm"
       - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos7-amd64/rpms/MariaDB-client-{{mariadb_version}}.el7.centos.x86_64.rpm"
       - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos7-amd64/rpms/MariaDB-server-{{mariadb_version}}.el7.centos.x86_64.rpm"
+    galera_packages:
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos7-amd64/rpms/galera{{'-4' if mariadb_version.startswith('10.4') or mariadb_version.startswith('10.5') else '' }}-{{galera}}.el7.centos.x86_64.rpm"
     10.1.29:
       install_packages:
         - "https://downloads.mariadb.com/MariaDB/mariadb-10.1.29/yum/centos7-amd64/rpms/MariaDB-10.1.29-centos7-x86_64-common.rpm"
