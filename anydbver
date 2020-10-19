@@ -26,6 +26,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1"
     echo "$0 deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row"
     echo "$0 deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default"
+    echo "$0 deploy ps:8.0 group-replication node1 ps:8.0 group-replication master:default node2 ps:8.0 group-replication master:default"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-mongo"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-mongo"
@@ -363,6 +364,9 @@ deploy_node() {
       else
         DEP_ENV="$DEP_ENV DB_IP=default "
       fi
+    fi
+    if [[ $i == "group-replication" ]] ; then
+      DEP_ENV="$DEP_ENV REPLICATION_TYPE=group "
     fi
     if [[ $i == "galera-master" ]] || [[ $i == "galera-master:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
