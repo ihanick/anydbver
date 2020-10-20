@@ -23,7 +23,7 @@
       when: k8s_pmm != ''
       shell:
         warn: false
-        cmd: helm install monitoring percona/pmm-server --set credentials.username=admin --set credentials.password=admin  --set imageTag=2.6.1 --set platform=kubernetes ; touch /root/k8s-pmm.installed
+        cmd: helm install monitoring percona/pmm-server --set credentials.username=admin --set credentials.password=admin  --set imageTag={{k8s_pmm}} --set platform=kubernetes ; touch /root/k8s-pmm.installed
         creates: /root/k8s-pmm.installed
     - name: Install minio with helm
       when: k8s_minio != ''
