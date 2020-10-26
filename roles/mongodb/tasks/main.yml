@@ -17,7 +17,7 @@
     creates: /etc/yum.repos.d/percona-psmdb-44-release.repo
 
 - name: install Percona Server for MongoDB
-  when: psmdb_version.startswith('3.6') or psmdb_version.startswith('4.0') or psmdb_version.startswith('4.2') or psmdb_version.startswith('4.4')
+  when: psmdb_version.startswith('3.0') or psmdb_version.startswith('3.6') or psmdb_version.startswith('4.0') or psmdb_version.startswith('4.2') or psmdb_version.startswith('4.4')
 
   package:
     name: "{{ item }}"

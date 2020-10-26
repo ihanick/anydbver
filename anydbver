@@ -306,7 +306,7 @@ deploy_node() {
     if [[ $i == "psmdb" ]] || [[ $i == "psmdb:"* ]] || [[ $i == "mongo" ]] || [[ $i == "mongo:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
-        VER=$(grep "$VER" .version-info/psmdb.el7.txt |tail -n 1)
+        VER=$(grep "^$VER" .version-info/psmdb.el7.txt |tail -n 1)
         DEP_ENV="$DEP_ENV PSMDB=$VER DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf"
       else
         VER=$(tail -n 1 .version-info/psmdb.el7.txt)
