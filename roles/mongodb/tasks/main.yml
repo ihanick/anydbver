@@ -83,6 +83,12 @@
     cmd: /bin/bash /vagrant/tools/setup_mongo_ldap.sh perconaro secret "{{ldap_server_ip}}"
     creates: /etc/sasl2/mongodb.conf
 
+- name: Start database with systemd
+  when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
+  systemd:
+    name: "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
+    state: started
+
 - name: Init or join Mongo replicaset
   when: db_password != '' and psmdb_version != '' and mongo_replicaset != ''
   block:

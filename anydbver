@@ -36,6 +36,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg"
     echo "$0 deploy pg:12.3"
     echo "$0 deploy psmdb"
+    echo "$0 deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0"
     exit 0
   fi
 fi
@@ -377,6 +378,14 @@ deploy_node() {
         VER=$(tail -n 1 .version-info/pmm-server.txt)
       fi
       DEP_ENV="$DEP_ENV K8S_PMM=$VER"
+    fi
+    if [[ $i == "replica-set:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        RSNAME=$(get_version "$i")
+      else
+        RSNAME="rs0"
+      fi
+      DEP_ENV="$DEP_ENV REPLICA_SET=$RSNAME"
     fi
     if [[ $i == "k8s-pg" ]] || [[ $i == "k8s-pg:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
