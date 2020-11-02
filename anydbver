@@ -37,6 +37,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy pg:12.3"
     echo "$0 deploy psmdb"
     echo "$0 deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0"
+    echo -e $0' deploy \\\n psmdb:4.2 replica-set:rs0 shardsrv \\\n node1 psmdb:4.2 master:default replica-set:rs0 shardsrv \\\n node2 psmdb:4.2 master:default replica-set:rs0 shardsrv \\\n node3 psmdb:4.2 configsrv replica-set:cfg0 \\\n node4 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \\\n node5 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \\\n node6 psmdb:4.2 mongos-cfg:cfg0/node3,node4,node5 mongos-shard:rs0/default,node1,node2'
     exit 0
   fi
 fi
@@ -315,6 +316,15 @@ deploy_node() {
         DEP_ENV="$DEP_ENV PSMDB=$VER DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf"
       fi
     fi
+    if [[ $i == "mongos-cfg:"* ]] ; then
+      MONGOS_CFG=$(get_version "$i")
+      DEP_ENV="$DEP_ENV MONGOS_CFG=$MONGOS_CFG "
+    fi
+    if [[ $i == "mongos-shard:"* ]] ; then
+      MONGOS_SHARD=$(get_version "$i")
+      DEP_ENV="$DEP_ENV MONGOS_SHARD=$MONGOS_SHARD "
+    fi
+
     if [[ $i == "mariadb" ]] || [[ $i == "mariadb:"* ]] || [[ $i == "maria" ]] || [[ $i == "maria:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
@@ -386,6 +396,7 @@ deploy_node() {
         RSNAME="rs0"
       fi
       DEP_ENV="$DEP_ENV REPLICA_SET=$RSNAME"
+      test -f secret/"$RSNAME"-keyfile || openssl rand -base64 756 > secret/"$RSNAME"-keyfile
     fi
     if [[ $i == "k8s-pg" ]] || [[ $i == "k8s-pg:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
@@ -441,6 +452,12 @@ deploy_node() {
     fi
     if [[ $i == "utf8" ]] || [[ $i == "utf8mb3" ]] ; then
       UTF8ENC=1
+    fi
+    if [[ $i == "configsrv" ]] ; then
+      DEP_ENV="$DEP_ENV MONGO_CONFIGSRV=1"
+    fi
+    if [[ $i == "shardsrv" ]] ; then
+      DEP_ENV="$DEP_ENV MONGO_SHARDSRV=1"
     fi
     if [[ $i == "pmm" ]] || [[ $i == "pmm:"* ]] || [[ $i == "pmm-server" ]] || [[ $i == "pmm-server:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
@@ -662,6 +679,32 @@ if [ "x$1" = "xdeploy" ] ; then
       MASTER_IP=$(find_node_ip $MASTER_NODE)
       SAMBA_SID=$(find_samba_sid $MASTER_NODE)
       i=$(echo "$i"|sed -e "s/SAMBA_IP=$MASTER_NODE/SAMBA_IP=$MASTER_IP SAMBA_SID=$SAMBA_SID/g")
+    fi
+    if echo "$i" | grep -q MONGOS_CFG ; then
+      CFG_NODES_LIST=( )
+      CFG_NODES_FULL=$(echo "$i" | perl -ne '/MONGOS_CFG=(\S*) / and print $1')
+      CFG_NODES_RS=$(echo "$i" | perl -ne '/MONGOS_CFG=(\S*)\/(\S*) / and print $1')
+      CFG_NODES=$(echo "$i" | perl -ne '/MONGOS_CFG=(\S*)\/(\S*) / and print $2')
+      for n in $(echo "$CFG_NODES"|tr , '\n')
+      do
+        n_ip=$(find_node_ip $n)
+        CFG_NODES_LIST+=( ${n_ip}:27017 ) 
+      done
+      MONGOS_CFG=$( join_ws , "${CFG_NODES_LIST[@]}" )
+      i=$(echo "$i"|sed -e "s|MONGOS_CFG=$CFG_NODES_FULL|MONGOS_CFG=$CFG_NODES_RS/$MONGOS_CFG|g")
+    fi
+    if echo "$i" | grep -q MONGOS_SHARD ; then
+      SHARD_NODES_LIST=( )
+      SHARD_NODES_FULL=$(echo "$i" | perl -ne '/MONGOS_SHARD=(\S*) / and print $1')
+      SHARD_NODES_RS=$(echo "$i" | perl -ne '/MONGOS_SHARD=(\S*)\/(\S*) / and print $1')
+      SHARD_NODES=$(echo "$i" | perl -ne '/MONGOS_SHARD=(\S*)\/(\S*) / and print $2')
+      for n in $(echo "$SHARD_NODES"|tr , '\n')
+      do
+        n_ip=$(find_node_ip $n)
+        SHARD_NODES_LIST+=( ${n_ip}:27017 ) 
+      done
+      MONGOS_SHARD=$( join_ws , "${SHARD_NODES_LIST[@]}" )
+      i=$(echo "$i"|sed -e "s|MONGOS_SHARD=$SHARD_NODES_FULL|MONGOS_SHARD=$SHARD_NODES_RS/$MONGOS_SHARD|g")
     fi
 
     printf "%s\n" "$i"

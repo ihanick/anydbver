@@ -50,6 +50,33 @@
     - name: Avoid re-merge on next runs
       file: path="/root/{{ db_opts_file | basename }}.applied" state=touch modification_time=preserve access_time=preserve
 
+- name: merge configsrv conf
+  when: mongo_configsrv  != ''
+  command:
+    cmd: /usr/local/bin/yq merge -i /etc/mongod.conf "/vagrant/configs/mongo/configsrv.conf"
+    creates: "/root/configsrv.applied"
+
+- name: merge shardsrv conf
+  when: mongo_shardsrv  != ''
+  command:
+    cmd: /usr/local/bin/yq merge -i /etc/mongod.conf "/vagrant/configs/mongo/shardsrv.conf"
+    creates: "/root/shardsrv.applied"
+
+- name: setup mongos
+  when: mongos_cfg != ''
+  block:
+    - name: create mongos config from template
+      template:
+        src: "{{playbook_dir}}/configs/mongo/mongos.conf.j2"
+        dest: "/etc/mongos.conf"
+    - name: create mongos systemd service
+      command:
+        cmd: /bin/bash /vagrant/tools/setup_mongos.sh "{{ db_user }}" "{{ db_password }}" "{{ mongos_shard }}"
+        creates: /etc/systemd/system/mongos.service
+    - name: Set systemd service to mongos
+      set_fact:
+        db_systemd_service: mongos
+
 - name: Create MongoDB database
   when: db_password != "" and psmdb_version != ""
   shell:

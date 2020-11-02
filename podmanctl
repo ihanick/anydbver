@@ -93,7 +93,7 @@ if [ $DESTROY -eq 1 ] ; then
 fi
 
 if [ $K8S -eq 1 ] ; then
-  sudo podman run -d --privileged --tmpfs /run --tmpfs /var/run --name $USER.k8sm rancher/k3s:latest server --no-deploy traefik --flannel-backend=vxlan
+  sudo podman run -d --privileged --tmpfs /run --tmpfs /var/run --name $USER.k8sm rancher/k3s:latest server --no-deploy traefik --flannel-backend=host-gw
   sleep 30
   MIP=$(sudo podman inspect $USER.k8sm|grep -F IPAddress|perl -ne '/"([0-9.]+)"/ and print $1')
   K3S_URL="https://$MIP:6443"
