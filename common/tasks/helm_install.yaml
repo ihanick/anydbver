@@ -31,7 +31,7 @@
         warn: false
         cmd: >-
           helm repo add stable https://kubernetes-charts.storage.googleapis.com/ ;
-          helm install minio-service stable/minio
+          helm install minio-service minio/minio
           --set accessKey=REPLACE-WITH-AWS-ACCESS-KEY
           --set secretKey=REPLACE-WITH-AWS-SECRET-KEY
           --set service.type=ClusterIP
