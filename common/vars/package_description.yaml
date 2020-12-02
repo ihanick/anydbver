@@ -269,6 +269,14 @@ el8:
       - which
       - "proxysql{{'2' if percona_proxysql_version.startswith('2.') else ''}}-{{percona_proxysql_version}}.el8.x86_64"
 
+  ldap_server:
+    systemd_service: slapd
+    install_packages:
+      - openssl
+      - openldap
+      - symas-openldap-clients
+      - symas-openldap-servers
+
   mariadb_server:
     systemd_service: "mariadb"
     cnf_file: '/etc/my.cnf.d/zz_mysqld.cnf'

@@ -4,7 +4,11 @@ USER=$1
 PASSWORD=$2
 
 fix_ldap_certs() {
-sed -e "s#{SSHA}PASSWORD_CREATED#$(slappasswd -s $PASSWORD)#" /vagrant/configs/ldap_server/ldaprootpasswd.ldif > /root/ldaprootpasswd.ldif
+if test -f /etc/openldap/slapd.d/cn\=config/olcDatabase\=\{2\}mdb.ldif  ; then
+  sed -e "s#{SSHA}PASSWORD_CREATED#$(slappasswd -s $PASSWORD)#" -e 's#hdb,cn=config#mdb,cn=config#' /vagrant/configs/ldap_server/ldaprootpasswd.ldif > /root/ldaprootpasswd.ldif
+else 
+  sed -e "s#{SSHA}PASSWORD_CREATED#$(slappasswd -s $PASSWORD)#" /vagrant/configs/ldap_server/ldaprootpasswd.ldif > /root/ldaprootpasswd.ldif
+fi
 ldapmodify -Y EXTERNAL  -H ldapi:/// <<EOF
 dn: cn=config
 changetype: modify

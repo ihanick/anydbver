@@ -23,16 +23,16 @@
     name: "{{ item }}"
     state: present
   with_items:
-    - "{{ psmdb_name }}{{ psmdb_major_ver }}-tools-{{ psmdb_version }}.el7.x86_64"
-    - "{{ psmdb_name }}{{ psmdb_major_ver }}-shell-{{ psmdb_version }}.el7.x86_64"
-    - "{{ psmdb_name }}{{ psmdb_major_ver }}-server-{{ psmdb_version }}.el7.x86_64"
-    - "{{ psmdb_name }}{{ psmdb_major_ver }}-mongos-{{ psmdb_version }}.el7.x86_64"
-    - "{{ psmdb_name }}{{ psmdb_major_ver }}-{{ psmdb_version }}.el7.x86_64"
+    - "{{ psmdb_name }}{{ psmdb_major_ver }}-tools-{{ psmdb_version }}.{{ dist }}.x86_64"
+    - "{{ psmdb_name }}{{ psmdb_major_ver }}-shell-{{ psmdb_version }}.{{ dist }}.x86_64"
+    - "{{ psmdb_name }}{{ psmdb_major_ver }}-server-{{ psmdb_version }}.{{ dist }}.x86_64"
+    - "{{ psmdb_name }}{{ psmdb_major_ver }}-mongos-{{ psmdb_version }}.{{ dist }}.x86_64"
+    - "{{ psmdb_name }}{{ psmdb_major_ver }}-{{ psmdb_version }}.{{ dist }}.x86_64"
 
 - name: install Percona Backup for MongoDB
   when: pbm_version != ""
   yum:
-    name: "https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-{{ pbm_version_short }}/binary/redhat/7/x86_64/percona-backup-mongodb-{{pbm_version}}.el7.x86_64.rpm"
+    name: "https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-{{ pbm_version_short }}/binary/redhat/7/x86_64/percona-backup-mongodb-{{pbm_version}}.{{ dist }}.x86_64.rpm"
     state: present
 
 - name: Apply Mongo database options from file
@@ -103,6 +103,12 @@
         creates: "/root/replica-{{mongo_replicaset}}.applied"
     - name: Avoid re-merge on next runs
       file: path="/root/replica-{{mongo_replicaset}}.applied" state=touch modification_time=preserve access_time=preserve
+
+- name: Setup LDAP on client
+  when: ldap_server_ip != ''
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_ldap_client.sh "{{ldap_server_ip}}"
+    creates: /root/ldap-client.configured
 
 - name: Setup Mongo for LDAP
   when: psmdb_version != '' and db_password != '' and ldap_server_ip != ''

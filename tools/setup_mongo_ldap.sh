@@ -2,7 +2,7 @@
 DB_USER=$1
 DB_PASS=$2
 LDAP_IP=$3
-yum install -y cyrus-sasl-ldap cyrus-sasl-plain cyrus-sasl
+yum install -y openldap-clients cyrus-sasl-ldap cyrus-sasl-plain cyrus-sasl
 
 sed -i -e 's/MECH=pam/MECH=ldap/g' /etc/sysconfig/saslauthd
 

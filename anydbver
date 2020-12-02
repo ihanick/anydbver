@@ -357,6 +357,16 @@ deploy_node() {
         DEP_ENV="$DEP_ENV PG=$VER"
       fi
     fi
+    if [[ $i == "percona-postgresql" ]] || [[ $i == "percona-postgresql:"* ]] || [[ $i == "ppg" ]] || [[ $i == "ppg:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "$VER" .version-info/ppg.el7.txt |tail -n 1)
+        DEP_ENV="$DEP_ENV PPGSQL=$VER"
+      else
+        VER=$(tail -n 1 .version-info/ppg.el7.txt)
+        DEP_ENV="$DEP_ENV PPGSQL=$VER"
+      fi
+    fi
     if [[ $i == "k8s-mongo" ]] || [[ $i == "k8s-mongo:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")

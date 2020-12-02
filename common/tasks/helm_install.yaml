@@ -30,7 +30,7 @@
       shell:
         warn: false
         cmd: >-
-          helm repo add stable https://kubernetes-charts.storage.googleapis.com/ ;
+          helm repo add minio https://helm.min.io/ ; 
           helm install minio-service minio/minio
           --set accessKey=REPLACE-WITH-AWS-ACCESS-KEY
           --set secretKey=REPLACE-WITH-AWS-SECRET-KEY

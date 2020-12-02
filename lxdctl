@@ -88,6 +88,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [ "x$OS" == "xel8" ] ; then
+  IMG="images:centos/8"
+  PACKAGES="$PACKAGES python3"
+  PYTHON_INT=/usr/bin/python3
+fi
+
+
 if [ $DESTROY -eq 1 ] ; then
   for i in ${USER}.default $(seq 1 20|sed -e s/^/${USER}.node/); do
     c=${i//./-}
