@@ -118,9 +118,8 @@
 
 - name: Start database with systemd
   when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
-  systemd:
-    name: "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
-    state: started
+  command:
+    cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
 
 - name: Init or join Mongo replicaset
   when: db_password != '' and psmdb_version != '' and mongo_replicaset != ''

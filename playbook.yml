@@ -238,7 +238,7 @@
     - name: Setup LDAP server
       when: ldap_server != ''
       command:
-        cmd: /bin/bash /vagrant/tools/setup_ldap_server.sh "{{db_user}}" "{{db_password}}"
+        cmd: /bin/bash /vagrant/tools/setup_ldap_server.sh "{{db_user}}" "{{db_password}}" "ssl"
         creates: /root/ldaprootpasswd.ldif
 
     - name: Setup LDAP on client
@@ -334,9 +334,8 @@
 
     - name: Start database with systemd
       when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
-      systemd:
-        name: "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
-        state: started
+      command:
+        cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
 
     - name: Setup and start replication
       when: master_ip != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != '')

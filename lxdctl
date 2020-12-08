@@ -14,6 +14,12 @@ if [ "x$1" = "xssh" ] ; then
   exec ssh -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP "$@"
   exit 0
 fi
+if [ "x$1" = "xscp" ] ; then
+  shift
+  IP="$(sed -ne '/'$1'/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)"
+  shift
+  exec scp -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP:"$1" "$2"
+fi
 if [ "x$1" = "xdestroy" ] ; then
   shift
   if [ "x$1" = "x" ] ; then

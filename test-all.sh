@@ -551,6 +551,8 @@ if [[ "x$2" = "" || "x$2" = "xmongoldap-el8" ]] ; then
       test $DESTROY = yes && sudo podman rm -f $USER.default $USER.node1 $USER.node2
     elif [[ "x$1" = "xlxd" ]] ; then
       ./lxdctl --nodes 3 --os el8
+      cat tools/generate_ldap_ssl_certs.sh | ./anydbver ssh node2
+      ./lxdctl scp node2 /root/ldap-certs.tar.gz secret/
       LDAP_SERVER=1 DB_USER=dba DB_PASS=secret \
         ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
       LDAP_IP=$(grep $USER.node2 ansible_hosts |sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}') \
@@ -1086,6 +1088,18 @@ if [[ "x$2" = "" || "x$2" = "xsamba" ]] ; then
       PS=5.7.26-29.1 DB_OPTS=mysql/async-repl-gtid.cnf \
       ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
     test $DESTROY = yes && ./podmanctl --destroy
+  elif [[ "x$1" = "xlxd" ]] ; then
+    ./lxdctl --nodes 3 --privileged
+    SAMBA_AD=1 \
+      ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+
+    SAMBA_IP="$(sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)" \
+      SAMBA_SID="$(ssh -i secret/id_rsa root@$(sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) -o StrictHostKeyChecking=no /opt/samba/bin/wbinfo -D PERCONA|grep SID|awk '{print $3}')" \
+      SAMBA_PASS="verysecretpassword1^" \
+      DB_USER=dba DB_PASS=secret START=1 \
+      PS=5.7.26-29.1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./lxdctl --destroy
   else
     SAMBA_AD=1 \
       vagrant up node2
@@ -1098,6 +1112,31 @@ if [[ "x$2" = "" || "x$2" = "xsamba" ]] ; then
     test $DESTROY = yes && vagrant destroy -f
   fi
 fi
+
+
+# Samba
+if [[ "x$2" = "" || "x$2" = "xsamba-el8" ]] ; then
+  if [[ "x$1" = "xlxdock" ]] ; then
+    test $DESTROY = yes && lxdock destroy -f
+  elif [[ "x$1" = "xpodman" ]] ; then
+    test $DESTROY = yes && ./podmanctl --destroy
+  elif [[ "x$1" = "xlxd" ]] ; then
+    ./lxdctl --nodes 3 --privileged --os el8
+    SAMBA_AD=1 \
+      ansible-playbook -i ansible_hosts --limit $USER.node2 playbook.yml
+
+    SAMBA_IP="$(sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)" \
+      SAMBA_SID="$(ssh -i secret/id_rsa root@$(sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) -o StrictHostKeyChecking=no /opt/samba/bin/wbinfo -D PERCONA|grep SID|awk '{print $3}')" \
+      SAMBA_PASS="verysecretpassword1^" \
+      DB_USER=dba DB_PASS=secret START=1 \
+      PS=5.7.26-29.1 DB_OPTS=mysql/async-repl-gtid.cnf \
+      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+    test $DESTROY = yes && ./lxdctl --destroy
+  else
+    test $DESTROY = yes && vagrant destroy -f
+  fi
+fi
+
 
 if [[ "x$2" = "" || "x$2" = "xperconatoolkit" ]] ; then
   if [[ "x$1" = "xlxdock" ]] ; then

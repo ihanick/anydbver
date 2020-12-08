@@ -112,3 +112,40 @@ ldappasswd -s $PASSWORD -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" -x "uid
 ldapadd -x -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" -f /vagrant/configs/ldap_server/dba.ldif
 
 ldappasswd -s $PASSWORD -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" -x "uid=dba,ou=People,dc=percona,dc=local"
+
+yum install -y tar
+tar -C /etc/openldap/certs -xzf /vagrant/secret/ldap-certs.tar.gz
+chown ldap:ldap -R /etc/openldap/certs
+
+cp /etc/openldap/certs/ca.pem /etc/pki/ca-trust/source/anchors/ldap.pem
+chown root:root /etc/pki/ca-trust/source/anchors/ldap.pem
+chmod 0644 /etc/pki/ca-trust/source/anchors/ldap.pem
+update-ca-trust
+
+cat >>/etc/openldap/ldap.conf <<EOF 
+TLS_CACERT /etc/openldap/certs/ca.pem
+EOF
+
+ldapmodify -Y EXTERNAL  -H ldapi:/// <<EOF
+dn: cn=config
+changetype: modify
+replace: olcTLSCertificateFile
+olcTLSCertificateFile: /etc/openldap/certs/server.pem
+-
+replace: olcTLSCertificateKeyFile
+olcTLSCertificateKeyFile: /etc/openldap/certs/server-key.pem
+EOF
+
+ldapmodify -Y EXTERNAL  -H ldapi:/// <<EOF
+dn: cn=config
+changetype: modify
+add: olcTLSCACertificateFile
+olcTLSCACertificateFile: /etc/openldap/certs/ca.pem
+EOF
+
+# test: slapcat -b "cn=config" | egrep "olcTLSCertificateFile|olcTLSCertificateKeyFile|olcTLSCACertificateFile"
+systemctl restart slapd
+
+
+# openssl s_client -connect ldap.percona.local:636
+# ldapsearch -H ldaps://ldap.percona.local -x cn=dba -b dc=percona,dc=local
