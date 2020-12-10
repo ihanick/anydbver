@@ -508,6 +508,11 @@
         name: "{{os[dist].mydumper.install_packages}}"
         state: present
 
+    - name: Setup ProxySQL replication hostgroup
+      when: proxysql_version != '' and master_ip != ''
+      shell:
+        cmd: /bin/bash /vagrant/tools/setup_proxysql_repl.sh {{master_ip}} {{db_user}} {{db_password}}
+
     - name: Setup pmm client mysql
       when: pmm_client_version != '' and pmm_url != '' and percona_server_version != ''
       register: pmm_admin_mysql_config

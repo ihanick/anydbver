@@ -1129,8 +1129,8 @@ if [[ "x$2" = "" || "x$2" = "xsamba-el8" ]] ; then
       SAMBA_SID="$(ssh -i secret/id_rsa root@$(sed -ne '/node2/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts) -o StrictHostKeyChecking=no /opt/samba/bin/wbinfo -D PERCONA|grep SID|awk '{print $3}')" \
       SAMBA_PASS="verysecretpassword1^" \
       DB_USER=dba DB_PASS=secret START=1 \
-      PS=5.7.26-29.1 DB_OPTS=mysql/async-repl-gtid.cnf \
-      ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
+        PSMDB=4.2.3-4 DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf \
+        ansible-playbook -i ansible_hosts --limit $USER.default playbook.yml
     test $DESTROY = yes && ./lxdctl --destroy
   else
     test $DESTROY = yes && vagrant destroy -f

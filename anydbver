@@ -38,6 +38,8 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy psmdb"
     echo "$0 deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0"
     echo -e $0' deploy \\\n psmdb:4.2 replica-set:rs0 shardsrv \\\n node1 psmdb:4.2 master:default replica-set:rs0 shardsrv \\\n node2 psmdb:4.2 master:default replica-set:rs0 shardsrv \\\n node3 psmdb:4.2 configsrv replica-set:cfg0 \\\n node4 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \\\n node5 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \\\n node6 psmdb:4.2 mongos-cfg:cfg0/node3,node4,node5 mongos-shard:rs0/default,node1,node2'
+    echo "$0 deploy sysbench"
+    echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:default node3 proxysql master:default"
     exit 0
   fi
 fi
@@ -259,6 +261,40 @@ EOF
 1.5.0
 EOF
 
+ cat > .version-info/sysbench.el7.txt <<EOF
+1.0.20-6
+EOF
+
+ cat > .version-info/proxysql.el7.txt <<EOF
+1.3.10-1
+1.4.6-1
+1.4.7-1
+1.4.8-1
+1.4.9-1
+1.4.10-1
+1.4.11-1
+1.4.12-1
+1.4.13-1
+1.4.14-1
+1.4.15-1
+1.4.16-1
+2.0.1-1
+2.0.2-1
+2.0.3-1
+2.0.4-1
+2.0.5-1
+2.0.6-1
+2.0.7-1
+2.0.8-1
+2.0.9-1
+2.0.10-1
+2.0.11-1
+2.0.12-1
+2.0.13-1
+2.0.14-1
+2.0.15-1
+EOF
+
 curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/|perl -ne '/Percona-Server-MongoDB(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 > .version-info/psmdb.el7.txt
 
 curl -sL https://repo.percona.com/pdmdb-4.2/yum/release/7/RPMS/x86_64/ |perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el7.txt
@@ -294,6 +330,26 @@ deploy_node() {
       else
         VER=$(tail -n 1 .version-info/percona-server.el7.txt)
         DEP_ENV="$DEP_ENV PS=$VER"
+      fi
+    fi
+    if [[ $i == "sysbench" ]] || [[ $i == "sysbench:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "^$VER" .version-info/sysbench.el7.txt |tail -n 1)
+        DEP_ENV="$DEP_ENV SYSBENCH=$VER"
+      else
+        VER=$(tail -n 1 .version-info/sysbench.el7.txt)
+        DEP_ENV="$DEP_ENV SYSBENCH=$VER"
+      fi
+    fi
+    if [[ $i == "proxysql" ]] || [[ $i == "proxysql:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "^$VER" .version-info/proxysql.el7.txt |tail -n 1)
+        DEP_ENV="$DEP_ENV PROXYSQL=$VER"
+      else
+        VER=$(tail -n 1 .version-info/proxysql.el7.txt)
+        DEP_ENV="$DEP_ENV PROXYSQL=$VER"
       fi
     fi
     if [[ $i == "percona-xtradb-cluster" ]] || [[ $i == "percona-xtradb-cluster:"* ]] || [[ $i == "pxc" ]] || [[ $i == "pxc:"* ]] ; then
