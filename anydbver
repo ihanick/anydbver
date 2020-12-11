@@ -6,6 +6,7 @@ if [ "x$1" = "xhelp" ] ; then
   echo "$0 configure provider:lxd"
   echo "$0 ssh default or $0 ssh node1"
   echo "$0 update # refresh version information"
+  echo "$0 destroy # remove containers and cleanup"
   echo "$0 deploy help"
   exit 0
 fi
@@ -183,7 +184,6 @@ EOF
 2.10.1
 2.11.0
 2.11.1
-latest
 EOF
   cat > .version-info/pg.el7.txt <<EOF
 9.5.15
