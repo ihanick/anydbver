@@ -11,3 +11,4 @@ Docker/centos7-samba/install_samba_ad.sh
 configs/hosts
 .anydbver
 .version-info/*
+test-run.log

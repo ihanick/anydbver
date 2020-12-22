@@ -25,14 +25,24 @@ if [[ "x$TYPE" == "xstreaming_physical_slots" ]] ; then
 EOF
     systemctl stop $SYSTEMD_UNIT
     rm -rf -- $PGDATA/*
-    PGPASSWORD="$MASTER_PASSWORD" PGHOST=$MASTER_IP PGDATABASE=$MASTER_DB PGUSER=$MASTER_USER pg_basebackup \
-      -S "$SLOT" -D $PGDATA -Fp -P -Xs -Rv &
+    if [[ "$SYSTEMD_UNIT" == *'-9.'* ]] ; then
+        PGPASSWORD="$MASTER_PASSWORD" PGHOST=$MASTER_IP PGDATABASE=$MASTER_DB PGUSER=$MASTER_USER pg_basebackup \
+          -D $PGDATA -Fp -P -Xs -Rv &
+    else
+        PGPASSWORD="$MASTER_PASSWORD" PGHOST=$MASTER_IP PGDATABASE=$MASTER_DB PGUSER=$MASTER_USER pg_basebackup \
+          -S "$SLOT" -D $PGDATA -Fp -P -Xs -Rv &
+    fi
     
     PGPASSWORD="$MASTER_PASSWORD" PGHOST=$MASTER_IP PGDATABASE=$MASTER_DB PGUSER=$MASTER_USER psql <<EOF1
     CHECKPOINT;
 EOF1
     wait
     chown -R postgres:postgres $PGDATA
+    if [[ "$SYSTEMD_UNIT" == *'-9.'* ]] ; then
+        cat >> $PGDATA/recovery.conf <<EOF
+primary_slot_name = '$SLOT'
+EOF
+    fi
     systemctl start $SYSTEMD_UNIT
 
     touch /root/replication.configured
