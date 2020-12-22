@@ -184,11 +184,22 @@
       block:
         - name: MySQL 8.0 yum repo
           when: >
-            mysql_version.startswith('8.0') and
             (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
           yum:
             name: "{{os[dist][soft].repo_url}}"
             state: present
+        - name: Switch mysql repo 5.7
+          when: >
+            mysql_version.startswith('5.7') and
+            (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+          shell:
+            cmd: "yum-config-manager --disable mysql80-community; yum-config-manager --enable mysql57-community"
+        - name: Switch mysql repo 5.6
+          when: >
+            mysql_version.startswith('5.6') and
+            (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+          shell:
+            cmd: "yum-config-manager --disable mysql80-community; yum-config-manager --enable mysql56-community"
     
     - name: Enable EPEL
       when: >
@@ -308,7 +319,7 @@
         mysql_version != ''
         ) and db_password != ''
       command:
-        cmd: /bin/bash /vagrant/tools/create_mysql_db_with_password.sh "{{ db_password }}" "{{ 'oldgrant' if percona_server_version.startswith('5.6') or percona_xtradb_cluster_version.startswith('5.6') else 'no' }}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
+        cmd: /bin/bash /vagrant/tools/create_mysql_db_with_password.sh "{{ db_password }}" "{{ 'oldgrant' if percona_server_version.startswith('5.6') or percona_xtradb_cluster_version.startswith('5.6') or mysql_version.startswith('5.6') else 'no' }}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
         creates: /root/.my.cnf
 
 

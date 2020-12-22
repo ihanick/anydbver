@@ -18,6 +18,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy percona-server:8.0"
     echo "$0 deploy percona-server"
     echo "$0 deploy ps:5.7"
+    echo "$0 deploy mysql"
     echo "$0 deploy mariadb:10.4"
     echo "$0 deploy maria:10.4"
     echo "$0 deploy mariadb node1 mariadb master:default"
@@ -36,11 +37,13 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pmm k8s-pxc backup"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg"
     echo "$0 deploy pg:12.3"
+    echo "$0 deploy pg:12.3 node1 pg:12.3 master:default"
     echo "$0 deploy psmdb"
     echo "$0 deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0"
     echo -e $0' deploy \\\n psmdb:4.2 replica-set:rs0 shardsrv \\\n node1 psmdb:4.2 master:default replica-set:rs0 shardsrv \\\n node2 psmdb:4.2 master:default replica-set:rs0 shardsrv \\\n node3 psmdb:4.2 configsrv replica-set:cfg0 \\\n node4 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \\\n node5 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \\\n node6 psmdb:4.2 mongos-cfg:cfg0/node3,node4,node5 mongos-shard:rs0/default,node1,node2'
     echo "$0 deploy sysbench"
     echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:default node3 proxysql master:default"
+    echo "$0 deploy pmm node1 ps:5.7 pmm-client pmm-server:default"
     exit 0
   fi
 fi
@@ -162,6 +165,78 @@ EOF
 10.4.15-1 26.4.5-1
 EOF
 
+  cat > .version-info/mysql.el7.txt <<EOF
+5.6.20-4
+5.6.21-2
+5.6.22-2
+5.6.23-2
+5.6.24-2
+5.6.25-2
+5.6.26-2
+5.6.27-2
+5.6.28-2
+5.6.29-2
+5.6.30-2
+5.6.31-2
+5.6.32-2
+5.6.33-2
+5.6.34-2
+5.6.35-2
+5.6.36-2
+5.6.37-2
+5.6.38-2
+5.6.39-2
+5.6.40-2
+5.6.41-2
+5.6.42-2
+5.6.43-2
+5.6.44-2
+5.6.45-2
+5.6.46-2
+5.6.47-2
+5.6.48-2
+5.7.10-1
+5.7.11-1
+5.7.12-1
+5.7.13-1
+5.7.14-1
+5.7.15-1
+5.7.16-1
+5.7.17-1
+5.7.18-1
+5.7.19-1
+5.7.20-1
+5.7.21-1
+5.7.22-1
+5.7.23-1
+5.7.24-1
+5.7.25-1
+5.7.26-1
+5.7.27-1
+5.7.28-1
+5.7.29-1
+5.7.30-1
+5.7.31-1
+8.0.11-1
+8.0.12-1
+8.0.13-1
+8.0.14-1
+8.0.15-1
+8.0.16-1
+8.0.17-1
+8.0.18-1
+8.0.19-1
+8.0.20-1
+8.0.21-1
+8.0.22-1
+EOF
+
+if test -f /usr/bin/which && which jq &>/dev/null ; then
+  curl -s 'https://hub.docker.com/v2/repositories/percona/pmm-server/tags/?page_size=10000' \
+    | jq -r '.results|.[]|.name'|egrep '[0-9]*\.[0-9]*\.[0-9]*' \
+    | sort -t. -k 1,1n -k 2,2n -k 3,3n \
+    > .version-info/pmm-server.txt
+else
   cat > .version-info/pmm-server.txt <<EOF
 1.17.1
 1.17.2
@@ -184,7 +259,45 @@ EOF
 2.10.1
 2.11.0
 2.11.1
+2.12.0
 EOF
+fi
+
+  cat > .version-info/pmm-client.el7.txt <<EOF
+1.10.0-1
+1.11.0-1
+1.12.0-1
+1.13.0-1
+1.14.0-1
+1.14.1-1
+1.15.0-1
+1.16.0-1
+1.17.0-1
+1.17.1-1
+1.17.2-1
+1.17.3-1
+1.17.4-1
+2.0.0-5
+2.0.1-5
+2.1.0-5
+2.2.0-6
+2.2.1-6
+2.2.2-6
+2.3.0-6
+2.4.0-6
+2.5.0-6
+2.6.0-6
+2.6.1-6
+2.8.0-6
+2.9.1-6
+2.10.0-6
+2.10.1-6
+2.11.0-6
+2.11.1-6
+2.12.0-6
+EOF
+
+
   cat > .version-info/pg.el7.txt <<EOF
 9.5.15
 9.5.23
@@ -330,6 +443,16 @@ deploy_node() {
       else
         VER=$(tail -n 1 .version-info/percona-server.el7.txt)
         DEP_ENV="$DEP_ENV PS=$VER"
+      fi
+    fi
+    if [[ $i == "mysql" ]] || [[ $i == "mysql:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "^$VER" .version-info/mysql.el7.txt |tail -n 1)
+        DEP_ENV="$DEP_ENV MYSQL=$VER"
+      else
+        VER=$(tail -n 1 .version-info/mysql.el7.txt)
+        DEP_ENV="$DEP_ENV MYSQL=$VER"
       fi
     fi
     if [[ $i == "sysbench" ]] || [[ $i == "sysbench:"* ]] ; then
@@ -525,7 +648,7 @@ deploy_node() {
     if [[ $i == "shardsrv" ]] ; then
       DEP_ENV="$DEP_ENV MONGO_SHARDSRV=1"
     fi
-    if [[ $i == "pmm" ]] || [[ $i == "pmm:"* ]] || [[ $i == "pmm-server" ]] || [[ $i == "pmm-server:"* ]] ; then
+    if [[ $i == "pmm" ]] || [[ $i == "pmm:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
         VER=$(grep "$VER" .version-info/pmm-server.txt |tail -n 1)
@@ -534,6 +657,24 @@ deploy_node() {
       fi
       DEP_ENV="$DEP_ENV PMM_SERVER=$VER DB_PASS=secret"
     fi
+    if [[ $i == "pmm-client" ]] || [[ $i == "pmm-client:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "$VER" .version-info/pmm-client.el7.txt |tail -n 1)
+      else
+        VER=$(tail -n 1 .version-info/pmm-client.el7.txt)
+      fi
+      DEP_ENV="$DEP_ENV PMM_CLIENT=$VER"
+    fi
+    if [[ $i == "pmm-server" ]] || [[ $i == "pmm-server:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        PMM_NODE=$(get_version "$i")
+      else
+        PMM_NODE=default
+      fi
+      DEP_ENV="$DEP_ENV PMM_URL=$PMM_NODE"
+    fi
+
     if [[ $i == "ldap" ]] || [[ $i == "ldap-server"* ]] ; then
       DEP_ENV="$DEP_ENV LDAP_SERVER=1 DB_USER=dba DB_PASS=secret"
     fi
@@ -631,6 +772,19 @@ find_node_ip() {
   esac
 }
 
+if [ "x$1" = "xip" ] ; then
+  shift
+  NODE="$1"
+  if [ "x$NODE" = "x" ] ; then
+    NODE=default
+  else
+    shift
+  fi
+  find_node_ip "$NODE"
+  exit 0
+fi
+
+
 find_samba_sid() {
   NODE="$1"
   SAMBA_IP=$(find_node_ip $NODE)
@@ -676,6 +830,7 @@ if [ "x$1" = "xdeploy" ] ; then
   DEPLOY_CMDS=()
   NODE=default
   declare -A ALL_NODES
+  ALL_NODES[$NODE]=1
   shift
   if [[ "$1" == default ]] ; then
     shift
@@ -739,6 +894,11 @@ if [ "x$1" = "xdeploy" ] ; then
       MASTER_IP=$(find_node_ip $MASTER_NODE)
       MASTER_TOKEN=$(find_node_token $MASTER_NODE)
       i=$(echo "$i"|sed -e "s,K3S_URL=$MASTER_NODE,K3S_URL=https://$MASTER_IP:6443 K3S_TOKEN=$MASTER_TOKEN,g")
+    fi
+    if echo "$i" | grep -q PMM_URL ; then
+      PMM_NODE=$(echo "$i" | perl -ne '/PMM_URL=(\S*) / and print $1')
+      PMM_IP=$(find_node_ip $PMM_NODE)
+      i=$(echo "$i"|sed -e "s,PMM_URL=$PMM_NODE,PMM_URL=https://admin:secret@$PMM_IP:443,g")
     fi
     if echo "$i" | grep -q SAMBA_IP ; then
       MASTER_NODE=$(echo "$i" | perl -ne '/SAMBA_IP=(\S*) / and print $1')
