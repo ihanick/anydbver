@@ -301,6 +301,7 @@ EOF
   cat > .version-info/pg.el7.txt <<EOF
 9.5.15
 9.5.23
+9.6.20
 10.7
 10.8
 10.9
@@ -309,6 +310,7 @@ EOF
 10.12
 10.13
 10.14
+10.15
 11.0
 11.2
 11.3
@@ -318,11 +320,14 @@ EOF
 11.7
 11.8
 11.9
+11.10
 12.1
 12.2
 12.3
 12.4
+12.5
 13.0
+13.1
 EOF
   cat > .version-info/pg.el8.txt <<EOF
 11.0
@@ -339,6 +344,7 @@ EOF
 12.3
 12.4
 13.0
+13.1
 EOF
   cat > .version-info/pko4psmdb.txt <<EOF
 0.1.0
@@ -529,7 +535,7 @@ deploy_node() {
     if [[ $i == "postgresql" ]] || [[ $i == "postgresql:"* ]] || [[ $i == "pg" ]] || [[ $i == "pg:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
-        VER=$(grep "$VER" .version-info/pg.el7.txt |tail -n 1)
+        VER=$(grep "^$VER" .version-info/pg.el7.txt |tail -n 1)
         DEP_ENV="$DEP_ENV PG=$VER"
       else
         VER=$(tail -n 1 .version-info/pg.el7.txt)
@@ -722,6 +728,8 @@ deploy_node() {
     DEP_ENV="$DEP_ENV DB_OPTS=mariadb/async-repl-gtid-row.cnf"
   elif [[ "$DEP_ENV" == *'MARIADB='* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mariadb/async-repl-gtid.cnf"
+  elif [[ "$DEP_ENV" == *'PG=9'* ]] || [[ "$DEP_ENV" == *'PG=10'* ]] || [[ "$DEP_ENV" == *'PG=11'* ]] ; then
+    DEP_ENV="$DEP_ENV DB_OPTS=postgresql/logical9.conf"
   elif [[ "$DEP_ENV" == *'PG='* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=postgresql/logical.conf"
   fi

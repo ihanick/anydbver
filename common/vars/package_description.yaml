@@ -251,14 +251,14 @@ el7:
       - "https://github.com/maxbube/mydumper/releases/download/v{{mydumper_version|regex_replace('-[0-9]+$')}}/mydumper-{{mydumper_version}}.el7.x86_64.rpm"
 
   postgresql:
-    systemd_service: "postgresql-{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}"
-    cnf_file: "/var/lib/pgsql/{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}/data/postgresql.conf"
+    systemd_service: "postgresql-{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}"
+    cnf_file: "/var/lib/pgsql/{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}/data/postgresql.conf"
     repo_url: https://yum.postgresql.org/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
     install_packages:
-      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-libs-{{postgresql_version}}"
-      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-{{postgresql_version}}"
-      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-server-{{postgresql_version}}"
-      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-contrib-{{postgresql_version}}"
+      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-libs-{{postgresql_version}}"
+      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-{{postgresql_version}}"
+      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-server-{{postgresql_version}}"
+      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-contrib-{{postgresql_version}}"
 
 el8:
   proxysql:

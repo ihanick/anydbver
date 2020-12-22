@@ -7,13 +7,21 @@ fi
 for m in mysql ps ; do
   if [[ "x$1" = "" || "x$1" = "x$m" ]] ; then
     for ver in 5.6 5.7 8.0 ; do 
-      ./anydbver deploy $m:$ver
+      ./anydbver deploy $m:$ver >> test-run.log
       ./anydbver ssh default mysql -e "'select version()'" 2>/dev/null |grep -q $ver || echo FAIL
     done
   fi
 done
 
 if [[ "x$1" = "" || "x$1" = "xpmm" ]] ; then
-  ./anydbver deploy pmm node1 ps:5.7 pmm-client pmm-server:default
+  ./anydbver deploy pmm node1 ps:5.7 pmm-client pmm-server:default >> test-run.log
   curl -u admin:secret -k -s https://$(./anydbver ip)/graph/|grep -q pmm || echo FAILED
 fi
+
+if [[ "x$1" = "" || "x$1" = "xpg" ]] ; then
+  for ver in 9.5 9.6 10 11 12 13 ; do
+    ./anydbver deploy pg:$ver >> test-run.log
+    ./anydbver ssh default psql -U postgres -h $(./anydbver ip) -c "'select version()'" 2>/dev/null | grep -q $ver || echo FAIL
+  done
+fi
+
