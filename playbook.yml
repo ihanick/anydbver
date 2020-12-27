@@ -535,3 +535,10 @@
       when: percona_server_version != '' and start_db != '' and ('audit' in db_features.split(','))
       shell:
         cmd: mysql -e "INSTALL PLUGIN audit_log SONAME 'audit_log.so'"
+
+    - name: Setup PMM client with postgres
+      when: pmm_url != '' and (postgresql_version != '' or percona_postgresql_version != '')
+      shell:
+        cmd: /bin/bash -e /vagrant/tools/setup_pmm.sh "{{soft}}" postgres "{{db_password}}" pmm_user "{{db_password}}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}" "{{ 'yes' if pmm_client_version != '' and (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') or percona_postgresql_version.startswith('13.') ) else 'no' }}"
+        creates: /root/pmm-postgresql.applied
+

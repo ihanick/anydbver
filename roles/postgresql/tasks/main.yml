@@ -54,6 +54,11 @@
     - "percona-postgresql{{ percona_postgresql_major_ver }}-server-{{ percona_postgresql_version }}.el7.x86_64"
     - "percona-postgresql{{ percona_postgresql_major_ver }}-contrib-{{ percona_postgresql_version }}.el7.x86_64"
 
+- name: install pg_stat_monitor for Percona Distribution for PostgreSQL
+  when: pmm_client_version != '' and (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') or percona_postgresql_version.startswith('13.') )
+  package:
+    name: "percona-pg-stat-monitor{{ percona_postgresql_major_ver }}"
+    state: present
 
 - name: Create Postgres Database
   when: (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') or percona_postgresql_version.startswith('13.') or postgresql_version != '' ) and db_password != ""
@@ -110,12 +115,6 @@
     cmd: >-
       sudo -u postgres createuser "{{db_user}}";
       sudo -u postgres psql -c 'grant all on database postgres to {{db_user}}';
-- name: Setup PMM client with postgres
-  when: pmm_url != '' and (postgresql_version != '' or percona_postgresql_version != '')
-  shell:
-    cmd: /bin/bash /vagrant/tools/setup_pmm.sh "{{soft}}" postgres "{{db_password}}" pmm_user "{{db_password}}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
-    creates: /root/pmm-postgresql.applied
-
 - name: Install Yandex Odyssey
   when: odyssey_version != ''
   block:
