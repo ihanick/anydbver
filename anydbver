@@ -24,8 +24,9 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy mariadb node1 mariadb master:default"
     echo "$0 deploy mariadb node1 mariadb master:default default mariadb master:node1 node2 mariadb master:node1"
     echo "$0 deploy mariadb-cluster:10.4 node1 mariadb-cluster:10.4 galera-master:default node2 mariadb-cluster:10.4 galera-master:default"
-    echo "$0 deploy deploy ldap node1 ldap-master:default ps:5.7"
+    echo "$0 deploy ldap node1 ldap-master:default ps:5.7"
     echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1"
+    echo "$0 deploy ps:5.7 hostname:leader.percona.local node1 ps:5.7 hostname:follower.percona.local leader:default"
     echo "$0 deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row"
     echo "$0 deploy samba node1 ps samba-dc:default"
     echo "$0 deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default"
@@ -439,6 +440,7 @@ fi
 
 join_ws()  { local IFS=; local s="${*/#/$1}"; echo "${s#"$1$1$1"}"; }
 
+
 deploy_node() {
   [ -f .version-info/percona-server.el7.txt ] || refresh_percona_server_version_info
   NODE="$1"
@@ -450,6 +452,11 @@ deploy_node() {
   FEATURES=()
   for i in "${arr[@]}";
   do
+    if [[ $i == "hostname:"* ]] || [[ $i == "hn:"* ]] || [[ $i == "name:"* ]] ; then
+      HOST=$(get_version "$i")
+      DEP_ENV="$DEP_ENV HOSTNAME=$HOST"
+    fi
+
     if [[ $i == "percona-server" ]] || [[ $i == "percona-server:"* ]] || [[ $i == "ps" ]] || [[ $i == "ps:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
@@ -612,7 +619,7 @@ deploy_node() {
         DEP_ENV="$DEP_ENV K8S_PG=$VER"
       fi
     fi
-    if [[ $i == "master_ip" ]] || [[ $i == "master_ip:"* ]] || [[ $i == "master" ]] || [[ $i == "master:"* ]] ; then
+    if [[ $i == "master_ip" ]] || [[ $i == "master_ip:"* ]] || [[ $i == "master" ]] || [[ $i == "master:"* ]] || [[ $i == "leader:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         MASTER_NODE=$(get_version "$i")
         DEP_ENV="$DEP_ENV DB_IP=$MASTER_NODE "
@@ -623,7 +630,7 @@ deploy_node() {
     if [[ $i == "group-replication" ]] ; then
       DEP_ENV="$DEP_ENV REPLICATION_TYPE=group "
     fi
-    if [[ $i == "galera-master" ]] || [[ $i == "galera-master:"* ]] ; then
+    if [[ $i == "galera-master" ]] || [[ $i == "galera-master:"* ]] || [[ $i == "galera-leader:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         MASTER_NODE=$(get_version "$i")
         DEP_ENV="$DEP_ENV DB_IP=$MASTER_NODE REPLICATION_TYPE=galera "
@@ -693,7 +700,7 @@ deploy_node() {
     if [[ $i == "ldap" ]] || [[ $i == "ldap-server"* ]] ; then
       DEP_ENV="$DEP_ENV LDAP_SERVER=1 DB_USER=dba DB_PASS=secret"
     fi
-    if [[ $i == "ldap-master" ]] || [[ $i == "ldap-master"* ]] ; then
+    if [[ $i == "ldap-master" ]] || [[ $i == "ldap-master"* ]] || [[ $i == "ldap-leader"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         LDAP_NODE=$(get_version "$i")
       else
@@ -701,7 +708,7 @@ deploy_node() {
       fi
       DEP_ENV="$DEP_ENV LDAP_IP=$LDAP_NODE DB_USER=dba DB_PASS=secret"
     fi
-    if [[ $i == "k3s-master" ]] || [[ $i == "k3s-master"* ]] ; then
+    if [[ $i == "k3s-master" ]] || [[ $i == "k3s-master"* ]] || [[ $i == "k3s-leader"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         MASTER_NODE=$(get_version "$i")
       else
@@ -843,6 +850,7 @@ find_node_token() {
 
 if [ "x$1" = "xdeploy" ] ; then
   PRIV_CONTAINER_REQUIRED=0
+  HOSTNAMES_CMD=''
   DEPLARGS=()
   DEPLOY_CMDS=()
   NODE=default
@@ -863,6 +871,9 @@ if [ "x$1" = "xdeploy" ] ; then
     done
     DEPCMD=$(deploy_node $NODE "${DEPLARGS[@]}")
     echo "$DEPCMD"|egrep -q 'PMM_SERVER|K8S|K3S|PKO|SAMBA_AD' && PRIV_CONTAINER_REQUIRED=1
+    if [[ $i == "HOSTNAME="* ]] ; then
+      HOSTNAMES_CMD="$HOSTNAMES_CMD --hostname $NODE="$(echo "$DEPCMD"| sed -re 's/^.*HOSTNAME=([^ ]+) .*/\1/')
+    fi
     DEPLOY_CMDS+=("$DEPCMD")
     ALL_NODES[$NODE]=1
     if [[ "$1" == node* || "$1" == default ]] ; then
@@ -885,9 +896,11 @@ if [ "x$1" = "xdeploy" ] ; then
     lxd)
       ./lxdctl --destroy
       if [[ $PRIV_CONTAINER_REQUIRED == 1 ]] ; then
-        ./lxdctl --nodes ${#ALL_NODES[@]} --privileged
+        echo "./lxdctl --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD"
+        ./lxdctl --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD
       else
-        ./lxdctl --nodes ${#ALL_NODES[@]}
+        echo "./lxdctl --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD"
+        ./lxdctl --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD
       fi
       ;;
     *)

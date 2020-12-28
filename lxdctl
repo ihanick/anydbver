@@ -7,16 +7,24 @@ NUM_NODES=3
 DESTROY=0
 LXD_PRIVILEGED_CONTAINERS=''
 
+
+getip() {
+  IP="$(sed -ne '/'$1'/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)"
+  if [ "x$IP" = "x" ] ; then
+    IP="$(sed -ne '/\<'$1'\>/ {s/ .*$//;p}' configs/hosts|head -n 1)"
+  fi
+}
+
 if [ "x$1" = "xssh" ] ; then
   shift
-  IP="$(sed -ne '/'$1'/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)"
+  getip "$1"
   shift
   exec ssh -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP "$@"
   exit 0
 fi
 if [ "x$1" = "xscp" ] ; then
   shift
-  IP="$(sed -ne '/'$1'/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)"
+  getip "$1"
   shift
   exec scp -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP:"$1" "$2"
 fi
@@ -114,12 +122,13 @@ if [ "x$LXD_PROFILE" != "x" ] ; then
 fi
 
 :> ansible_hosts
+:> configs/hosts
 
 test -f secret/id_rsa || ssh-keygen -t rsa -f secret/id_rsa -P '' && chmod 0600 secret/id_rsa
 test -f secret/rs0-keyfile || openssl rand -base64 756 > secret/rs0-keyfile
 
 N=0
-for i in ${USER}.default $(seq 1 20|sed -e s/^/${USER}.node/); do
+for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
   c=${i//./-}
   lxc launch $LXD_PROFILE $IMG $c $LXD_PRIVILEGED_CONTAINERS 
   lxc exec $c -- mkdir /root/.ssh
@@ -141,4 +150,9 @@ for i in ${USER}.default $(seq 1 20|sed -e s/^/${USER}.node/); do
 
   ((N=N+1))
   if [ $N -eq $NUM_NODES ] ; then break ; fi
+done
+
+for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
+  c=${i//./-}
+  lxc exec $c -- bash -c "cat >> /etc/hosts" < configs/hosts
 done
