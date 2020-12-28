@@ -10,16 +10,11 @@
   command:
     cmd: /usr/bin/percona-release enable ppg-11
     creates: /etc/yum.repos.d/percona-ppg-11-release.repo
-- name: enable Percona Distribution for PostgreSQL 12.2
-  when: percona_postgresql_version.startswith('12.2')
+- name: enable Percona Distribution for PostgreSQL 12
+  when: percona_postgresql_version.startswith('12.')
   command:
-    cmd: /usr/bin/percona-release enable ppg-12.2 testing
-    creates: /etc/yum.repos.d/percona-ppg-12.2-testing.repo
-- name: enable Percona Distribution for PostgreSQL 12.3
-  when: percona_postgresql_version.startswith('12.3')
-  command:
-    cmd: /usr/bin/percona-release enable ppg-12.3 testing
-    creates: /etc/yum.repos.d/percona-ppg-12.3-testing.repo
+    cmd: /usr/bin/percona-release enable ppg-12
+    creates: /etc/yum.repos.d/percona-ppg-12-release.repo
 - name: enable Percona Distribution for PostgreSQL 13
   when: percona_postgresql_version.startswith('13')
   command:

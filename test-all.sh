@@ -21,14 +21,20 @@ fi
 if [[ "x$1" = "" || "x$1" = "xpg" ]] ; then
   for ver in 9.5 9.6 10 11 12 13 ; do
     ./anydbver deploy pg:$ver >> test-run.log
-    ./anydbver ssh default psql -U postgres -h $(./anydbver ip) -c "'select version()'" 2>/dev/null | grep -q $ver || echo FAIL
+    ./anydbver ssh default LC_ALL=en_US.UTF-8 psql -U postgres -h $(./anydbver ip) -c "'select version()'" 2>/dev/null | grep -q $ver || echo FAIL
   done
 fi
 
 if [[ "x$1" = "" || "x$1" = "xpg-replication" ]] ; then
   for ver in 9.5 9.6 10 11 12 13 ; do
     ./anydbver deploy pg:$ver node1 pg:$ver master:default >> test-run.log
-    ./anydbver ssh default psql -U postgres -h $(./anydbver ip) -xc "'select * from pg_replication_slots'" 2>/dev/null|grep active_pid |cut -d'|' -f 2|egrep -q '[0-9]' || echo FAIL
+    ./anydbver ssh default LC_ALL=en_US.UTF-8 psql -U postgres -h $(./anydbver ip) -xc "'select * from pg_replication_slots'" 2>/dev/null|grep active_pid |cut -d'|' -f 2|egrep -q '[0-9]' || echo FAIL
   done
 fi
 
+if [[ "x$1" = "" || "x$1" = "xppg" ]] ; then
+  for ver in 12.2 12.3 12.4 12.5 13.0 13.1 ; do
+    ./anydbver deploy ppg:$ver >> test-run.log
+    ./anydbver ssh default LC_ALL=en_US.UTF-8 psql -U postgres -h $(./anydbver ip) -c "'select version()'" 2>/dev/null | grep -q $ver || echo "$ver: FAIL"
+  done
+fi
