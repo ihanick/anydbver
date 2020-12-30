@@ -163,9 +163,13 @@ EOF
     curl -sL http://yum.mariadb.org/$maver/centos7-amd64/rpms/| perl -ne '/MariaDB-server-(\d[^"]*).el7.centos.x86_64.rpm/ and print "$1\n"' >> .version-info/mariadb.el7.txt
   done
 
-  cat > .version-info/mariadb-galera.el7.txt <<EOF
-10.4.15-1 26.4.5-1
-EOF
+  for ver in $(grep 10.[3-5] .version-info/mariadb.el7.txt) ; do
+    short_ver=$(echo $ver|sed -re 's/-[0-9]+$//')
+    for galera_ver in $( curl -sL https://mirrors.ukfast.co.uk/sites/mariadb/mariadb-${short_ver}/yum/centos7-amd64/rpms/|grep galera|grep -v rhel7|sed -re 's/<a href="galera-([0-9]+-)?([^>]+)\.el7\.centos\.x86_64\.rpm">.*$/\2/' ) ; do
+      echo -n "$ver "
+      echo $galera_ver
+    done
+  done > .version-info/mariadb-galera.el7.txt
 
   cat > .version-info/mysql.el7.txt <<EOF
 5.6.20-4
@@ -540,11 +544,11 @@ deploy_node() {
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
         VER=$(grep "$VER" .version-info/mariadb.el7.txt |tail -n 1)
-	GALERA_VER=$(grep "10.4.15-1" .version-info/mariadb-galera.el7.txt|cut -d' ' -f2|tail -n 1 )
+	GALERA_VER=$(grep "$VER" .version-info/mariadb-galera.el7.txt|cut -d' ' -f2|tail -n 1 )
         DEP_ENV="$DEP_ENV MARIADB=$VER GALERA=$GALERA_VER CLUSTER=cluster1"
       else
         VER=$(tail -n 1 .version-info/mariadb.el7.txt)
-	GALERA_VER=$(grep "10.4.15-1" .version-info/mariadb-galera.el7.txt|cut -d' ' -f2|tail -n 1 )
+	GALERA_VER=$(grep "$VER" .version-info/mariadb-galera.el7.txt|cut -d' ' -f2|tail -n 1 )
         DEP_ENV="$DEP_ENV MARIADB=$VER GALERA=$GALERA_VER CLUSTER=cluster1"
       fi
     fi
@@ -730,6 +734,8 @@ deploy_node() {
   [[ "$DEP_ENV" == *START* ]] || DEP_ENV="$DEP_ENV START=1"
   if  [[ "$DEP_ENV" == *DB_OPTS* ]] ; then
     :
+  elif [[ "$DEP_ENV" == *'GALERA='* ]] && [[ "$DEP_ENV" == *'MARIADB=10.3'* ]] ; then
+    DEP_ENV="$DEP_ENV DB_OPTS=mariadb/galera3.cnf"
   elif [[ "$DEP_ENV" == *'GALERA='* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mariadb/galera.cnf"
   elif [[ "$DEP_ENV" == *'PXC=5'* ]] ; then

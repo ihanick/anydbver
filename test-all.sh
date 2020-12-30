@@ -1,5 +1,7 @@
 #!/bin/bash
 unset LC_CTYPE
+:> test-run.log
+
 if [[ "x$1" = "" || "x$1" = "xps-async-proxysql" ]] ; then
   ./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:default node3 proxysql master:default
   test $(./anydbver ssh node3 mysql --protocol=tcp --port 6032 -uadmin -padmin -e "'select * from runtime_mysql_servers'" 2>/dev/null|grep -c ONLINE ) = 3 || echo FAIL
@@ -18,6 +20,13 @@ if [[ "x$1" = "" || "x$1" = "xmariadb" ]] ; then
   for ver in 10.3 10.4 10.5; do
     ./anydbver deploy mariadb:$ver >> test-run.log
     ./anydbver ssh default mysql -e "'select version()'" 2>/dev/null |grep -q $ver || echo FAIL
+  done
+fi
+
+if [[ "x$1" = "" || "x$1" = "xmariadb-galera" ]] ; then
+  for ver in 10.3 10.4 10.5; do
+    ./anydbver deploy mariadb-cluster:$ver node1 mariadb-cluster:$ver galera-master:default node2 mariadb-cluster:$ver galera-master:default >> test-run.log
+    ./anydbver ssh default mysql -e "'show status'" 2>/dev/null|grep wsrep_cluster_size|grep -q 3 || echo "$ver: FAIL"
   done
 fi
 
