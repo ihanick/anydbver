@@ -18,7 +18,6 @@
 
 - name: install Percona Server for MongoDB
   when: psmdb_version.startswith('3.0') or psmdb_version.startswith('3.6') or psmdb_version.startswith('4.0') or psmdb_version.startswith('4.2') or psmdb_version.startswith('4.4')
-
   package:
     name: "{{ item }}"
     state: present
@@ -28,6 +27,18 @@
     - "{{ psmdb_name }}{{ psmdb_major_ver }}-server-{{ psmdb_version }}.{{ dist }}.x86_64"
     - "{{ psmdb_name }}{{ psmdb_major_ver }}-mongos-{{ psmdb_version }}.{{ dist }}.x86_64"
     - "{{ psmdb_name }}{{ psmdb_major_ver }}-{{ psmdb_version }}.{{ dist }}.x86_64"
+
+- name: install Percona Server for MongoDB 3.2 or 3.4
+  when: psmdb_version.startswith('3.2') or psmdb_version.startswith('3.4')
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - "http://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-tools-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
+    - "http://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-shell-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
+    - "http://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-server-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
+    - "http://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-mongos-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
+    - "http://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
 
 - name: install Percona Backup for MongoDB
   when: pbm_version != ""
