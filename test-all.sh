@@ -16,6 +16,14 @@ for m in mysql ps ; do
   fi
 done
 
+if [[ "x$1" = "" || "x$1" = "xpxc" ]] ; then
+  for ver in 5.6 5.7 8.0; do
+    ./anydbver deploy pxc:$ver node1 pxc:$ver galera-master:default node2 pxc:$ver galera-master:default >> test-run.log
+    ./anydbver ssh default mysql -e "'show status'" 2>/dev/null|grep wsrep_cluster_size|grep -q 3 || echo "$ver: FAIL"
+  done
+fi
+
+
 if [[ "x$1" = "" || "x$1" = "xmariadb" ]] ; then
   for ver in 10.3 10.4 10.5; do
     ./anydbver deploy mariadb:$ver >> test-run.log

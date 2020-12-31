@@ -152,6 +152,7 @@ refresh_percona_server_version_info() {
   rm -f .version-info/percona-server-80.html
 
   curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/|perl -ne '/Percona-XtraDB-Cluster-\d\d-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' > .version-info/percona-xtradb-cluster.el7.txt
+  curl -sL https://repo.percona.com/pxc-80/yum/release/7/RPMS/x86_64/|perl -ne '/percona-xtradb-cluster-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' >> .version-info/percona-xtradb-cluster.el7.txt
   curl -sL https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/|perl -ne '/Percona-XtraDB-Cluster-\d\d-([0-9.-]*).el8.x86_64.rpm/ and print "$1\n"' > .version-info/percona-xtradb-cluster.el8.txt
 
   :> .version-info/mariadb.el7.txt
@@ -502,14 +503,16 @@ deploy_node() {
       fi
     fi
     if [[ $i == "percona-xtradb-cluster" ]] || [[ $i == "percona-xtradb-cluster:"* ]] || [[ $i == "pxc" ]] || [[ $i == "pxc:"* ]] ; then
+      CLUSTER_NAME=cluster1
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
         VER=$(grep "^$VER" .version-info/percona-xtradb-cluster.el7.txt |tail -n 1)
-        DEP_ENV="$DEP_ENV PXC=$VER CLUSTER=cluster1"
+        DEP_ENV="$DEP_ENV PXC=$VER CLUSTER=$CLUSTER_NAME"
       else
         VER=$(tail -n 1 .version-info/percona-xtradb-cluster.el7.txt)
-        DEP_ENV="$DEP_ENV PXC=$VER CLUSTER=cluster1"
+        DEP_ENV="$DEP_ENV PXC=$VER CLUSTER=$CLUSTER_NAME"
       fi
+      test -f secret/${CLUSTER_NAME}-ssl.tar.gz && rm -f secret/${CLUSTER_NAME}-ssl.tar.gz
     fi
     if [[ $i == "psmdb" ]] || [[ $i == "psmdb:"* ]] || [[ $i == "mongo" ]] || [[ $i == "mongo:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
@@ -740,6 +743,8 @@ deploy_node() {
     DEP_ENV="$DEP_ENV DB_OPTS=mariadb/galera.cnf"
   elif [[ "$DEP_ENV" == *'PXC=5'* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mysql/pxc5657.cnf"
+  elif [[ "$DEP_ENV" == *'PXC=8'* ]] ; then
+    DEP_ENV="$DEP_ENV DB_OPTS=mysql/pxc8-repl-gtid.cnf"
   elif [[ "$DEP_ENV" == *'PS='* && $ROW_REPLICATION == 1 ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mysql/async-repl-gtid-row.cnf"
   elif [[ "$DEP_ENV" == *'PS='* && $UTF8ENC == 1 ]] ; then
@@ -971,6 +976,21 @@ if [ "x$1" = "xdeploy" ] ; then
 
     printf "%s\n" "$i"
     bash -c "$i"
+
+    # after reploy node actions
+    if echo "$i" | grep -q CLUSTER= && echo "$i" | grep -q PXC=8. ; then
+      NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
+      CLUSTER_NAME=$(echo "$i" | sed -re 's/^.*CLUSTER=([^ ]+).*$/\1/' )
+      test -f secret/${CLUSTER_NAME}-ssl.tar.gz || ./anydbver \
+        ssh $NODE tar cz \
+          /var/lib/mysql/ca.pem \
+          /var/lib/mysql/ca-key.pem \
+          /var/lib/mysql/client-cert.pem \
+          /var/lib/mysql/client-key.pem \
+          /var/lib/mysql/server-cert.pem \
+          /var/lib/mysql/server-key.pem > secret/${CLUSTER_NAME}-ssl.tar.gz
+    fi
+
   done
 
 fi
