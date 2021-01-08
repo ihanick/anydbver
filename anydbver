@@ -882,7 +882,7 @@ if [ "x$1" = "xdeploy" ] ; then
     done
     DEPCMD=$(deploy_node $NODE "${DEPLARGS[@]}")
     echo "$DEPCMD"|egrep -q 'PMM_SERVER|K8S|K3S|PKO|SAMBA_AD' && PRIV_CONTAINER_REQUIRED=1
-    if [[ $i == "HOSTNAME="* ]] ; then
+    if [[ "$DEPCMD" == *"HOSTNAME="* ]] ; then
       HOSTNAMES_CMD="$HOSTNAMES_CMD --hostname $NODE="$(echo "$DEPCMD"| sed -re 's/^.*HOSTNAME=([^ ]+) .*/\1/')
     fi
     DEPLOY_CMDS+=("$DEPCMD")
