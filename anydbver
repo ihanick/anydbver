@@ -464,6 +464,46 @@ deploy_node() {
       DEP_ENV="$DEP_ENV HOSTNAME=$HOST"
     fi
 
+    if [[ $i == "os:"* ]] || [[ $i == "operating-system:"* ]] ; then
+      NODE_OS=$(get_version "$i")
+      case "$NODE_OS" in
+        el7)
+          NODE_OS=el7
+          ;;
+        centos7)
+          NODE_OS=el7
+          ;;
+        centos-7)
+          NODE_OS=el7
+          ;;
+        CentOS7)
+          NODE_OS=el7
+          ;;
+        CentOS-7)
+          NODE_OS=el7
+          ;;
+        el8)
+          NODE_OS=el8
+          ;;
+        centos8)
+          NODE_OS=el8
+          ;;
+        centos-8)
+          NODE_OS=el8
+          ;;
+        CentOS8)
+          NODE_OS=el8
+          ;;
+        CentOS-8)
+          NODE_OS=el8
+          ;;
+        *)
+          NODE_OS=el7
+      esac
+
+      DEP_ENV="$DEP_ENV NODE_OS=$NODE_OS"
+    fi
+
     if [[ $i == "percona-server" ]] || [[ $i == "percona-server:"* ]] || [[ $i == "ps" ]] || [[ $i == "ps:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
@@ -872,6 +912,7 @@ find_node_token() {
 if [ "x$1" = "xdeploy" ] ; then
   PRIV_CONTAINER_REQUIRED=0
   HOSTNAMES_CMD=''
+  OS_CMD=''
   DEPLARGS=()
   DEPLOY_CMDS=()
   NODE=default
@@ -895,6 +936,9 @@ if [ "x$1" = "xdeploy" ] ; then
     if [[ "$DEPCMD" == *"HOSTNAME="* ]] ; then
       HOSTNAMES_CMD="$HOSTNAMES_CMD --hostname $NODE="$(echo "$DEPCMD"| sed -re 's/^.*HOSTNAME=([^ ]+) .*/\1/')
     fi
+    if [[ "$DEPCMD" == *"NODE_OS="* ]] ; then
+      OS_CMD="$OS_CMD --os $NODE="$(echo "$DEPCMD"| sed -re 's/^.*NODE_OS=([^ ]+) .*/\1/')
+    fi
     DEPLOY_CMDS+=("$DEPCMD")
     ALL_NODES[$NODE]=1
     if [[ "$1" == node* || "$1" == default ]] ; then
@@ -917,11 +961,11 @@ if [ "x$1" = "xdeploy" ] ; then
     lxd)
       ./lxdctl --destroy
       if [[ $PRIV_CONTAINER_REQUIRED == 1 ]] ; then
-        echo "./lxdctl --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD"
-        ./lxdctl --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD
+        echo "./lxdctl --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD"
+        ./lxdctl --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD
       else
-        echo "./lxdctl --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD"
-        ./lxdctl --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD
+        echo "./lxdctl --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD"
+        ./lxdctl --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD
       fi
       ;;
     *)

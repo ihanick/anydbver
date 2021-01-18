@@ -3,6 +3,14 @@
   become: yes
   vars:
     sync_is_required: "{{ lookup('vars', 'extra_sync_is_required', default=lookup('env', 'SYNC', default='') ) }}"
+    dist: >-
+      {{
+      'el7' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and ansible_distribution_version.startswith('7') else
+      'el8' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and ansible_distribution_version.startswith('8') else
+      'bionic' if ansible_distribution_release == 'bionic' else
+      'focal' if ansible_distribution_release == 'focal' else
+      ''
+      }}
     percona_server_version: "{{ lookup('vars', 'extra_percona_server_version', default=lookup('env', 'PS', default='') ) }}"
     rocksdb_enabled: "{{ lookup('vars', 'extra_rocksdb_enabled', default=lookup('env', 'ROCKSDB', default='') ) }}"
     percona_xtrabackup_version: "{{ lookup('vars', 'extra_percona_xtrabackup_version', default=lookup('env','PXB',default='') ) }}"
@@ -66,7 +74,7 @@
 
     percona_server_name: "{{ 'percona-server' if percona_server_version.startswith('8.0') else 'Percona-Server' }}"
     percona_server_major_ver: "{{ '' if percona_server_version.startswith('8.0') else '-57' if percona_server_version.startswith('5.7') else '-56' if percona_server_version.startswith('5.6') else '' }}"
-    percona_server_full_ver: "{{ percona_server_major_ver }}-{{ percona_server_version }}.el7.x86_64"
+    percona_server_full_ver: "{{ percona_server_major_ver }}-{{ percona_server_version }}.{{ dist }}.x86_64"
     percona_xtradb_cluster_56_version: "{{ percona_xtradb_cluster_version if percona_xtradb_cluster_version.startswith('5.6') else '' }}"
     percona_xtradb_cluster_name: "{{ 'Percona-XtraDB-Cluster' if percona_xtradb_cluster_version.startswith('5.6') or percona_xtradb_cluster_version.startswith('5.7') else 'percona-xtradb-cluster' }}"
     percona_xtradb_cluster_major_ver: "{{ '-56' if percona_xtradb_cluster_version.startswith('5.6') else '-57' if percona_xtradb_cluster_version.startswith('5.7') else '' }}"
@@ -95,14 +103,6 @@
       sysbench_version != '' or
       percona_proxysql_version != ''
       else ''
-      }}
-    dist: >-
-      {{
-      'el7' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and ansible_distribution_version.startswith('7') else
-      'el8' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and ansible_distribution_version.startswith('8') else
-      'bionic' if ansible_distribution_release == 'bionic' else
-      'focal' if ansible_distribution_release == 'focal' else
-      ''
       }}
     soft: >-
       {{
@@ -200,6 +200,11 @@
             (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
           shell:
             cmd: "yum-config-manager --disable mysql80-community; yum-config-manager --enable mysql56-community"
+
+    - name: Disable Redhat MySQL module
+      when: (mysql_version != '' or percona_server_version != '' or percona_xtradb_cluster_version != '') and dist == 'el8'
+      command:
+        cmd: dnf -y module disable mysql
     
     - name: Enable EPEL
       when: >

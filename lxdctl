@@ -15,6 +15,18 @@ getip() {
   fi
 }
 
+setupOS() {
+  if [ "x$1" == "xel8" ] ; then
+    IMG="images:centos/8"
+    PACKAGES="$PACKAGES python3"
+    PYTHON_INT=/usr/bin/python3
+  else # default CentOS 7
+    IMG="images:centos/7"
+    PACKAGES=''
+    PYTHON_INT=/usr/bin/python2.7
+  fi
+}
+
 if [ "x$1" = "xssh" ] ; then
   shift
   getip "$1"
@@ -54,6 +66,7 @@ opts=$(getopt \
 )
 
 declare -A HOSTNAMES
+declare -A OSes
 
 eval set --$opts
 while [[ $# -gt 0 ]]; do
@@ -71,7 +84,14 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --os)
-      OS=$2
+      NODE_NAME=$(echo "$2"|cut -d= -f 1)
+      NODE_OS=$(echo "$2"|cut -d= -f 2)
+      if [[ "x$NODE_OS" != "x" && "x$NODE_NAME"  != "x" ]] ; then
+        OSes[$USER.$NODE_NAME]="$NODE_OS"
+      else
+        OS=$2
+      fi
+
       shift 2
       ;;
     --k8s)
@@ -102,13 +122,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ "x$OS" == "xel8" ] ; then
-  IMG="images:centos/8"
-  PACKAGES="$PACKAGES python3"
-  PYTHON_INT=/usr/bin/python3
-fi
-
-
 if [ $DESTROY -eq 1 ] ; then
   for i in ${USER}.default $(seq 1 20|sed -e s/^/${USER}.node/); do
     c=${i//./-}
@@ -129,6 +142,12 @@ test -f secret/rs0-keyfile || openssl rand -base64 756 > secret/rs0-keyfile
 
 N=0
 for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
+  if [ "x${OSes[$i]}" != "x" ] ; then
+    setupOS ${OSes[$i]} 
+  else
+    setupOS $OS
+  fi
+
   c=${i//./-}
   lxc launch $LXD_PROFILE $IMG $c $LXD_PRIVILEGED_CONTAINERS 
   lxc exec $c -- mkdir /root/.ssh
