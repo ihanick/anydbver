@@ -1,6 +1,7 @@
 #!/bin/bash
 OS=el7
-IMG="images:centos/7"
+ARCH=amd64
+IMG="images:centos/7/$ARCH"
 PACKAGES=''
 PYTHON_INT=/usr/bin/python2.7
 NUM_NODES=3
@@ -17,11 +18,11 @@ getip() {
 
 setupOS() {
   if [ "x$1" == "xel8" ] ; then
-    IMG="images:centos/8"
+    IMG="images:centos/8/$ARCH"
     PACKAGES="$PACKAGES python3"
     PYTHON_INT=/usr/bin/python3
   else # default CentOS 7
-    IMG="images:centos/7"
+    IMG="images:centos/7/$ARCH"
     PACKAGES=''
     PYTHON_INT=/usr/bin/python2.7
   fi
