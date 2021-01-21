@@ -22,7 +22,7 @@
     creates: /etc/yum.repos.d/percona-ppg-13-release.repo
 
 - name: Postgresql repo
-  when: postgresql_version != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+  when: postgresql_version != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   yum:
     name: "{{os[dist][soft].repo_url}}"
     state: present

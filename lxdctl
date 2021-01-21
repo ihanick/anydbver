@@ -21,6 +21,14 @@ setupOS() {
     IMG="images:centos/8/$ARCH"
     PACKAGES="$PACKAGES python3"
     PYTHON_INT=/usr/bin/python3
+  elif [ "x$1" == "xoel7" ] ; then
+    IMG="images:oracle/7/$ARCH"
+    PACKAGES=''
+    PYTHON_INT=/usr/bin/python2.7
+  elif [ "x$1" == "xoel8" ] ; then
+    IMG="images:oracle/8/$ARCH"
+    PACKAGES="$PACKAGES oracle-epel-release-el8 python3"
+    PYTHON_INT=/usr/bin/python3
   else # default CentOS 7
     IMG="images:centos/7/$ARCH"
     PACKAGES=''
@@ -87,7 +95,7 @@ while [[ $# -gt 0 ]]; do
     --os)
       NODE_NAME=$(echo "$2"|cut -d= -f 1)
       NODE_OS=$(echo "$2"|cut -d= -f 2)
-      if [[ "x$NODE_OS" != "x" && "x$NODE_NAME"  != "x" ]] ; then
+      if [[ "x$NODE_OS" != "x" && "$xNODE_NAME" != "x" && "$2" == *=* ]] ; then
         OSes[$USER.$NODE_NAME]="$NODE_OS"
       else
         OS=$2
@@ -154,7 +162,7 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
   lxc exec $c -- mkdir /root/.ssh
   lxc file push secret/id_rsa.pub $c/root/.ssh/authorized_keys
   lxc file push tools/node_ip.sh $c/usr/bin/node_ip.sh
-  lxc exec $c -- bash -c "export LANG=C;test -f /usr/bin/rsync || (until ping  -c 1 percona.com &>/dev/null ; do sleep 1; done;yum install -y sudo openssh-server iproute rsync $PACKAGES); chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd;systemctl enable sshd;systemctl restart sshd; chmod 0600 /root/.ssh/authorized_keys; chmod 0700 /root/.ssh; chown root:root -R /root/.ssh"
+  lxc exec $c -- bash -c "export LANG=C;test -f /usr/bin/rsync || (until ping  -c 1 percona.com &>/dev/null ; do sleep 1; done; for pkg in sudo openssh-server iproute rsync $PACKAGES; do yum install -q -y \$pkg ; done); chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd;systemctl enable sshd;systemctl restart sshd; chmod 0600 /root/.ssh/authorized_keys; chmod 0700 /root/.ssh; chown root:root -R /root/.ssh"
 
   IP=$(lxc exec $c -- /bin/bash /usr/bin/node_ip.sh)
   echo "$i ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ansible_hosts

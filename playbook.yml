@@ -5,8 +5,8 @@
     sync_is_required: "{{ lookup('vars', 'extra_sync_is_required', default=lookup('env', 'SYNC', default='') ) }}"
     dist: >-
       {{
-      'el7' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and ansible_distribution_version.startswith('7') else
-      'el8' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and ansible_distribution_version.startswith('8') else
+      'el7' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and ansible_distribution_version.startswith('7') else
+      'el8' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and ansible_distribution_version.startswith('8') else
       'bionic' if ansible_distribution_release == 'bionic' else
       'focal' if ansible_distribution_release == 'focal' else
       ''
@@ -149,7 +149,7 @@
         name: mariadb
 
     - name: Install Percona yum Repository
-      when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and is_percona_repo_required != ''
+      when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and is_percona_repo_required != ''
       block:
         - name: install percona yum repo
           yum:
@@ -184,20 +184,20 @@
       block:
         - name: MySQL 8.0 yum repo
           when: >
-            (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+            (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
           yum:
             name: "{{os[dist][soft].repo_url}}"
             state: present
         - name: Switch mysql repo 5.7
           when: >
             mysql_version.startswith('5.7') and
-            (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+            (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
           shell:
             cmd: "yum-config-manager --disable mysql80-community; yum-config-manager --enable mysql57-community"
         - name: Switch mysql repo 5.6
           when: >
             mysql_version.startswith('5.6') and
-            (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+            (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
           shell:
             cmd: "yum-config-manager --disable mysql80-community; yum-config-manager --enable mysql56-community"
 
@@ -209,7 +209,7 @@
     - name: Enable EPEL
       when: >
         orchestrator_version != '' and
-        (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+        (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
       package:
         name: epel-release
         state: present
@@ -234,13 +234,13 @@
       include_tasks: common/tasks/install_db_packages.yml
 
     - name: Install Samba Active Directory server
-      when: samba_ad != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+      when: samba_ad != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
       shell:
         cmd: /bin/bash /vagrant/tools/install_samba_ad.sh
         creates: /opt/samba/sbin/samba
 
     - name: Setup Samba Active Directory server
-      when: samba_ad != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+      when: samba_ad != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
       shell:
         cmd: /bin/bash /vagrant/tools/setup_samba_ad.sh
         creates: /root/samba.configured
@@ -549,7 +549,7 @@
             cmd: /usr/bin/gem install innodb_ruby
             creates: /usr/local/bin/innodb_space
     - name: Install mydumper
-      when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux') and mydumper_version != ''
+      when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and mydumper_version != ''
       yum:
         name: "{{os[dist].mydumper.install_packages}}"
         state: present

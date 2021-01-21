@@ -498,7 +498,7 @@ deploy_node() {
           NODE_OS=el8
           ;;
         *)
-          NODE_OS=el7
+          :
       esac
 
       DEP_ENV="$DEP_ENV NODE_OS=$NODE_OS"
