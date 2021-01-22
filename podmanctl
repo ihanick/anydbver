@@ -16,24 +16,36 @@ opts=$(getopt \
     -- "$@"
 )
 
+getip() {
+  IP="$(sed -ne '/'$1'/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)"
+  if [ "x$IP" = "x" ] ; then
+    IP="$(sed -ne '/\<'$1'\>/ {s/ .*$//;p}' configs/hosts|head -n 1)"
+  fi
+}
+
+
 if [ "x$1" = "xssh" ] ; then
   shift
-  IP="$(sed -ne '/'$1'/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)"
+  getip "$1"
   shift
   exec ssh -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP "$@"
   exit 0
+fi
+if [ "x$1" = "xscp" ] ; then
+  shift
+  getip "$1"
+  shift
+  exec scp -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP:"$1" "$2"
 fi
 if [ "x$1" = "xdestroy" ] ; then
   shift
   if [ "x$1" = "x" ] ; then
     i=${USER}.default
-    c=${i//./-}
-    lxc delete -f $c
+    sudo podman rm -f $i
   fi
   while (( "$#" )); do
     i=${USER}.$1
-    c=${i//./-}
-    lxc delete -f $c
+    sudo podman rm -f $i
     shift
   done
   exit 0
@@ -154,7 +166,7 @@ for i in ${USER}.default $(seq 1 20|sed -e s/^/${USER}.node/); do
     CAP_ADMIN='--cap-add SYS_ADMIN'
   fi
 
-  sudo podman run -d $CAP_ADMIN $NODE_HOSTNAME --name $i $IMG /sbin/init
+  sudo podman run --privileged --tmpfs /run --tmpfs /var/run -d $CAP_ADMIN $NODE_HOSTNAME --name $i $IMG /sbin/init
 
   sudo podman cp $PWD/secret/id_rsa.pub $i:/root/.ssh/authorized_keys
   sudo podman cp $PWD/tools/node_ip.sh $i:/usr/bin/node_ip.sh
