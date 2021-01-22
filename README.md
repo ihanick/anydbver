@@ -90,7 +90,7 @@ anydbver stores lists of version for each database product in temporary files. Y
 
 ## Advanced Installation
 
-If you are able to run LXD on your linux server, there is no need to run additional virtual machines. Anydbver can re-use your LXD installation and run withou vagrant.
+If you are able to run LXD on your linux server, there is no need to run additional virtual machines. Anydbver can re-use your LXD installation and run without vagrant.
 
 ```bash
 # Specify LXD profile. It's important on servers with shared lxd environment
@@ -137,3 +137,18 @@ You may have problems with flannel using vxlan network. Enable host-gw instead, 
 export K3S_FLANNEL_BACKEND=host-gw
 ```
 
+### LXD 4.10 incompatibility with K3S
+LXD 4.10 breaks compabibility with K3S. LXD ignores `net.netfilter.nf_conntrack_tcp_timeout_established` value on the host and uses default 5 days instead of 86400 seconds required for K3S.
+You can downgrade it, but LXD looses all settings:
+```bash
+# assuming you have LXD 4.10, do not run these commands on previous versions:
+snap remove lxd
+snap install lxd --channel=4.9/stable
+# remove old storage and re-create profile
+sudo rm -rf /home/$USER/lxc/*
+lxc storage create $USER dir source=/home/$USER/lxc
+lxc profile create $USER
+lxc profile device add $USER root disk type=disk pool=$USER path=/
+lxc network create lxdbr0
+lxc profile device add $USER eth0 nic name=eth0 network=lxdbr0 type=nic
+```
