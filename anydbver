@@ -18,6 +18,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy percona-server:8.0"
     echo "$0 deploy percona-server"
     echo "$0 deploy ps:5.7"
+    echo "$0 deploy ps:5.7 mydumper"
     echo "$0 deploy mysql"
     echo "$0 deploy mariadb:10.4"
     echo "$0 deploy maria:10.4"
@@ -432,6 +433,13 @@ EOF
 2.0.15-1
 EOF
 
+ cat > .version-info/mydumper.el7.txt <<EOF
+0.9.3-41
+0.9.5-2
+10.1-1
+EOF
+
+
 curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/|perl -ne '/Percona-Server-MongoDB(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 > .version-info/psmdb.el7.txt
 
 curl -sL https://repo.percona.com/pdmdb-4.2/yum/release/7/RPMS/x86_64/ |perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el7.txt
@@ -543,6 +551,16 @@ deploy_node() {
       else
         VER=$(tail -n 1 .version-info/proxysql.el7.txt)
         DEP_ENV="$DEP_ENV PROXYSQL=$VER"
+      fi
+    fi
+    if [[ $i == "mydumper" ]] || [[ $i == "mydumper:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "^$VER" .version-info/mydumper.el7.txt |tail -n 1)
+        DEP_ENV="$DEP_ENV MYDUMPER=$VER"
+      else
+        VER=$(tail -n 1 .version-info/mydumper.el7.txt)
+        DEP_ENV="$DEP_ENV MYDUMPER=$VER"
       fi
     fi
     if [[ $i == "percona-xtradb-cluster" ]] || [[ $i == "percona-xtradb-cluster:"* ]] || [[ $i == "pxc" ]] || [[ $i == "pxc:"* ]] ; then
