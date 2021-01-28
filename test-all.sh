@@ -77,3 +77,9 @@ if [[ "x$1" = "x" || "x$1" = "xpsmdb" ]] ; then
     ./anydbver ssh default mongo --eval "'db.version()'" 2>/dev/null | grep -q $ver || echo "psmdb $ver: FAIL"
   done
 fi
+
+# Regression tests
+if [[ "x$1" = "x" || "x$1" = "xissue-2" ]] ; then
+  ./anydbver deploy mysql:$(grep 8.0 .version-info/mysql.el7.txt |tail -n 2|head -n 1) >> test-run.log
+  ./anydbver ssh default mysql -e "'select version()'" 2>/dev/null |grep -q 8.0 || echo "issue-2 : FAIL"
+fi

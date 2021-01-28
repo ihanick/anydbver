@@ -194,6 +194,7 @@ el7:
     cnf_file: '/etc/my.cnf'
     install_packages:
       - "mysql-community-common-{{mysql_version}}.el7.x86_64"
+      - "mysql-community-libs-{{mysql_version}}.el7.x86_64"
       - "mysql-community-client-{{mysql_version}}.el7.x86_64"
       - "mysql-community-server-{{mysql_version}}.el7.x86_64"
     mysql_shell_packages:
