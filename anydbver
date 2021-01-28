@@ -20,6 +20,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy ps:5.7"
     echo "$0 deploy ps:5.7 mydumper"
     echo "$0 deploy mysql"
+    echo -e $0' deploy \\\n  hn:mysql_rs0_gr0 mysql:8.0.18 group-replication \\\n  node1 hn:mysql_rs0_gr1 mysql:8.0.18 group-replication master:default \\\n  node2 hn:mysql_rs0_gr2 mysql:8.0.18 group-replication master:default \\\n  node3 hn:mysql_rs0_router mysql-router:8.0.18 master:default'
     echo "$0 deploy mariadb:10.4"
     echo "$0 deploy maria:10.4"
     echo "$0 deploy mariadb node1 mariadb master:default"
@@ -539,6 +540,16 @@ deploy_node() {
         DEP_ENV="$DEP_ENV MYSQL=$VER"
       fi
     fi
+    if [[ $i == "mysql-router" ]] || [[ $i == "mysql-router:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "^$VER" .version-info/mysql.el7.txt |tail -n 1)
+        DEP_ENV="$DEP_ENV MYSQL_ROUTER=$VER"
+      else
+        VER=$(tail -n 1 .version-info/mysql.el7.txt)
+        DEP_ENV="$DEP_ENV MYSQL_ROUTER=$VER"
+      fi
+    fi
     if [[ $i == "sysbench" ]] || [[ $i == "sysbench:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
@@ -820,6 +831,8 @@ deploy_node() {
     DEP_ENV="$DEP_ENV DB_OPTS=mysql/pxc5657.cnf"
   elif [[ "$DEP_ENV" == *'PXC=8'* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mysql/pxc8-repl-gtid.cnf"
+  elif [[ "$DEP_ENV" == *'REPLICATION_TYPE=group'* ]] ; then
+    DEP_ENV="$DEP_ENV DB_OPTS=mysql/gr.cnf"
   elif [[ "$DEP_ENV" == *'PS='* && $ROW_REPLICATION == 1 ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mysql/async-repl-gtid-row.cnf"
   elif [[ "$DEP_ENV" == *'PS='* && $UTF8ENC == 1 ]] ; then

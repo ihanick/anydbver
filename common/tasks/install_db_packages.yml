@@ -17,6 +17,7 @@
     percona_server_version != "" or
     percona_xtradb_cluster_version != "" or
     mysql_version != '' or
+    mysql_router_version != '' or
     orchestrator_version != '' or
     proxysql_version != '' or
     sysbench_version != '' or

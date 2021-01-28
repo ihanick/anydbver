@@ -90,5 +90,5 @@ if [[ "x$TYPE" == "xgroup" ]] ; then
     fi
 
     mysqlsh "${MASTER_USER}:${MASTER_PASSWORD}@$MASTER_IP" \
-        -e "var c=dba.getCluster();c.addInstance('$MASTER_USER:$MASTER_PASSWORD@$MYIP', {localAddress: '$MYIP:33061', recoveryMethod: 'clone', label: '$MYIP'})"
+        -e "var c=dba.getCluster();c.addInstance('$MASTER_USER:$MASTER_PASSWORD@$MYIP:3306', {localAddress: '$MYIP:33061', recoveryMethod: 'clone', label: '$MYIP'})"
 fi

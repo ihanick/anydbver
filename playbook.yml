@@ -54,6 +54,7 @@
     mariadb_version: "{{ lookup('vars', 'extra_mariadb_version', default=lookup('env','MARIADB',default='') ) }}"
     galera:  "{{ lookup('vars', 'extra_galera', default=lookup('env','GALERA',default='') ) }}"
     mysql_version: "{{ lookup('vars', 'extra_mysql_version', default=lookup('env','MYSQL',default='') ) }}"
+    mysql_router_version: "{{ lookup('vars', 'extra_mysql_router_version', default=lookup('env','MYSQL_ROUTER',default='') ) }}"
     orchestrator_version: "{{ lookup('vars', 'extra_orchestrator_version', default=lookup('env','ORCHESTRATOR',default='') ) }}"
     debug_packages: "{{ lookup('vars', 'extra_debug_packages', default=lookup('env','DEBUG_PACKAGES',default='') ) }}"
     sysbench_version: "{{ lookup('vars', 'extra_sysbench_version', default=lookup('env','SYSBENCH',default='') ) }}"
@@ -119,6 +120,7 @@
       'percona_proxysql' if percona_proxysql_version != '' else
       'mariadb_server' if mariadb_version != '' else
       'mysql' if mysql_version != '' else
+      'mysql_router' if mysql_router_version != '' else
       'orchestrator' if orchestrator_version != '' else
       'sysbench' if sysbench_version != '' else
       'ldap_server' if ldap_server != '' else
@@ -180,7 +182,7 @@
       register: percona_release_enabled
       
     - name: MySQL repo
-      when: mysql_version != ''
+      when: mysql_version != '' or mysql_router_version != ''
       block:
         - name: MySQL 8.0 yum repo
           when: >
@@ -347,6 +349,11 @@
           when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'
           apt:
             deb: "{{os[dist][soft].url}}"
+
+    - name: Boostrap MySQL Router
+      when: mysql_router_version != '' and master_ip != ''
+      command:
+        cmd: mysqlrouter --bootstrap "{{ db_user }}:{{ db_password }}@{{ master_ip }}:3306" --directory /etc/mysqlrouter --user mysqlrouter
 
     - name: Start database with systemd
       when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )

@@ -199,6 +199,15 @@ el7:
       - "mysql-community-server-{{mysql_version}}.el7.x86_64"
     mysql_shell_packages:
       - "https://dev.mysql.com/get/Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el7.x86_64.rpm"
+  mysql_router:
+    repo_url: https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm
+    systemd_service: "mysqlrouter"
+    cnf_file: '/etc/my.cnf'
+    install_packages:
+      - "mysql-community-common-{{mysql_router_version}}.el7.x86_64"
+      - "mysql-community-libs-{{mysql_router_version}}.el7.x86_64"
+      - "mysql-community-client-{{mysql_router_version}}.el7.x86_64"
+      - "mysql-router-community-{{mysql_router_version}}.el7.x86_64"
   proxysql:
     systemd_service: "proxysql"
     install_packages:
