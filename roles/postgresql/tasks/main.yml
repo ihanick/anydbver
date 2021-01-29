@@ -21,6 +21,22 @@
     cmd: /usr/bin/percona-release enable ppg-13
     creates: /etc/yum.repos.d/percona-ppg-13-release.repo
 
+- name: Enable EPEL
+  when: >
+    'development' in db_features.split(',') and
+    (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  package:
+    name: epel-release
+    state: present
+
+- name: Enable CentOS Linux Software Collections
+  when: >
+    'development' in db_features.split(',') and
+    (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  package:
+    name: centos-release-scl
+    state: present
+
 - name: Postgresql repo
   when: postgresql_version != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   yum:
@@ -103,6 +119,11 @@
       /var/lib/pgsql/{{maj}}/data
       postgresql-{{maj}}
     creates: /root/replication.configured
+
+- name: Start database with systemd
+  when: start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
+  command:
+    cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
 
 - name: Create LDAP user in postgres
   when: (postgresql_version != '' or percona_postgresql_version != '') and ldap_server_ip != '' and db_user != ''

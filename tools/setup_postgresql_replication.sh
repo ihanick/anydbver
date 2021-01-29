@@ -43,7 +43,7 @@ EOF1
 primary_slot_name = '$SLOT'
 EOF
     fi
-    systemctl start $SYSTEMD_UNIT
+    # it's a next step in playbook: systemctl start $SYSTEMD_UNIT
 
     touch /root/replication.configured
 fi

@@ -7,6 +7,7 @@
       os[dist][soft].install_packages +
       ( [] if debug_packages == '' else
         os[dist][soft].install_packages + os[dist][soft].install_debug_packages) +
+      ( [] if not ('development' in db_features.split(',') and 'development_packages' in os[dist][soft]) else os[dist][soft].development_packages) +
       ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else
         os[dist][soft].rocksdb_packages)
     }}
@@ -38,6 +39,7 @@
         os[dist][soft].install_debug_packages) +
       ( [] if replication_type != 'group' else
         os[dist][soft].mysql_shell_packages) +
+      ( [] if not ('development' in db_features.split(',') and 'development_packages' in os[dist][soft]) else os[dist][soft].development_packages) +
       ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else
         os[dist][soft].rocksdb_packages)
     }}

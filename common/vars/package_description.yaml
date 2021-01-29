@@ -269,6 +269,8 @@ el7:
       - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-{{postgresql_version}}"
       - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-server-{{postgresql_version}}"
       - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-contrib-{{postgresql_version}}"
+    development_packages:
+      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-devel-{{postgresql_version}}"
 
 el8:
   proxysql:

@@ -22,6 +22,7 @@
     pmm_client_version: "{{ lookup('vars', 'extra_pmm_client_version', default=lookup('env','PMM_CLIENT',default='') ) }}"
     pmm_url: "{{ lookup('vars', 'extra_pmm_url', default=lookup('env','PMM_URL',default='') ) }}"
     percona_postgresql_version: "{{ lookup('vars', 'extra_percona_postgresql_version', default=lookup('env', 'PPGSQL', default='') ) }}"
+    patroni_version: "{{ lookup('vars', 'extra_percona_patroni_version', default=lookup('env', 'PATRONI', default='') ) }}"
     pgpool_version: "{{ lookup('vars', 'extra_pgpool_version', default=lookup('env', 'PGPOOL', default='') ) }}"
     odyssey_version: "{{ lookup('vars', 'extra_odyssey_version', default=lookup('env', 'ODYSSEY', default='') ) }}"
     walg_version:  "{{ lookup('vars', 'extra_walg_version', default=lookup('env', 'WALG', default='') ) }}"
@@ -42,6 +43,7 @@
     k3s_flannel_backend: "{{ lookup('vars', 'extra_k3s_flannel_backend', default=lookup('env','K3S_FLANNEL_BACKEND',default='vxlan') ) }}"
     kube_config: "{{ lookup('vars', 'extra_kube_config', default=lookup('env','KUBE_CONFIG',default='') ) }}"
     master_ip: "{{ lookup('vars', 'extra_master_ip', default=lookup('env','DB_IP',default='') ) }}"
+    etcd_ip: "{{ lookup('vars', 'extra_etcd_ip', default=lookup('env','ETCD_IP',default='') ) }}"
     replication_type: "{{ lookup('vars', 'extra_replication_type', default=lookup('env','REPLICATION_TYPE',default='') ) }}"
     cluster_name:  "{{ lookup('vars', 'extra_cluster_name', default=lookup('env','CLUSTER',default='cluster1') ) }}"
     mongo_replicaset: "{{ lookup('vars', 'extra_mongo_replicaset', default=lookup('env','REPLICA_SET',default='') ) }}"
@@ -227,6 +229,11 @@
       include_role:
         name: postgresql
 
+    - name: Patroni Role
+      when: patroni_version != ''
+      include_role:
+        name: patroni
+
     - name: MongoDB Role
       when: psmdb_version != '' or pbm_version != ""
       include_role:
@@ -356,7 +363,7 @@
         cmd: mysqlrouter --bootstrap "{{ db_user }}:{{ db_password }}@{{ master_ip }}:3306" --directory /etc/mysqlrouter --user mysqlrouter
 
     - name: Start database with systemd
-      when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
+      when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and postgresql_version == '' and percona_postgresql_version == ''
       command:
         cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
 

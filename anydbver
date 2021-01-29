@@ -42,6 +42,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg"
     echo "$0 deploy pg:12.3"
     echo "$0 deploy pg:12.3 node1 pg:12.3 master:default"
+    echo "$0 deploy pg:13 patroni node1 pg:13 master:default patroni etcd-ip:default node2 pg:13 master:default patroni etcd-ip:default"
     echo "$0 deploy pmm node1 ppg pmm-client pmm-server:default"
     echo "$0 deploy psmdb"
     echo "$0 deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0"
@@ -710,6 +711,11 @@ deploy_node() {
         DEP_ENV="$DEP_ENV DB_IP=default "
       fi
     fi
+    if [[ $i == "etcd-ip:"* ]] ; then
+        ETCD_NODE=$(get_version "$i")
+        DEP_ENV="$DEP_ENV ETCD_IP=$ETCD_NODE "
+    fi
+
     if [[ $i == "group-replication" ]] ; then
       DEP_ENV="$DEP_ENV REPLICATION_TYPE=group "
     fi
@@ -737,6 +743,10 @@ deploy_node() {
         DEP_ENV="$DEP_ENV SAMBA_IP=default "
       fi
     fi
+    if [[ $i == "patroni" ]] ; then
+      FEATURES+=( development )
+      DEP_ENV="$DEP_ENV PATRONI=1"
+    fi
     if [[ $i == "rbr" ]] || [[ $i == "row" ]] || [[ $i == "row-based-replication" ]] || [[ $i == "row_based_replication" ]] ; then
       ROW_REPLICATION=1
     fi
@@ -745,6 +755,9 @@ deploy_node() {
     fi
     if [[ $i == "gtid" ]] ; then
       FEATURES+=( gtid )
+    fi
+    if [[ $i == "development" || $i == "devel" ]] ; then
+      FEATURES+=( development )
     fi
     if [[ $i == "master" ]] ; then
       FEATURES+=( master )
@@ -820,6 +833,9 @@ deploy_node() {
     [[ "$DEP_ENV" == *CLUSTER=* ]] || DEP_ENV="$DEP_ENV CLUSTER=cluster1"
     CLUSTER_NAME=$(echo "$i" | sed -re 's/^.*CLUSTER=([^ ]+).*$/\1/' )
     test -f secret/${CLUSTER_NAME}-ssl.tar.gz && rm -f secret/${CLUSTER_NAME}-ssl.tar.gz
+  fi
+  if [[ "$DEP_ENV" == *'PATRONI='* ]] ; then
+    [[ "$DEP_ENV" == *CLUSTER=* ]] || DEP_ENV="$DEP_ENV CLUSTER=cluster1"
   fi
   if  [[ "$DEP_ENV" == *DB_OPTS* ]] ; then
     :
@@ -1026,6 +1042,11 @@ if [ "x$1" = "xdeploy" ] ; then
       LDAP_NODE=$(echo "$i" | perl -ne '/LDAP_IP=(\S*) / and print $1')
       LDAP_IP=$(find_node_ip $LDAP_NODE)
       i=$(echo "$i"|sed -e "s/LDAP_IP=$LDAP_NODE/LDAP_IP=$LDAP_IP/g")
+    fi
+    if echo "$i" | grep -q ETCD_IP ; then
+      ETCD_NODE=$(echo "$i" | perl -ne '/ETCD_IP=(\S*) / and print $1')
+      ETCD_IP=$(find_node_ip $ETCD_NODE)
+      i=$(echo "$i"|sed -e "s/ETCD_IP=$ETCD_NODE/ETCD_IP=$ETCD_IP/g")
     fi
     if echo "$i" | grep -q K3S_URL ; then
       MASTER_NODE=$(echo "$i" | perl -ne '/K3S_URL=(\S*) / and print $1')
