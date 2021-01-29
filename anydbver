@@ -19,6 +19,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy percona-server"
     echo "$0 deploy ps:5.7"
     echo "$0 deploy ps:5.7 mydumper"
+    echo "$0 deploy hn:vault.percona.local vault node1 ps:8.0 vault-server:vault.percona.local"
     echo "$0 deploy mysql"
     echo -e $0' deploy \\\n  hn:mysql_rs0_gr0 mysql:8.0.18 group-replication \\\n  node1 hn:mysql_rs0_gr1 mysql:8.0.18 group-replication master:default \\\n  node2 hn:mysql_rs0_gr2 mysql:8.0.18 group-replication master:default \\\n  node3 hn:mysql_rs0_router mysql-router:8.0.18 master:default'
     echo "$0 deploy mariadb:10.4"
@@ -743,6 +744,9 @@ deploy_node() {
         DEP_ENV="$DEP_ENV SAMBA_IP=default "
       fi
     fi
+    if [[ $i == "vault" ]] ; then
+      DEP_ENV="$DEP_ENV VAULT=1"
+    fi
     if [[ $i == "patroni" ]] ; then
       FEATURES+=( development )
       DEP_ENV="$DEP_ENV PATRONI=1"
@@ -796,6 +800,14 @@ deploy_node() {
         PMM_NODE=default
       fi
       DEP_ENV="$DEP_ENV PMM_URL=$PMM_NODE"
+    fi
+    if [[ $i == "vault-server" ]] || [[ $i == "vault-server:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VAULT_NODE=$(get_version "$i")
+      else
+        VAULT_NODE=default
+      fi
+      DEP_ENV="$DEP_ENV VAULT_URL=$VAULT_NODE"
     fi
 
     if [[ $i == "ldap" ]] || [[ $i == "ldap-server"* ]] ; then
@@ -1109,6 +1121,10 @@ if [ "x$1" = "xdeploy" ] ; then
           /var/lib/mysql/server-key.pem > secret/${CLUSTER_NAME}-ssl.tar.gz
     fi
 
+    if echo "$i" | grep -q VAULT= ; then
+      NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
+      ./anydbver ssh $NODE tar c /etc/vault.d/ca.crt /root/.vault-token > secret/vault-client.tar
+    fi
   done
 
 fi

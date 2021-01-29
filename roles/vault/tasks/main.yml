@@ -1,0 +1,19 @@
+---
+# tasks file for vault
+- name: Create SSL certificates
+  command:
+    cmd: /bin/bash /vagrant/tools/generate_ssl_certs.sh vault.percona.local client.percona.local
+    creates: /root/certs.tar.gz
+
+- name: Make Vault CA trusted
+  shell:
+    cmd: >-
+      cp /root/ssl/ca.pem /etc/pki/ca-trust/source/anchors/vault-local.pem ;
+      update-ca-trust 
+    creates: /etc/pki/ca-trust/source/anchors/vault-local.pem
+
+- name: Setup Vault
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_vault_server.sh vault.percona.local 1.6.1
+    creates: /etc/vault/vault.hcl
+

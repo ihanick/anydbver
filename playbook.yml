@@ -21,6 +21,8 @@
     pmm_server_version: "{{ lookup('vars', 'extra_pmm_server_version', default=lookup('env','PMM_SERVER',default='') ) }}"
     pmm_client_version: "{{ lookup('vars', 'extra_pmm_client_version', default=lookup('env','PMM_CLIENT',default='') ) }}"
     pmm_url: "{{ lookup('vars', 'extra_pmm_url', default=lookup('env','PMM_URL',default='') ) }}"
+    vault_url: "{{ lookup('vars', 'extra_vault_url', default=lookup('env','VAULT_URL',default='') ) }}"
+    vault_version: "{{ lookup('vars', 'extra_percona_vault_version', default=lookup('env', 'VAULT', default='') ) }}"
     percona_postgresql_version: "{{ lookup('vars', 'extra_percona_postgresql_version', default=lookup('env', 'PPGSQL', default='') ) }}"
     patroni_version: "{{ lookup('vars', 'extra_percona_patroni_version', default=lookup('env', 'PATRONI', default='') ) }}"
     pgpool_version: "{{ lookup('vars', 'extra_pgpool_version', default=lookup('env', 'PGPOOL', default='') ) }}"
@@ -224,6 +226,11 @@
         url: https://repo.symas.com/configs/SOFL/rhel8/sofl.repo
         dest: /etc/yum.repos.d/sofl.repo
 
+    - name: Vault Role
+      when: vault_version != ''
+      include_role:
+        name: vault
+
     - name: Postgresql Role
       when: postgresql_version != '' or percona_postgresql_version != '' or odyssey_version != '' or walg_version != ''
       include_role:
@@ -361,6 +368,12 @@
       when: mysql_router_version != '' and master_ip != ''
       command:
         cmd: mysqlrouter --bootstrap "{{ db_user }}:{{ db_password }}@{{ master_ip }}:3306" --directory /etc/mysqlrouter --user mysqlrouter
+
+    - name: Setup Vault keyring plugin for Percona Server
+      when: percona_server_version != '' and vault_url != ''
+      command:
+        cmd: /bin/bash /vagrant/tools/setup_ps_vault.sh "{{vault_url}}" "{{ os[dist][soft].cnf_file }}"
+        creates: /var/lib/mysql/keyring_vault.conf
 
     - name: Start database with systemd
       when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and postgresql_version == '' and percona_postgresql_version == ''

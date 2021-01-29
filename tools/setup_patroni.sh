@@ -133,6 +133,8 @@ tags:
 EOF
 
 chown postgres:postgres -R /home/postgres/archived /etc/patroni/${ETCD_NAME}.yml
+chmod 0600 -R /home/postgres/archived /etc/patroni/${ETCD_NAME}.yml
+
 
 
 cat > /etc/systemd/system/patroni.service << EOF
