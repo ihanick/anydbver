@@ -1,0 +1,183 @@
+---
+# tasks file for mysql
+- name: enable Percona MySQL 8.0 repo
+  when: percona_server_version.startswith('8.0') or percona_xtradb_cluster_version.startswith('8.0')
+  command:
+    cmd: /usr/bin/percona-release enable "{{ os[dist][soft].repo_enable_str }}"
+    creates: "{{ os[dist][soft].repo_file }}"
+  register: percona_release_enabled
+  
+- name: MySQL repo
+  when: mysql_version != '' or mysql_router_version != ''
+  block:
+    - name: MySQL 8.0 yum repo
+      when: >
+        (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+      yum:
+        name: "{{os[dist][soft].repo_url}}"
+        state: present
+    - name: Switch mysql repo 5.7
+      when: >
+        mysql_version.startswith('5.7') and
+        (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+      shell:
+        cmd: "yum-config-manager --disable mysql80-community; yum-config-manager --enable mysql57-community"
+    - name: Switch mysql repo 5.6
+      when: >
+        mysql_version.startswith('5.6') and
+        (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+      shell:
+        cmd: "yum-config-manager --disable mysql80-community; yum-config-manager --enable mysql56-community"
+
+- name: Disable Redhat MySQL module
+  when: (mysql_version != '' or percona_server_version != '' or percona_xtradb_cluster_version != '') and dist == 'el8'
+  command:
+    cmd: dnf -y module disable mysql
+
+- name: Install db packages
+  include_tasks: common/tasks/install_db_packages.yml
+
+- name: install Percona XtraBackup
+  when: percona_xtrabackup_version != ""
+  package:
+    name: "percona-xtrabackup{{ '-24' if percona_xtrabackup_version.startswith('2.4') else '-80' if percona_xtrabackup_version.startswith('8.0')  else '' }}-{{ percona_xtrabackup_version }}.{{dist}}.x86_64"
+    state: present
+
+- name: Create MySQL Database
+  when: >
+    (
+    percona_server_version != '' or
+    percona_xtradb_cluster_version != '' or
+    mysql_version != ''
+    ) and db_password != ''
+  command:
+    cmd: /bin/bash /vagrant/tools/create_mysql_db_with_password.sh "{{ db_password }}" "{{ 'oldgrant' if percona_server_version.startswith('5.6') or percona_xtradb_cluster_version.startswith('5.6') or mysql_version.startswith('5.6') else 'no' }}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
+    creates: /root/.my.cnf
+
+- name: Apply database options from file
+  when: (percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != '') and db_opts_file != ''
+  command:
+    cmd: >-
+      /bin/bash /vagrant/tools/apply_mysql_conf.sh
+      "{{ os[dist][soft].cnf_file }}"
+      "/vagrant/configs/{{ db_opts_file }}"
+      "{{cluster_name}}"
+      "{{db_user}}"
+      "{{db_password}}"
+    creates: "/root/{{ db_opts_file | basename }}.applied"
+
+- name: Boostrap MySQL Router
+  when: mysql_router_version != '' and master_ip != ''
+  command:
+    cmd: mysqlrouter --bootstrap "{{ db_user }}:{{ db_password }}@{{ master_ip }}:3306" --directory /etc/mysqlrouter --user mysqlrouter
+
+- name: Setup Vault keyring plugin for Percona Server
+  when: percona_server_version != '' and vault_url != ''
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_ps_vault.sh "{{vault_url}}" "{{ os[dist][soft].cnf_file }}"
+    creates: /var/lib/mysql/keyring_vault.conf
+
+- name: ProxySQL
+  when: proxysql_version !=''
+  block:
+    - name: install ProxySQL deb package
+      when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'
+      apt:
+        deb: "{{os[dist][soft].url}}"
+
+- name: Start database with systemd
+  when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and postgresql_version == '' and percona_postgresql_version == ''
+  command:
+    cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
+
+- name: Setup and start replication
+  when: master_ip != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != '')
+  shell:
+    cmd: /bin/bash /vagrant/tools/setup_mysql_replication.sh "{{ 'gtid' if replication_type == '' else replication_type }}" "{{ master_ip }}" root "{{ db_password }}" "{{soft}}" "{{ os[dist][soft].cnf_file }}" "{{os[dist][soft].systemd_service}}" "{{'cluster1' if cluster_name == '' else cluster_name}}"
+    creates: /root/replication.configured
+
+- name: MySQL LDAP
+  when: ldap_server_ip != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
+  block:
+    - name: fill /etc/pam.d/mysqld
+      copy:
+        dest: /etc/pam.d/mysqld
+        content: |
+          auth required pam_ldap.so
+          account required pam_ldap.so
+    - name: setup pam_ldap plugin
+      shell:
+        cmd: /bin/bash /vagrant/tools/setup_ldap_mysql.sh "{{db_user}}"
+        creates: /root/mysql-ldap.applied
+
+- name: MySQL Samba Active Directory
+  when: samba_ip != '' and samba_pass != '' and samba_sid != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
+  shell:
+    cmd: /bin/bash /vagrant/tools/setup_samba_ldap_client.sh "{{samba_ip}}" "{{samba_pass}}" "{{samba_sid}}" mysql
+
+- name: InnoDB ruby
+  when: innodb_ruby_version != ''
+  block:
+    - name: install ruby and gem
+      package:
+        name: ruby
+        state: present
+    - name: install innodb_ruby
+      command:
+        cmd: /usr/bin/gem install innodb_ruby
+        creates: /usr/local/bin/innodb_space
+
+- name: install mysql_random_data_load
+  when: mysql_random_data_load_version != ''
+  shell:
+    warn: false
+    cmd: >-
+      curl -sL https://github.com/Percona-Lab/mysql_random_data_load/releases/download/v{{mysql_random_data_load_version}}/mysql_random_data_load_{{mysql_random_data_load_version}}_Linux_x86_64.tar.gz
+      | tar -C /usr/local/bin -xz mysql_random_data_load
+    creates: /usr/local/bin/mysql_random_data_load
+- name: MySQL connector java
+  when: master_ip != '' and mysql_connector_java_version != ''
+  block:
+    - name: Create /srv/java directory
+      file:
+        path: /srv/java
+        state: directory
+    - name: put example file to /srv/java directory
+      template:
+        src: "{{playbook_dir}}/configs/connectors/java/ConnectorTest.java.j2"
+        dest: /srv/java/ConnectorTest.java
+        mode: '0644'
+    - name: MySQL Connector Java packages
+      package:
+        name: "{{ item }}"
+        state: present
+      with_items: "{{os[dist].mysql_connector_java.install_packages}}"
+
+- name: Install mydumper
+  when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and mydumper_version != ''
+  yum:
+    name: "{{os[dist].mydumper.install_packages}}"
+    state: present
+
+- name: Setup pmm client mysql
+  when: pmm_client_version != '' and pmm_url != '' and percona_server_version != ''
+  register: pmm_admin_mysql_config
+  changed_when: "'already exists' not in pmm_admin_mysql_config.stdout"
+  shell:
+    cmd: >-
+      /usr/bin/pmm-admin add mysql
+      --query-source="{{ 'perfschema' if 'pmm_perfschema' in db_features.split(',') else 'slowlog' }}"
+      --username="{{db_user}}"
+      --password="{{db_password}}"
+
+- name: Enable MySQL Audit plugin
+  when: percona_server_version != '' and start_db != '' and ('audit' in db_features.split(','))
+  shell:
+    cmd: mysql -e "INSTALL PLUGIN audit_log SONAME 'audit_log.so'"
+
+- name: Setup ProxySQL replication hostgroup
+  when: proxysql_version != '' and master_ip != ''
+  shell:
+    cmd: /bin/bash /vagrant/tools/setup_proxysql_repl.sh {{master_ip}} {{db_user}} {{db_password}}
+
+

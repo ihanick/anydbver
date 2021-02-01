@@ -178,40 +178,7 @@
           when: percona_release_deb_installed.changed
           apt:
             update_cache: yes
-    - name: enable Percona MySQL 8.0 repo
-      when: percona_server_version.startswith('8.0') or percona_xtradb_cluster_version.startswith('8.0')
-      command:
-        cmd: /usr/bin/percona-release enable "{{ os[dist][soft].repo_enable_str }}"
-        creates: "{{ os[dist][soft].repo_file }}"
-      register: percona_release_enabled
-      
-    - name: MySQL repo
-      when: mysql_version != '' or mysql_router_version != ''
-      block:
-        - name: MySQL 8.0 yum repo
-          when: >
-            (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
-          yum:
-            name: "{{os[dist][soft].repo_url}}"
-            state: present
-        - name: Switch mysql repo 5.7
-          when: >
-            mysql_version.startswith('5.7') and
-            (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
-          shell:
-            cmd: "yum-config-manager --disable mysql80-community; yum-config-manager --enable mysql57-community"
-        - name: Switch mysql repo 5.6
-          when: >
-            mysql_version.startswith('5.6') and
-            (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
-          shell:
-            cmd: "yum-config-manager --disable mysql80-community; yum-config-manager --enable mysql56-community"
-
-    - name: Disable Redhat MySQL module
-      when: (mysql_version != '' or percona_server_version != '' or percona_xtradb_cluster_version != '') and dist == 'el8'
-      command:
-        cmd: dnf -y module disable mysql
-    
+   
     - name: Enable EPEL
       when: >
         orchestrator_version != '' and
@@ -220,78 +187,6 @@
         name: epel-release
         state: present
 
-    - name: Install symas.com repo for openldap-servers
-      when: dist == 'el8' and ldap_server != ''
-      get_url:
-        url: https://repo.symas.com/configs/SOFL/rhel8/sofl.repo
-        dest: /etc/yum.repos.d/sofl.repo
-
-    - name: Vault Role
-      when: vault_version != ''
-      include_role:
-        name: vault
-
-    - name: Postgresql Role
-      when: postgresql_version != '' or percona_postgresql_version != '' or odyssey_version != '' or walg_version != ''
-      include_role:
-        name: postgresql
-
-    - name: Patroni Role
-      when: patroni_version != ''
-      include_role:
-        name: patroni
-
-    - name: MongoDB Role
-      when: psmdb_version != '' or pbm_version != ""
-      include_role:
-        name: mongodb
-
-    - name: Install db packages
-      include_tasks: common/tasks/install_db_packages.yml
-
-    - name: Install Samba Active Directory server
-      when: samba_ad != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
-      shell:
-        cmd: /bin/bash /vagrant/tools/install_samba_ad.sh
-        creates: /opt/samba/sbin/samba
-
-    - name: Setup Samba Active Directory server
-      when: samba_ad != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
-      shell:
-        cmd: /bin/bash /vagrant/tools/setup_samba_ad.sh
-        creates: /root/samba.configured
-
-    - name: install Percona XtraBackup
-      when: percona_xtrabackup_version != ""
-      package:
-        name: "percona-xtrabackup{{ '-24' if percona_xtrabackup_version.startswith('2.4') else '-80' if percona_xtrabackup_version.startswith('8.0')  else '' }}-{{ percona_xtrabackup_version }}.{{dist}}.x86_64"
-        state: present
-        
-    - name: Setup LDAP server
-      when: ldap_server != ''
-      command:
-        cmd: /bin/bash /vagrant/tools/setup_ldap_server.sh "{{db_user}}" "{{db_password}}" "ssl"
-        creates: /root/ldaprootpasswd.ldif
-
-    - name: Setup LDAP on client
-      when: ldap_server_ip != ''
-      command:
-        cmd: /bin/bash /vagrant/tools/setup_ldap_client.sh "{{ldap_server_ip}}"
-        creates: /root/ldap-client.configured
-
-    - name: Setup Kerberos server
-      when: kerberos_server != ''
-      command:
-        cmd: /bin/bash /vagrant/tools/setup_kerberos_server.sh "{{db_user}}" "{{db_password}}"
-        creates: /root/kerberos.configured
-
-    - name: Setup Kerberos client
-      when: kerberos_client != ''
-      command:
-        cmd: /bin/bash /vagrant/tools/setup_kerberos_client.sh "{{db_user}}" "{{db_password}}" "{{ 'yes' if samba_kerberos != '' else 'no' }}"
-        creates: /root/kerberos-client.configured
-
-    # PMM
     - name: install PMM client
       when: pmm_client_version != ""
       package:
@@ -305,305 +200,46 @@
       shell:
         cmd: '/usr/bin/pmm-admin config --server-insecure-tls --server-url="{{pmm_url}}" || true'
 
-    - name: install podman (like docker)
-      when: pmm_server_version != ""
-      package:
-        name: podman
-        state: present
-    - name: Start PMM
-      when: pmm_server_version != ""
-      shell:
-        cmd: "podman create -v /srv --name pmm-data docker.io/percona/pmm-server:{{ pmm_server_version }} /bin/true ; podman run -d -p 80:80 -p 443:443 --volumes-from pmm-data --name pmm-server docker.io/percona/pmm-server:{{ pmm_server_version }} ; podman ps | grep pmm-server && touch /root/pmm-server-created"
-        creates: /root/pmm-server-created
-    - name: Set PMM2 password
-      when: pmm_server_version.startswith('2.') and db_password != ''
-      command:
-        cmd: podman exec -t pmm-server bash -c  'ln -s /srv/grafana /usr/share/grafana/data; grafana-cli --homepath /usr/share/grafana admin reset-admin-password {{db_password}}'
+    - name: User Security LDAP, PAM, Active Directory, Vault, Kerberos
+      when: vault_version != '' or samba_ad != '' or ldap_server != '' or kerberos_client != ''
+      include_role:
+        name: user_security
 
-    - name: Setup PGPool
-      when: pgpool_version != '' and master_ip != ''
-      shell:
-        cmd: /bin/bash /vagrant/tools/setup_pg_pool.sh "{{master_ip}}" "{{db_password}}"
-        creates: /root/pgpool.applied
+    - name: Postgresql Role
+      when: postgresql_version != '' or percona_postgresql_version != '' or odyssey_version != '' or walg_version != '' or pgpool_version != ''
+      include_role:
+        name: postgresql
 
-    - name: install Percona Toolkit
-      when: percona_toolkit_version != ""
-      package:
-        name: "percona-toolkit-{{ percona_toolkit_version }}.{{dist}}.x86_64"
-        state: present
+    - name: Patroni Role
+      when: patroni_version != ''
+      include_role:
+        name: patroni
 
-    - name: Create MySQL Database
-      when: >
-        (
-        percona_server_version != '' or
-        percona_xtradb_cluster_version != '' or
-        mysql_version != ''
-        ) and db_password != ''
-      command:
-        cmd: /bin/bash /vagrant/tools/create_mysql_db_with_password.sh "{{ db_password }}" "{{ 'oldgrant' if percona_server_version.startswith('5.6') or percona_xtradb_cluster_version.startswith('5.6') or mysql_version.startswith('5.6') else 'no' }}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
-        creates: /root/.my.cnf
+    - name: MongoDB Role
+      when: psmdb_version != '' or pbm_version != ""
+      include_role:
+        name: mongodb
 
+    - name: MySQL Role
+      when: mysql_version != '' or percona_server_version != "" or percona_xtradb_cluster_version != "" or percona_xtrabackup_version != "" or mysql_router_version != "" or innodb_ruby_version != '' or mydumper_version != '' or mysql_connector_java_version != '' or mysql_random_data_load_version != '' or proxysql_version != '' or percona_proxysql_version != ''
+      include_role:
+        name: mysql
 
-    - name: Apply database options from file
-      when: (percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != '') and db_opts_file != ''
-      command:
-        cmd: >-
-          /bin/bash /vagrant/tools/apply_mysql_conf.sh
-          "{{ os[dist][soft].cnf_file }}"
-          "/vagrant/configs/{{ db_opts_file }}"
-          "{{cluster_name}}"
-          "{{db_user}}"
-          "{{db_password}}"
-        creates: "/root/{{ db_opts_file | basename }}.applied"
+    - name: Kubernetes Role
+      when: zalando_pg_op_version != '' or percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or k3s_url != '' or k3s_version != '' or kube_config != ''
+      include_role:
+        name: kubernetes
 
-    - name: ProxySQL
-      when: proxysql_version !=''
-      block:
-        - name: install ProxySQL deb package
-          when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'
-          apt:
-            deb: "{{os[dist][soft].url}}"
+    - name: PMM, Percona Toolkit Role
+      when: pmm_server_version != "" or percona_toolkit_version != ""
+      include_role:
+        name: tools_and_monitoring
 
-    - name: Boostrap MySQL Router
-      when: mysql_router_version != '' and master_ip != ''
-      command:
-        cmd: mysqlrouter --bootstrap "{{ db_user }}:{{ db_password }}@{{ master_ip }}:3306" --directory /etc/mysqlrouter --user mysqlrouter
-
-    - name: Setup Vault keyring plugin for Percona Server
-      when: percona_server_version != '' and vault_url != ''
-      command:
-        cmd: /bin/bash /vagrant/tools/setup_ps_vault.sh "{{vault_url}}" "{{ os[dist][soft].cnf_file }}"
-        creates: /var/lib/mysql/keyring_vault.conf
+    - name: Install db packages
+      include_tasks: common/tasks/install_db_packages.yml
 
     - name: Start database with systemd
       when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and postgresql_version == '' and percona_postgresql_version == ''
       command:
         cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
-
-    - name: Setup and start replication
-      when: master_ip != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != '')
-      shell:
-        cmd: /bin/bash /vagrant/tools/setup_mysql_replication.sh "{{ 'gtid' if replication_type == '' else replication_type }}" "{{ master_ip }}" root "{{ db_password }}" "{{soft}}" "{{ os[dist][soft].cnf_file }}" "{{os[dist][soft].systemd_service}}" "{{'cluster1' if cluster_name == '' else cluster_name}}"
-        creates: /root/replication.configured
-
-    - name: MySQL LDAP
-      when: ldap_server_ip != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
-      block:
-        - name: fill /etc/pam.d/mysqld
-          copy:
-            dest: /etc/pam.d/mysqld
-            content: |
-              auth required pam_ldap.so
-              account required pam_ldap.so
-        - name: setup pam_ldap plugin
-          shell:
-            cmd: /bin/bash /vagrant/tools/setup_ldap_mysql.sh "{{db_user}}"
-            creates: /root/mysql-ldap.applied
-
-    - name: MySQL Samba Active Directory
-      when: samba_ip != '' and samba_pass != '' and samba_sid != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
-      shell:
-        cmd: /bin/bash /vagrant/tools/setup_samba_ldap_client.sh "{{samba_ip}}" "{{samba_pass}}" "{{samba_sid}}" mysql
-
-    - name: Install k3s, kubernetes distribution
-      include_tasks: common/tasks/kubernetes_install.yaml
-      when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or zalando_pg_op_version != '' or (k3s_url != '' and k3s_token != '') or k3s_version != '') and kube_config == ''
-
-    - name: Install kubectl
-      when: kube_config != ''
-      block:
-        - file: path=/root/.kube state=directory mode='0755'
-        - copy:
-            src: "{{playbook_dir}}/secret/{{kube_config}}"
-            dest: /root/.kube/config
-            mode: "0600"
-            owner: root
-            group: root
-        - shell:
-            warn: false
-            cmd: curl -o /usr/bin/kubectl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl; chmod +x /usr/bin/kubectl
-            creates: /usr/bin/kubectl
-        - include_tasks: common/tasks/helm_install.yaml
-
-    - name: Install git for Percona Operator setup
-      when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != "" or zalando_pg_op_version != ""
-      package:
-        name: git
-        state: present
-    - name: Install operator
-      when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != ""
-      shell:
-        cmd: >-
-          cd /root;
-          git clone -b {{'v' if percona_k8s_op_version | regex_search('^[0-9]+') else ''}}{{ percona_k8s_op_version }} https://github.com/percona/{{ percona_k8s_op_name }}.git;
-          cd {{ percona_k8s_op_name }};
-          until kubectl wait --for=condition=ready -n kube-system pod -l k8s-app=kube-dns &>/dev/null;do sleep 2;done;
-          kubectl apply -f deploy/bundle.yaml;
-          kubectl apply -f deploy/secrets.yaml;
-          kubectl apply -f deploy/backup-s3.yaml;
-          until
-           kubectl wait --for=condition=ready pod -l name={{ percona_k8s_op_name }} &>/dev/null ||
-           kubectl wait --for=condition=ready pod -l app.kubernetes.io/name={{ percona_k8s_op_name }} &>/dev/null ;
-          do sleep 2;done
-        creates: /root/{{ percona_k8s_op_name }}/deploy/cr.yaml
-    - name: Download yq
-      when: percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != ''
-      get_url:
-        url: 'https://github.com/mikefarah/yq/releases/download/3.3.0/yq_linux_amd64'
-        dest: /usr/local/bin/yq
-        mode: '0755'
-    - name: Prepare cr.yaml file for Percona K8S operators (single/multi node)
-      when: percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != ''
-      shell:
-        warn: false
-        cmd: >-
-          mv /root/{{ percona_k8s_op_name }}/deploy/cr-min.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
-          if test $( kubectl get nodes 2>/dev/null|wc -l ) -lt 3 ;
-          then
-          sed
-          -e 's/antiAffinityTopologyKey: .*$/antiAffinityTopologyKey: \"none\"/g'
-          -e 's/allowUnsafeConfigurations: false/allowUnsafeConfigurations: true/'
-          /root/{{ percona_k8s_op_name }}/deploy/cr.yaml > /root/{{ percona_k8s_op_name }}/deploy/cr-single.yaml;
-          mv /root/{{ percona_k8s_op_name }}/deploy/cr-single.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
-          fi;
-          touch /root/{{ percona_k8s_op_name }}-k8s.single-multi.applied
-        creates: /root/{{ percona_k8s_op_name }}-k8s.single-multi.applied
-    - name: Prepare cr.yaml file for Percona K8S operators (pmm)
-      when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '') and k8s_pmm != ''
-      shell:
-        warn: false
-        cmd: >-
-          sed -e 's/c3VwYXxefHBheno=/YWRtaW4=/' /root/{{ percona_k8s_op_name }}/deploy/secrets.yaml  | kubectl apply -f - ;
-          /usr/local/bin/yq merge -x /root/{{ percona_k8s_op_name }}/deploy/cr.yaml /vagrant/configs/k8s/cr-pmm.yaml
-          > /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml;
-          mv /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
-          touch /root/{{ percona_k8s_op_name }}-k8s.pmm.applied
-        creates: /root/{{ percona_k8s_op_name }}-k8s.pmm.applied
-    - name: Prepare cr.yaml file for Percona K8S operators (gtid)
-      when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '') and ('gtid' in db_features.split(',') )
-      shell:
-        warn: false
-        cmd: >-
-          /usr/local/bin/yq merge -x /root/{{ percona_k8s_op_name }}/deploy/cr.yaml /vagrant/configs/k8s/cr-mysql-gtid.yaml
-          > /root/{{ percona_k8s_op_name }}/deploy/cr-gtid.yaml;
-          mv /root/{{ percona_k8s_op_name }}/deploy/cr-gtid.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
-          touch /root/{{ percona_k8s_op_name }}-k8s.gtid.applied
-        creates: /root/{{ percona_k8s_op_name }}-k8s.gtid.applied
-    - name: Prepare cr.yaml file for Percona K8S operators (pxc57)
-      when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '') and ('pxc57' in db_features.split(',') )
-      shell:
-        warn: false
-        cmd: >-
-          /usr/local/bin/yq merge -x /root/{{ percona_k8s_op_name }}/deploy/cr.yaml /vagrant/configs/k8s/cr-mysql-pxc57.yaml
-          > /root/{{ percona_k8s_op_name }}/deploy/cr-pxc57.yaml;
-          mv /root/{{ percona_k8s_op_name }}/deploy/cr-pxc57.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
-          touch /root/{{ percona_k8s_op_name }}-k8s.pxc57.applied
-        creates: /root/{{ percona_k8s_op_name }}-k8s.pxc57.applied
-    - name: Prepare cr.yaml file for Percona K8S operators (backup)
-      when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '') and ('backup' in db_features.split(',') )
-      shell:
-        warn: false
-        cmd: >-
-          /usr/local/bin/yq merge -x /root/{{ percona_k8s_op_name }}/deploy/cr.yaml /vagrant/configs/k8s/cr-minio.yaml
-          > /root/{{ percona_k8s_op_name }}/deploy/cr-backup.yaml;
-          mv /root/{{ percona_k8s_op_name }}/deploy/cr-backup.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
-          touch /root/{{ percona_k8s_op_name }}-k8s.backup.applied
-        creates: /root/{{ percona_k8s_op_name }}-k8s.backup.applied
-    - name: Start database cluster in k8s
-      when: percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != ''
-      shell:
-        warn: false
-        cmd: >-
-          kubectl apply -f /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
-          touch /root/{{ percona_k8s_op_name }}-k8s.cr.applied
-        creates: /root/{{ percona_k8s_op_name }}-k8s.cr.applied
-
-
-    - name: install Zalando Postgresql Operator
-      when: zalando_pg_op_version != ''
-      shell:
-        cmd: >-
-          cd /root;
-          git clone -b v{{ zalando_pg_op_version }} https://github.com/zalando/postgres-operator.git;
-          cd postgres-operator;
-          until kubectl wait --for=condition=ready -n kube-system pod -l k8s-app=kube-dns &>/dev/null;do sleep 2;done;
-          kubectl apply -k manifests/;
-          until kubectl wait --for=condition=ready pod -l name=postgres-operator &>/dev/null;do sleep 2;done
-        creates: /root/postgres-operator/manifests/minimal-postgres-manifest.yaml
-
-    - name: Start Postgresql cluster in k8s
-      when: zalando_pg_op_version != ''
-      shell:
-        warn: false
-        cmd: >-
-          cd /root/postgres-operator;
-          kubectl apply -f manifests/minimal-postgres-manifest.yaml;
-          touch /root/zalando_pg.applied
-        creates: /root/zalando_pg.applied
-
-    - name: install mysql_random_data_load
-      when: mysql_random_data_load_version != ''
-      shell:
-        warn: false
-        cmd: >-
-          curl -sL https://github.com/Percona-Lab/mysql_random_data_load/releases/download/v{{mysql_random_data_load_version}}/mysql_random_data_load_{{mysql_random_data_load_version}}_Linux_x86_64.tar.gz
-          | tar -C /usr/local/bin -xz mysql_random_data_load
-        creates: /usr/local/bin/mysql_random_data_load
-    - name: MySQL connector java
-      when: master_ip != '' and mysql_connector_java_version != ''
-      block:
-        - name: Create /srv/java directory
-          file:
-            path: /srv/java
-            state: directory
-        - name: put example file to /srv/java directory
-          template:
-            src: "{{playbook_dir}}/configs/connectors/java/ConnectorTest.java.j2"
-            dest: /srv/java/ConnectorTest.java
-            mode: '0644'
-        - name: MySQL Connector Java packages
-          package:
-            name: "{{ item }}"
-            state: present
-          with_items: "{{os[dist].mysql_connector_java.install_packages}}"
-
-    - name: InnoDB ruby
-      when: innodb_ruby_version != ''
-      block:
-        - name: install ruby and gem
-          package:
-            name: ruby
-            state: present
-        - name: install innodb_ruby
-          command:
-            cmd: /usr/bin/gem install innodb_ruby
-            creates: /usr/local/bin/innodb_space
-    - name: Install mydumper
-      when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and mydumper_version != ''
-      yum:
-        name: "{{os[dist].mydumper.install_packages}}"
-        state: present
-
-    - name: Setup ProxySQL replication hostgroup
-      when: proxysql_version != '' and master_ip != ''
-      shell:
-        cmd: /bin/bash /vagrant/tools/setup_proxysql_repl.sh {{master_ip}} {{db_user}} {{db_password}}
-
-    - name: Setup pmm client mysql
-      when: pmm_client_version != '' and pmm_url != '' and percona_server_version != ''
-      register: pmm_admin_mysql_config
-      changed_when: "'already exists' not in pmm_admin_mysql_config.stdout"
-      shell:
-        cmd: /usr/bin/pmm-admin add mysql --query-source="{{ 'perfschema' if 'pmm_perfschema' in db_features.split(',') else 'slowlog' }}" --username="{{db_user}}" --password="{{db_password}}"
-
-    - name: Enable MySQL Audit plugin
-      when: percona_server_version != '' and start_db != '' and ('audit' in db_features.split(','))
-      shell:
-        cmd: mysql -e "INSTALL PLUGIN audit_log SONAME 'audit_log.so'"
-
-    - name: Setup PMM client with postgres
-      when: pmm_url != '' and (postgresql_version != '' or percona_postgresql_version != '')
-      shell:
-        cmd: /bin/bash -e /vagrant/tools/setup_pmm.sh "{{soft}}" postgres "{{db_password}}" pmm_user "{{db_password}}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}" "{{ 'yes' if pmm_client_version != '' and (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') or percona_postgresql_version.startswith('13.') ) else 'no' }}"
-        creates: /root/pmm-postgresql.applied
 

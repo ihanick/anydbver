@@ -1,0 +1,138 @@
+---
+# tasks file for kubernetes
+- name: Install k3s, kubernetes distribution
+  include_tasks: common/tasks/kubernetes_install.yaml
+  when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or zalando_pg_op_version != '' or (k3s_url != '' and k3s_token != '') or k3s_version != '') and kube_config == ''
+
+- name: Install kubectl
+  when: kube_config != ''
+  block:
+    - file: path=/root/.kube state=directory mode='0755'
+    - copy:
+        src: "{{playbook_dir}}/secret/{{kube_config}}"
+        dest: /root/.kube/config
+        mode: "0600"
+        owner: root
+        group: root
+    - shell:
+        warn: false
+        cmd: curl -o /usr/bin/kubectl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl; chmod +x /usr/bin/kubectl
+        creates: /usr/bin/kubectl
+    - include_tasks: common/tasks/helm_install.yaml
+
+- name: Install git for Percona Operator setup
+  when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != "" or zalando_pg_op_version != ""
+  package:
+    name: git
+    state: present
+- name: Install operator
+  when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != ""
+  shell:
+    cmd: >-
+      cd /root;
+      git clone -b {{'v' if percona_k8s_op_version | regex_search('^[0-9]+') else ''}}{{ percona_k8s_op_version }} https://github.com/percona/{{ percona_k8s_op_name }}.git;
+      cd {{ percona_k8s_op_name }};
+      until kubectl wait --for=condition=ready -n kube-system pod -l k8s-app=kube-dns &>/dev/null;do sleep 2;done;
+      kubectl apply -f deploy/bundle.yaml;
+      kubectl apply -f deploy/secrets.yaml;
+      kubectl apply -f deploy/backup-s3.yaml;
+      until
+       kubectl wait --for=condition=ready pod -l name={{ percona_k8s_op_name }} &>/dev/null ||
+       kubectl wait --for=condition=ready pod -l app.kubernetes.io/name={{ percona_k8s_op_name }} &>/dev/null ;
+      do sleep 2;done
+    creates: /root/{{ percona_k8s_op_name }}/deploy/cr.yaml
+- name: Download yq
+  when: percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != ''
+  get_url:
+    url: 'https://github.com/mikefarah/yq/releases/download/3.3.0/yq_linux_amd64'
+    dest: /usr/local/bin/yq
+    mode: '0755'
+- name: Prepare cr.yaml file for Percona K8S operators (single/multi node)
+  when: percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != ''
+  shell:
+    warn: false
+    cmd: >-
+      mv /root/{{ percona_k8s_op_name }}/deploy/cr-min.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
+      if test $( kubectl get nodes 2>/dev/null|wc -l ) -lt 3 ;
+      then
+      sed
+      -e 's/antiAffinityTopologyKey: .*$/antiAffinityTopologyKey: \"none\"/g'
+      -e 's/allowUnsafeConfigurations: false/allowUnsafeConfigurations: true/'
+      /root/{{ percona_k8s_op_name }}/deploy/cr.yaml > /root/{{ percona_k8s_op_name }}/deploy/cr-single.yaml;
+      mv /root/{{ percona_k8s_op_name }}/deploy/cr-single.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
+      fi;
+      touch /root/{{ percona_k8s_op_name }}-k8s.single-multi.applied
+    creates: /root/{{ percona_k8s_op_name }}-k8s.single-multi.applied
+- name: Prepare cr.yaml file for Percona K8S operators (pmm)
+  when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '') and k8s_pmm != ''
+  shell:
+    warn: false
+    cmd: >-
+      sed -e 's/c3VwYXxefHBheno=/YWRtaW4=/' /root/{{ percona_k8s_op_name }}/deploy/secrets.yaml  | kubectl apply -f - ;
+      /usr/local/bin/yq merge -x /root/{{ percona_k8s_op_name }}/deploy/cr.yaml /vagrant/configs/k8s/cr-pmm.yaml
+      > /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml;
+      mv /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
+      touch /root/{{ percona_k8s_op_name }}-k8s.pmm.applied
+    creates: /root/{{ percona_k8s_op_name }}-k8s.pmm.applied
+- name: Prepare cr.yaml file for Percona K8S operators (gtid)
+  when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '') and ('gtid' in db_features.split(',') )
+  shell:
+    warn: false
+    cmd: >-
+      /usr/local/bin/yq merge -x /root/{{ percona_k8s_op_name }}/deploy/cr.yaml /vagrant/configs/k8s/cr-mysql-gtid.yaml
+      > /root/{{ percona_k8s_op_name }}/deploy/cr-gtid.yaml;
+      mv /root/{{ percona_k8s_op_name }}/deploy/cr-gtid.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
+      touch /root/{{ percona_k8s_op_name }}-k8s.gtid.applied
+    creates: /root/{{ percona_k8s_op_name }}-k8s.gtid.applied
+- name: Prepare cr.yaml file for Percona K8S operators (pxc57)
+  when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '') and ('pxc57' in db_features.split(',') )
+  shell:
+    warn: false
+    cmd: >-
+      /usr/local/bin/yq merge -x /root/{{ percona_k8s_op_name }}/deploy/cr.yaml /vagrant/configs/k8s/cr-mysql-pxc57.yaml
+      > /root/{{ percona_k8s_op_name }}/deploy/cr-pxc57.yaml;
+      mv /root/{{ percona_k8s_op_name }}/deploy/cr-pxc57.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
+      touch /root/{{ percona_k8s_op_name }}-k8s.pxc57.applied
+    creates: /root/{{ percona_k8s_op_name }}-k8s.pxc57.applied
+- name: Prepare cr.yaml file for Percona K8S operators (backup)
+  when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '') and ('backup' in db_features.split(',') )
+  shell:
+    warn: false
+    cmd: >-
+      /usr/local/bin/yq merge -x /root/{{ percona_k8s_op_name }}/deploy/cr.yaml /vagrant/configs/k8s/cr-minio.yaml
+      > /root/{{ percona_k8s_op_name }}/deploy/cr-backup.yaml;
+      mv /root/{{ percona_k8s_op_name }}/deploy/cr-backup.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
+      touch /root/{{ percona_k8s_op_name }}-k8s.backup.applied
+    creates: /root/{{ percona_k8s_op_name }}-k8s.backup.applied
+- name: Start database cluster in k8s
+  when: percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != ''
+  shell:
+    warn: false
+    cmd: >-
+      kubectl apply -f /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
+      touch /root/{{ percona_k8s_op_name }}-k8s.cr.applied
+    creates: /root/{{ percona_k8s_op_name }}-k8s.cr.applied
+
+
+- name: install Zalando Postgresql Operator
+  when: zalando_pg_op_version != ''
+  shell:
+    cmd: >-
+      cd /root;
+      git clone -b v{{ zalando_pg_op_version }} https://github.com/zalando/postgres-operator.git;
+      cd postgres-operator;
+      until kubectl wait --for=condition=ready -n kube-system pod -l k8s-app=kube-dns &>/dev/null;do sleep 2;done;
+      kubectl apply -k manifests/;
+      until kubectl wait --for=condition=ready pod -l name=postgres-operator &>/dev/null;do sleep 2;done
+    creates: /root/postgres-operator/manifests/minimal-postgres-manifest.yaml
+
+- name: Start Postgresql cluster in k8s
+  when: zalando_pg_op_version != ''
+  shell:
+    warn: false
+    cmd: >-
+      cd /root/postgres-operator;
+      kubectl apply -f manifests/minimal-postgres-manifest.yaml;
+      touch /root/zalando_pg.applied
+    creates: /root/zalando_pg.applied
+

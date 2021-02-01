@@ -78,7 +78,7 @@
   shell:
     cmd: >-
       echo {{ db_password }} > /tmp/root-pw.txt;
-      PGSETUP_INITDB_OPTIONS='--pwfile=/tmp/root-pw.txt' /usr/pgsql-{{maj}}/bin/postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else '-'+maj}}-setup initdb;
+      PGSETUP_INITDB_OPTIONS="--pwfile=/tmp/root-pw.txt {{ '' if pmm_url == '' else '-A md5' }}" /usr/pgsql-{{maj}}/bin/postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else '-'+maj}}-setup initdb;
       echo "listen_addresses = '*'" >> /var/lib/pgsql/{{maj}}/data/postgresql.conf;
       echo 'host    all             all             0.0.0.0/0            {{'md5' if ldap_server_ip == '' else 'ldap ldapurl="ldap://'+ldap_server_ip+':389/dc=percona,dc=local?uid?sub"' }}' >> /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
       echo 'host    replication     all             0.0.0.0/0            md5' >> /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
@@ -176,4 +176,15 @@
           rm -rf /tmp/walg.tar.gz
         creates: /usr/bin/wal-g
 
+- name: Setup PMM client with postgres
+  when: pmm_url != '' and (postgresql_version != '' or percona_postgresql_version != '')
+  shell:
+    cmd: /bin/bash -e /vagrant/tools/setup_pmm.sh "{{soft}}" postgres "{{db_password}}" pmm_user "{{db_password}}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}" "{{ 'yes' if pmm_client_version != '' and (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') or percona_postgresql_version.startswith('13.') ) else 'no' }}"
+    creates: /root/pmm-postgresql.applied
+
+- name: Setup PGPool
+  when: pgpool_version != '' and master_ip != ''
+  shell:
+    cmd: /bin/bash /vagrant/tools/setup_pg_pool.sh "{{master_ip}}" "{{db_password}}"
+    creates: /root/pgpool.applied
 
