@@ -49,6 +49,10 @@ if [ "x$1" = "xscp" ] ; then
   shift
   exec scp -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP:"$1" "$2"
 fi
+if [ "x$1" = "xlist" ] ; then
+  lxc ls ${USER//./-}
+  exit 0
+fi
 if [ "x$1" = "xdestroy" ] ; then
   shift
   if [ "x$1" = "x" ] ; then

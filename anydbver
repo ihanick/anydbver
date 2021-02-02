@@ -7,6 +7,7 @@ if [ "x$1" = "xhelp" ] ; then
   echo "$0 ssh default or $0 ssh node1"
   echo "$0 update # refresh version information"
   echo "$0 destroy # remove containers and cleanup"
+  echo "$0 list # show currently running containers"
   echo "$0 deploy help"
   exit 0
 fi
@@ -109,6 +110,20 @@ if [ "x$1" = "xssh" ] ; then
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
       exit 1
   esac
+fi
+if [ "x$1" = "xlist" ] ; then
+  case "$PROVIDER" in
+    podman)
+      exec ./podmanctl list
+      ;;
+    lxd)
+      exec ./lxdctl list
+      ;;
+    *)
+      echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
+      exit 1
+  esac
+  exit 0
 fi
 if [ "x$1" = "xdestroy" ] ; then
   shift

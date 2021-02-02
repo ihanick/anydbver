@@ -24,6 +24,10 @@ getip() {
 }
 
 
+if [ "x$1" = "xlist" ] ; then
+  sudo podman ps |grep $USER
+  exit 0
+fi
 if [ "x$1" = "xssh" ] ; then
   shift
   getip "$1"
@@ -166,7 +170,7 @@ for i in ${USER}.default $(seq 1 20|sed -e s/^/${USER}.node/); do
     CAP_ADMIN='--cap-add SYS_ADMIN'
   fi
 
-  sudo podman run --privileged --tmpfs /run --tmpfs /var/run -d $CAP_ADMIN $NODE_HOSTNAME --name $i $IMG /sbin/init
+  sudo podman run --tmpfs /run --tmpfs /var/run -d --cap-add AUDIT_WRITE $CAP_ADMIN $NODE_HOSTNAME --name $i $IMG /sbin/init
 
   sudo podman cp $PWD/secret/id_rsa.pub $i:/root/.ssh/authorized_keys
   sudo podman cp $PWD/tools/node_ip.sh $i:/usr/bin/node_ip.sh
