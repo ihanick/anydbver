@@ -37,6 +37,19 @@
 - name: Install db packages
   include_tasks: common/tasks/install_db_packages.yml
 
+- name: Install Garbd
+  when: ('garbd' in db_features.split(',')) and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items: "{{ os[dist][soft].garbd_packages }}"
+
+- name: Setup and start Garbd
+  when: master_ip != '' and ('garbd' in db_features.split(','))
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_garbd.sh "{{ master_ip }}" root "{{ db_password }}" "{{'cluster1' if cluster_name == '' else cluster_name}}"
+    creates: /root/garbd.configured
+
 - name: install Percona XtraBackup
   when: percona_xtrabackup_version != ""
   package:
@@ -49,7 +62,8 @@
     percona_server_version != '' or
     percona_xtradb_cluster_version != '' or
     mysql_version != ''
-    ) and db_password != ''
+    ) and db_password != '' and
+    ('garbd' not in db_features.split(','))
   command:
     cmd: /bin/bash /vagrant/tools/create_mysql_db_with_password.sh "{{ db_password }}" "{{ 'oldgrant' if percona_server_version.startswith('5.6') or percona_xtradb_cluster_version.startswith('5.6') or mysql_version.startswith('5.6') else 'no' }}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
     creates: /root/.my.cnf
@@ -86,12 +100,18 @@
         deb: "{{os[dist][soft].url}}"
 
 - name: Start database with systemd
-  when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and postgresql_version == '' and percona_postgresql_version == ''
+  when: >
+    start_db == '1' and
+    (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and
+    ('garbd' not in db_features.split(','))
   command:
     cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
 
 - name: Setup and start replication
-  when: master_ip != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != '')
+  when: >
+    master_ip != '' and
+    (percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != '') and
+    ('garbd' not in db_features.split(','))
   shell:
     cmd: /bin/bash /vagrant/tools/setup_mysql_replication.sh "{{ 'gtid' if replication_type == '' else replication_type }}" "{{ master_ip }}" root "{{ db_password }}" "{{soft}}" "{{ os[dist][soft].cnf_file }}" "{{os[dist][soft].systemd_service}}" "{{'cluster1' if cluster_name == '' else cluster_name}}"
     creates: /root/replication.configured

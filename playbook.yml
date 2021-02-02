@@ -239,7 +239,11 @@
       include_tasks: common/tasks/install_db_packages.yml
 
     - name: Start database with systemd
-      when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and postgresql_version == '' and percona_postgresql_version == ''
+      when: >
+        start_db == '1' and
+        (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and
+        postgresql_version == '' and percona_postgresql_version == '' and
+        ('garbd' not in db_features.split(','))
       command:
         cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
 
