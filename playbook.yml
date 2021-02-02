@@ -94,6 +94,7 @@
     percona_k8s_op_name: "percona-{{ 'xtradb-cluster' if percona_k8s_op_pxc_version != '' else 'server-mongodb' if percona_k8s_op_psmdb_version != '' else '' }}-operator"
     percona_k8s_op_version: "{{ percona_k8s_op_pxc_version if percona_k8s_op_pxc_version != '' else percona_k8s_op_psmdb_version }}"
     db_systemd_service: "{{ 'mongod' if psmdb_version != '' else ('postgresql-' + percona_postgresql_major_ver) if percona_postgresql_version != '' else '' }}"
+    mariadb_url: "{{ 'http://downloads.mariadb.com.local' if lookup('env','LOCAL_REPO_CACHE',default='') != '' else 'https://downloads.mariadb.com' }}"
     is_percona_repo_required: >-
       {{
       'required' if
@@ -162,6 +163,8 @@
             name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
             state: present
             disable_gpg_check: True
+    - name: Enable local repo.* caching
+      include_tasks: common/tasks/repo_cache.yaml
     - name: Install Percona apt Repository
       when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and is_percona_repo_required != ''
       block:

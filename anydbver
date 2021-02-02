@@ -1139,7 +1139,7 @@ if [ "x$1" = "xdeploy" ] ; then
           /var/lib/mysql/client-cert.pem \
           /var/lib/mysql/client-key.pem \
           /var/lib/mysql/server-cert.pem \
-          /var/lib/mysql/server-key.pem > secret/${CLUSTER_NAME}-ssl.tar.gz
+          /var/lib/mysql/server-key.pem > secret/${CLUSTER_NAME}-ssl.tar.gz 2>/dev/null
     fi
 
     if echo "$i" | grep -q VAULT= ; then

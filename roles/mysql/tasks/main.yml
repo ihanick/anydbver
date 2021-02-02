@@ -34,6 +34,9 @@
   command:
     cmd: dnf -y module disable mysql
 
+- name: Enable local repo.* caching
+  include_tasks: common/tasks/repo_cache.yaml
+
 - name: Install db packages
   include_tasks: common/tasks/install_db_packages.yml
 
