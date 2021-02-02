@@ -101,3 +101,9 @@ if [[ "x$1" = "x" || "x$1" = "xissue-1" ]] && [[ "x$2" = "x" || "x$2" = "xps" ]]
     node3 hn:mysql_rs0_router mysql-router:8.0.19 master:default
   ./anydbver ssh node3 mysql --protocol=tcp --port 6446 -uroot -psecret -e "'select version()'" 2>/dev/null |grep -q 8.0 || echo "ps issue-1 : FAIL"
 fi
+
+
+if [[ "x$1" = "x" || "x$1" = "xissue-3" ]] ; then
+  ./anydbver deploy hn:vault.percona.local vault node1 ps:8.0 vault-server:vault.percona.local
+  ./anydbver ssh node1 mysql -e "'create database test;create table test.t(iduniqname int auto_increment primary key) ENCRYPTION=\"Y\";show create table test.t'" 2>/dev/null | grep -q iduniqname || echo "issue-3 : FAIL"
+fi
