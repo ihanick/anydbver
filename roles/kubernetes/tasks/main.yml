@@ -68,7 +68,7 @@
   shell:
     warn: false
     cmd: >-
-      sed -e 's/c3VwYXxefHBheno=/YWRtaW4=/' /root/{{ percona_k8s_op_name }}/deploy/secrets.yaml  | kubectl apply -f - ;
+      sed -e 's/c3VwYXxefHBheno=/YWRtaW4=/' -e 's/supa|^|pazz/admin/' /root/{{ percona_k8s_op_name }}/deploy/secrets.yaml  | kubectl apply -f - ;
       /usr/local/bin/yq merge -x /root/{{ percona_k8s_op_name }}/deploy/cr.yaml /vagrant/configs/k8s/cr-pmm.yaml
       > /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml;
       mv /root/{{ percona_k8s_op_name }}/deploy/cr-pmm.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
