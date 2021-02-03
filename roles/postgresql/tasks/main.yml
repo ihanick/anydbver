@@ -21,6 +21,9 @@
     cmd: /usr/bin/percona-release enable ppg-13
     creates: /etc/yum.repos.d/percona-ppg-13-release.repo
 
+- name: Enable local repo.* caching
+  include_tasks: common/tasks/repo_cache.yaml
+
 - name: Enable EPEL
   when: >
     'development' in db_features.split(',') and

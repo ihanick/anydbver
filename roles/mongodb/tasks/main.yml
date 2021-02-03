@@ -16,6 +16,9 @@
     cmd: /usr/bin/percona-release enable psmdb-44
     creates: /etc/yum.repos.d/percona-psmdb-44-release.repo
 
+- name: Enable local repo.* caching
+  include_tasks: common/tasks/repo_cache.yaml
+
 - name: install Percona Server for MongoDB
   when: psmdb_version.startswith('3.0') or psmdb_version.startswith('3.6') or psmdb_version.startswith('4.0') or psmdb_version.startswith('4.2') or psmdb_version.startswith('4.4')
   package:
