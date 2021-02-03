@@ -182,14 +182,6 @@
           apt:
             update_cache: yes
    
-    - name: Enable EPEL
-      when: >
-        orchestrator_version != '' and
-        (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
-      package:
-        name: epel-release
-        state: present
-
     - name: install PMM client
       when: pmm_client_version != ""
       package:
@@ -224,7 +216,19 @@
         name: mongodb
 
     - name: MySQL Role
-      when: mysql_version != '' or percona_server_version != "" or percona_xtradb_cluster_version != "" or percona_xtrabackup_version != "" or mysql_router_version != "" or innodb_ruby_version != '' or mydumper_version != '' or mysql_connector_java_version != '' or mysql_random_data_load_version != '' or proxysql_version != '' or percona_proxysql_version != ''
+      when: >
+        mysql_version != '' or
+        percona_server_version != "" or
+        percona_xtradb_cluster_version != "" or
+        percona_xtrabackup_version != "" or
+        mysql_router_version != "" or
+        innodb_ruby_version != '' or
+        mydumper_version != '' or
+        mysql_connector_java_version != '' or
+        mysql_random_data_load_version != '' or
+        proxysql_version != '' or
+        percona_proxysql_version != '' or
+        orchestrator_version != ''
       include_role:
         name: mysql
 
@@ -239,6 +243,10 @@
         name: tools_and_monitoring
 
     - name: Install db packages
+      when: >
+        (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and
+        postgresql_version == '' and percona_postgresql_version == '' and
+        ('garbd' not in db_features.split(',')) and orchestrator_version == ''
       include_tasks: common/tasks/install_db_packages.yml
 
     - name: Start database with systemd
@@ -246,7 +254,7 @@
         start_db == '1' and
         (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and
         postgresql_version == '' and percona_postgresql_version == '' and
-        ('garbd' not in db_features.split(','))
+        ('garbd' not in db_features.split(',')) and orchestrator_version == ''
       command:
         cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
 

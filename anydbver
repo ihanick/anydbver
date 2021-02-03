@@ -32,6 +32,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1"
     echo "$0 deploy ps:5.7 hostname:leader.percona.local node1 ps:5.7 hostname:follower.percona.local leader:default"
     echo "$0 deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row"
+    echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1 node3 orchestrator master:default"
     echo "$0 deploy samba node1 ps samba-dc:default"
     echo "$0 deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default"
     echo -e $0' deploy \\\n pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default \\\n node3 pxc:5.7 cluster:cluster2 node4 pxc:5.7 cluster:cluster2 galera-master:node3 node5 pxc:5.7 cluster:cluster2 galera-master:node3'
@@ -460,6 +461,25 @@ EOF
 10.1-1
 EOF
 
+ cat > .version-info/orchestrator.el7.txt <<EOF
+3.0.3-1
+3.0.5-1
+3.0.6-1
+3.0.7-1
+3.0.8-1
+3.0.9-1
+3.0.10-1
+3.0.11-1
+3.0.12-1
+3.0.13-1
+3.0.14-1
+3.1.0-1
+3.1.2-1
+3.1.3-1
+3.1.4-1
+3.2.2-1
+3.2.3-1
+EOF
 
 curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/|perl -ne '/Percona-Server-MongoDB(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 > .version-info/psmdb.el7.txt
 
@@ -598,6 +618,16 @@ deploy_node() {
       else
         VER=$(tail -n 1 .version-info/mydumper.el7.txt)
         DEP_ENV="$DEP_ENV MYDUMPER=$VER"
+      fi
+    fi
+    if [[ $i == "orchestrator" ]] || [[ $i == "orchestrator:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "^$VER" .version-info/orchestrator.el7.txt |tail -n 1)
+        DEP_ENV="$DEP_ENV ORCHESTRATOR=$VER"
+      else
+        VER=$(tail -n 1 .version-info/orchestrator.el7.txt)
+        DEP_ENV="$DEP_ENV ORCHESTRATOR=$VER"
       fi
     fi
     if [[ $i == "percona-xtradb-cluster" ]] || [[ $i == "percona-xtradb-cluster:"* ]] || [[ $i == "pxc" ]] || [[ $i == "pxc:"* ]] ; then

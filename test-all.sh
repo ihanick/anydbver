@@ -78,6 +78,11 @@ if [[ "x$1" = "x" || "x$1" = "xpsmdb" ]] ; then
   done
 fi
 
+if [[ "x$1" = "x" || "x$1" = "xorchestrator" ]] ; then
+  ./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1 node3 orchestrator master:default
+  [[ $(./anydbver ssh node3 orchestrator-client -c topology -i $USER-default:3306 2>/dev/null |wc -l) == 3 ]] || echo "orchestrator: FAIL"
+fi
+
 # Regression tests
 if [[ "x$1" = "x" || "x$1" = "xissue-2" ]] ; then
   ./anydbver deploy mysql:$(grep 8.0 .version-info/mysql.el7.txt |tail -n 2|head -n 1) >> test-run.log
