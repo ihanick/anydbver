@@ -113,7 +113,7 @@ if [ "x$1" = "xssh" ] ; then
       exit 1
   esac
 fi
-if [ "x$1" = "xlist" ] ; then
+if [ "x$1" = "xlist" ] || [ "x$1" = "xls" ] ; then
   case "$PROVIDER" in
     podman)
       exec ./podmanctl list
