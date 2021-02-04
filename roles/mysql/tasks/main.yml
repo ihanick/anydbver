@@ -213,13 +213,25 @@
   shell:
     cmd: orchestrator-client -c discover -i {{master_ip}}:3306
 
-- name: Setup pmm client mysql
-  when: pmm_client_version != '' and pmm_url != '' and percona_server_version != ''
+- name: Setup pmm-2 client mysql
+  when: pmm_client_version.startswith('2.') and pmm_url != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
   register: pmm_admin_mysql_config
   changed_when: "'already exists' not in pmm_admin_mysql_config.stdout"
   shell:
     cmd: >-
       /usr/bin/pmm-admin add mysql
-      --query-source="{{ 'perfschema' if 'pmm_perfschema' in db_features.split(',') else 'slowlog' }}"
+      --query-source={{ 'perfschema' if 'pmm_perfschema' in db_features.split(',') else 'slowlog' }}
       --username="{{db_user}}"
       --password="{{db_password}}"
+
+- name: Setup pmm-1 client mysql
+  when: pmm_client_version.startswith('1.') and pmm_url != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
+  register: pmm_admin_mysql_config
+  changed_when: "'already exists' not in pmm_admin_mysql_config.stdout"
+  shell:
+    cmd: >-
+      pmm-admin add mysql
+      --query-source={{ 'perfschema' if 'pmm_perfschema' in db_features.split(',') else 'slowlog' }}
+      --user="{{db_user}}"
+      --password="{{db_password}}"
+

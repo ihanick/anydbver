@@ -188,12 +188,23 @@
         name: "{{item}}"
         state: present
       with_items: "{{os[dist].pmm_client.install_packages }}"
-    - name: Setup pmm-admin
-      when: pmm_client_version != '' and pmm_url != ''
+    - name: Setup pmm-admin PMM2
+      when: pmm_client_version.startswith('2.') and pmm_url != ''
       register: pmm_admin_config
       changed_when: "'already exists' not in pmm_admin_config.stdout"
       shell:
         cmd: '/usr/bin/pmm-admin config --server-insecure-tls --server-url="{{pmm_url}}" || true'
+    - name: Setup pmm-admin PMM1
+      when: pmm_client_version.startswith('1.') and pmm_url != ''
+      register: pmm_admin_config
+      changed_when: "'already exists' not in pmm_admin_config.stdout"
+      shell:
+        cmd: >-
+          pmm-admin config
+          --server-insecure-ssl
+          --server=$(echo "{{pmm_url}}"|awk -F '[/:@]' '{print $6}'):$(echo "{{pmm_url}}"|awk -F '[/:@]' '{print $7}')
+          --server-user=$(echo "{{pmm_url}}"|awk -F '[/:@]' '{print $4}')
+          --server-password=$(echo "{{pmm_url}}"|awk -F '[/:@]' '{print $5}') || true
 
     - name: User Security LDAP, PAM, Active Directory, Vault, Kerberos
       when: vault_version != '' or samba_ad != '' or ldap_server != '' or kerberos_client != ''

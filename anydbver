@@ -54,6 +54,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy sysbench"
     echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:default node3 proxysql master:default"
     echo "$0 deploy pmm node1 ps:5.7 pmm-client pmm-server:default"
+    echo "$0 deploy pmm:1.17.4 node1 ps:5.7 pmm-client:1.17.4 pmm-server:default"
     exit 0
   fi
 fi
