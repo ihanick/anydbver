@@ -884,6 +884,10 @@ deploy_node() {
     if [[ $i == "k3s" ]] || [[ $i == "k3s:"* ]] || [[ $i == "k8s" ]] || [[ $i == "kubernetes" ]] ; then
       DEP_ENV="$DEP_ENV K3S=latest"
     fi
+    if [[ $i == "kube-config:"* ]] ; then
+      KUBE_CONFIG=$(get_version "$i")
+      DEP_ENV="$DEP_ENV KUBE_CONFIG=$KUBE_CONFIG"
+    fi
   done
 
   if [[ "$DEP_ENV" != *DB_USER* && "$DEP_ENV" == *'PG='* ]] ; then
