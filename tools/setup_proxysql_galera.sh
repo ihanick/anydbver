@@ -26,14 +26,14 @@ INSERT INTO mysql_users (username,password, default_hostgroup) VALUES ('$MASTER_
 LOAD MYSQL USERS TO RUNTIME;
 SAVE MYSQL USERS TO DISK;
 
-INSERT INTO mysql_replication_hostgroups (writer_hostgroup, reader_hostgroup) VALUES(1,2);
+INSERT INTO mysql_galera_hostgroups (writer_hostgroup, reader_hostgroup,backup_writer_hostgroup,offline_hostgroup, active,max_writers,writer_is_also_reader,max_transactions_behind) VALUES(1,2,3,4, 1,1,0,100);
 
-INSERT INTO mysql_servers (hostgroup_id, hostname, port, weight) VALUES (1,'$MASTER_IP',3306,1);
-
+INSERT INTO mysql_servers (hostgroup_id, hostname, port, weight) VALUES (2,'$MASTER_IP',3306,1);
 EOF
 
-for i in $(mysql -N -u "$MASTER_USER" --host "$MASTER_IP" --password="$MASTER_PASSWORD" -e 'show slave hosts'|cut -f 2)
+for i in $(mysql -N -u "$MASTER_USER" --host "$MASTER_IP" --password="$MASTER_PASSWORD" -e "show status like 'wsrep_incoming_addresses'\\G"|grep :3306|sed -re 's/:3306,?/ /g')
 do
+  [[ "$i" == "$MASTER_IP" ]] && continue
   mysql -h $i -u "$MASTER_USER" --password="$MASTER_PASSWORD" -e 'set global read_only=1;'
   mysql --force --protocol=tcp --host=127.0.0.1 --port 6032 -uadmin -padmin --prompt='Admin> ' <<EOF
 INSERT INTO mysql_servers (hostgroup_id, hostname, port, weight) VALUES (2,'$i',3306,1);
@@ -55,6 +55,9 @@ update global_variables set variable_value=200 where variable_name='admin-cluste
 update global_variables set variable_value=100 where variable_name='admin-cluster_check_status_frequency';
 update global_variables set variable_value='true' where variable_name='admin-cluster_mysql_query_rules_save_to_disk';
 update global_variables set variable_value='true' where variable_name='admin-cluster_mysql_servers_save_to_disk';
+update global_variables set variable_value='1200' where variable_name='mysql-monitor_galera_healthcheck_timeout';
+update global_variables set variable_value='6000' where variable_name='mysql-monitor_galera_healthcheck_interval';
+
 LOAD ADMIN VARIABLES TO RUNTIME;
 SAVE ADMIN VARIABLES TO DISK;
 EOF

@@ -9,6 +9,7 @@ if [ "x$1" = "xhelp" ] ; then
   echo "$0 destroy # remove containers and cleanup"
   echo "$0 list # show currently running containers"
   echo "$0 deploy help"
+  echo "$0 add nodeN node_definition # spawn additional node and deploy software on it"
   exit 0
 fi
 
@@ -53,6 +54,8 @@ if [ "x$2" = "xhelp" ] ; then
     echo -e $0' deploy \\\n psmdb:4.2 replica-set:rs0 shardsrv \\\n node1 psmdb:4.2 master:default replica-set:rs0 shardsrv \\\n node2 psmdb:4.2 master:default replica-set:rs0 shardsrv \\\n node3 psmdb:4.2 configsrv replica-set:cfg0 \\\n node4 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \\\n node5 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \\\n node6 psmdb:4.2 mongos-cfg:cfg0/node3,node4,node5 mongos-shard:rs0/default,node1,node2'
     echo "$0 deploy sysbench"
     echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:default node3 proxysql master:default"
+    echo "$0 deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default node3 proxysql galera-master:default"
+    echo "$0 deploy pxc node1 pxc galera-master:default node2 pxc galera-master:default node3 proxysql galera-master:default"
     echo "$0 deploy pmm node1 ps:5.7 pmm-client pmm-server:default"
     echo "$0 deploy pmm:1.17.4 node1 ps:5.7 pmm-client:1.17.4 pmm-server:default"
     exit 0
@@ -1032,6 +1035,145 @@ find_node_token() {
   esac
 }
 
+pre_deploy_hook() {
+  i="$i"
+  if echo "$i" | grep -q DB_IP ; then
+    MASTER_NODE=$(echo "$i" | perl -ne '/DB_IP=(\S*) / and print $1')
+    MASTER_IP=$(find_node_ip $MASTER_NODE)
+    i=$(echo "$i"|sed -e "s/DB_IP=$MASTER_NODE/DB_IP=$MASTER_IP/g")
+  fi
+  if echo "$i" | grep -q LDAP_IP ; then
+    LDAP_NODE=$(echo "$i" | perl -ne '/LDAP_IP=(\S*) / and print $1')
+    LDAP_IP=$(find_node_ip $LDAP_NODE)
+    i=$(echo "$i"|sed -e "s/LDAP_IP=$LDAP_NODE/LDAP_IP=$LDAP_IP/g")
+  fi
+  if echo "$i" | grep -q ETCD_IP ; then
+    ETCD_NODE=$(echo "$i" | perl -ne '/ETCD_IP=(\S*) / and print $1')
+    ETCD_IP=$(find_node_ip $ETCD_NODE)
+    i=$(echo "$i"|sed -e "s/ETCD_IP=$ETCD_NODE/ETCD_IP=$ETCD_IP/g")
+  fi
+  if echo "$i" | grep -q K3S_URL ; then
+    MASTER_NODE=$(echo "$i" | perl -ne '/K3S_URL=(\S*) / and print $1')
+    MASTER_IP=$(find_node_ip $MASTER_NODE)
+    MASTER_TOKEN=$(find_node_token $MASTER_NODE)
+    i=$(echo "$i"|sed -e "s,K3S_URL=$MASTER_NODE,K3S_URL=https://$MASTER_IP:6443 K3S_TOKEN=$MASTER_TOKEN,g")
+  fi
+  if echo "$i" | grep -q PMM_URL ; then
+    PMM_NODE=$(echo "$i" | perl -ne '/PMM_URL=(\S*) / and print $1')
+    PMM_IP=$(find_node_ip $PMM_NODE)
+    i=$(echo "$i"|sed -e "s,PMM_URL=$PMM_NODE,PMM_URL=https://admin:secret@$PMM_IP:443,g")
+  fi
+  if echo "$i" | grep -q SAMBA_IP ; then
+    MASTER_NODE=$(echo "$i" | perl -ne '/SAMBA_IP=(\S*) / and print $1')
+    MASTER_IP=$(find_node_ip $MASTER_NODE)
+    SAMBA_SID=$(find_samba_sid $MASTER_NODE)
+    i=$(echo "$i"|sed -e "s/SAMBA_IP=$MASTER_NODE/SAMBA_IP=$MASTER_IP SAMBA_SID=$SAMBA_SID/g")
+  fi
+  if echo "$i" | grep -q MONGOS_CFG ; then
+    CFG_NODES_LIST=( )
+    CFG_NODES_FULL=$(echo "$i" | perl -ne '/MONGOS_CFG=(\S*) / and print $1')
+    CFG_NODES_RS=$(echo "$i" | perl -ne '/MONGOS_CFG=(\S*)\/(\S*) / and print $1')
+    CFG_NODES=$(echo "$i" | perl -ne '/MONGOS_CFG=(\S*)\/(\S*) / and print $2')
+    for n in $(echo "$CFG_NODES"|tr , '\n')
+    do
+      n_ip=$(find_node_ip $n)
+      CFG_NODES_LIST+=( ${n_ip}:27017 )
+    done
+    MONGOS_CFG=$( join_ws , "${CFG_NODES_LIST[@]}" )
+    i=$(echo "$i"|sed -e "s|MONGOS_CFG=$CFG_NODES_FULL|MONGOS_CFG=$CFG_NODES_RS/$MONGOS_CFG|g")
+  fi
+  if echo "$i" | grep -q MONGOS_SHARD ; then
+    SHARD_NODES_LIST=( )
+    SHARD_NODES_FULL=$(echo "$i" | perl -ne '/MONGOS_SHARD=(\S*) / and print $1')
+    SHARD_NODES_RS=$(echo "$i" | perl -ne '/MONGOS_SHARD=(\S*)\/(\S*) / and print $1')
+    SHARD_NODES=$(echo "$i" | perl -ne '/MONGOS_SHARD=(\S*)\/(\S*) / and print $2')
+    for n in $(echo "$SHARD_NODES"|tr , '\n')
+    do
+      n_ip=$(find_node_ip $n)
+      SHARD_NODES_LIST+=( ${n_ip}:27017 )
+    done
+    MONGOS_SHARD=$( join_ws , "${SHARD_NODES_LIST[@]}" )
+    i=$(echo "$i"|sed -e "s|MONGOS_SHARD=$SHARD_NODES_FULL|MONGOS_SHARD=$SHARD_NODES_RS/$MONGOS_SHARD|g")
+  fi
+
+}
+
+post_deploy_hook() {
+  i="$i"
+
+  # after reploy node actions
+  if echo "$i" | grep -q CLUSTER= && echo "$i" | grep -q PXC=8. ; then
+    NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
+    CLUSTER_NAME=$(echo "$i" | sed -re 's/^.*CLUSTER=([^ ]+).*$/\1/' )
+    test -f secret/${CLUSTER_NAME}-ssl.tar.gz || ./anydbver \
+      ssh $NODE tar cz \
+        /var/lib/mysql/ca.pem \
+        /var/lib/mysql/ca-key.pem \
+        /var/lib/mysql/client-cert.pem \
+        /var/lib/mysql/client-key.pem \
+        /var/lib/mysql/server-cert.pem \
+        /var/lib/mysql/server-key.pem > secret/${CLUSTER_NAME}-ssl.tar.gz 2>/dev/null
+  fi
+
+  if echo "$i" | grep -q VAULT= ; then
+    NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
+    ./anydbver ssh $NODE tar c /etc/vault.d/ca.crt /root/.vault-token > secret/vault-client.tar
+  fi
+}
+
+start_all_nodes() {
+  case "$PROVIDER" in
+    vagrant)
+      ;;
+    lxdock)
+      ;;
+    podman)
+      ./podmanctl --destroy
+      ./podmanctl --nodes ${#ALL_NODES[@]}
+      ;;
+    lxd)
+      echo "./lxdctl --destroy"
+      [[ $DRY_RUN == 0 ]] && ./lxdctl --destroy
+      if [[ $PRIV_CONTAINER_REQUIRED == 1 ]] ; then
+        echo "./lxdctl --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD
+      else
+        echo "./lxdctl --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD
+      fi
+      ;;
+    *)
+      echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
+      exit 1
+  esac
+}
+
+start_node() {
+  NODE="$1"
+  case "$PROVIDER" in
+    vagrant)
+      ;;
+    lxdock)
+      ;;
+    podman)
+      ./podmanctl --destroy
+      ./podmanctl --nodes ${#ALL_NODES[@]}
+      ;;
+    lxd)
+      if [[ $PRIV_CONTAINER_REQUIRED == 1 ]] ; then
+        echo "./lxdctl --only-node $NODE --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl --only-node $NODE  --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD
+      else
+        echo "./lxdctl --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD
+      fi
+      ;;
+    *)
+      echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
+      exit 1
+  esac
+}
+
 if [ "x$1" = "xdeploy" ] ; then
   PRIV_CONTAINER_REQUIRED=0
   HOSTNAMES_CMD=''
@@ -1043,6 +1185,11 @@ if [ "x$1" = "xdeploy" ] ; then
   declare -A ALL_NODES
   ALL_NODES[$NODE]=1
   shift
+  DRY_RUN=0
+  if [[ "$1" == "--dry-run" ]] ; then
+    DRY_RUN=1
+    shift
+  fi
   if [[ "$1" == default ]] ; then
     shift
   fi
@@ -1077,111 +1224,68 @@ if [ "x$1" = "xdeploy" ] ; then
     DEPLARGS=()
   done
 
-  case "$PROVIDER" in
-    vagrant)
-      ;;
-    lxdock)
-      ;;
-    podman)
-      ./podmanctl --destroy
-      ./podmanctl --nodes ${#ALL_NODES[@]}
-      ;;
-    lxd)
-      ./lxdctl --destroy
-      if [[ $PRIV_CONTAINER_REQUIRED == 1 ]] ; then
-        echo "./lxdctl --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD"
-        ./lxdctl --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD
-      else
-        echo "./lxdctl --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD"
-        ./lxdctl --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD
-      fi
-      ;;
-    *)
-      echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
-      exit 1
-  esac
+  start_all_nodes
 
   for i in "${DEPLOY_CMDS[@]}"; do
-    if echo "$i" | grep -q DB_IP ; then
-      MASTER_NODE=$(echo "$i" | perl -ne '/DB_IP=(\S*) / and print $1')
-      MASTER_IP=$(find_node_ip $MASTER_NODE)
-      i=$(echo "$i"|sed -e "s/DB_IP=$MASTER_NODE/DB_IP=$MASTER_IP/g")
-    fi
-    if echo "$i" | grep -q LDAP_IP ; then
-      LDAP_NODE=$(echo "$i" | perl -ne '/LDAP_IP=(\S*) / and print $1')
-      LDAP_IP=$(find_node_ip $LDAP_NODE)
-      i=$(echo "$i"|sed -e "s/LDAP_IP=$LDAP_NODE/LDAP_IP=$LDAP_IP/g")
-    fi
-    if echo "$i" | grep -q ETCD_IP ; then
-      ETCD_NODE=$(echo "$i" | perl -ne '/ETCD_IP=(\S*) / and print $1')
-      ETCD_IP=$(find_node_ip $ETCD_NODE)
-      i=$(echo "$i"|sed -e "s/ETCD_IP=$ETCD_NODE/ETCD_IP=$ETCD_IP/g")
-    fi
-    if echo "$i" | grep -q K3S_URL ; then
-      MASTER_NODE=$(echo "$i" | perl -ne '/K3S_URL=(\S*) / and print $1')
-      MASTER_IP=$(find_node_ip $MASTER_NODE)
-      MASTER_TOKEN=$(find_node_token $MASTER_NODE)
-      i=$(echo "$i"|sed -e "s,K3S_URL=$MASTER_NODE,K3S_URL=https://$MASTER_IP:6443 K3S_TOKEN=$MASTER_TOKEN,g")
-    fi
-    if echo "$i" | grep -q PMM_URL ; then
-      PMM_NODE=$(echo "$i" | perl -ne '/PMM_URL=(\S*) / and print $1')
-      PMM_IP=$(find_node_ip $PMM_NODE)
-      i=$(echo "$i"|sed -e "s,PMM_URL=$PMM_NODE,PMM_URL=https://admin:secret@$PMM_IP:443,g")
-    fi
-    if echo "$i" | grep -q SAMBA_IP ; then
-      MASTER_NODE=$(echo "$i" | perl -ne '/SAMBA_IP=(\S*) / and print $1')
-      MASTER_IP=$(find_node_ip $MASTER_NODE)
-      SAMBA_SID=$(find_samba_sid $MASTER_NODE)
-      i=$(echo "$i"|sed -e "s/SAMBA_IP=$MASTER_NODE/SAMBA_IP=$MASTER_IP SAMBA_SID=$SAMBA_SID/g")
-    fi
-    if echo "$i" | grep -q MONGOS_CFG ; then
-      CFG_NODES_LIST=( )
-      CFG_NODES_FULL=$(echo "$i" | perl -ne '/MONGOS_CFG=(\S*) / and print $1')
-      CFG_NODES_RS=$(echo "$i" | perl -ne '/MONGOS_CFG=(\S*)\/(\S*) / and print $1')
-      CFG_NODES=$(echo "$i" | perl -ne '/MONGOS_CFG=(\S*)\/(\S*) / and print $2')
-      for n in $(echo "$CFG_NODES"|tr , '\n')
-      do
-        n_ip=$(find_node_ip $n)
-        CFG_NODES_LIST+=( ${n_ip}:27017 ) 
-      done
-      MONGOS_CFG=$( join_ws , "${CFG_NODES_LIST[@]}" )
-      i=$(echo "$i"|sed -e "s|MONGOS_CFG=$CFG_NODES_FULL|MONGOS_CFG=$CFG_NODES_RS/$MONGOS_CFG|g")
-    fi
-    if echo "$i" | grep -q MONGOS_SHARD ; then
-      SHARD_NODES_LIST=( )
-      SHARD_NODES_FULL=$(echo "$i" | perl -ne '/MONGOS_SHARD=(\S*) / and print $1')
-      SHARD_NODES_RS=$(echo "$i" | perl -ne '/MONGOS_SHARD=(\S*)\/(\S*) / and print $1')
-      SHARD_NODES=$(echo "$i" | perl -ne '/MONGOS_SHARD=(\S*)\/(\S*) / and print $2')
-      for n in $(echo "$SHARD_NODES"|tr , '\n')
-      do
-        n_ip=$(find_node_ip $n)
-        SHARD_NODES_LIST+=( ${n_ip}:27017 ) 
-      done
-      MONGOS_SHARD=$( join_ws , "${SHARD_NODES_LIST[@]}" )
-      i=$(echo "$i"|sed -e "s|MONGOS_SHARD=$SHARD_NODES_FULL|MONGOS_SHARD=$SHARD_NODES_RS/$MONGOS_SHARD|g")
-    fi
-
+    pre_deploy_hook "$i"
     printf "%s\n" "$i"
-    bash -c "$i"
+    [[ $DRY_RUN == 0 ]] && bash -c "$i"
+    post_deploy_hook "$i"
+  done
 
-    # after reploy node actions
-    if echo "$i" | grep -q CLUSTER= && echo "$i" | grep -q PXC=8. ; then
-      NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
-      CLUSTER_NAME=$(echo "$i" | sed -re 's/^.*CLUSTER=([^ ]+).*$/\1/' )
-      test -f secret/${CLUSTER_NAME}-ssl.tar.gz || ./anydbver \
-        ssh $NODE tar cz \
-          /var/lib/mysql/ca.pem \
-          /var/lib/mysql/ca-key.pem \
-          /var/lib/mysql/client-cert.pem \
-          /var/lib/mysql/client-key.pem \
-          /var/lib/mysql/server-cert.pem \
-          /var/lib/mysql/server-key.pem > secret/${CLUSTER_NAME}-ssl.tar.gz 2>/dev/null
-    fi
+fi
 
-    if echo "$i" | grep -q VAULT= ; then
-      NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
-      ./anydbver ssh $NODE tar c /etc/vault.d/ca.crt /root/.vault-token > secret/vault-client.tar
+if [ "x$1" = "xadd" ] ; then
+  PRIV_CONTAINER_REQUIRED=0
+  HOSTNAMES_CMD=''
+  OS_CMD=''
+  VM_CMD=''
+  DEPLARGS=()
+  DEPLOY_CMDS=()
+  NODE=default
+  shift
+  DRY_RUN=0
+  if [[ "$1" == "--dry-run" ]] ; then
+    DRY_RUN=1
+    shift
+  fi
+  if [[ "$1" == default ]] || [[ "$1" == node* ]] ; then
+    NODE=$1
+    shift
+  fi
+  declare -A ALL_NODES
+  ALL_NODES[$NODE]=1
+
+  while (( "$#" )); do
+    if [[ "$1" == node* ]] || [[ "$1" == default && NODE != default ]] ; then
+      break
     fi
+    DEPLARGS+=("$1")
+    shift
+  done
+  DEPCMD=$(deploy_node $NODE "${DEPLARGS[@]}")
+  echo "$DEPCMD"|egrep -q 'PMM_SERVER|K8S|K3S|PKO|SAMBA_AD' && PRIV_CONTAINER_REQUIRED=1
+  if [[ "$DEPCMD" == *"HOSTNAME="* ]] ; then
+    HOSTNAMES_CMD="$HOSTNAMES_CMD --hostname $NODE="$(echo "$DEPCMD"| sed -re 's/^.*HOSTNAME=([^ ]+) .*/\1/')
+  fi
+  if [[ "$DEPCMD" == *"NODE_OS="* ]] ; then
+    OS_CMD="$OS_CMD --os $NODE="$(echo "$DEPCMD"| sed -re 's/^.*NODE_OS=([^ ]+) .*/\1/')
+  fi
+  if [[ "$DEPCMD" == *"NODE_VM="* ]] ; then
+    VM_CMD="$VM_CMD --vm $NODE"
+  fi
+
+  DEPLOY_CMDS+=("$DEPCMD")
+
+  DEPLARGS=()
+
+  start_node "$NODE"
+
+  for i in "${DEPLOY_CMDS[@]}"; do
+    pre_deploy_hook "$i"
+    printf "%s\n" "$i"
+    [[ $DRY_RUN == 0 ]] && bash -c "$i"
+    post_deploy_hook "$i"
   done
 
 fi

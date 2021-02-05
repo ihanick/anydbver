@@ -72,7 +72,7 @@ fi
 
 # read arguments
 opts=$(getopt \
-    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:,hostname:,vm:,privileged" \
+    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:,hostname:,vm:,only-node:,privileged" \
     --name "$(basename "$0")" \
     --options "" \
     -- "$@"
@@ -91,6 +91,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --nodes)
       NUM_NODES=$2
+      shift 2
+      ;;
+    --only-node)
+      ONLY_NODE=$2
       shift 2
       ;;
     --pmm-port)
@@ -153,14 +157,22 @@ if [ "x$LXD_PROFILE" != "x" ] ; then
   LXD_PROFILE="--profile $LXD_PROFILE"
 fi
 
-:> ansible_hosts
-:> configs/hosts
+if [ "x$ONLY_NODE" != "x" ] ; then
+  NUM_NODES=20
+else
+  :> ansible_hosts
+  :> configs/hosts
+fi
 
 test -f secret/id_rsa || ssh-keygen -t rsa -f secret/id_rsa -P '' && chmod 0600 secret/id_rsa
 test -f secret/rs0-keyfile || openssl rand -base64 756 > secret/rs0-keyfile
 
 N=0
 for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
+  if [ "x$ONLY_NODE" != "x" ] && [ "x${USER}.$ONLY_NODE" != "x$i" ] ; then
+      continue
+  fi
+
   if [ "x${OSes[$i]}" != "x" ] ; then
     setupOS ${OSes[$i]} 
   else
@@ -192,6 +204,9 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
 done
 
 for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
+  if [ "x$ONLY_NODE" != "x" ] && [ "x${USER}.$ONLY_NODE" != "x$i" ] ; then
+      continue
+  fi
   c=${i//./-}
   lxc exec $c -- bash -c "cat >> /etc/hosts" < configs/hosts
 done

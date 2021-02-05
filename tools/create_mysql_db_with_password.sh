@@ -15,7 +15,7 @@ if [[ "x$OLDGRANT" == "xoldgrant" ]]; then
     mysqld --pid-file=/var/lib/mysql/mysqld.pid $S --user=mysql --loose-wsrep-provider='none' --skip-networking &>/dev/null &
     mysqladmin $S --silent --connect-timeout=30 --wait=4 ping
 
-    mysql $S -e "SET PASSWORD FOR root@localhost = PASSWORD('$PASS');GRANT ALL PRIVILEGES ON *.* TO root@'%' IDENTIFIED BY '$PASS';"
+    mysql $S -e "SET PASSWORD FOR root@localhost = PASSWORD('$PASS');GRANT ALL PRIVILEGES ON *.* TO root@'%' IDENTIFIED BY '$PASS' WITH GRANT OPTION;"
 else
     # ubuntu modifies root@localhost to use auth_socket
     systemctl stop $SERVICE
