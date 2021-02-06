@@ -1247,6 +1247,10 @@ if [ "x$1" = "xdeploy" ] ; then
 fi
 
 if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] ; then
+  ADD_CMD=0
+  if [ "x$1" = "xadd" ] ; then
+    ADD_CMD=1
+  fi
   PRIV_CONTAINER_REQUIRED=0
   HOSTNAMES_CMD=''
   OS_CMD=''
@@ -1290,7 +1294,7 @@ if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] ; then
 
   DEPLARGS=()
 
-  if [ "x$1" = "xadd" ] ; then
+  if [ $ADD_CMD -eq 1 ] ; then
     start_node "$NODE"
   fi
 
