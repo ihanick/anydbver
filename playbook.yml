@@ -46,6 +46,7 @@
     kube_config: "{{ lookup('vars', 'extra_kube_config', default=lookup('env','KUBE_CONFIG',default='') ) }}"
     master_ip: "{{ lookup('vars', 'extra_master_ip', default=lookup('env','DB_IP',default='') ) }}"
     etcd_ip: "{{ lookup('vars', 'extra_etcd_ip', default=lookup('env','ETCD_IP',default='') ) }}"
+    proxysql_ip: "{{ lookup('vars', 'extra_proxysql_ip', default=lookup('env','PROXYSQL_IP',default='') ) }}"
     replication_type: "{{ lookup('vars', 'extra_replication_type', default=lookup('env','REPLICATION_TYPE',default='') ) }}"
     cluster_name:  "{{ lookup('vars', 'extra_cluster_name', default=lookup('env','CLUSTER',default='cluster1') ) }}"
     mongo_replicaset: "{{ lookup('vars', 'extra_mongo_replicaset', default=lookup('env','REPLICA_SET',default='') ) }}"
