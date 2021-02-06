@@ -10,6 +10,7 @@ if [ "x$1" = "xhelp" ] ; then
   echo "$0 list # show currently running containers"
   echo "$0 deploy help"
   echo "$0 add nodeN node_definition # spawn additional node and deploy software on it"
+  echo "$0 apply nodeN node_definition # deploy software on existing node"
   exit 0
 fi
 
@@ -1245,7 +1246,7 @@ if [ "x$1" = "xdeploy" ] ; then
 
 fi
 
-if [ "x$1" = "xadd" ] ; then
+if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] ; then
   PRIV_CONTAINER_REQUIRED=0
   HOSTNAMES_CMD=''
   OS_CMD=''
@@ -1289,7 +1290,9 @@ if [ "x$1" = "xadd" ] ; then
 
   DEPLARGS=()
 
-  start_node "$NODE"
+  if [ "x$1" = "xadd" ] ; then
+    start_node "$NODE"
+  fi
 
   for i in "${DEPLOY_CMDS[@]}"; do
     pre_deploy_hook "$i"
