@@ -30,6 +30,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy maria:10.4"
     echo "$0 deploy mariadb node1 mariadb master:default"
     echo "$0 deploy mariadb node1 mariadb master:default default mariadb master:node1 node2 mariadb master:node1"
+    echo "$0 deploy mariadb-cluster:10.3.26:25.3.30"
     echo "$0 deploy mariadb-cluster:10.4 node1 mariadb-cluster:10.4 galera-master:default node2 mariadb-cluster:10.4 galera-master:default"
     echo "$0 deploy ldap node1 ldap-master:default ps:5.7"
     echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1"
@@ -169,6 +170,15 @@ get_version() {
     echo "$1" | cut -d= -f2
   fi
 }
+
+get_2nd_version() {
+  if [[ $i == *':'* ]] ; then
+    echo "$1" | cut -d: -f3
+  else
+    echo "$1" | cut -d= -f3
+  fi
+}
+
 
 refresh_percona_server_version_info() {
   [ -d .version-info ] || mkdir .version-info
@@ -684,11 +694,17 @@ deploy_node() {
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
         VER=$(grep "$VER" .version-info/mariadb.el7.txt |tail -n 1)
-	GALERA_VER=$(grep "$VER" .version-info/mariadb-galera.el7.txt|cut -d' ' -f2|tail -n 1 )
+        GALERA_VER=$(get_2nd_version "$i")
+        if [ "x$GALERA_VER" == "x" ] ; then
+          GALERA_VER=$(grep "$VER" .version-info/mariadb-galera.el7.txt|cut -d' ' -f2|tail -n 1 )
+        else
+          GALERA_VER=$(grep "$GALERA_VER" .version-info/mariadb-galera.el7.txt|cut -d' ' -f2|tail -n 1 )
+        fi
+
         DEP_ENV="$DEP_ENV MARIADB=$VER GALERA=$GALERA_VER "
       else
         VER=$(tail -n 1 .version-info/mariadb.el7.txt)
-	GALERA_VER=$(grep "$VER" .version-info/mariadb-galera.el7.txt|cut -d' ' -f2|tail -n 1 )
+        GALERA_VER=$(grep "$VER" .version-info/mariadb-galera.el7.txt|cut -d' ' -f2|tail -n 1 )
         DEP_ENV="$DEP_ENV MARIADB=$VER GALERA=$GALERA_VER "
       fi
     fi
