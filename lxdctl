@@ -53,19 +53,20 @@ if [ "x$1" = "xlist" ] ; then
   lxc ls ${USER//./-}
   exit 0
 fi
-if [ "x$1" = "xdestroy" ] ; then
+if [ "x$1" = "xdestroy" ] || [ "x$1" = "x--destroy" ] ; then
   shift
   if [ "x$1" = "x" ] ; then
-    i=${USER}.default
-    c=${i//./-}
-    lxc delete -f $c
+    # delete everything by default
+    lxc ls ${USER//./-} --format=yaml|grep "name: $USER"|awk -F: '{print $2}'|xargs --no-run-if-empty lxc delete --force
+  else
+    while [[ $# -gt 0 ]]; do
+      i="$USER.$1"
+      shift
+      c=${i//./-}
+      lxc delete --force "$c"
+      sed -i -e "/$i/d" ansible_hosts
+    done
   fi
-  while (( "$#" )); do
-    i=${USER}.$1
-    c=${i//./-}
-    lxc delete -f $c
-    shift
-  done
   exit 0
 fi
 
@@ -144,14 +145,6 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
-
-if [ $DESTROY -eq 1 ] ; then
-  for i in ${USER}.default $(seq 1 20|sed -e s/^/${USER}.node/); do
-    c=${i//./-}
-    lxc delete -f $c &>/dev/null
-  done
-  exit 0
-fi
 
 if [ "x$LXD_PROFILE" != "x" ] ; then
   LXD_PROFILE="--profile $LXD_PROFILE"

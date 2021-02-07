@@ -10,6 +10,7 @@ if [ "x$1" = "xhelp" ] ; then
   echo "$0 list # show currently running containers"
   echo "$0 deploy help"
   echo "$0 add nodeN node_definition # spawn additional node and deploy software on it"
+  echo "$0 replace nodeN node_definition # delete existing node, spawn additional and deploy software on it"
   echo "$0 apply nodeN node_definition # deploy software on existing node"
   exit 0
 fi
@@ -1255,8 +1256,14 @@ if [ "x$1" = "xdeploy" ] ; then
   wait
 fi
 
-if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] ; then
+if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] || [ "x$1" = "xreplace" ] ; then
   ADD_CMD=0
+  REPLACE_CMD=0
+
+  if [ "x$1" = "xreplace" ] ; then
+    ADD_CMD=1
+    REPLACE_CMD=1
+  fi
   if [ "x$1" = "xadd" ] ; then
     ADD_CMD=1
   fi
@@ -1303,6 +1310,19 @@ if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] ; then
 
   DEPLARGS=()
 
+  if [ $REPLACE_CMD -eq 1 ] ; then
+    case "$PROVIDER" in
+      podman)
+        ./podmanctl --destroy
+        ;;
+      lxd)
+        ./lxdctl --destroy "$NODE"
+        ;;
+      *)
+        echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
+        exit 1
+    esac
+  fi
   if [ $ADD_CMD -eq 1 ] ; then
     start_node "$NODE"
   fi
