@@ -48,3 +48,11 @@ ip_of_nginx_server downloads.mariadb.com.local
 
 ```
 * Export bash variable `LOCAL_REPO_CACHE=1`, add to .bashrc if needed
+
+## LXD cache for base OS image
+* Export variable
+```
+export ANYDBVER_CACHE_OS_IMG=1
+```
+* During first deployment the image is cached as ${USER}-$OS-empty
+* During next deployments for the same OS the cache image speedup startup

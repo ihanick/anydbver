@@ -526,6 +526,9 @@ deploy_node() {
     if [[ $i == "virtual-machine" ]] ; then
       DEP_ENV="$DEP_ENV NODE_VM=1"
     fi
+    if [[ $i == "parallel" ]] ; then
+      DEP_ENV="$DEP_ENV PARALLEL=1"
+    fi
 
     if [[ $i == "os:"* ]] || [[ $i == "operating-system:"* ]] ; then
       NODE_OS=$(get_version "$i")
@@ -1240,10 +1243,16 @@ if [ "x$1" = "xdeploy" ] ; then
   for i in "${DEPLOY_CMDS[@]}"; do
     pre_deploy_hook "$i"
     printf "%s\n" "$i"
-    [[ $DRY_RUN == 0 ]] && bash -c "$i"
+    if [[ "$i" == *PARALLEL=1* && $DRY_RUN == 0  ]] ; then
+      bash -c "$i" &> $( mktemp deploy.log.XXXXXX ) &
+    elif [[ $DRY_RUN == 0 ]] ; then
+      wait
+      bash -c "$i"
+    fi
     post_deploy_hook "$i"
   done
 
+  wait
 fi
 
 if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] ; then

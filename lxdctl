@@ -180,12 +180,24 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
   fi
 
   c=${i//./-}
-  lxc launch $LXD_PROFILE $IMG $c $LXD_PRIVILEGED_CONTAINERS ${VMs[$i]}
-  until lxc exec $c true ; do sleep 2; done
-  lxc exec $c -- mkdir /root/.ssh
-  lxc file push secret/id_rsa.pub $c/root/.ssh/authorized_keys
-  lxc file push tools/node_ip.sh $c/usr/bin/node_ip.sh
-  lxc exec $c -- bash -c "export LANG=C;test -f /usr/bin/rsync || (until ping  -c 1 percona.com &>/dev/null ; do sleep 1; done; for pkg in sudo openssh-server iproute rsync $PACKAGES; do yum install -q -y \$pkg ; done); chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd;systemctl enable sshd;systemctl restart sshd; chmod 0600 /root/.ssh/authorized_keys; chmod 0700 /root/.ssh; chown root:root -R /root/.ssh"
+  if [[ $ANYDBVER_CACHE_OS_IMG == 1 ]] && lxc image list --format yaml ${USER}-${OS}-empty | grep -q ${USER}-${OS}-empty ; then
+    lxc launch $LXD_PROFILE ${USER}-${OS}-empty $c $LXD_PRIVILEGED_CONTAINERS ${VMs[$i]}
+    until lxc exec $c true ; do sleep 2; done
+  else
+    lxc launch $LXD_PROFILE $IMG $c $LXD_PRIVILEGED_CONTAINERS ${VMs[$i]}
+    until lxc exec $c true ; do sleep 2; done
+    lxc exec $c -- mkdir /root/.ssh
+    lxc file push secret/id_rsa.pub $c/root/.ssh/authorized_keys
+    lxc file push tools/node_ip.sh $c/usr/bin/node_ip.sh
+    lxc exec $c -- bash -c "export LANG=C;test -f /usr/bin/rsync || (until ping  -c 1 percona.com &>/dev/null ; do sleep 1; done; for pkg in sudo openssh-server iproute rsync $PACKAGES; do yum install -q -y \$pkg ; done); chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd; chmod 0600 /root/.ssh/authorized_keys; chmod 0700 /root/.ssh; chown root:root -R /root/.ssh; yum install -q -y https://repo.percona.com/yum/release/7/RPMS/x86_64/libeatmydata-0.1-00.21.el7.centos.x86_64.rpm"
+    if [[ $ANYDBVER_CACHE_OS_IMG == 1 ]] ; then
+      lxc stop $c
+      lxc publish ihanick-default --alias ${USER}-${OS}-empty
+      lxc start $c
+    fi
+  fi
+
+  lxc exec $c -- bash -c "systemctl enable sshd;systemctl restart sshd"
 
   IP=$(lxc exec $c -- /bin/bash /usr/bin/node_ip.sh)
   echo "$i ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ansible_hosts
