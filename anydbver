@@ -935,7 +935,7 @@ deploy_node() {
     DEP_ENV="$DEP_ENV DB_OPTS=mysql/async-repl-gtid-row.cnf"
   elif [[ "$DEP_ENV" == *'PS='* && $UTF8ENC == 1 ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mysql/async-repl-gtid-utf8.cnf"
-  elif [[ "$DEP_ENV" == *'PS='* ]] ; then
+  elif [[ "$DEP_ENV" == *'PS='* || "$DEP_ENV" == *'MYSQL='* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mysql/async-repl-gtid.cnf"
   elif [[ "$DEP_ENV" == *'MARIADB='* && $ROW_REPLICATION == 1 ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mariadb/async-repl-gtid-row.cnf"

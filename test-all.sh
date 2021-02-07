@@ -79,8 +79,14 @@ if [[ "x$1" = "x" || "x$1" = "xpsmdb" ]] ; then
 fi
 
 if [[ "x$1" = "x" || "x$1" = "xorchestrator" ]] ; then
-  ./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1 node3 orchestrator master:default
+  ./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1 node3 orchestrator master:default >> test-run.log
   [[ $(./anydbver ssh node3 orchestrator-client -c topology -i $USER-default:3306 2>/dev/null |wc -l) == 3 ]] || echo "orchestrator: FAIL"
+fi
+
+if [[ "x$1" = "x" || "x$1" = "xproxysql-mysql-async" ]] ; then
+  ./anydbver deploy mysql node1 mysql master:default node2 proxysql master:default >> test-run.log
+  ./anydbver ssh node2 mysql --protocol=tcp --port 6033 -uroot -psecret -e "'select version()'" 2>/dev/null | \
+    grep -q 8.0 || echo "proxysql-mysql-async : FAIL"
 fi
 
 # Regression tests
@@ -95,7 +101,7 @@ if [[ "x$1" = "x" || "x$1" = "xissue-1" ]] && [[ "x$2" = "x" || "x$2" = "xmysql"
     hn:mysql_rs0_gr0 mysql:8.0.18 group-replication \
     node1 hn:mysql_rs0_gr1 mysql:8.0.18 group-replication master:default \
     node2 hn:mysql_rs0_gr2 mysql:8.0.18 group-replication master:default \
-    node3 hn:mysql_rs0_router mysql-router:8.0.18 master:default
+    node3 hn:mysql_rs0_router mysql-router:8.0.18 master:default >> test-run.log
   ./anydbver ssh node3 mysql --protocol=tcp --port 6446 -uroot -psecret -e "'select version()'" 2>/dev/null |grep -q 8.0 || echo "mysql issue-1 : FAIL"
 fi
 if [[ "x$1" = "x" || "x$1" = "xissue-1" ]] && [[ "x$2" = "x" || "x$2" = "xps" ]] ; then
@@ -103,12 +109,12 @@ if [[ "x$1" = "x" || "x$1" = "xissue-1" ]] && [[ "x$2" = "x" || "x$2" = "xps" ]]
     hn:mysql_rs0_gr0 ps:8.0.19 group-replication \
     node1 hn:mysql_rs0_gr1 ps:8.0.19 group-replication master:default \
     node2 hn:mysql_rs0_gr2 ps:8.0.19 group-replication master:default \
-    node3 hn:mysql_rs0_router mysql-router:8.0.19 master:default
+    node3 hn:mysql_rs0_router mysql-router:8.0.19 master:default >> test-run.log
   ./anydbver ssh node3 mysql --protocol=tcp --port 6446 -uroot -psecret -e "'select version()'" 2>/dev/null |grep -q 8.0 || echo "ps issue-1 : FAIL"
 fi
 
 
 if [[ "x$1" = "x" || "x$1" = "xissue-3" ]] ; then
-  ./anydbver deploy hn:vault.percona.local vault node1 ps:8.0 vault-server:vault.percona.local
+  ./anydbver deploy hn:vault.percona.local vault node1 ps:8.0 vault-server:vault.percona.local >> test-run.log
   ./anydbver ssh node1 mysql -e "'create database test;create table test.t(iduniqname int auto_increment primary key) ENCRYPTION=\"Y\";show create table test.t'" 2>/dev/null | grep -q iduniqname || echo "issue-3 : FAIL"
 fi
