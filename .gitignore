@@ -3,14 +3,14 @@ secret/*.tar.gz
 secret/*.pem
 secret/*keyfile
 lxdock.yml
-ansible_hosts
+*ansible_hosts
 secret/id_rsa
 secret/id_rsa.pub
 secret/kube.config
 secret/*kube_config
 secret/vault*-client.tar
 Docker/centos7-samba/install_samba_ad.sh
-configs/hosts
+configs/*hosts
 .anydbver
 .version-info/*
 test-run.log

@@ -7,12 +7,13 @@ PYTHON_INT=/usr/bin/python2.7
 NUM_NODES=3
 DESTROY=0
 LXD_PRIVILEGED_CONTAINERS=''
+NAMESPACE=''
 
 
 getip() {
-  IP="$(sed -ne '/'$1'/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts)"
+  IP="$(sed -ne '/'$1'/ {s/^.*ansible_host=//;s/ .*$//;p}' ${NAMESPACE}ansible_hosts 2>/dev/null)"
   if [ "x$IP" = "x" ] ; then
-    IP="$(sed -ne '/\<'$1'\>/ {s/ .*$//;p}' configs/hosts|head -n 1)"
+    IP="$(sed -ne '/\<'$1'\>/ {s/ .*$//;p}' configs/${NAMESPACE}hosts 2>/dev/null|head -n 1)"
   fi
 }
 
@@ -36,44 +37,9 @@ setupOS() {
   fi
 }
 
-if [ "x$1" = "xssh" ] ; then
-  shift
-  getip "$1"
-  shift
-  exec ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP "$@"
-  exit 0
-fi
-if [ "x$1" = "xscp" ] ; then
-  shift
-  getip "$1"
-  shift
-  exec -o UserKnownHostsFile=/dev/null scp -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP:"$1" "$2"
-fi
-if [ "x$1" = "xlist" ] ; then
-  lxc ls ${USER//./-}
-  exit 0
-fi
-if [ "x$1" = "xdestroy" ] || [ "x$1" = "x--destroy" ] ; then
-  shift
-  if [ "x$1" = "x" ] ; then
-    # delete everything by default
-    lxc ls ${USER//./-} --format=yaml|grep "name: $USER"|awk -F: '{print $2}'|xargs --no-run-if-empty lxc delete --force
-  else
-    while [[ $# -gt 0 ]]; do
-      i="$USER.$1"
-      shift
-      c=${i//./-}
-      lxc delete --force "$c"
-      sed -i -e "/$i/d" ansible_hosts
-    done
-  fi
-  exit 0
-fi
-
-
 # read arguments
 opts=$(getopt \
-    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:,hostname:,vm:,only-node:,privileged" \
+    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:,hostname:,vm:,only-node:,privileged,namespace:" \
     --name "$(basename "$0")" \
     --options "" \
     -- "$@"
@@ -96,6 +62,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --only-node)
       ONLY_NODE=$2
+      shift 2
+      ;;
+    --namespace)
+      NAMESPACE="$2-"
       shift 2
       ;;
     --pmm-port)
@@ -146,6 +116,51 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [ "x$1" = "x--" ] ; then
+  shift
+fi
+
+
+if [ "x$1" = "xssh" ] ; then
+  shift
+  getip "$1"
+  shift
+  if [ "x$IP" = "x" ] ; then
+    echo "No such host, try to deploy or add it"
+    exit 1
+  fi
+  exec ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP "$@"
+  exit 0
+fi
+if [ "x$1" = "xscp" ] ; then
+  shift
+  getip "$1"
+  shift
+  exec -o UserKnownHostsFile=/dev/null scp -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP:"$1" "$2"
+fi
+if [ "x$1" = "xlist" ] ; then
+  lxc ls ${NAMESPACE//./-}${USER//./-}
+  exit 0
+fi
+if [ "x$1" = "xdestroy" ] || [ "x$1" = "x--destroy" ] || [ $DESTROY -eq 1 ] ; then
+  [ $DESTROY -eq 1 ] || shift
+  if [ "x$1" = "x" ] ; then
+    # delete everything by default
+    lxc ls ${NAMESPACE//./-}${USER//./-} --format=yaml|grep "name: ${NAMESPACE//./-}${USER//./-}"|awk -F: '{print $2}'|xargs --no-run-if-empty lxc delete --force
+    rm -f ${NAMESPACE}ansible_hosts configs/${NAMESPACE}hosts
+  else
+    while [[ $# -gt 0 ]]; do
+      i="$NAMESPACE$USER.$1"
+      shift
+      c=${i//./-}
+      lxc delete --force "$c"
+      sed -i -e "/$i/d" ${NAMESPACE}ansible_hosts
+    done
+  fi
+  exit 0
+fi
+
+
 if [ "x$LXD_PROFILE" != "x" ] ; then
   LXD_PROFILE="--profile $LXD_PROFILE"
 fi
@@ -153,8 +168,8 @@ fi
 if [ "x$ONLY_NODE" != "x" ] ; then
   NUM_NODES=20
 else
-  :> ansible_hosts
-  :> configs/hosts
+  :> ${NAMESPACE}ansible_hosts
+  :> configs/${NAMESPACE}hosts
 fi
 
 test -f secret/id_rsa || ssh-keygen -t rsa -f secret/id_rsa -P '' && chmod 0600 secret/id_rsa
@@ -172,7 +187,7 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
     setupOS $OS
   fi
 
-  c=${i//./-}
+  c=$NAMESPACE${i//./-}
   if [[ $ANYDBVER_CACHE_OS_IMG == 1 ]] && lxc image list --format yaml ${USER}-${OS}-empty | grep -q ${USER}-${OS}-empty ; then
     lxc launch $LXD_PROFILE ${USER}-${OS}-empty $c $LXD_PRIVILEGED_CONTAINERS ${VMs[$i]}
     until lxc exec $c true ; do sleep 2; done
@@ -193,7 +208,7 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
   lxc exec $c -- bash -c "systemctl enable sshd;systemctl restart sshd"
 
   IP=$(lxc exec $c -- /bin/bash /usr/bin/node_ip.sh)
-  echo "$i ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ansible_hosts
+  echo "$i ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ${NAMESPACE}ansible_hosts
 
   if [ "x${HOSTNAMES[$i]}" != "x" ] ; then
     lxc exec $c -- hostnamectl set-hostname "${HOSTNAMES[$i]}"
@@ -201,7 +216,7 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
 
   if [ "x${HOSTNAMES[$i]}" != "x" ] ; then
     SHORT_NAME=$(echo "${HOSTNAMES[$i]}" | cut -d. -f 1)
-    echo "$IP ${HOSTNAMES[$i]} $SHORT_NAME" >> configs/hosts
+    echo "$IP ${HOSTNAMES[$i]} $SHORT_NAME" >> configs/${NAMESPACE}hosts
   fi
 
   ((N=N+1))
@@ -212,6 +227,7 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
   if [ "x$ONLY_NODE" != "x" ] && [ "x${USER}.$ONLY_NODE" != "x$i" ] ; then
       continue
   fi
+  i="$NAMESPACE$i"
   c=${i//./-}
-  lxc exec $c -- bash -c "cat >> /etc/hosts" < configs/hosts
+  lxc exec $c -- bash -c "cat >> /etc/hosts" < configs/${NAMESPACE}hosts
 done

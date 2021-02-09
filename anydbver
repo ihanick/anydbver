@@ -1,8 +1,8 @@
 #!/bin/bash
 [ -f .anydbver ] && source .anydbver
 
-if [ "x$1" = "xhelp" ] ; then
-  echo "Use: "
+print_help() {
+  echo "Usage: "
   echo "$0 configure provider:lxd"
   echo "$0 ssh default or $0 ssh node1"
   echo "$0 update # refresh version information"
@@ -12,7 +12,12 @@ if [ "x$1" = "xhelp" ] ; then
   echo "$0 add nodeN node_definition # spawn additional node and deploy software on it"
   echo "$0 replace nodeN node_definition # delete existing node, spawn additional and deploy software on it"
   echo "$0 apply nodeN node_definition # deploy software on existing node"
+  echo "$0 --namespace mynsp <ssh|list|deploy|add|replace|apply> ... # separate deployments operations"
   exit 0
+}
+
+if [ "x$1" = "xhelp" ] ; then
+  print_help
 fi
 
 if [ "x$2" = "xhelp" ] ; then
@@ -66,6 +71,14 @@ if [ "x$2" = "xhelp" ] ; then
   fi
 fi
 
+NAMESPACE_CMD=''
+NAMESPACE=''
+if [ "x$1" = "x--namespace" ] ; then
+  NAMESPACE="$2-"
+  NAMESPACE_CMD="--namespace $2"
+  shift 2
+fi
+
 
 if [ "x$1" = "xconfigure" ] ; then
   while (( "$#" )); do
@@ -114,7 +127,7 @@ if [ "x$1" = "xssh" ] ; then
       exec ./podmanctl ssh "$NODE" "$@"
       ;;
     lxd)
-      exec ./lxdctl ssh "$NODE" "$@"
+      exec ./lxdctl $NAMESPACE_CMD ssh "$NODE" "$@"
       ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
@@ -127,7 +140,7 @@ if [ "x$1" = "xlist" ] || [ "x$1" = "xls" ] ; then
       exec ./podmanctl list
       ;;
     lxd)
-      exec ./lxdctl list
+      exec ./lxdctl $NAMESPACE_CMD list
       ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
@@ -154,7 +167,7 @@ if [ "x$1" = "xdestroy" ] ; then
       exec ./podmanctl --destroy
       ;;
     lxd)
-      exec ./lxdctl --destroy
+      exec ./lxdctl $NAMESPACE_CMD --destroy
       ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
@@ -980,7 +993,7 @@ deploy_node() {
       echo "$DEP_ENV ansible-playbook -i ansible_hosts --limit $USER.$NODE playbook.yml"
       ;;
     lxd)
-      echo "$DEP_ENV ansible-playbook -i ansible_hosts --limit $USER.$NODE playbook.yml"
+      echo "$DEP_ENV ansible-playbook -i ${NAMESPACE}ansible_hosts --limit $USER.$NODE playbook.yml"
       ;;
     *)
       echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
@@ -1001,7 +1014,7 @@ find_node_ip() {
       sed -ne '/'$NODE'/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts
       ;;
     lxd)
-      sed -ne '/'$NODE'/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts
+      sed -ne '/'$NODE'/ {s/^.*ansible_host=//;s/ .*$//;p}' ${NAMESPACE}ansible_hosts
       ;;
     *)
       echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
@@ -1136,7 +1149,7 @@ post_deploy_hook() {
   if echo "$i" | grep -q CLUSTER= && echo "$i" | grep -q PXC=8. ; then
     NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
     CLUSTER_NAME=$(echo "$i" | sed -re 's/^.*CLUSTER=([^ ]+).*$/\1/' )
-    test -f secret/${CLUSTER_NAME}-ssl.tar.gz || ./anydbver \
+    test -f secret/${CLUSTER_NAME}-ssl.tar.gz || ./anydbver ${NAMESPACE_CMD} \
       ssh $NODE tar cz \
         /var/lib/mysql/ca.pem \
         /var/lib/mysql/ca-key.pem \
@@ -1148,7 +1161,7 @@ post_deploy_hook() {
 
   if echo "$i" | grep -q VAULT= ; then
     NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
-    ./anydbver ssh $NODE tar c /etc/vault.d/ca.crt /root/.vault-token > secret/vault-client.tar
+    ./anydbver ${NAMESPACE_CMD} ssh $NODE tar c /etc/vault.d/ca.crt /root/.vault-token > secret/vault-client.tar
   fi
 }
 
@@ -1163,14 +1176,14 @@ start_all_nodes() {
       ./podmanctl --nodes ${#ALL_NODES[@]}
       ;;
     lxd)
-      echo "./lxdctl --destroy"
+      echo "./lxdctl $NAMESPACE_CMD --destroy"
       [[ $DRY_RUN == 0 ]] && ./lxdctl --destroy
       if [[ $PRIV_CONTAINER_REQUIRED == 1 ]] ; then
-        echo "./lxdctl --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD"
-        [[ $DRY_RUN == 0 ]] && ./lxdctl --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD
+        echo "./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD
       else
-        echo "./lxdctl --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD"
-        [[ $DRY_RUN == 0 ]] && ./lxdctl --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD
+        echo "./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD
       fi
       ;;
     *)
@@ -1192,11 +1205,11 @@ start_node() {
       ;;
     lxd)
       if [[ $PRIV_CONTAINER_REQUIRED == 1 ]] ; then
-        echo "./lxdctl --only-node $NODE --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD"
-        [[ $DRY_RUN == 0 ]] && ./lxdctl --only-node $NODE  --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD
+        echo "./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --only-node $NODE  --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD
       else
-        echo "./lxdctl --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD"
-        [[ $DRY_RUN == 0 ]] && ./lxdctl --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD
+        echo "./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD
       fi
       ;;
     *)
@@ -1332,7 +1345,7 @@ if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] || [ "x$1" = "xreplace" ] ; then
         ./podmanctl --destroy
         ;;
       lxd)
-        ./lxdctl --destroy "$NODE"
+        ./lxdctl $NAMESPACE_CMD --destroy "$NODE"
         ;;
       *)
         echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
@@ -1350,4 +1363,7 @@ if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] || [ "x$1" = "xreplace" ] ; then
     post_deploy_hook "$i"
   done
 
+  exit 0
 fi
+
+print_help
