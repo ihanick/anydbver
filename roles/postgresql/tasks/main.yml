@@ -85,6 +85,11 @@
       echo "listen_addresses = '*'" >> /var/lib/pgsql/{{maj}}/data/postgresql.conf;
       echo 'host    all             all             0.0.0.0/0            {{'md5' if ldap_server_ip == '' else 'ldap ldapurl="ldap://'+ldap_server_ip+':389/dc=percona,dc=local?uid?sub"' }}' >> /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
       echo 'host    replication     all             0.0.0.0/0            md5' >> /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
+      echo 'host    replication     all             127.0.0.1/32         md5' >> /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
+      echo 'host    replication     all             ::1/128              md5' >> /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
+      echo 'host    all             all             127.0.0.1/32         md5' >> /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
+      echo 'host    all             all             ::1/128              md5' >> /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
+      sed -i -r -e 's/^(host.*ident)/#\1/' /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
       echo $(/bin/bash /vagrant/tools/node_ip.sh):5432:*:postgres:{{db_password}} > ~/.pgpass ;
       chmod 0600 ~/.pgpass
     creates: "/var/lib/pgsql/{{maj}}/data/pg_hba.conf"
