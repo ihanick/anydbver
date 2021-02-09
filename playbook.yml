@@ -96,6 +96,7 @@
     percona_k8s_op_version: "{{ percona_k8s_op_pxc_version if percona_k8s_op_pxc_version != '' else percona_k8s_op_psmdb_version }}"
     db_systemd_service: "{{ 'mongod' if psmdb_version != '' else ('postgresql-' + percona_postgresql_major_ver) if percona_postgresql_version != '' else '' }}"
     mariadb_url: "{{ 'http://downloads.mariadb.com.local' if lookup('env','LOCAL_REPO_CACHE',default='') != '' else 'https://downloads.mariadb.com' }}"
+    install_only: "{{ lookup('vars', 'extra_install_only', default=lookup('env','INSTALL_ONLY',default='') ) }}"
     is_percona_repo_required: >-
       {{
       'required' if
@@ -257,7 +258,7 @@
     - name: Install db packages
       when: >
         (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and
-        postgresql_version == '' and percona_postgresql_version == '' and
+        postgresql_version == '' and percona_postgresql_version == '' and percona_server_version == '' and percona_xtradb_cluster == '' and proxysql == '' and
         ('garbd' not in db_features.split(',')) and orchestrator_version == ''
       include_tasks: common/tasks/install_db_packages.yml
 
@@ -265,7 +266,7 @@
       when: >
         start_db == '1' and
         (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and
-        postgresql_version == '' and percona_postgresql_version == '' and
+        postgresql_version == '' and percona_postgresql_version == '' and percona_server_version == '' and percona_xtradb_cluster == '' and proxysql == '' and
         ('garbd' not in db_features.split(',')) and orchestrator_version == ''
       command:
         cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"

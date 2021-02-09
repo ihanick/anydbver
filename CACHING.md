@@ -56,3 +56,21 @@ export ANYDBVER_CACHE_OS_IMG=1
 ```
 * During first deployment the image is cached as ${USER}-$OS-empty
 * During next deployments for the same OS the cache image speedup startup
+
+## Cache for existing package installations
+* Create a cache from image with "install" keyword
+```
+./anydbver deploy install ps:8.0.22 cache:ps-8.0.22
+```
+* Use same syntax for deployment
+```
+./anydbver deploy \
+          install ps:8.0.22 cache:ps-8.0.22 \
+  node1   install ps:8.0.22 cache:ps-8.0.22 \
+  node2   install ps:8.0.22 cache:ps-8.0.22 \
+  default ps:8.0.22 \
+  node1 ps:8.0.22 master:default \
+  node2 ps:8.0.22 master:default
+```
+
+* Currently only mysql/percona-server/mariadb supports install keyword

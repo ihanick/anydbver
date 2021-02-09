@@ -8,6 +8,7 @@ NUM_NODES=3
 DESTROY=0
 LXD_PRIVILEGED_CONTAINERS=''
 NAMESPACE=''
+SNAPSHOT=''
 
 
 getip() {
@@ -39,7 +40,7 @@ setupOS() {
 
 # read arguments
 opts=$(getopt \
-    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:,hostname:,vm:,only-node:,privileged,namespace:" \
+    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:,hostname:,vm:,only-node:,privileged,namespace:,snapshot:,cache:,has-cache:" \
     --name "$(basename "$0")" \
     --options "" \
     -- "$@"
@@ -48,6 +49,7 @@ opts=$(getopt \
 declare -A HOSTNAMES
 declare -A OSes
 declare -A VMs
+declare -A CACHE_IMAGES
 
 eval set --$opts
 while [[ $# -gt 0 ]]; do
@@ -83,6 +85,20 @@ while [[ $# -gt 0 ]]; do
 
       shift 2
       ;;
+    --cache)
+      NODE_NAME=$(echo "$2"|cut -d= -f 1)
+      NODE_CACHE_IMG=$(echo "$2"|cut -d= -f 2)
+      if [[ "x$NODE_NAME" != "x" && "$xNODE_CACHE_IMG" != "x" && "$2" == *=* ]] ; then
+        CACHE_IMAGES[$USER.$NODE_NAME]="$NODE_CACHE_IMG"
+      fi
+
+      shift 2
+      ;;
+    --has-cache)
+      HAS_CACHE_CHECK=$2
+      shift 2
+      ;;
+
     --vm)
       NODE_NAME="$2"
       VMs[$USER.$NODE_NAME]="--vm"
@@ -94,6 +110,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --samba)
       SAMBA_NODE=$2
+      shift 2
+      ;;
+    --snapshot)
+      SNAPSHOT=$2
       shift 2
       ;;
     --hostname)
@@ -120,6 +140,22 @@ if [ "x$1" = "x--" ] ; then
   shift
 fi
 
+if [ "x$HAS_CACHE_CHECK" != "x" ] ; then
+  if lxc image list --format yaml ${USER}-${OS}-$HAS_CACHE_CHECK | grep -q ${USER}-${OS}-$HAS_CACHE_CHECK ; then
+    exit 0
+  fi
+  exit 1
+fi
+
+if [ "x$SNAPSHOT" != "x" ] ; then
+  i="$NAMESPACE$USER.$1"
+  c=${i//./-}
+  lxc stop $c
+  lxc publish $c --alias ${USER}-${OS}-${SNAPSHOT}
+  lxc start $c
+
+  exit 0
+fi
 
 if [ "x$1" = "xssh" ] ; then
   shift
@@ -188,7 +224,10 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
   fi
 
   c=$NAMESPACE${i//./-}
-  if [[ $ANYDBVER_CACHE_OS_IMG == 1 ]] && lxc image list --format yaml ${USER}-${OS}-empty | grep -q ${USER}-${OS}-empty ; then
+  if [ "x${CACHE_IMAGES[$i]}" != "x" ] && lxc image list --format yaml ${USER}-${OS}-${CACHE_IMAGES[$i]} | grep -q ${USER}-${OS}-${CACHE_IMAGES[$i]} ; then
+    lxc launch $LXD_PROFILE ${USER}-${OS}-${CACHE_IMAGES[$i]} $c $LXD_PRIVILEGED_CONTAINERS ${VMs[$i]}
+    until lxc exec $c true ; do sleep 2; done
+  elif [[ $ANYDBVER_CACHE_OS_IMG == 1 ]] && lxc image list --format yaml ${USER}-${OS}-empty | grep -q ${USER}-${OS}-empty ; then
     lxc launch $LXD_PROFILE ${USER}-${OS}-empty $c $LXD_PRIVILEGED_CONTAINERS ${VMs[$i]}
     until lxc exec $c true ; do sleep 2; done
   else

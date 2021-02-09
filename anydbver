@@ -554,6 +554,11 @@ deploy_node() {
       DEP_ENV="$DEP_ENV PARALLEL=1"
     fi
 
+    if [[ $i == "cache:"* ]] ; then
+      CACHE_IMG=$(get_version "$i")
+      DEP_ENV="$DEP_ENV CACHE_IMG=${CACHE_IMG} "
+    fi
+
     if [[ $i == "os:"* ]] || [[ $i == "operating-system:"* ]] ; then
       NODE_OS=$(get_version "$i")
       case "$NODE_OS" in
@@ -864,6 +869,10 @@ deploy_node() {
     if [[ $i == "utf8" ]] || [[ $i == "utf8mb3" ]] ; then
       UTF8ENC=1
     fi
+    if [[ $i == "install" ]] ; then
+      DEP_ENV="$DEP_ENV INSTALL_ONLY=1"
+    fi
+
     if [[ $i == "configsrv" ]] ; then
       DEP_ENV="$DEP_ENV MONGO_CONFIGSRV=1"
     fi
@@ -1179,11 +1188,11 @@ start_all_nodes() {
       echo "./lxdctl $NAMESPACE_CMD --destroy"
       [[ $DRY_RUN == 0 ]] && ./lxdctl --destroy
       if [[ $PRIV_CONTAINER_REQUIRED == 1 ]] ; then
-        echo "./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD"
-        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD
+        echo "./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD
       else
-        echo "./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD"
-        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD
+        echo "./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD
       fi
       ;;
     *)
@@ -1205,11 +1214,11 @@ start_node() {
       ;;
     lxd)
       if [[ $PRIV_CONTAINER_REQUIRED == 1 ]] ; then
-        echo "./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD"
-        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --only-node $NODE  --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD
+        echo "./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --only-node $NODE  --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD
       else
-        echo "./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD"
-        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD
+        echo "./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD
       fi
       ;;
     *)
@@ -1223,6 +1232,7 @@ if [ "x$1" = "xdeploy" ] ; then
   HOSTNAMES_CMD=''
   OS_CMD=''
   VM_CMD=''
+  CACHE_IMG_CMD=''
   DEPLARGS=()
   DEPLOY_CMDS=()
   NODE=default
@@ -1251,6 +1261,9 @@ if [ "x$1" = "xdeploy" ] ; then
     if [[ "$DEPCMD" == *"HOSTNAME="* ]] ; then
       HOSTNAMES_CMD="$HOSTNAMES_CMD --hostname $NODE="$(echo "$DEPCMD"| sed -re 's/^.*HOSTNAME=([^ ]+) .*/\1/')
     fi
+    if [[ "$DEPCMD" == *"CACHE_IMG="* ]] ; then
+      CACHE_IMG_CMD="$CACHE_IMG_CMD --cache $NODE="$(echo "$DEPCMD"| sed -re 's/^.*CACHE_IMG=([^ ]+) .*/\1/')
+    fi
     if [[ "$DEPCMD" == *"NODE_OS="* ]] ; then
       OS_CMD="$OS_CMD --os $NODE="$(echo "$DEPCMD"| sed -re 's/^.*NODE_OS=([^ ]+) .*/\1/')
     fi
@@ -1273,16 +1286,26 @@ if [ "x$1" = "xdeploy" ] ; then
   for i in "${DEPLOY_CMDS[@]}"; do
     pre_deploy_hook "$i"
     printf "%s\n" "$i"
-    if [[ "$i" == *PARALLEL=1* && $DRY_RUN == 0  ]] ; then
+
+    CACHE_IMG=$(echo "$i"| sed -re 's/^.*CACHE_IMG=([^ ]+) .*/\1/')
+    if [[ "$i" == *CACHE_IMG=* ]] && [ "x$CACHE_IMG" != "x" ] && ./lxdctl --has-cache $CACHE_IMG ; then
+      echo "Using existing cache image $CACHE_IMG skipping ansible run"
+    elif [[ "$i" == *PARALLEL=1* && $DRY_RUN == 0  ]] ; then
       bash -c "$i" &> $( mktemp deploy.log.XXXXXX ) &
     elif [[ $DRY_RUN == 0 ]] ; then
       wait
       bash -c "$i"
+      if [[ "$i" == *CACHE_IMG=* ]] && [ "x$CACHE_IMG" != "x" ] ; then
+        NODE=$(echo "$i"| sed -re 's/^.*\.([^.]+)[ ]* playbook.yml/\1/')
+        echo "Caching $CACHE_IMG on node $NODE"
+        ./lxdctl --snapshot $CACHE_IMG $NODE
+      fi
     fi
     post_deploy_hook "$i"
   done
 
   wait
+  exit 0
 fi
 
 if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] || [ "x$1" = "xreplace" ] ; then
