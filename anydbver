@@ -416,6 +416,7 @@ EOF
 13.1
 EOF
   cat > .version-info/pko4psmdb.txt <<EOF
+master
 0.1.0
 0.2.0
 0.2.1
