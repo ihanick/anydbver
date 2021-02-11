@@ -5,17 +5,11 @@
     name: "etcd"
     state: present
 
-- name: Setup etcd
+- name: Install patroni
   command:
-    cmd: /bin/bash /vagrant/tools/setup_etcd.sh "{{ cluster_name }}" "{{ db_password }}" "{{ etcd_ip }}"
-    creates: /etc/etcd/etcd.conf.bak
-
-- name: Start etcd with systemd
-  when:  start_db == '1'
-  command:
-    cmd: systemctl start etcd
-
-- name: Setup patroni
-  command:
-    cmd: /bin/bash /vagrant/tools/setup_patroni.sh "{{ cluster_name }}" "{{ db_password }}" "{{ etcd_ip }}"
+    cmd: /bin/bash /vagrant/tools/install_patroni.sh
     creates: /usr/local/bin/patroni
+
+- name: Patroni Setup tasks
+  when: install_only == ''
+  include_tasks: setup.yaml

@@ -1,0 +1,84 @@
+- name: Create Postgres Database
+  when: (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') or percona_postgresql_version.startswith('13.') or postgresql_version != '' ) and db_password != ""
+  vars:
+    maj: "{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1') if postgresql_version != '' else percona_postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')   }}"
+  shell:
+    cmd: >-
+      echo {{ db_password }} > /tmp/root-pw.txt;
+      PGSETUP_INITDB_OPTIONS="--pwfile=/tmp/root-pw.txt {{ '' if pmm_url == '' else '-A md5' }}" /usr/pgsql-{{maj}}/bin/postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else '-'+maj}}-setup initdb;
+      echo "listen_addresses = '*'" >> /var/lib/pgsql/{{maj}}/data/postgresql.conf;
+      echo 'host    all             all             0.0.0.0/0            {{'md5' if ldap_server_ip == '' else 'ldap ldapurl="ldap://'+ldap_server_ip+':389/dc=percona,dc=local?uid?sub"' }}' >> /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
+      echo 'host    replication     all             0.0.0.0/0            md5' >> /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
+      echo 'host    replication     all             127.0.0.1/32         md5' >> /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
+      echo 'host    replication     all             ::1/128              md5' >> /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
+      echo 'host    all             all             127.0.0.1/32         md5' >> /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
+      echo 'host    all             all             ::1/128              md5' >> /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
+      sed -i -r -e 's/^(host.*ident)/#\1/' /var/lib/pgsql/{{maj}}/data/pg_hba.conf;
+      echo $(/bin/bash /vagrant/tools/node_ip.sh):5432:*:postgres:{{db_password}} > ~/.pgpass ;
+      chmod 0600 ~/.pgpass
+    creates: "/var/lib/pgsql/{{maj}}/data/pg_hba.conf"
+
+- name: Apply database options from file
+  when: db_opts_file != '' and (postgresql_version != '' or percona_postgresql_version != '')
+  command:
+    cmd: >-
+      /bin/bash /vagrant/tools/apply_mysql_conf.sh
+      "{{ os[dist][soft].cnf_file }}"
+      "/vagrant/configs/{{ db_opts_file }}"
+      "{{cluster_name}}"
+      "{{db_user}}"
+      "{{db_password}}"
+    creates: "/root/{{ db_opts_file | basename }}.applied"
+
+- name: Setup Kerberos for PG
+  when: kerberos_client != '' and (postgresql_version != '' or percona_postgresql_version != '')
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_pg_kerberos.sh "{{db_user}}" "{{db_password}}"
+    creates: /etc/sysconfig/pgsql/krb5.keytab
+
+- name: Setup and start streaming physical replication with slots
+  when: master_ip != '' and ( percona_postgresql_version != '' or postgresql_version != '')
+  vars:
+    maj: "{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1') if postgresql_version != '' else percona_postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')   }}"
+  shell:
+    cmd: >-
+      /bin/bash /vagrant/tools/setup_postgresql_replication.sh
+      streaming_physical_slots
+      {{master_ip}}
+      postgres
+      {{db_password}}
+      postgres
+      /var/lib/pgsql/{{maj}}/data
+      postgresql-{{maj}}
+    creates: /root/replication.configured
+
+- name: Start database with systemd
+  when: start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
+  command:
+    cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
+
+- name: Create LDAP user in postgres
+  when: (postgresql_version != '' or percona_postgresql_version != '') and ldap_server_ip != '' and db_user != ''
+  shell:
+    cmd: >-
+      sudo -u postgres createuser "{{db_user}}";
+      sudo -u postgres psql -c 'grant all on database postgres to {{db_user}}';
+
+- name: Setup Odyssey
+  when: odyssey_version != '' and master_ip != ''
+  shell:
+    cmd: /bin/bash /vagrant/tools/setup_pg_odyssey.sh "{{master_ip}}" "{{db_password}}"
+    creates: /etc/odyssey/odyssey.conf
+
+- name: Setup PMM client with postgres
+  when: pmm_url != '' and (postgresql_version != '' or percona_postgresql_version != '')
+  shell:
+    cmd: /bin/bash -e /vagrant/tools/setup_pmm.sh "{{soft}}" postgres "{{db_password}}" pmm_user "{{db_password}}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}" "{{ 'yes' if pmm_client_version != '' and (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') or percona_postgresql_version.startswith('13.') ) else 'no' }}"
+    creates: /root/pmm-postgresql.applied
+
+- name: Setup PGPool
+  when: pgpool_version != '' and master_ip != ''
+  shell:
+    cmd: /bin/bash /vagrant/tools/setup_pg_pool.sh "{{master_ip}}" "{{db_password}}"
+    creates: /root/pgpool.applied
+

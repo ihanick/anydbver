@@ -11,22 +11,12 @@ PATRONI_CFG=/etc/patroni/${ETCD_NAME}.yml
 PG_BIN=$(ls -d /usr/pgsql-*/bin|tail -n 1)
 PG_DATA=$(ls -d /var/lib/pgsql/*/data|tail -n 1)
 
-
-yum install -y python3-pip pyOpenSSL python3-devel gcc
-yum install -y epel-release
-yum -y install pyOpenSSL python-setuptools.noarch
-pip3 install --upgrade pip
-pip3 install --upgrade setuptools
-
 export PATH=$PATH:$PG_BIN
-pip3 install psycopg2
-pip3 install patroni[etcd]
 
 mkdir /etc/patroni
 chown postgres:postgres /etc/patroni
 
 mkdir -p /home/postgres/archived
-
 
 
 cat > /tmp/pgpass0 << EOF
@@ -188,3 +178,5 @@ EOF
 systemctl daemon-reload
 
 systemctl start patroni
+
+touch /root/patroni.configured
