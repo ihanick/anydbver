@@ -1,0 +1,29 @@
+- name: Install percona helm repo
+  shell:
+    warn: false
+    cmd: helm repo add percona https://percona-charts.storage.googleapis.com ; helm repo update
+    creates: /root/.cache/helm/repository/percona-index.yaml
+- name: Install PMM with helm
+  when: k8s_pmm != ''
+  shell:
+    warn: false
+    cmd: helm install monitoring percona/pmm-server --set credentials.username=admin --set credentials.password=admin  --set imageTag={{k8s_pmm}} --set platform=kubernetes ; touch /root/k8s-pmm.installed
+    creates: /root/k8s-pmm.installed
+- name: Install minio with helm
+  when: k8s_minio != ''
+  shell:
+    warn: false
+    cmd: >-
+      helm repo add minio https://helm.min.io/ ; 
+      helm install minio-service minio/minio
+      --set accessKey=REPLACE-WITH-AWS-ACCESS-KEY
+      --set secretKey=REPLACE-WITH-AWS-SECRET-KEY
+      --set service.type=ClusterIP
+      --set configPath=/tmp/.minio/
+      --set persistence.size=2G
+      --set buckets[0].name=operator-testing 
+      --set buckets[0].policy=none
+      --set buckets[0].purge=false
+      --set environment.MINIO_REGION=us-east-1 ;
+      touch /root/k8s-minio.installed
+    creates: /root/k8s-minio.installed

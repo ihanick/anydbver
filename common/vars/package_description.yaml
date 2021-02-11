@@ -267,7 +267,7 @@ el7:
       - krb5-workstation
   mydumper:
     install_packages:
-      - "https://github.com/maxbube/mydumper/releases/download/v{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version|regex_replace('-[0-9]+$')}}/mydumper-{{mydumper_version}}.el7.x86_64.rpm"
+      - "https://github.com/maxbube/mydumper/releases/download/v{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version|regex_replace('-[0-9]+$')}}/mydumper-{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version}}.el7.x86_64.rpm"
 
   postgresql:
     systemd_service: "postgresql-{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}"

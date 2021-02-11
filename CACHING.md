@@ -73,4 +73,18 @@ export ANYDBVER_CACHE_OS_IMG=1
   node2 ps:8.0.22 master:default
 ```
 
-* Currently only mysql/percona-server/mariadb/Samba supports install keyword
+```
+./anydbver deploy install k3s cache:k8s
+./anydbver deploy \
+        install k3s cache:k8s \
+  node1 install k3s cache:k8s \
+  node2 install k3s cache:k8s \
+  node3 install k3s cache:k8s \
+  default k3s \
+  node1 k3s-master:default \
+  node2 k3s-master:default \
+  node3 k3s-master:default \
+  default k8s-pmm k8s-pxc
+```
+
+* Currently only mysql/percona-server/Postgres/Patroni/PMM/Samba/k3s support install keyword
