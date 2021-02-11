@@ -493,6 +493,16 @@ EOF
 10.1-1
 EOF
 
+ cat > .version-info/mysql-jdbc.txt <<EOF
+8.0.17-1
+8.0.18-1
+8.0.19-1
+8.0.20-1
+8.0.21-1
+8.0.22-1
+8.0.23-1
+EOF
+
  cat > .version-info/orchestrator.el7.txt <<EOF
 3.0.3-1
 3.0.5-1
@@ -659,6 +669,15 @@ deploy_node() {
         VER=$(tail -n 1 .version-info/mydumper.el7.txt)
         DEP_ENV="$DEP_ENV MYDUMPER=$VER"
       fi
+    fi
+    if [[ $i == "mysql-jdbc:"* || $i == "mysql-jdbc" ]] ; then
+      if [[ $i == *':'* || $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "^$VER" .version-info/mysql-jdbc.txt |tail -n 1)
+      else
+        VER=$(tail -n 1 .version-info/mysql-jdbc.txt)
+      fi
+      DEP_ENV="$DEP_ENV MYSQL_JAVA=$VER"
     fi
     if [[ $i == "orchestrator" ]] || [[ $i == "orchestrator:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
@@ -1187,7 +1206,7 @@ start_all_nodes() {
       ;;
     lxd)
       echo "./lxdctl $NAMESPACE_CMD --destroy"
-      [[ $DRY_RUN == 0 ]] && ./lxdctl --destroy
+      [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --destroy
       if [[ $PRIV_CONTAINER_REQUIRED == 1 ]] ; then
         echo "./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD"
         [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD

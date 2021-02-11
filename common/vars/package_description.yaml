@@ -138,7 +138,7 @@ el7:
       - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
       - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
       - "percona-xtrabackup{{ '-'+percona_xtrabackup_version+'.el7.x86_64' if percona_xtrabackup_version.startswith('2.3') else ''}}"
-      - "Percona-XtraDB-Cluster-galera-{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)\\.([0-9]+)$', '3-3.\\1-\\2') }}.el7.x86_64"
+      - "Percona-XtraDB-Cluster-galera-{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)\\.([0-9]+)$', '3-3.\\1-\\2') }}.{{ 'rhel7' if percona_xtradb_cluster_version | regex_search('(5\\.6\\.2)|(5\\.6\\.3[0-4])') else 'el7' }}.x86_64"
       - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
     garbd_packages:
       - "Percona-XtraDB-Cluster-garbd-{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)\\.([0-9]+)$', '3-3.\\1-\\2') }}.el7.x86_64"

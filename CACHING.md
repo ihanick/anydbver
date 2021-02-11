@@ -73,4 +73,4 @@ export ANYDBVER_CACHE_OS_IMG=1
   node2 ps:8.0.22 master:default
 ```
 
-* Currently only mysql/percona-server/mariadb supports install keyword
+* Currently only mysql/percona-server/mariadb/Samba supports install keyword
