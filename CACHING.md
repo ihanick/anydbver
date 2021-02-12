@@ -47,7 +47,7 @@ ip_of_nginx_server repo.percona.com.local
 ip_of_nginx_server downloads.mariadb.com.local
 
 ```
-* Export bash variable `LOCAL_REPO_CACHE=1`, add to .bashrc if needed
+* Export bash variable `export LOCAL_REPO_CACHE=1`, add to .bashrc if needed
 
 ## LXD cache for base OS image
 * Export variable
@@ -98,4 +98,4 @@ export ANYDBVER_CACHE_OS_IMG=1
   node2   pg:13 master:default patroni etcd-ip:default
 ```
 
-* Currently only mysql/percona-server/Postgres/Patroni/PMM/Samba/k3s support install keyword
+* Currently mysql/percona-server/MariaDB/Postgres/Patroni/PMM/Samba/k3s support install keyword

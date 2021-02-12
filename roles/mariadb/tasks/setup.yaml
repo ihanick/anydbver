@@ -1,0 +1,40 @@
+- name: Apply database options from file
+  when: db_opts_file != ''
+  command:
+    cmd: >-
+      /bin/bash /vagrant/tools/apply_mysql_conf.sh
+      "{{ os[dist][soft].cnf_file }}"
+      "/vagrant/configs/{{ db_opts_file }}"
+      "{{cluster_name}}"
+      "{{db_user}}"
+      "{{db_password}}"
+    creates: "/root/{{ db_opts_file | basename }}.applied"
+
+- name: Create data directory
+  when: db_password != ''
+  command:
+    cmd: >-
+      /bin/bash /vagrant/tools/create_mysql_db_with_password.sh
+      "{{ db_password }}"
+      "oldgrant"
+      "{{os[dist][soft].systemd_service}}"
+    creates: /root/.my.cnf
+
+- name: Start systemd unit
+  when:  start_db == '1'
+  systemd:
+    name: "{{os[dist][soft].systemd_service}}"
+    state: started
+
+- name: Setup and start replication
+  when: master_ip != ''
+  shell:
+    cmd: /bin/bash /vagrant/tools/setup_mysql_replication.sh "{{ 'gtid' if replication_type == '' else replication_type }}" "{{ master_ip }}" root "{{ db_password }}" "{{soft}}" "{{ os[dist][soft].cnf_file }}" "{{os[dist][soft].systemd_service}}" "{{'cluster1' if cluster_name == '' else cluster_name}}"
+    creates: /root/replication.configured
+
+- name: Setup pmm client mysql
+  when: pmm_client_version != '' and pmm_url != '' and ( percona_server_version != '' or mariadb_version != '' )
+  register: pmm_admin_mysql_config
+  changed_when: "'already exists' not in pmm_admin_mysql_config.stdout"
+  shell:
+    cmd: /usr/bin/pmm-admin add mysql --query-source="{{ 'perfschema' if 'pmm_perfschema' in db_features.split(',') else 'slowlog' }}" --username="{{db_user}}" --password="{{db_password}}"
