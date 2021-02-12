@@ -87,4 +87,15 @@ export ANYDBVER_CACHE_OS_IMG=1
   default k8s-pmm k8s-pxc
 ```
 
+```
+./anydbver deploy install pg:13 patroni cache:pg13-patroni
+./anydbver deploy \
+          install pg:13 patroni cache:pg13-patroni \
+  node1   install pg:13 patroni cache:pg13-patroni \
+  node2   install pg:13 patroni cache:pg13-patroni \
+  default pg:13 patroni \
+  node1   pg:13 master:default patroni etcd-ip:default \
+  node2   pg:13 master:default patroni etcd-ip:default
+```
+
 * Currently only mysql/percona-server/Postgres/Patroni/PMM/Samba/k3s support install keyword
