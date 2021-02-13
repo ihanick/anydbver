@@ -38,6 +38,30 @@ setupOS() {
   fi
 }
 
+if [ "x$1" = "x--namespace" ] ;then
+      NAMESPACE="$2-"
+      shift 2
+fi
+
+if [ "x$1" = "xssh" ] ; then
+  shift
+  getip "$1"
+  shift
+  if [ "x$IP" = "x" ] ; then
+    echo "No such host, try to deploy or add it"
+    exit 1
+  fi
+  exec ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP "$@"
+  exit 0
+fi
+if [ "x$1" = "xscp" ] ; then
+  shift
+  getip "$1"
+  shift
+  exec -o UserKnownHostsFile=/dev/null scp -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP:"$1" "$2"
+fi
+
+
 # read arguments
 opts=$(getopt \
     --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:,hostname:,vm:,only-node:,privileged,namespace:,snapshot:,cache:,has-cache:" \
@@ -157,23 +181,6 @@ if [ "x$SNAPSHOT" != "x" ] ; then
   exit 0
 fi
 
-if [ "x$1" = "xssh" ] ; then
-  shift
-  getip "$1"
-  shift
-  if [ "x$IP" = "x" ] ; then
-    echo "No such host, try to deploy or add it"
-    exit 1
-  fi
-  exec ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP "$@"
-  exit 0
-fi
-if [ "x$1" = "xscp" ] ; then
-  shift
-  getip "$1"
-  shift
-  exec -o UserKnownHostsFile=/dev/null scp -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP:"$1" "$2"
-fi
 if [ "x$1" = "xlist" ] ; then
   lxc ls ${NAMESPACE//./-}${USER//./-}
   exit 0
