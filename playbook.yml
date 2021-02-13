@@ -255,21 +255,3 @@
       include_role:
         name: tools_and_monitoring
 
-    - name: Install db packages
-      when: >
-        (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and
-        postgresql_version == '' and percona_postgresql_version == '' and percona_server_version == '' and percona_xtradb_cluster_version == '' and proxysql_version == '' and
-        mariadb_version == '' and
-        ('garbd' not in db_features.split(',')) and orchestrator_version == ''
-      include_tasks: common/tasks/install_db_packages.yml
-
-    - name: Start database with systemd
-      when: >
-        start_db == '1' and
-        (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and
-        postgresql_version == '' and percona_postgresql_version == '' and percona_server_version == '' and percona_xtradb_cluster_version == '' and proxysql_version == '' and
-        mariadb_version == '' and
-        ('garbd' not in db_features.split(',')) and orchestrator_version == ''
-      command:
-        cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
-

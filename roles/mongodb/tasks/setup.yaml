@@ -1,0 +1,94 @@
+- name: Apply Mongo database options from file
+  when: psmdb_version != "" and db_opts_file != ''
+  block:
+    - name: Merge conf file part and main config
+      command:
+        cmd: /usr/local/bin/yq merge -i /etc/mongod.conf "/vagrant/configs/{{ db_opts_file }}"
+        creates: "/root/{{ db_opts_file | basename }}.applied"
+    - name: Avoid re-merge on next runs
+      file: path="/root/{{ db_opts_file | basename }}.applied" state=touch modification_time=preserve access_time=preserve
+
+- name: merge configsrv conf
+  when: mongo_configsrv  != ''
+  command:
+    cmd: /usr/local/bin/yq merge -i /etc/mongod.conf "/vagrant/configs/mongo/configsrv.conf"
+    creates: "/root/configsrv.applied"
+
+- name: merge shardsrv conf
+  when: mongo_shardsrv  != ''
+  command:
+    cmd: /usr/local/bin/yq merge -i /etc/mongod.conf "/vagrant/configs/mongo/shardsrv.conf"
+    creates: "/root/shardsrv.applied"
+
+- name: setup mongos
+  when: mongos_cfg != ''
+  block:
+    - name: create mongos config from template
+      template:
+        src: "{{playbook_dir}}/configs/mongo/mongos.conf.j2"
+        dest: "/etc/mongos.conf"
+    - name: create mongos systemd service
+      command:
+        cmd: /bin/bash /vagrant/tools/setup_mongos.sh "{{ db_user }}" "{{ db_password }}" "{{ mongos_shard }}"
+        creates: /etc/systemd/system/mongos.service
+    - name: Set systemd service to mongos
+      set_fact:
+        db_systemd_service: mongos
+
+- name: Create MongoDB database
+  when: db_password != "" and psmdb_version != ""
+  shell:
+    cmd: "systemctl start mongod;until mongo --eval 'print(\"waited for connection\")' &>/dev/null ; do sleep 2 ; done;/bin/percona-server-mongodb-enable-auth.sh -q;mongo admin --eval 'db.changeUserPassword(\"dba\", \"{{ db_password }}\")';systemctl stop mongod;sed -i -e 's/127.0.0.1/0.0.0.0/g' /etc/mongod.conf;echo 'db = connect(\"mongodb://dba:{{ db_password }}@127.0.0.1:27017/admin\")' > /root/.mongorc.js"
+    creates: /root/.mongorc.js
+
+- name: configure MongoDB replica options
+  when: db_password != '' and psmdb_version != '' and mongo_replicaset != ''
+  block:
+    - name: copy keyfile
+      copy:
+        src: "{{playbook_dir}}/secret/{{mongo_replicaset}}-keyfile"
+        dest: "/etc/{{mongo_replicaset}}-keyfile"
+        mode: "0400"
+        owner: "mongod"
+        group: "mongod"
+    - name: create replication template yaml
+      template:
+        src: "{{playbook_dir}}/configs/mongo/replica.conf.j2"
+        dest: "/root/replica-{{mongo_replicaset}}.yaml"
+    - name: Merge conf file part and main config
+      command:
+        cmd: /usr/local/bin/yq merge -i /etc/mongod.conf "/root/replica-{{mongo_replicaset}}.yaml"
+        creates: "/root/replica-{{mongo_replicaset}}.applied"
+    - name: Avoid re-merge on next runs
+      file: path="/root/replica-{{mongo_replicaset}}.applied" state=touch modification_time=preserve access_time=preserve
+
+- name: Setup LDAP on client
+  when: ldap_server_ip != ''
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_ldap_client.sh "{{ldap_server_ip}}"
+    creates: /root/ldap-client.configured
+
+- name: Setup Mongo for LDAP
+  when: psmdb_version != '' and db_password != '' and ldap_server_ip != ''
+  shell:
+    cmd: /bin/bash /vagrant/tools/setup_mongo_ldap.sh perconaro secret "{{ldap_server_ip}}"
+    creates: /etc/sasl2/mongodb.conf
+
+- name: Start database with systemd
+  when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
+  command:
+    cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
+
+- name: Init or join Mongo replicaset
+  when: db_password != '' and psmdb_version != '' and mongo_replicaset != ''
+  block:
+    - name: init replicaset
+      when: master_ip == ''
+      command:
+        cmd: /bin/bash /vagrant/tools/setup_mongo_replication.sh "{{mongo_replicaset}}" "dba" "{{db_password}}"
+        creates: /root/{{mongo_replicaset}}.init
+    - name: Add secondary to set
+      when: master_ip != ''
+      command:
+        cmd: /bin/bash /vagrant/tools/setup_mongo_replication.sh "{{mongo_replicaset}}" "dba" "{{db_password}}" "{{master_ip}}"
+        creates: /root/{{mongo_replicaset}}.init

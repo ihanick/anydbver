@@ -98,4 +98,4 @@ export ANYDBVER_CACHE_OS_IMG=1
   node2   pg:13 master:default patroni etcd-ip:default
 ```
 
-* Currently mysql/percona-server/MariaDB/Postgres/Patroni/PMM/Samba/k3s support install keyword
+* Currently mysql/Percona Server/Percona Server for MongoDB/MariaDB/Postgres/Patroni/PMM/Samba/k3s support install keyword
