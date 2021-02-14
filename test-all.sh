@@ -79,8 +79,13 @@ if [[ "x$1" = "x" || "x$1" = "xpsmdb" ]] ; then
 fi
 
 if [[ "x$1" = "x" || "x$1" = "xorchestrator" ]] ; then
-  ./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1 node3 orchestrator master:default >> test-run.log
-  [[ $(./anydbver ssh node3 orchestrator-client -c topology -i $USER-default:3306 2>/dev/null |wc -l) == 3 ]] || echo "orchestrator: FAIL"
+  ./anydbver deploy \
+          ps:5.7                "hn:ps0.percona.local" \
+    node1 ps:5.7 master:default "hn:ps1.percona.local" \
+    node2 ps:5.7 master:node1   "hn:ps2.percona.local" \
+    node3 orchestrator master:default >> test-run.log
+  sleep 10 # wait for topology change
+  [[ $(./anydbver ssh node3 orchestrator-client -c topology -i ps0.percona.local:3306 2>/dev/null |wc -l) == 3 ]] || echo "orchestrator: FAIL"
 fi
 
 if [[ "x$1" = "x" || "x$1" = "xproxysql-mysql-async" ]] ; then
