@@ -94,6 +94,24 @@ if [[ "x$1" = "x" || "x$1" = "xproxysql-mysql-async" ]] ; then
     grep -q 8.0 || echo "proxysql-mysql-async : FAIL"
 fi
 
+if [[ "x$1" = "x" || "x$1" = "xmongo-ldap" ]] ; then
+  ./anydbver deploy ldap node1 ldap-master:default psmdb:4.2 >> test-run.log
+  ./anydbver ssh node1 \
+    sudo -u perconaro mongo -u perconaro -psecret --authenticationDatabase "'\$external'" \
+      --authenticationMechanism PLAIN --eval "'db.version()'" | \
+    grep -q 4.2 || echo "mongo-ldap : FAIL"
+fi
+
+if [[ "x$1" = "x" || "x$1" = "xmongo-samba" ]] ; then
+  ./anydbver deploy install samba cache:samba default samba node1 psmdb:4.2 samba-dc:default >> test-run.log
+  ./anydbver ssh node1 \
+    sudo -u nihalainen mongo \
+      -u nihalainen -pverysecretpassword1^ --authenticationDatabase "'\$external'" \
+      --authenticationMechanism PLAIN --eval "'db.version()'" | \
+    grep -q 4.2 || echo "mongo-samba : FAIL"
+fi
+
+
 # Regression tests
 if [[ "x$1" = "x" || "x$1" = "xissue-2" ]] ; then
   ./anydbver deploy mysql:$(grep 8.0 .version-info/mysql.el7.txt |tail -n 2|head -n 1) >> test-run.log
