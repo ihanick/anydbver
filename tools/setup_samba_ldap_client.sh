@@ -57,5 +57,9 @@ GRANT PROXY ON dba_users@'%' TO ''@'';
 EOF
 fi
 
+cat << EOF >> /etc/openldap/ldap.conf
+TLS_REQCERT allow
+EOF
+
 systemctl restart nslcd
 systemctl restart nscd

@@ -3,6 +3,7 @@ DB_USER=$1
 DB_PASS=$2
 LDAP_IP=$3
 LDAP_AD=$4
+DB_LDAP_USR_PASS=$5
 yum install -y openldap-clients cyrus-sasl-ldap cyrus-sasl-plain cyrus-sasl
 
 sed -i -e 's/MECH=pam/MECH=ldap/g' /etc/sysconfig/saslauthd
@@ -16,11 +17,11 @@ EOF
 
 if [ "x$LDAP_AD" = "xyes" ] ; then
 cat > /etc/saslauthd.conf  <<EOF
-ldap_servers: ldaps://ihanick-node2.percona.local
+ldap_servers: ldaps://$LDAP_IP
 ldap_search_base: dc=percona,dc=local
 ldap_timeout: 10
 ldap_filter: sAMAccountName=%U
-ldap_bind_dn: cn=mysqldba,cn=Users,dc=percona,dc=local
+ldap_bind_dn: cn=ldap,cn=Users,dc=percona,dc=local
 ldap_password: verysecretpassword1^
 ldap_deref: never
 ldap_restart: yes
@@ -29,8 +30,9 @@ ldap_use_sasl: no
 ldap_start_tls: no
 ldap_version: 3
 ldap_auth_method: bind
-ldap_tls_cacert_file: /etc/openldap/certs/ca.pem
+ldap_tls_check_peer: no
 EOF
+# ldap_tls_cacert_file: /etc/openldap/certs/ca.pem
 else
 cat > /etc/saslauthd.conf  <<EOF
 ldap_servers: ldap://${LDAP_IP}:389
@@ -59,7 +61,7 @@ db.getSiblingDB("\$external").createUser({user : '$DB_USER', roles: [ {role : "r
 db.getSiblingDB("\$external").auth({mechanism: "PLAIN",user : '$DB_USER',pwd: '$DB_PASS',digestPassword: false})
 EOF
 
-mongo -u $DB_USER -p$DB_PASS --authenticationDatabase '$external' --authenticationMechanism PLAIN <<EOF
+mongo -u $DB_USER -p$DB_LDAP_USR_PASS --authenticationDatabase '$external' --authenticationMechanism PLAIN <<EOF
 use percona
 db.col1.find()
 EOF

@@ -71,7 +71,19 @@
 - name: Setup Mongo for LDAP
   when: psmdb_version != '' and db_password != '' and ldap_server_ip != ''
   shell:
-    cmd: /bin/bash /vagrant/tools/setup_mongo_ldap.sh perconaro secret "{{ldap_server_ip}}"
+    cmd: /bin/bash /vagrant/tools/setup_mongo_ldap.sh perconaro secret "{{ldap_server_ip}}" no "{{db_password}}"
+    creates: /etc/sasl2/mongodb.conf
+
+- name: MongoDB Samba Active Directory
+  when: samba_ip != '' and samba_pass != '' and samba_sid != '' and psmdb_version != ''
+  shell:
+    cmd: /bin/bash /vagrant/tools/setup_samba_ldap_client.sh "{{samba_ip}}" "{{samba_pass}}" "{{samba_sid}}" mongo
+
+
+- name: Setup Mongo for Active Directory LDAP
+  when: psmdb_version != '' and db_password != '' and samba_ip != ''
+  shell:
+    cmd: /bin/bash /vagrant/tools/setup_mongo_ldap.sh nihalainen "{{db_password}}" "{{samba_ip}}" yes "verysecretpassword1^"
     creates: /etc/sasl2/mongodb.conf
 
 - name: Start database with systemd
