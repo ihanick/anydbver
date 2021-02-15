@@ -12,9 +12,11 @@ SNAPSHOT=''
 
 
 getip() {
-  IP="$(sed -ne '/'$1'/ {s/^.*ansible_host=//;s/ .*$//;p}' ${NAMESPACE}ansible_hosts 2>/dev/null)"
+  NODE="$1"
+  [ "x$NODE" = "xnode0" ] && NODE=default
+  IP="$(sed -ne '/'$NODE'/ {s/^.*ansible_host=//;s/ .*$//;p}' ${NAMESPACE}ansible_hosts 2>/dev/null)"
   if [ "x$IP" = "x" ] ; then
-    IP="$(sed -ne '/\<'$1'\>/ {s/ .*$//;p}' configs/${NAMESPACE}hosts 2>/dev/null|head -n 1)"
+    IP="$(sed -ne '/\<'$NODE'\>/ {s/ .*$//;p}' configs/${NAMESPACE}hosts 2>/dev/null|head -n 1)"
   fi
 }
 
@@ -51,14 +53,24 @@ if [ "x$1" = "xssh" ] ; then
     echo "No such host, try to deploy or add it"
     exit 1
   fi
-  exec ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP "$@"
+  exec ssh -o LogLevel=error -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP "$@"
   exit 0
 fi
 if [ "x$1" = "xscp" ] ; then
   shift
   getip "$1"
   shift
-  exec -o UserKnownHostsFile=/dev/null scp -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP:"$1" "$2"
+  exec scp -o LogLevel=error -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP:"$1" "$2"
+fi
+if [ "x$1" = "xip" ] ; then
+  shift
+  getip "$1"
+  shift
+  if [ "x$IP" = "x" ] ; then
+    exit 1
+  fi
+  echo $IP
+  exit 0
 fi
 
 

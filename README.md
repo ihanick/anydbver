@@ -70,6 +70,15 @@ Complex anydbver setups including multiple linux containers. The first container
 ./anydbver ssh node1
 ```
 
+## Specifying host names for nodes
+
+In complex setups each node could have individual name. The name is specified as a linux hostname, could be used for ssh, replication source, ldap server name.
+```bash
+./anydbver deploy ps:5.6 hostname:ps0.percona.local node1 ps:5.6 hostname:ps1.percona.local leader:ps0
+./anydbver ssh ps0
+./anydbver ssh ps1.percona.local
+```
+
 ## Updating version information
 
 anydbver stores lists of version for each database product in temporary files. You can update it with latest values by running:

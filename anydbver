@@ -1032,6 +1032,7 @@ deploy_node() {
 
 find_node_ip() {
   NODE="$1"
+  [ "x$NODE" = "xnode0" ] && NODE=default
   case "$PROVIDER" in
     vagrant)
       vagrant ssh $NODE -c /vagrant/tools/node_ip.sh 2>/dev/null
@@ -1043,7 +1044,7 @@ find_node_ip() {
       sed -ne '/'$NODE'/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts
       ;;
     lxd)
-      sed -ne '/'$NODE'/ {s/^.*ansible_host=//;s/ .*$//;p}' ${NAMESPACE}ansible_hosts
+      ./lxdctl $NAMESPACE_CMD ip $NODE
       ;;
     *)
       echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
@@ -1054,7 +1055,7 @@ find_node_ip() {
 if [ "x$1" = "xip" ] ; then
   shift
   NODE="$1"
-  if [ "x$NODE" = "x" ] ; then
+  if [ "x$NODE" = "x" ] || [ "x$NODE" = "xnode0" ] ; then
     NODE=default
   else
     shift
