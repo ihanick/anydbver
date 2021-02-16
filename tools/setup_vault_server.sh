@@ -2,14 +2,7 @@
 # https://www.percona.com/blog/2020/04/21/using-vault-to-store-the-master-key-for-data-at-rest-encryption-on-percona-server-for-mongodb/
 # https://learn.hashicorp.com/tutorials/vault/deployment-guide#step-3-configure-systemd
 VAULT_HOST="$1"
-VAULT_VERSION="$2"
 NODE_IP=$(node_ip.sh)
-yum install -y openssl unzip
-cd /root
-curl -sL https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip -o vault_${VAULT_VERSION}_linux_amd64.zip
-unzip vault_${VAULT_VERSION}_linux_amd64.zip
-mv vault /usr/local/bin/
-
 mkdir /etc/vault.d
 cp /root/ssl/server.pem /etc/vault.d/vault.crt
 cp /root/ssl/server-key.pem /etc/vault.d/vault.key
@@ -81,6 +74,9 @@ systemctl start vault
 
 export VAULT_CACERT=/etc/vault.d/ca.crt
 export VAULT_ADDR=https://$VAULT_HOST:8200
+
+until curl -o /dev/null -s  https://$VAULT_HOST:8200/ ; do sleep 1; done
+
 vault operator init > /etc/vault.d/unseal-keys.txt
 chmod og-rw /etc/vault.d/unseal-keys.txt
 vault operator unseal $(grep 'Unseal Key 1:' /etc/vault.d/unseal-keys.txt|cut -d: -f 2)

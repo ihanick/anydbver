@@ -532,6 +532,11 @@ curl -sL https://repo.percona.com/psmdb-40/yum/release/7/RPMS/x86_64/ |perl -ne 
 curl -sL https://repo.percona.com/pdmdb-4.2/yum/release/7/RPMS/x86_64/ |perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el7.txt
 
 curl -sL https://repo.percona.com/pdmdb-4.4/yum/release/7/RPMS/x86_64/ |perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el7.txt
+
+cat > .version-info/vault.txt <<EOF
+1.6.1
+EOF
+
 }
 
 
@@ -863,9 +868,16 @@ deploy_node() {
         DEP_ENV="$DEP_ENV SAMBA_IP=default "
       fi
     fi
-    if [[ $i == "vault" ]] ; then
-      DEP_ENV="$DEP_ENV VAULT=1"
+    if [[ $i == "vault" ]] || [[ $i == "vault:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "$VER" .version-info/vault.txt |tail -n 1)
+      else
+        VER=$(tail -n 1   .version-info/vault.txt)
+      fi
+      DEP_ENV="$DEP_ENV VAULT=$VER"
     fi
+
     if [[ $i == "patroni" ]] ; then
       FEATURES+=( development )
       DEP_ENV="$DEP_ENV PATRONI=1"
@@ -1185,9 +1197,9 @@ post_deploy_hook() {
         /var/lib/mysql/server-key.pem > secret/${CLUSTER_NAME}-ssl.tar.gz 2>/dev/null
   fi
 
-  if echo "$i" | grep -q VAULT= ; then
+  if echo "$i" | grep -q VAULT= && ! echo "$i"|grep -q INSTALL_ONLY=1 ; then
     NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
-    ./anydbver ${NAMESPACE_CMD} ssh $NODE tar c /etc/vault.d/ca.crt /root/.vault-token > secret/vault-client.tar
+    ./anydbver ${NAMESPACE_CMD} ssh $NODE tar c /etc/vault.d/ca.crt /root/.vault-token 2>/dev/null > secret/vault-client.tar
   fi
 }
 

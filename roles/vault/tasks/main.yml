@@ -12,8 +12,21 @@
       update-ca-trust 
     creates: /etc/pki/ca-trust/source/anchors/vault-local.pem
 
-- name: Setup Vault
-  command:
-    cmd: /bin/bash /vagrant/tools/setup_vault_server.sh vault.percona.local 1.6.1
-    creates: /etc/vault/vault.hcl
+- name: Install vault package deps
+  package:
+    name: "{{item}}"
+    state: present
+  with_items: openssl, unzip
 
+- name: Download and unpack vault binary
+  ansible.builtin.unarchive:
+    src: https://releases.hashicorp.com/vault/{{vault_version}}/vault_{{vault_version}}_linux_amd64.zip
+    dest: /usr/local/bin
+    remote_src: yes
+    creates: /usr/local/bin/vault
+
+- name: Setup Vault
+  when: install_only == ''
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_vault_server.sh vault.percona.local
+    creates: /etc/vault/vault.hcl
