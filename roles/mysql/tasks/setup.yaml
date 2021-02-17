@@ -98,7 +98,7 @@
     cmd: mysql -e "INSTALL PLUGIN audit_log SONAME 'audit_log.so'"
 
 - name: Setup ProxySQL replication hostgroup
-  when: proxysql_version != '' and master_ip != '' and replication_type != 'galera' and replication_type != 'group'
+  when: (proxysql_version != '' or percona_proxysql_version != '') and master_ip != '' and replication_type != 'galera' and replication_type != 'group'
   shell:
     cmd: /bin/bash /vagrant/tools/setup_proxysql_repl.sh {{master_ip}} {{db_user}} {{db_password}}
 
@@ -107,13 +107,18 @@
   shell:
     cmd: /bin/bash /vagrant/tools/setup_proxysql_galera.sh {{master_ip}} {{db_user}} {{db_password}}
 
+- name: Setup ProxySQL Galera hostgroup (proxysql-admin)
+  when: percona_proxysql_version != '' and master_ip != '' and replication_type == 'galera'
+  shell:
+    cmd: /bin/bash /vagrant/tools/setup_proxysql_pxc.sh {{master_ip}} {{db_user}} {{db_password}}
+
 - name: Setup ProxySQL Group Replication hostgroup
-  when: proxysql_version != '' and master_ip != '' and replication_type == 'group'
+  when: (proxysql_version != '' or percona_proxysql_version != '') and master_ip != '' and replication_type == 'group'
   shell:
     cmd: /bin/bash /vagrant/tools/setup_proxysql_group.sh {{master_ip}} {{db_user}} {{db_password}}
 
 - name: Setup ProxySQL cluster
-  when: proxysql_version != '' and proxysql_ip != ''
+  when: (proxysql_version != '' or percona_proxysql_version != '') and proxysql_ip != ''
   shell:
     cmd: /bin/bash /vagrant/tools/setup_proxysql_cluster.sh {{proxysql_ip}} radmin radmin {{db_password}}
 

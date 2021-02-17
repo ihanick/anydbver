@@ -208,6 +208,9 @@ refresh_percona_server_version_info() {
   curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/|perl -ne '/Percona-XtraDB-Cluster-\d\d-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' > .version-info/percona-xtradb-cluster.el7.txt
   curl -sL https://repo.percona.com/pxc-80/yum/release/7/RPMS/x86_64/|perl -ne '/percona-xtradb-cluster-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' >> .version-info/percona-xtradb-cluster.el7.txt
   curl -sL https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/|perl -ne '/Percona-XtraDB-Cluster-\d\d-([0-9.-]*).el8.x86_64.rpm/ and print "$1\n"' > .version-info/percona-xtradb-cluster.el8.txt
+  curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/ \
+   | perl -ne '/proxysql[0-9]*-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' \
+   | sort -n -t . -k1,1 -k2,2 -k3,3 > .version-info/percona-proxysql.el7.txt
 
   :> .version-info/mariadb.el7.txt
   cat > .version-info/mariadb.el7.txt <<EOF
@@ -667,6 +670,16 @@ deploy_node() {
       else
         VER=$(tail -n 1 .version-info/proxysql.el7.txt)
         DEP_ENV="$DEP_ENV PROXYSQL=$VER"
+      fi
+    fi
+    if [[ $i == "percona-proxysql" ]] || [[ $i == "percona-proxysql:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "^$VER" .version-info/percona-proxysql.el7.txt |tail -n 1)
+        DEP_ENV="$DEP_ENV PERCONA_PROXYSQL=$VER"
+      else
+        VER=$(tail -n 1 .version-info/percona-proxysql.el7.txt)
+        DEP_ENV="$DEP_ENV PERCONA_PROXYSQL=$VER"
       fi
     fi
     if [[ $i == "mydumper" ]] || [[ $i == "mydumper:"* ]] ; then
