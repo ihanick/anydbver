@@ -487,6 +487,8 @@ EOF
 2.0.13-1
 2.0.14-1
 2.0.15-1
+2.0.16-1
+2.0.17-1
 EOF
 
  cat > .version-info/mydumper.el7.txt <<EOF
