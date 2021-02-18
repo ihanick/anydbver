@@ -1154,17 +1154,29 @@ pre_deploy_hook() {
     i=$(echo "$i"|sed -e "s|MONGOS_CFG=$CFG_NODES_FULL|MONGOS_CFG=$CFG_NODES_RS/$MONGOS_CFG|g")
   fi
   if echo "$i" | grep -q MONGOS_SHARD ; then
-    SHARD_NODES_LIST=( )
     SHARD_NODES_FULL=$(echo "$i" | perl -ne '/MONGOS_SHARD=(\S*) / and print $1')
-    SHARD_NODES_RS=$(echo "$i" | perl -ne '/MONGOS_SHARD=(\S*)\/(\S*) / and print $1')
-    SHARD_NODES=$(echo "$i" | perl -ne '/MONGOS_SHARD=(\S*)\/(\S*) / and print $2')
-    for n in $(echo "$SHARD_NODES"|tr , '\n')
-    do
-      n_ip=$(find_node_ip $n)
-      SHARD_NODES_LIST+=( ${n_ip}:27017 )
+    SHARD_RESOLVED_NODES=''
+    FULL_NEW_SEP=$(echo "$SHARD_NODES_FULL"|sed -re 's|,([^/^,]+/)|;\1|g')
+    OLDIFS="$IFS"
+    IFS=";"
+
+    for SHARD_ITEM in $FULL_NEW_SEP ; do
+      SHARD_NODES_LIST=( )
+      SHARD_NODES_RS=$(echo "$SHARD_ITEM"|cut -d/ -f 1)
+      SHARD_NODES=$(echo "$SHARD_ITEM"|cut -d/ -f 2)
+      for n in $(echo "$SHARD_NODES"|tr , ';')
+      do
+        n_ip=$(find_node_ip $n)
+        SHARD_NODES_LIST+=( ${n_ip}:27017 )
+      done
+      MONGOS_SHARD=$( join_ws , "${SHARD_NODES_LIST[@]}" )
+      [ "x$SHARD_RESOLVED_NODES" != "x" ] && SHARD_RESOLVED_NODES="$SHARD_RESOLVED_NODES,"
+      SHARD_RESOLVED_NODES="$SHARD_RESOLVED_NODES$SHARD_NODES_RS/$MONGOS_SHARD"
     done
-    MONGOS_SHARD=$( join_ws , "${SHARD_NODES_LIST[@]}" )
-    i=$(echo "$i"|sed -e "s|MONGOS_SHARD=$SHARD_NODES_FULL|MONGOS_SHARD=$SHARD_NODES_RS/$MONGOS_SHARD|g")
+
+    IFS=OLDIFS
+
+    i=$(echo "$i"|sed -e "s|MONGOS_SHARD=$SHARD_NODES_FULL|MONGOS_SHARD=$SHARD_RESOLVED_NODES|g")
   fi
 
 }
