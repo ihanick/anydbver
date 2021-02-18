@@ -98,4 +98,17 @@ export ANYDBVER_CACHE_OS_IMG=1
   node2   pg:13 master:default patroni etcd-ip:default
 ```
 
+After making an image you can omit all keywords in deployment except for cache:name
+```
+./anydbver deploy install psmdb:4.2.12 cache:psmdb-4.2.12
+./anydbver deploy \
+  default hostname:rs0-0 cache:psmdb-4.2.12 \
+  node1   hostname:rs0-1 cache:psmdb-4.2.12 \
+  node2   hostname:rs0-2 cache:psmdb-4.2.12 \
+  \
+  default psmdb:4.2.12 replica-set:rs0 \
+  node1   psmdb:4.2.12 master:default replica-set:rs0 \
+  node2   psmdb:4.2.12 master:default replica-set:rs0
+```
+
 * Currently mysql/Percona Server/Percona Server for MongoDB/MariaDB/Postgres/Patroni/PMM/Samba/k3s support install keyword
