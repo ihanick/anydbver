@@ -1028,7 +1028,7 @@ deploy_node() {
       echo "$DEP_ENV ansible-playbook -i ${NAMESPACE}ansible_hosts --limit $USER.$NODE playbook.yml"
       ;;
     *)
-      echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
+      echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
       exit 1
   esac
 }
@@ -1050,7 +1050,7 @@ find_node_ip() {
       ./lxdctl $NAMESPACE_CMD ip $NODE
       ;;
     *)
-      echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
+      echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
       exit 1
   esac
 }
@@ -1079,7 +1079,7 @@ find_samba_sid() {
       ./anydbver ssh $NODE /opt/samba/bin/wbinfo -D PERCONA|grep SID|awk '{print $3}' 2>/dev/null
       ;;
     *)
-      echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
+      echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
       exit 1
   esac
 }
@@ -1096,7 +1096,7 @@ find_node_token() {
       ssh -i secret/id_rsa root@$MASTER_IP -o StrictHostKeyChecking=no cat /var/lib/rancher/k3s/server/node-token
       ;;
     *)
-      echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
+      echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
       exit 1
   esac
 }
@@ -1214,7 +1214,7 @@ start_all_nodes() {
       fi
       ;;
     *)
-      echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
+      echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
       exit 1
   esac
 }
@@ -1240,7 +1240,7 @@ start_node() {
       fi
       ;;
     *)
-      echo "Please select VM/Container provider with $0 config provider:PROVIDERNAME"
+      echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
       exit 1
   esac
 }
