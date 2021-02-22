@@ -290,6 +290,14 @@ el8:
     install_packages:
       - which
       - "proxysql{{'2' if percona_proxysql_version.startswith('2.') else ''}}-{{percona_proxysql_version}}.el8.x86_64"
+  ps57:
+    systemd_service: "mysqld"
+    cnf_file: "/etc/percona-server.conf.d/mysqld.cnf"
+    install_packages:
+      - Percona-Server-shared-compat-57-{{ percona_server_version }}.el8.x86_64
+      - Percona-Server-shared-57-{{        percona_server_version }}.el8.x86_64
+      - Percona-Server-client-57-{{        percona_server_version }}.el8.x86_64
+      - Percona-Server-server-57-{{        percona_server_version }}.el8.x86_64
   ps80:
     repo_file: "/etc/yum.repos.d/percona-ps-80-release.repo"
     repo_enable_str: "ps-80"

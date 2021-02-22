@@ -203,6 +203,12 @@ refresh_percona_server_version_info() {
   for VER in $( cat .version-info/percona-server-80.html |perl -ne 'm,option value=\"Percona-Server-LATEST/Percona-Server-([^/]*?)\", and print "$1\n"'|sort -n ) ; do
     curl -sL https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-"$VER"/binary/redhat/7/ |grep "$VER"|perl -ne '/percona-server-server-(.*?).el7.x86_64.rpm/ and print "$1\n"'
   done >> .version-info/percona-server.el7.txt
+
+  curl -sL https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/|perl -ne '/Percona-Server-server-\d\d-([^"]*).el8.x86_64.rpm/ and print "$1\n"' | grep -v debuginfo > .version-info/percona-server.el8.txt
+  for VER in $( cat .version-info/percona-server-80.html |perl -ne 'm,option value=\"Percona-Server-LATEST/Percona-Server-([^/]*?)\", and print "$1\n"'|sort -n ) ; do
+    curl -sL https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-"$VER"/binary/redhat/8/ |grep "$VER"|perl -ne '/percona-server-server-(.*?).el8.x86_64.rpm/ and print "$1\n"'
+  done >> .version-info/percona-server.el8.txt
+
   rm -f .version-info/percona-server-80.html
 
   curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/|perl -ne '/Percona-XtraDB-Cluster-\d\d-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' > .version-info/percona-xtradb-cluster.el7.txt
@@ -536,6 +542,7 @@ deploy_node() {
   arr=("$@")
   ROW_REPLICATION=0
   UTF8ENC=0
+  NODE_OS=el7
   FEATURES=()
   for i in "${arr[@]}";
   do
@@ -599,12 +606,15 @@ deploy_node() {
     if [[ $i == "percona-server" ]] || [[ $i == "percona-server:"* ]] || [[ $i == "ps" ]] || [[ $i == "ps:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
-        VER=$(grep "^$VER" .version-info/percona-server.el7.txt |tail -n 1)
-        DEP_ENV="$DEP_ENV PS=$VER"
+        VER=$(grep "^$VER" .version-info/percona-server.${NODE_OS}.txt |tail -n 1)
       else
-        VER=$(tail -n 1 .version-info/percona-server.el7.txt)
-        DEP_ENV="$DEP_ENV PS=$VER"
+        VER=$(tail -n 1 .version-info/percona-server.${NODE_OS}.txt)
       fi
+      if [ "x$VER" == "x" ] ; then
+        echo "No such version percona server $NODE_OS $i" >&2
+        exit 1
+      fi
+      DEP_ENV="$DEP_ENV PS=$VER"
     fi
     if [[ $i == "mysql" ]] || [[ $i == "mysql:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
@@ -1287,6 +1297,9 @@ if [ "x$1" = "xdeploy" ] ; then
       shift
     done
     DEPCMD=$(deploy_node $NODE "${DEPLARGS[@]}")
+    if [ $? != 0 ] ; then
+      exit 1
+    fi
     echo "$DEPCMD"|egrep -q 'PMM_SERVER|K8S|K3S|PKO|SAMBA_AD' && PRIV_CONTAINER_REQUIRED=1
     if [[ "$DEPCMD" == *"HOSTNAME="* ]] ; then
       HOSTNAMES_CMD="$HOSTNAMES_CMD --hostname $NODE="$(echo "$DEPCMD"| sed -re 's/^.*HOSTNAME=([^ ]+) .*/\1/')
