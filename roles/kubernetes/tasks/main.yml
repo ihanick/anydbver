@@ -37,6 +37,16 @@
     name: git
     state: present
 
+- name: bash completion
+  package:
+    name: bash-completion
+    state: present
+
+- name: kubectl bash completion
+  shell:
+    cmd: kubectl completion bash > /etc/bash_completion.d/kubectl
+    creates: /etc/bash_completion.d/kubectl
+
 - name: Setup Operator tasks
   when: install_only == ''
   include_tasks: setup_operators.yaml
