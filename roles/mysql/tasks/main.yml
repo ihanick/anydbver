@@ -41,6 +41,14 @@
   command:
     cmd: dnf -y module disable mysql
 
+- name: Enable ProxySQL repo
+  when: >
+    proxysql_version != '' and
+    (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  ansible.builtin.template:
+    src: roles/mysql/templates/proxysql.repo.j2
+    dest: /etc/yum.repos.d/proxysql.repo
+
 - name: Enable local repo.* caching
   include_tasks: common/tasks/repo_cache.yaml
 

@@ -284,7 +284,7 @@ el7:
 el8:
   proxysql:
     install_packages:
-      - "https://github.com/sysown/proxysql/releases/download/v{{ proxysql_version | regex_replace('-[0-9]+$', '') }}/proxysql-{{proxysql_version}}-centos8.x86_64.rpm"
+      - "proxysql-{{proxysql_version}}"
   percona_proxysql:
     systemd_service: "proxysql"
     install_packages:
@@ -341,7 +341,6 @@ el8:
 
   sysbench:
     install_packages:
-      - "Percona-Server-client-56"
       - "sysbench-{{sysbench_version}}.el8.x86_64"
 
   orchestrator:
