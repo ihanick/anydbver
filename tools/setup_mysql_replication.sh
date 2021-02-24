@@ -48,13 +48,32 @@ else
       mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;show master status\G' > "$MINF"
       GTID= $( awk -F': ' '/Executed_Gtid_Set/ {print $2}' "$MINF" )
 
-      mysql << EOF
-      RESET MASTER;
-      SET GLOBAL GTID_PURGED='${GTID}';
-      STOP SLAVE;
-      CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;
-      START SLAVE;
+      if [[ "$SOFT" = pxc* ]] ; then
+        systemctl stop $MYSQLD_UNIT
+        mysqld --user=mysql --wsrep-provider=none &>/dev/null &
+        until mysqladmin --silent --connect-timeout=30 --wait=4 ping ; do sleep 5 ; done
+        mysql << EOF
+          RESET SLAVE ALL;
+          RESET MASTER;
+          SET GLOBAL GTID_PURGED='${GTID}';
 EOF
+        mysqladmin shutdown
+        systemctl start $MYSQLD_UNIT
+        until mysqladmin --silent --connect-timeout=30 --wait=4 ping ; do sleep 5 ; done
+        mysql << EOF
+          CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;
+          START SLAVE;
+EOF
+      else
+        mysql << EOF
+        RESET MASTER;
+        SET GLOBAL GTID_PURGED='${GTID}';
+        STOP SLAVE;
+        CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;
+        START SLAVE;
+EOF
+      fi
+
 
       rm "${MINF}"
       touch /root/replication.configured
