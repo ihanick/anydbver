@@ -20,6 +20,52 @@ if [ "x$1" = "xhelp" ] ; then
   print_help
 fi
 
+if [ "x$1" = "xdeploy" ] && ([ "x$2" = "xpsmdb" -o "x$2" = "xmongo" -o "xmongodb"  ] ) && [ "x$3" = "xhelp" ] ; then
+    echo "Deploy mongodb/psmdb: "
+    echo "$0 deploy psmdb"
+    echo "$0 deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0"
+    echo -e $0' deploy \\\n  psmdb:4.2 replica-set:rs0 shardsrv \\\n  node1 psmdb:4.2 master:default replica-set:rs0 shardsrv \\\n  node2 psmdb:4.2 master:default replica-set:rs0 shardsrv \\\n  node3 psmdb:4.2 configsrv replica-set:cfg0 \\\n  node4 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \\\n  node5 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \\\n  node6 psmdb:4.2 mongos-cfg:cfg0/node3,node4,node5 mongos-shard:rs0/default,node1,node2'
+    echo "$0 deploy ldap node1 ldap-master:default psmdb:4.2"
+    echo "$0 deploy samba node1 psmdb:4.2 samba-dc:default"
+    echo "Deploy multiple shards:"
+
+cat <<EOF
+openssl rand -base64 756 > secret/cfg0-keyfile
+for keyfile in rs{0,1,2}-keyfile ; do echo cp -L cfg0-keyfile \$keyfile; done
+$0 deploy install psmdb:4.2.12 cache:psmdb-4.2.12
+$0 deploy \\
+  default hostname:rs0-0  cache:psmdb-4.2.12 \\
+  node1   hostname:rs0-1  cache:psmdb-4.2.12 \\
+  node2   hostname:rs0-2  cache:psmdb-4.2.12 \\
+  node3   hostname:rs1-0  cache:psmdb-4.2.12 \\
+  node4   hostname:rs1-1  cache:psmdb-4.2.12 \\
+  node5   hostname:rs1-2  cache:psmdb-4.2.12 \\
+  node6   hostname:rs2-0  cache:psmdb-4.2.12 \\
+  node7   hostname:rs2-1  cache:psmdb-4.2.12 \\
+  node8   hostname:rs2-2  cache:psmdb-4.2.12 \\
+  node9   hostname:cfg0-0 cache:psmdb-4.2.12 \\
+  node10  hostname:cfg0-1 cache:psmdb-4.2.12 \\
+  node11  hostname:cfg0-2 cache:psmdb-4.2.12 \\
+  node12  hostname:route1 cache:psmdb-4.2.12 \\
+  \\
+  default psmdb:4.2.12               replica-set:rs0  shardsrv \\
+  node1   psmdb:4.2.12 master:rs0-0  replica-set:rs0  shardsrv \\
+  node2   psmdb:4.2.12 master:rs0-0  replica-set:rs0  shardsrv \\
+  node3   psmdb:4.2.12               replica-set:rs1  shardsrv \\
+  node4   psmdb:4.2.12 master:rs1-0  replica-set:rs1  shardsrv \\
+  node5   psmdb:4.2.12 master:rs1-0  replica-set:rs1  shardsrv \\
+  node6   psmdb:4.2.12               replica-set:rs2  shardsrv \\
+  node7   psmdb:4.2.12 master:rs2-0  replica-set:rs2  shardsrv \\
+  node8   psmdb:4.2.12 master:rs2-0  replica-set:rs2  shardsrv \\
+  node9   psmdb:4.2.12               replica-set:cfg0 configsrv \\
+  node10  psmdb:4.2.12 master:cfg0-0 replica-set:cfg0 configsrv \\
+  node11  psmdb:4.2.12 master:cfg0-0 replica-set:cfg0 configsrv \\
+  node12  psmdb:4.2.12 mongos-cfg:cfg0/cfg0-0,cfg0-1,cfg0-2 mongos-shard:rs0/rs0-0,rs0-1,rs0-2,rs1/rs1-0,rs1-1,rs1-2,rs2/rs2-0,rs2-1,rs2-2
+EOF
+
+    exit 0
+fi
+
 if [ "x$2" = "xhelp" ] ; then
   if [ "x$1" = "xdeploy" ] ; then
     echo "Deploy: "
@@ -69,6 +115,8 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy pxc node1 pxc galera-master:default node2 pxc galera-master:default node3 proxysql galera-master:default"
     echo "$0 deploy pmm node1 ps:5.7 pmm-client pmm-server:default"
     echo "$0 deploy pmm:1.17.4 node1 ps:5.7 pmm-client:1.17.4 pmm-server:default"
+    echo "$0 deploy mongo help"
+    echo "$0 deploy psmdb help"
     exit 0
   fi
 fi

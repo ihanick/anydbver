@@ -60,6 +60,7 @@ Deploy:
 ./anydbver deploy sysbench
 ./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:default node3 proxysql master:default
 
+./anydbver deploy mongo help
 ```
 
 ## Connect to selected node via ssh:
