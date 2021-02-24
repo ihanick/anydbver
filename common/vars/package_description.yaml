@@ -285,6 +285,14 @@ el8:
   proxysql:
     install_packages:
       - "proxysql-{{proxysql_version}}"
+  mydumper:
+    install_packages:
+      - "https://github.com/maxbube/mydumper/releases/download/v{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version|regex_replace('-[0-9]+$')}}/mydumper-{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version}}.el8.x86_64.rpm"
+  mysql_connector_java:
+    install_packages:
+      - java-1.8.0-openjdk.x86_64
+      - java-1.8.0-openjdk-devel
+      - https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-{{mysql_connector_java_version}}.el8.noarch.rpm
   percona_proxysql:
     systemd_service: "proxysql"
     install_packages:
@@ -313,6 +321,33 @@ el8:
       - "{{ percona_mysql_name }}-debuginfo{{ percona_mysql_full_ver }}"
     mysql_shell_packages:
       - "https://www.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}/binary/redhat/7/x86_64/percona-mysql-shell-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}-1.el8.x86_64.rpm"
+  pxc57:
+    systemd_service: "mysqld"
+    cnf_file: "/etc/percona-xtradb-cluster.conf.d/zz_mysqld.cnf"
+    install_packages:
+      - "{{ percona_mysql_name }}-shared-compat{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
+      - "{{ percona_mysql_name }}-shared{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
+      - "{{ percona_mysql_name }}-client{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
+      - "percona-xtrabackup-24{{ '-'+percona_xtrabackup_version if percona_xtrabackup_version !='' else '' }}"
+      - "{{ percona_mysql_name }}-server{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
+    garbd_packages:
+      - "{{ percona_mysql_name }}-garbd{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
+  pxc80:
+    repo_file: "/etc/yum.repos.d/percona-pxc-80-release.repo"
+    repo_enable_str: "pxc-80"
+    systemd_service: "mysqld"
+    cnf_file: "/etc/my.cnf"
+    install_packages:
+      - openssl
+      - "{{ percona_mysql_name }}-shared-compat{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
+      - "{{ percona_mysql_name }}-shared{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
+      - "{{ percona_mysql_name }}-client{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
+      - "{{ percona_mysql_name }}-server{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
+    install_debug_packages:
+      - gdb
+      - "{{ percona_mysql_name }}-debuginfo{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
+    garbd_packages:
+      - "{{ percona_mysql_name }}-garbd{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
 
   ldap_server:
     systemd_service: slapd

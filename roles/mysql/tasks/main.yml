@@ -108,12 +108,14 @@
   yum:
     name: "{{os[dist].mydumper.install_packages}}"
     state: present
+    disable_gpg_check: yes
 
 - name: Install MySQL connector java
-  when: master_ip != '' and mysql_connector_java_version != ''
+  when: mysql_connector_java_version != ''
   package:
     name: "{{ item }}"
     state: present
+    disable_gpg_check: yes
   with_items: "{{os[dist].mysql_connector_java.install_packages}}"
 
 - name: MySQL Setup tasks

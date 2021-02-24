@@ -29,18 +29,8 @@
     pgpool_version != ''
     ) and
     (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
-  package:
-    name: "{{ item }}"
+  yum:
+    name: "{{ os[dist][soft].install_packages + ( [] if debug_packages == '' else os[dist][soft].install_debug_packages) + ( [] if replication_type != 'group' or soft == 'proxysql' else os[dist][soft].mysql_shell_packages) + ( [] if not ('development' in db_features.split(',') and 'development_packages' in os[dist][soft]) else os[dist][soft].development_packages) + ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else os[dist][soft].rocksdb_packages) }}"
     state: present
-  with_items: >-
-    {{
-      os[dist][soft].install_packages +
-      ( [] if debug_packages == '' else
-        os[dist][soft].install_debug_packages) +
-      ( [] if replication_type != 'group' or soft == 'proxysql' else
-        os[dist][soft].mysql_shell_packages) +
-      ( [] if not ('development' in db_features.split(',') and 'development_packages' in os[dist][soft]) else os[dist][soft].development_packages) +
-      ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else
-        os[dist][soft].rocksdb_packages)
-    }}
+    disable_gpg_check: "{{ 'yes' if os[dist][soft].install_packages[0].startswith('http') else 'no' }}"
 

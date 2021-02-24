@@ -242,6 +242,7 @@
         proxysql_version != '' or
         percona_proxysql_version != '' or
         sysbench_version != '' or
+        mysql_connector_java_version != '' or
         orchestrator_version != ''
       include_role:
         name: mysql

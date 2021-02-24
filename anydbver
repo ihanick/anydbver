@@ -277,7 +277,10 @@ refresh_percona_server_version_info() {
 
   curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/|perl -ne '/Percona-XtraDB-Cluster-\d\d-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' > .version-info/percona-xtradb-cluster.el7.txt
   curl -sL https://repo.percona.com/pxc-80/yum/release/7/RPMS/x86_64/|perl -ne '/percona-xtradb-cluster-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' >> .version-info/percona-xtradb-cluster.el7.txt
+  # el8
   curl -sL https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/|perl -ne '/Percona-XtraDB-Cluster-\d\d-([0-9.-]*).el8.x86_64.rpm/ and print "$1\n"' > .version-info/percona-xtradb-cluster.el8.txt
+  curl -sL https://repo.percona.com/pxc-80/yum/release/8/RPMS/x86_64/|perl -ne '/percona-xtradb-cluster-([0-9.-]*).el8.x86_64.rpm/ and print "$1\n"' >> .version-info/percona-xtradb-cluster.el8.txt
+
   curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/ \
    | perl -ne '/proxysql[0-9]*-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' \
    | sort -n -t . -k1,1 -k2,2 -k3,3 > .version-info/percona-proxysql.el7.txt
@@ -286,12 +289,14 @@ refresh_percona_server_version_info() {
    | sort -n -t . -k1,1 -k2,2 -k3,3 > .version-info/percona-proxysql.el8.txt
 
   :> .version-info/mariadb.el7.txt
+  :> .version-info/mariadb.el8.txt
   cat > .version-info/mariadb.el7.txt <<EOF
 10.1.29
 EOF
 
   for maver in 10.3 10.4 10.5 ; do
     curl -sL http://yum.mariadb.org/$maver/centos7-amd64/rpms/| perl -ne '/MariaDB-server-(\d[^"]*).el7.centos.x86_64.rpm/ and print "$1\n"' >> .version-info/mariadb.el7.txt
+    curl -sL http://yum.mariadb.org/$maver/centos8-amd64/rpms/| perl -ne '/MariaDB-server-(\d[^"]*).el8.x86_64.rpm/ and print "$1\n"' >> .version-info/mariadb.el8.txt
   done
 
   for ver in $(grep 10.[3-5] .version-info/mariadb.el7.txt) ; do
@@ -301,6 +306,13 @@ EOF
       echo $galera_ver
     done
   done > .version-info/mariadb-galera.el7.txt
+  for ver in $(grep 10.[3-5] .version-info/mariadb.el8.txt) ; do
+    short_ver=$(echo $ver|sed -re 's/-[0-9]+$//')
+    for galera_ver in $( curl -sL https://mirrors.ukfast.co.uk/sites/mariadb/mariadb-${short_ver}/yum/centos8-amd64/rpms/|grep galera|grep -v rhel8|sed -re 's/<a href="galera-([0-9]+-)?([^>]+)\.el8\.x86_64\.rpm">.*$/\2/' ) ; do
+      echo -n "$ver "
+      echo $galera_ver
+    done
+  done > .version-info/mariadb-galera.el8.txt
 
   curl -s \
     http://repo.mysql.com/yum/mysql-5.6-community/el/7/x86_64/ \
@@ -511,6 +523,10 @@ curl -sL \
 0.9.5-2
 10.1-2
 EOF
+ cat > .version-info/mydumper.el8.txt <<EOF
+0.9.5-1
+10.1-2
+EOF
 
  cat > .version-info/mysql-jdbc.txt <<EOF
 8.0.17-1
@@ -541,14 +557,25 @@ EOF
 3.2.2-1
 3.2.3-1
 EOF
+ cat .version-info/orchestrator.el7.txt > .version-info/orchestrator.el8.txt
 
-curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/|perl -ne '/Percona-Server-MongoDB(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 > .version-info/psmdb.el7.txt
-
-curl -sL https://repo.percona.com/psmdb-40/yum/release/7/RPMS/x86_64/ |perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el7.txt
-
-curl -sL https://repo.percona.com/pdmdb-4.2/yum/release/7/RPMS/x86_64/ |perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el7.txt
-
-curl -sL https://repo.percona.com/pdmdb-4.4/yum/release/7/RPMS/x86_64/ |perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el7.txt
+  curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/ \
+    | perl -ne '/Percona-Server-MongoDB(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 > .version-info/psmdb.el7.txt
+  curl -sL https://repo.percona.com/psmdb-40/yum/release/7/RPMS/x86_64/ \
+    | perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el7.txt
+  curl -sL https://repo.percona.com/pdmdb-4.2/yum/release/7/RPMS/x86_64/ \
+    | perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el7.txt
+  curl -sL https://repo.percona.com/pdmdb-4.4/yum/release/7/RPMS/x86_64/ \
+    | perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el7.txt
+# el8
+  curl -sL https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/ \
+    | perl -ne '/Percona-Server-MongoDB(-\d\d)?-server-([^"]*).el8.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 > .version-info/psmdb.el8.txt
+  curl -sL https://repo.percona.com/psmdb-40/yum/release/8/RPMS/x86_64/ \
+    | perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el8.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el8.txt
+  curl -sL https://repo.percona.com/pdmdb-4.2/yum/release/8/RPMS/x86_64/ \
+    | perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el8.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el8.txt
+  curl -sL https://repo.percona.com/pdmdb-4.4/yum/release/8/RPMS/x86_64/ \
+    | perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el8.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el8.txt
 
 cat > .version-info/vault.txt <<EOF
 1.6.1
@@ -660,14 +687,8 @@ deploy_node() {
       DEP_ENV="$DEP_ENV PERCONA_PROXYSQL=$VER"
     fi
     if [[ $i == "mydumper" ]] || [[ $i == "mydumper:"* ]] ; then
-      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
-        VER=$(get_version "$i")
-        VER=$(grep "^$VER" .version-info/mydumper.el7.txt |tail -n 1)
-        DEP_ENV="$DEP_ENV MYDUMPER=$VER"
-      else
-        VER=$(tail -n 1 .version-info/mydumper.el7.txt)
-        DEP_ENV="$DEP_ENV MYDUMPER=$VER"
-      fi
+      search_for_latest_version mydumper "$i"
+      DEP_ENV="$DEP_ENV MYDUMPER=$VER"
     fi
     if [[ $i == "mysql-jdbc:"* || $i == "mysql-jdbc" ]] ; then
       if [[ $i == *':'* || $i == *'='* ]] ; then
@@ -679,35 +700,18 @@ deploy_node() {
       DEP_ENV="$DEP_ENV MYSQL_JAVA=$VER"
     fi
     if [[ $i == "orchestrator" ]] || [[ $i == "orchestrator:"* ]] ; then
-      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
-        VER=$(get_version "$i")
-        VER=$(grep "^$VER" .version-info/orchestrator.el7.txt |tail -n 1)
-        DEP_ENV="$DEP_ENV ORCHESTRATOR=$VER"
-      else
-        VER=$(tail -n 1 .version-info/orchestrator.el7.txt)
-        DEP_ENV="$DEP_ENV ORCHESTRATOR=$VER"
-      fi
+      search_for_latest_version orchestrator "$i"
+      DEP_ENV="$DEP_ENV ORCHESTRATOR=$VER"
     fi
     if [[ $i == "percona-xtradb-cluster" ]] || [[ $i == "percona-xtradb-cluster:"* ]] || [[ $i == "pxc" ]] || [[ $i == "pxc:"* ]] ; then
-      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
-        VER=$(get_version "$i")
-        VER=$(grep "^$VER" .version-info/percona-xtradb-cluster.el7.txt |tail -n 1)
-        DEP_ENV="$DEP_ENV PXC=$VER "
-      else
-        VER=$(tail -n 1 .version-info/percona-xtradb-cluster.el7.txt)
-        DEP_ENV="$DEP_ENV PXC=$VER "
-      fi
+      search_for_latest_version percona-xtradb-cluster "$i"
+      DEP_ENV="$DEP_ENV PXC=$VER "
     fi
     if [[ $i == "psmdb" ]] || [[ $i == "psmdb:"* ]] || [[ $i == "mongo" ]] || [[ $i == "mongo:"* ]] ; then
-      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
-        VER=$(get_version "$i")
-        VER=$(grep "^$VER" .version-info/psmdb.el7.txt |tail -n 1)
-        DEP_ENV="$DEP_ENV PSMDB=$VER DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf"
-      else
-        VER=$(tail -n 1 .version-info/psmdb.el7.txt)
-        DEP_ENV="$DEP_ENV PSMDB=$VER DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf"
-      fi
+      search_for_latest_version psmdb "$i"
+      DEP_ENV="$DEP_ENV PSMDB=$VER DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf"
     fi
+
     if [[ $i == "mongos-cfg:"* ]] ; then
       MONGOS_CFG=$(get_version "$i")
       DEP_ENV="$DEP_ENV MONGOS_CFG=$MONGOS_CFG "
@@ -718,52 +722,34 @@ deploy_node() {
     fi
 
     if [[ $i == "mariadb" ]] || [[ $i == "mariadb:"* ]] || [[ $i == "maria" ]] || [[ $i == "maria:"* ]] ; then
-      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
-        VER=$(get_version "$i")
-        VER=$(grep "$VER" .version-info/mariadb.el7.txt |tail -n 1)
-        DEP_ENV="$DEP_ENV MARIADB=$VER"
-      else
-        VER=$(tail -n 1 .version-info/mariadb.el7.txt)
-        DEP_ENV="$DEP_ENV MARIADB=$VER"
-      fi
+      search_for_latest_version mariadb "$i"
+      DEP_ENV="$DEP_ENV MARIADB=$VER"
     fi
     if [[ $i == "mariadb-galera" ]] || [[ $i == "mariadb-galera:"* ]] || [[ $i == "mariadb-cluster" ]] || [[ $i == "mariadb-cluster:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
-        VER=$(grep "$VER" .version-info/mariadb.el7.txt |tail -n 1)
+        VER=$(grep "$VER" .version-info/mariadb.${NODE_OS}.txt |tail -n 1)
         GALERA_VER=$(get_2nd_version "$i")
         if [ "x$GALERA_VER" == "x" ] ; then
-          GALERA_VER=$(grep "$VER" .version-info/mariadb-galera.el7.txt|cut -d' ' -f2|tail -n 1 )
+          GALERA_VER=$(grep "$VER" .version-info/mariadb-galera.${NODE_OS}.txt|cut -d' ' -f2|tail -n 1 )
         else
-          GALERA_VER=$(grep "$GALERA_VER" .version-info/mariadb-galera.el7.txt|cut -d' ' -f2|tail -n 1 )
+          GALERA_VER=$(grep "$GALERA_VER" .version-info/mariadb-galera.${NODE_OS}.txt|cut -d' ' -f2|tail -n 1 )
         fi
 
         DEP_ENV="$DEP_ENV MARIADB=$VER GALERA=$GALERA_VER "
       else
-        VER=$(tail -n 1 .version-info/mariadb.el7.txt)
-        GALERA_VER=$(grep "$VER" .version-info/mariadb-galera.el7.txt|cut -d' ' -f2|tail -n 1 )
+        VER=$(tail -n 1 .version-info/mariadb.${NODE_OS}.txt)
+        GALERA_VER=$(grep "$VER" .version-info/mariadb-galera.${NODE_OS}.txt|cut -d' ' -f2|tail -n 1 )
         DEP_ENV="$DEP_ENV MARIADB=$VER GALERA=$GALERA_VER "
       fi
     fi
     if [[ $i == "postgresql" ]] || [[ $i == "postgresql:"* ]] || [[ $i == "pg" ]] || [[ $i == "pg:"* ]] ; then
-      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
-        VER=$(get_version "$i")
-        VER=$(grep "^$VER" .version-info/pg.el7.txt |tail -n 1)
-        DEP_ENV="$DEP_ENV PG=$VER"
-      else
-        VER=$(tail -n 1 .version-info/pg.el7.txt)
-        DEP_ENV="$DEP_ENV PG=$VER"
-      fi
+      search_for_latest_version pg "$i"
+      DEP_ENV="$DEP_ENV PG=$VER"
     fi
     if [[ $i == "percona-postgresql" ]] || [[ $i == "percona-postgresql:"* ]] || [[ $i == "ppg" ]] || [[ $i == "ppg:"* ]] ; then
-      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
-        VER=$(get_version "$i")
-        VER=$(grep "$VER" .version-info/ppg.el7.txt |tail -n 1)
-        DEP_ENV="$DEP_ENV PPGSQL=$VER"
-      else
-        VER=$(tail -n 1 .version-info/ppg.el7.txt)
-        DEP_ENV="$DEP_ENV PPGSQL=$VER"
-      fi
+      search_for_latest_version ppg "$i"
+      DEP_ENV="$DEP_ENV PPGSQL=$VER"
     fi
     if [[ $i == "k8s-mongo" ]] || [[ $i == "k8s-mongo:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
