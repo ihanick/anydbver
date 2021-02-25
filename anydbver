@@ -1292,7 +1292,7 @@ if [ "x$1" = "xdeploy" ] ; then
     fi
     if [[ "$DEPCMD" == *"NODE_OS="* ]] ; then
       OS_CMD="$OS_CMD --os $NODE="$(echo "$DEPCMD"| sed -re 's/^.*NODE_OS=([^ ]+) .*/\1/')
-    elif [[ $NODE_OS != "el7" ]] ; then
+    elif [[ "x$NODE_OS" != "x" && $NODE_OS != "el7" ]] ; then
       OS_CMD="$OS_CMD --os $NODE=$NODE_OS"
     fi
     if [[ "$DEPCMD" == *"NODE_VM="* ]] ; then
