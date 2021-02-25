@@ -23,7 +23,7 @@ getip() {
 setupOS() {
   if [ "x$1" == "xel8" ] ; then
     IMG="images:centos/8/$ARCH"
-    PACKAGES="$PACKAGES python3"
+    PACKAGES="$PACKAGES python3 tar"
     PYTHON_INT=/usr/bin/python3
   elif [ "x$1" == "xoel7" ] ; then
     IMG="images:oracle/7/$ARCH"
@@ -31,7 +31,7 @@ setupOS() {
     PYTHON_INT=/usr/bin/python2.7
   elif [ "x$1" == "xoel8" ] ; then
     IMG="images:oracle/8/$ARCH"
-    PACKAGES="$PACKAGES oracle-epel-release-el8 python3"
+    PACKAGES="$PACKAGES oracle-epel-release-el8 python3 tar"
     PYTHON_INT=/usr/bin/python3
   else # default CentOS 7
     IMG="images:centos/7/$ARCH"

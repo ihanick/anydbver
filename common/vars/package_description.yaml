@@ -283,6 +283,7 @@ el7:
 
 el8:
   proxysql:
+    systemd_service: "proxysql"
     install_packages:
       - "proxysql-{{proxysql_version}}"
   mydumper:
@@ -377,6 +378,9 @@ el8:
   sysbench:
     install_packages:
       - "sysbench-{{sysbench_version}}.el8.x86_64"
+  pmm_client:
+    install_packages:
+      - "pmm{{'2' if pmm_client_version.startswith('2') else ''}}-client-{{pmm_client_version}}.el8.x86_64"
 
   orchestrator:
     install_packages:

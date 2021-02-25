@@ -601,7 +601,7 @@ deploy_node() {
   arr=("$@")
   ROW_REPLICATION=0
   UTF8ENC=0
-  NODE_OS=el7
+  NODE_OS="${NODE_OS:-el7}"
   FEATURES=()
   for i in "${arr[@]}";
   do
@@ -1263,7 +1263,11 @@ if [ "x$1" = "xdeploy" ] ; then
     DRY_RUN=1
     shift
   fi
-  if [[ "$1" == default ]] ; then
+  if [[ "$1" == "--os" ]] ; then
+    NODE_OS=$2
+    shift 2
+  fi
+  if [[ "$1" == default || "$1" == node0 ]] ; then
     shift
   fi
 
@@ -1288,6 +1292,8 @@ if [ "x$1" = "xdeploy" ] ; then
     fi
     if [[ "$DEPCMD" == *"NODE_OS="* ]] ; then
       OS_CMD="$OS_CMD --os $NODE="$(echo "$DEPCMD"| sed -re 's/^.*NODE_OS=([^ ]+) .*/\1/')
+    elif [[ $NODE_OS != "el7" ]] ; then
+      OS_CMD="$OS_CMD --os $NODE=$NODE_OS"
     fi
     if [[ "$DEPCMD" == *"NODE_VM="* ]] ; then
       VM_CMD="$VM_CMD --vm $NODE"
