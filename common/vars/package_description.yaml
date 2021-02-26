@@ -79,6 +79,28 @@ focal:
   repo_pkg: "/root/percona-release_latest.focal_all.deb"
   repo_url: "https://repo.percona.com/apt/percona-release_latest.focal_all.deb"
 
+  ps57:
+    repo_file: "/etc/apt/sources.list.d/percona-ps-57-release.list"
+    repo_enable_str: "ps-57"
+    systemd_service: "mysql"
+    cnf_file: "/etc/mysql/percona-server.conf.d/mysqld.cnf"
+    install_packages:
+      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-common-5.7_{{percona_server_version}}.focal_amd64.deb"
+      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-client-5.7_{{percona_server_version}}.focal_amd64.deb"
+      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/libperconaserverclient20_{{percona_server_version}}.focal_amd64.deb"
+      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-server-5.7_{{percona_server_version}}.focal_amd64.deb"
+
+  ps80:
+    repo_file: "/etc/apt/sources.list.d/percona-ps-80-release.list"
+    repo_enable_str: "ps-80"
+    systemd_service: "mysql"
+    cnf_file: "/etc/mysql/mysql.conf.d/mysqld.cnf"
+    install_packages:
+      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-common_{{percona_server_version}}.focal_amd64.deb"
+      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-client_{{percona_server_version}}.focal_amd64.deb"
+      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/libperconaserverclient21_{{percona_server_version}}.focal_amd64.deb"
+      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-server_{{percona_server_version}}.focal_amd64.deb"
+
   pxc57:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "pxc-57"

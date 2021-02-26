@@ -1,6 +1,7 @@
 #!/bin/bash
 OS=el7
 ARCH=amd64
+OS_TYPE=rpm
 IMG="images:centos/7/$ARCH"
 PACKAGES=''
 PYTHON_INT=/usr/bin/python2.7
@@ -33,6 +34,10 @@ setupOS() {
     IMG="images:oracle/8/$ARCH"
     PACKAGES="$PACKAGES oracle-epel-release-el8 python3 tar"
     PYTHON_INT=/usr/bin/python3
+  elif [ "x$1" == "xfocal" ] ; then
+    IMG="images:ubuntu/focal/$ARCH"
+    PYTHON_INT=/usr/bin/python3
+    OS_TYPE=deb
   else # default CentOS 7
     IMG="images:centos/7/$ARCH"
     PACKAGES=''
@@ -255,7 +260,11 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
     lxc exec $c -- mkdir /root/.ssh
     lxc file push secret/id_rsa.pub $c/root/.ssh/authorized_keys
     lxc file push tools/node_ip.sh $c/usr/bin/node_ip.sh
-    lxc exec $c -- bash -c "export LANG=C;test -f /usr/bin/rsync || (until ping  -c 1 percona.com &>/dev/null ; do sleep 1; done; for pkg in sudo openssh-server iproute rsync $PACKAGES; do yum install -q -y \$pkg ; done); chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd; chmod 0600 /root/.ssh/authorized_keys; chmod 0700 /root/.ssh; chown root:root -R /root/.ssh; yum install -q -y https://repo.percona.com/yum/release/7/RPMS/x86_64/libeatmydata-0.1-00.21.el7.centos.x86_64.rpm"
+    if [[ $OS_TYPE = deb ]] ; then
+       lxc exec $c -- bash -c "export LANG=C;test -f /usr/bin/rsync || (until ping  -c 1 percona.com &>/dev/null ; do sleep 1; done; for pkg in sudo openssh-server rsync eatmydata $PACKAGES; do apt-get install -qq -o=Dpkg::Use-Pty=0 -y \$pkg ; done); chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd; chmod 0600 /root/.ssh/authorized_keys; chmod 0700 /root/.ssh; chown root:root -R /root/.ssh"
+    else
+      lxc exec $c -- bash -c "export LANG=C;test -f /usr/bin/rsync || (until ping  -c 1 percona.com &>/dev/null ; do sleep 1; done; for pkg in sudo openssh-server iproute rsync $PACKAGES; do yum install -q -y \$pkg ; done); chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd; chmod 0600 /root/.ssh/authorized_keys; chmod 0700 /root/.ssh; chown root:root -R /root/.ssh; yum install -q -y https://repo.percona.com/yum/release/7/RPMS/x86_64/libeatmydata-0.1-00.21.el7.centos.x86_64.rpm"
+    fi
     if [[ $ANYDBVER_CACHE_OS_IMG == 1 ]] ; then
       lxc stop $c
       lxc publish ihanick-default --alias ${USER}-${OS}-empty
