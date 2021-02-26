@@ -12,3 +12,4 @@ sed -e "s/server_id=.*\$/server_id=$SERVER_ID/" \
     -e "s/wsrep_sst_auth=.*\$/wsrep_sst_auth=$USER:$PASSWORD/" \
     "$CONFPART" >> "$CONFDEST"
 touch /root/$( basename $CONFPART).applied
+echo "$CONFDEST" > /root/mysql.conf.filename

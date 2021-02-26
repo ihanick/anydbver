@@ -1172,10 +1172,10 @@ pre_deploy_hook() {
 
 post_deploy_hook() {
   i="$i"
+  NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
 
   # after reploy node actions
   if echo "$i" | grep -q CLUSTER= && echo "$i" | grep -q PXC=8. ; then
-    NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
     CLUSTER_NAME=$(echo "$i" | sed -re 's/^.*CLUSTER=([^ ]+).*$/\1/' )
     test -f secret/${CLUSTER_NAME}-ssl.tar.gz || ./anydbver ${NAMESPACE_CMD} \
       ssh $NODE tar cz \
@@ -1188,10 +1188,21 @@ post_deploy_hook() {
   fi
 
   if echo "$i" | grep -q VAULT= && ! echo "$i"|grep -q INSTALL_ONLY=1 ; then
-    NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
     ./anydbver ${NAMESPACE_CMD} ssh $NODE tar c /etc/vault.d/ca.crt /root/.vault-token 2>/dev/null > secret/vault-client.tar
   fi
 }
+
+post_deploy_hook_after_all_nodes() {
+  i="$i"
+  NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
+
+  # after all nodes deploy
+  if [[ $i == *CLUSTER=* && $i == *PXC=* ]] || [[ $i == *CLUSTER=* && $i == *GALERA=* ]] ; then
+    ./anydbver ssh $NODE bash /vagrant/tools/fix_wsrep_cluster_address.sh
+  fi
+}
+
+
 
 start_all_nodes() {
   case "$PROVIDER" in
@@ -1330,6 +1341,9 @@ if [ "x$1" = "xdeploy" ] ; then
       fi
     fi
     post_deploy_hook "$i"
+  done
+  for i in "${DEPLOY_CMDS[@]}"; do
+    post_deploy_hook_after_all_nodes "$i"
   done
 
   wait
