@@ -1,5 +1,20 @@
 - name: install apt db packages
-  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+  when: >
+    (
+    percona_server_version != "" or
+    percona_xtradb_cluster_version != "" or
+    mysql_version != '' or
+    mysql_router_version != '' or
+    orchestrator_version != '' or
+    proxysql_version != '' or
+    sysbench_version != '' or
+    ldap_server != '' or
+    kerberos_server != '' or
+    percona_proxysql_version != '' or
+    postgresql_version != '' or
+    pgpool_version != ''
+    ) and
+    (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
   apt:
     deb: "{{item}}"
   with_items: >-

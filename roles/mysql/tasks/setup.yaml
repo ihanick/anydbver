@@ -23,6 +23,12 @@
       "{{db_password}}"
     creates: "/root/{{ db_opts_file | basename }}.applied"
 
+- name: Create grastate.dat (Ubuntu/Debian)
+  when: (percona_xtradb_cluster_version != '') and (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+  command:
+    cmd: /bin/bash /vagrant/tools/create_grastate_dat.sh
+    creates: /var/lib/mysql/grastate.dat
+
 - name: Boostrap MySQL Router
   when: mysql_router_version != '' and master_ip != ''
   command:

@@ -280,6 +280,10 @@ refresh_percona_server_version_info() {
     | perl -ne  '/percona-server-server-\d.\d_([^"]*).focal_amd64.deb/ and print "$1\n"' > .version-info/percona-server.focal.txt
   curl -sL https://repo.percona.com/ps-80/apt/pool/main/p/percona-server/ \
     | perl -ne  '/percona-server-server_([^"]*).focal_amd64.deb/ and print "$1\n"' >> .version-info/percona-server.focal.txt
+  curl -sL https://repo.percona.com/percona/apt/pool/main/p/percona-xtradb-cluster-5.7/ \
+    | perl -ne  '/percona-xtradb-cluster-server-5.7_([^"]*).focal_amd64.deb/ and print "$1\n"' > .version-info/percona-xtradb-cluster.focal.txt
+  curl -sL https://repo.percona.com/pxc-80/apt/pool/main/p/percona-xtradb-cluster/ \
+    | perl -ne  '/percona-xtradb-cluster-server_([^"]*).focal_amd64.deb/ and print "$1\n"' >> .version-info/percona-xtradb-cluster.focal.txt
 
   curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/|perl -ne '/Percona-XtraDB-Cluster-\d\d-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' > .version-info/percona-xtradb-cluster.el7.txt
   curl -sL https://repo.percona.com/pxc-80/yum/release/7/RPMS/x86_64/|perl -ne '/percona-xtradb-cluster-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' >> .version-info/percona-xtradb-cluster.el7.txt

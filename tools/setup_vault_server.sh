@@ -75,7 +75,7 @@ systemctl start vault
 export VAULT_CACERT=/etc/vault.d/ca.crt
 export VAULT_ADDR=https://$VAULT_HOST:8200
 
-until curl -o /dev/null -s  https://$VAULT_HOST:8200/ ; do sleep 1; done
+until curl -k -o /dev/null -s  https://$VAULT_HOST:8200/ ; do sleep 1; done
 
 vault operator init > /etc/vault.d/unseal-keys.txt
 chmod og-rw /etc/vault.d/unseal-keys.txt

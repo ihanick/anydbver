@@ -6,6 +6,7 @@
     creates: /root/certs.tar.gz
 
 - name: Make Vault CA trusted
+  when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   shell:
     cmd: >-
       cp /root/ssl/ca.pem /etc/pki/ca-trust/source/anchors/vault-local.pem ;
