@@ -75,6 +75,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy ps:5.7"
     echo "$0 deploy ps:5.7 mydumper"
     echo "$0 deploy hn:vault.percona.local vault node1 ps:8.0 vault-server:vault.percona.local"
+    echo "$0 deploy ps:5.7 percona-toolkit"
     echo "$0 deploy mysql"
     echo -e $0' deploy \\\n  hn:mysql_rs0_gr0 mysql:8.0.18 group-replication \\\n  node1 hn:mysql_rs0_gr1 mysql:8.0.18 group-replication master:default \\\n  node2 hn:mysql_rs0_gr2 mysql:8.0.18 group-replication master:default \\\n  node3 hn:mysql_rs0_router mysql-router:8.0.18 master:default'
     echo "$0 deploy mariadb:10.4"
@@ -365,6 +366,13 @@ else
 2.12.0
 EOF
 fi
+
+  curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/ \
+    | perl -ne '/percona-toolkit-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' | sort -n -t . -k1,1 -k2,2 -k3,3 > .version-info/percona-toolkit.el7.txt
+  curl -sL https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/ \
+    | perl -ne '/percona-toolkit-([0-9.-]*).el8.x86_64.rpm/ and print "$1\n"' | sort -n -t . -k1,1 -k2,2 -k3,3 > .version-info/percona-toolkit.el8.txt
+  curl -sL https://repo.percona.com/pt/apt/pool/main/p/percona-toolkit/ \
+    | perl -ne  '/percona-toolkit_([^"]*).focal_amd64.deb/ and print "$1\n"' | sort -n -t . -k1,1 -k2,2 -k3,3 > .version-info/percona-toolkit.focal.txt
 
   cat > .version-info/pmm-client.el7.txt <<EOF
 1.10.0-1
@@ -706,6 +714,10 @@ deploy_node() {
         VER=$(tail -n 1 .version-info/mysql-jdbc.txt)
       fi
       DEP_ENV="$DEP_ENV MYSQL_JAVA=$VER"
+    fi
+    if [[ $i == "percona-toolkit" ]] || [[ $i == "percona-toolkit:"* ]] ; then
+      search_for_latest_version percona-toolkit "$i"
+      DEP_ENV="$DEP_ENV PT=$VER"
     fi
     if [[ $i == "orchestrator" ]] || [[ $i == "orchestrator:"* ]] ; then
       search_for_latest_version orchestrator "$i"

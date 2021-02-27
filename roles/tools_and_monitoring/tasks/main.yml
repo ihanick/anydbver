@@ -9,8 +9,9 @@
 - name: install Percona Toolkit
   when: percona_toolkit_version != ""
   package:
-    name: "percona-toolkit-{{ percona_toolkit_version }}.{{dist}}.x86_64"
+    name: "{{item}}"
     state: present
+  with_items: "{{ os[dist]['percona_toolkit'].install_packages }}"
 
 - name: PMM Setup tasks
   when: install_only == ''
