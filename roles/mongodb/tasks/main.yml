@@ -19,17 +19,20 @@
 - name: Enable local repo.* caching
   include_tasks: common/tasks/repo_cache.yaml
 
+- name: refresh percona repo
+  when: >
+    ( psmdb_version.startswith('3.0') or psmdb_version.startswith('3.6') or psmdb_version.startswith('4.0')
+    or psmdb_version.startswith('4.2') or psmdb_version.startswith('4.4') )
+    and (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and is_percona_repo_required != ''
+  apt:
+    update_cache: yes
+
 - name: install Percona Server for MongoDB
   when: psmdb_version.startswith('3.0') or psmdb_version.startswith('3.6') or psmdb_version.startswith('4.0') or psmdb_version.startswith('4.2') or psmdb_version.startswith('4.4')
   package:
     name: "{{ item }}"
     state: present
-  with_items:
-    - "{{ psmdb_name }}{{ psmdb_major_ver }}-tools-{{ psmdb_version }}.{{ dist }}.x86_64"
-    - "{{ psmdb_name }}{{ psmdb_major_ver }}-shell-{{ psmdb_version }}.{{ dist }}.x86_64"
-    - "{{ psmdb_name }}{{ psmdb_major_ver }}-server-{{ psmdb_version }}.{{ dist }}.x86_64"
-    - "{{ psmdb_name }}{{ psmdb_major_ver }}-mongos-{{ psmdb_version }}.{{ dist }}.x86_64"
-    - "{{ psmdb_name }}{{ psmdb_major_ver }}-{{ psmdb_version }}.{{ dist }}.x86_64"
+  with_items: "{{pkg[dist].install_packages}}"
 
 - name: install Percona Server for MongoDB 3.2 or 3.4
   when: psmdb_version.startswith('3.2') or psmdb_version.startswith('3.4')
