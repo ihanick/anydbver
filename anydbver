@@ -509,33 +509,32 @@ EOF
 1.5.0
 EOF
 
- cat > .version-info/sysbench.el7.txt <<EOF
+  cat > .version-info/sysbench.el7.txt <<EOF
 1.0.20-6
 EOF
- cat > .version-info/sysbench.el8.txt <<EOF
-1.0.20-6
-EOF
+  cp .version-info/sysbench.el7.txt .version-info/sysbench.el8.txt
+  cp .version-info/sysbench.el7.txt .version-info/sysbench.focal.txt
 
  cat > .version-info/proxysql.el7.txt <<EOF
 1.3.10-1
 EOF
 
-curl -sL \
-  https://repo.proxysql.com/ProxySQL/proxysql-1.4.x/centos/7/ \
-  https://repo.proxysql.com/ProxySQL/proxysql-2.0.x/centos/7/ \
-  https://repo.proxysql.com/ProxySQL/proxysql-2.1.x/centos/7/ \
-  | perl -ne '/proxysql-([0-9.-]*).centos7.x86_64.rpm/ and print "$1\n"' \
-  | sort -n -t . -k1,1 -k2,2 -k3,3 \
-  >> .version-info/proxysql.el7.txt
-curl -sL \
-  https://repo.proxysql.com/ProxySQL/proxysql-1.4.x/centos/8/ \
-  https://repo.proxysql.com/ProxySQL/proxysql-2.0.x/centos/8/ \
-  https://repo.proxysql.com/ProxySQL/proxysql-2.1.x/centos/8/ \
-  | perl -ne '/proxysql-([0-9.-]*).centos8.x86_64.rpm/ and print "$1\n"' \
-  | sort -n -t . -k1,1 -k2,2 -k3,3 \
-  > .version-info/proxysql.el8.txt
+  curl -sL \
+    https://repo.proxysql.com/ProxySQL/proxysql-1.4.x/centos/7/ \
+    https://repo.proxysql.com/ProxySQL/proxysql-2.0.x/centos/7/ \
+    https://repo.proxysql.com/ProxySQL/proxysql-2.1.x/centos/7/ \
+    | perl -ne '/proxysql-([0-9.-]*).centos7.x86_64.rpm/ and print "$1\n"' \
+    | sort -n -t . -k1,1 -k2,2 -k3,3 \
+    >> .version-info/proxysql.el7.txt
+  curl -sL \
+    https://repo.proxysql.com/ProxySQL/proxysql-1.4.x/centos/8/ \
+    https://repo.proxysql.com/ProxySQL/proxysql-2.0.x/centos/8/ \
+    https://repo.proxysql.com/ProxySQL/proxysql-2.1.x/centos/8/ \
+    | perl -ne '/proxysql-([0-9.-]*).centos8.x86_64.rpm/ and print "$1\n"' \
+    | sort -n -t . -k1,1 -k2,2 -k3,3 \
+    > .version-info/proxysql.el8.txt
 
- cat > .version-info/mydumper.el7.txt <<EOF
+  cat > .version-info/mydumper.el7.txt <<EOF
 0.9.3-41
 0.9.5-2
 10.1-2
@@ -610,6 +609,50 @@ fi
 join_ws()  { local IFS=; local s="${*/#/$1}"; echo "${s#"$1$1$1"}"; }
 
 
+check_os() {
+  if [[ $i == "os:"* ]] || [[ $i == "operating-system:"* ]] ; then
+    NODE_OS=$(get_version "$i")
+    case "$NODE_OS" in
+      el7)
+        NODE_OS=el7
+        ;;
+      centos7)
+        NODE_OS=el7
+        ;;
+      centos-7)
+        NODE_OS=el7
+        ;;
+      CentOS7)
+        NODE_OS=el7
+        ;;
+      CentOS-7)
+        NODE_OS=el7
+        ;;
+      el8)
+        NODE_OS=el8
+        ;;
+      centos8)
+        NODE_OS=el8
+        ;;
+      centos-8)
+        NODE_OS=el8
+        ;;
+      CentOS8)
+        NODE_OS=el8
+        ;;
+      CentOS-8)
+        NODE_OS=el8
+        ;;
+      focal)
+        NODE_OS=focal
+  ;;
+      *)
+        :
+    esac
+    DEP_ENV="$DEP_ENV NODE_OS=$NODE_OS"
+ fi
+}
+
 deploy_node() {
   [ -f .version-info/percona-server.el7.txt ] || refresh_percona_server_version_info
   NODE="$1"
@@ -620,6 +663,9 @@ deploy_node() {
   UTF8ENC=0
   NODE_OS="${NODE_OS:-el7}"
   FEATURES=()
+
+  for i in "${arr[@]}"; do check_os; done
+
   for i in "${arr[@]}";
   do
     if [[ $i == "hostname:"* ]] || [[ $i == "hn:"* ]] || [[ $i == "name:"* ]] ; then
@@ -637,49 +683,6 @@ deploy_node() {
     if [[ $i == "cache:"* ]] ; then
       CACHE_IMG=$(get_version "$i")
       DEP_ENV="$DEP_ENV CACHE_IMG=${CACHE_IMG} "
-    fi
-
-    if [[ $i == "os:"* ]] || [[ $i == "operating-system:"* ]] ; then
-      NODE_OS=$(get_version "$i")
-      case "$NODE_OS" in
-        el7)
-          NODE_OS=el7
-          ;;
-        centos7)
-          NODE_OS=el7
-          ;;
-        centos-7)
-          NODE_OS=el7
-          ;;
-        CentOS7)
-          NODE_OS=el7
-          ;;
-        CentOS-7)
-          NODE_OS=el7
-          ;;
-        el8)
-          NODE_OS=el8
-          ;;
-        centos8)
-          NODE_OS=el8
-          ;;
-        centos-8)
-          NODE_OS=el8
-          ;;
-        CentOS8)
-          NODE_OS=el8
-          ;;
-        CentOS-8)
-          NODE_OS=el8
-          ;;
-        focal)
-          NODE_OS=focal
-	  ;;
-        *)
-          :
-      esac
-
-      DEP_ENV="$DEP_ENV NODE_OS=$NODE_OS"
     fi
 
     if [[ $i == "percona-server" ]] || [[ $i == "percona-server:"* ]] || [[ $i == "ps" ]] || [[ $i == "ps:"* ]] ; then
@@ -886,6 +889,9 @@ deploy_node() {
     fi
     if [[ $i == "rbr" ]] || [[ $i == "row" ]] || [[ $i == "row-based-replication" ]] || [[ $i == "row_based_replication" ]] ; then
       ROW_REPLICATION=1
+    fi
+    if [[ $i == "ldap-simple" ]] ; then
+      FEATURES+=( ldap_simple )
     fi
     if [[ $i == "backup" ]] ; then
       FEATURES+=( backup )

@@ -3,6 +3,10 @@ SRV_IP=$1
 PASS=$2
 DOM_SID=$3
 SRV_TYPE=${4:-mysql}
+
+CNF_FILE=$5
+MYSQL_SERVICE=$6
+
 yum install -y authconfig openssh-clients nss-pam-ldapd nscd
 
 # https://wiki.gentoo.org/wiki/Samba/Active_Directory_Guide
@@ -55,6 +59,24 @@ GRANT ALL PRIVILEGES ON *.* TO dba_users@'%';
 GRANT PROXY ON support_users@'%' TO ''@'';
 GRANT PROXY ON dba_users@'%' TO ''@'';
 EOF
+fi
+
+
+if [ "x$SRV_TYPE" = "xmysql_ldap_simple" ] ; then
+  mysql <<EOF
+INSTALL PLUGIN authentication_ldap_simple SONAME 'authentication_ldap_simple.so';
+CREATE USER nihalainen@'%' IDENTIFIED WITH authentication_ldap_simple;
+EOF
+  cat >> "$CNF_FILE" <<EOF
+authentication_ldap_simple_auth_method_name=SIMPLE
+authentication_ldap_simple_server_host='$SRV_IP'
+authentication_ldap_simple_bind_root_dn='cn=ldap,cn=Users,dc=percona,dc=local'
+authentication_ldap_simple_bind_root_pwd='verysecretpassword1^'
+authentication_ldap_simple_bind_base_dn='dc=percona,dc=local'
+authentication_ldap_simple_tls=1
+authentication_ldap_simple_user_search_attr='cn'
+EOF
+  systemctl restart $MYSQL_SERVICE
 fi
 
 cat << EOF >> /etc/openldap/ldap.conf

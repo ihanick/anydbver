@@ -96,10 +96,10 @@ focal:
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/mysql.conf.d/mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-common_{{percona_server_version}}.focal_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-client_{{percona_server_version}}.focal_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/libperconaserverclient21_{{percona_server_version}}.focal_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-server_{{percona_server_version}}.focal_amd64.deb"
+      - "https://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-common_{{percona_server_version}}.focal_amd64.deb"
+      - "https://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-client_{{percona_server_version}}.focal_amd64.deb"
+      - "https://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/libperconaserverclient21_{{percona_server_version}}.focal_amd64.deb"
+      - "https://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-server_{{percona_server_version}}.focal_amd64.deb"
 
   pxc57:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
@@ -125,6 +125,9 @@ focal:
   percona_toolkit:
     install_packages:
       - "percona-toolkit={{ percona_toolkit_version }}.{{dist}}"
+  sysbench:
+    install_packages:
+      - "sysbench={{sysbench_version}}.{{dist}}"
 
 el7:
   repo_url: "https://repo.percona.com/yum/percona-release-latest.noarch.rpm"

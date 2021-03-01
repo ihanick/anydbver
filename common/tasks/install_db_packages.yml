@@ -1,4 +1,4 @@
-- name: install apt db packages
+- name: install apt db packages (*.deb file)
   when: >
     (
     percona_server_version != "" or
@@ -7,7 +7,6 @@
     mysql_router_version != '' or
     orchestrator_version != '' or
     proxysql_version != '' or
-    sysbench_version != '' or
     ldap_server != '' or
     kerberos_server != '' or
     percona_proxysql_version != '' or
@@ -26,6 +25,23 @@
       ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else
         os[dist][soft].rocksdb_packages)
     }}
+
+- name: install apt db packages (pkg name)
+  when: >
+    (
+    sysbench_version != ''
+    ) and
+    (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+  apt:
+    name: >-
+      {{
+        os[dist][soft].install_packages +
+        ( [] if debug_packages == '' else
+          os[dist][soft].install_packages + os[dist][soft].install_debug_packages) +
+        ( [] if not ('development' in db_features.split(',') and 'development_packages' in os[dist][soft]) else os[dist][soft].development_packages) +
+        ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else
+          os[dist][soft].rocksdb_packages)
+      }}
 
 - name: install db packages
   when: >

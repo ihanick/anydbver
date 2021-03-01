@@ -75,15 +75,15 @@
         content: |
           auth required pam_ldap.so
           account required pam_ldap.so
-    - name: setup pam_ldap plugin
+    - name: setup MySQL LDAP plugins
       shell:
-        cmd: /bin/bash /vagrant/tools/setup_ldap_mysql.sh "{{db_user}}"
+        cmd: /bin/bash /vagrant/tools/setup_ldap_mysql.sh "{{db_user}}" "{{ 'ldap_simple' if ('ldap_simple' not in db_features.split(',')) else '' }}" "{{ os[dist][soft].cnf_file }}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
         creates: /root/mysql-ldap.applied
 
 - name: MySQL Samba Active Directory
   when: samba_ip != '' and samba_pass != '' and samba_sid != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
   shell:
-    cmd: /bin/bash /vagrant/tools/setup_samba_ldap_client.sh "{{samba_ip}}" "{{samba_pass}}" "{{samba_sid}}" mysql
+    cmd: /bin/bash /vagrant/tools/setup_samba_ldap_client.sh "{{samba_ip}}" "{{samba_pass}}" "{{samba_sid}}" "{{ 'mysql' if ('ldap_simple' not in db_features.split(',')) else 'mysql_ldap_simple' }}" "{{ os[dist][soft].cnf_file }}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
 
 - name: MySQL connector java
   when: master_ip != '' and mysql_connector_java_version != ''
