@@ -422,6 +422,17 @@ EOF
 13.0-1
 13.1-1
 EOF
+  cp .version-info/ppg.el7.txt .version-info/ppg.el8.txt
+  cat > .version-info/ppg2.el8.txt <<EOF
+13.1-1 223-1
+EOF
+
+  cat > .version-info/ppg.focal.txt <<EOF
+13-1.1
+EOF
+  cat > .version-info/ppg2.focal.txt <<EOF
+13-1.1 223-1
+EOF
 
   cat > .version-info/pg.el7.txt <<EOF
 9.5.15
@@ -776,7 +787,12 @@ deploy_node() {
     fi
     if [[ $i == "percona-postgresql" ]] || [[ $i == "percona-postgresql:"* ]] || [[ $i == "ppg" ]] || [[ $i == "ppg:"* ]] ; then
       search_for_latest_version ppg "$i"
-      DEP_ENV="$DEP_ENV PPGSQL=$VER"
+      test -f .version-info/ppg2.${NODE_OS}.txt && PPG_VER2=$(grep "$VER" .version-info/ppg2.${NODE_OS}.txt|cut -d' ' -f2|tail -n 1 )
+      if [ "x$PPG_VER2" != "x" ] ; then
+        DEP_ENV="$DEP_ENV PPGSQL=$VER PPGSQL2=$PPG_VER2"
+      else
+        DEP_ENV="$DEP_ENV PPGSQL=$VER"
+      fi
     fi
     if [[ $i == "k8s-mongo" ]] || [[ $i == "k8s-mongo:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then

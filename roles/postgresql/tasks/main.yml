@@ -53,20 +53,23 @@
     cmd: dnf -qy module disable postgresql ; touch /root/dist-postgresql.disabled
     creates: /root/dist-postgresql.disabled
 
+- name: refresh percona repo
+  when: >
+    percona_postgresql_version != ''
+    and (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and is_percona_repo_required != ''
+  apt:
+    update_cache: yes
+
 - name: Install db packages
   when: postgresql_version != '' or percona_postgresql_version != ''
   include_tasks: common/tasks/install_db_packages.yml
 
 - name: install Percona Distribution for PostgreSQL
-  when: percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') or percona_postgresql_version.startswith('13.')
+  when: percona_postgresql_version != ''
   package:
     name: "{{ item }}"
     state: present
-  with_items:
-    - "percona-postgresql{{ percona_postgresql_major_ver }}-libs-{{ percona_postgresql_version }}.el7.x86_64"
-    - "percona-postgresql{{ percona_postgresql_major_ver }}-{{ percona_postgresql_version }}.el7.x86_64"
-    - "percona-postgresql{{ percona_postgresql_major_ver }}-server-{{ percona_postgresql_version }}.el7.x86_64"
-    - "percona-postgresql{{ percona_postgresql_major_ver }}-contrib-{{ percona_postgresql_version }}.el7.x86_64"
+  with_items: "{{pkg[dist].install_packages}}"
 
 - name: install pg_stat_monitor for Percona Distribution for PostgreSQL
   when: pmm_client_version != '' and (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') or percona_postgresql_version.startswith('13.') )

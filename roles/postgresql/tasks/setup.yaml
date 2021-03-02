@@ -55,7 +55,7 @@
 - name: Start database with systemd
   when: start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
   command:
-    cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
+    cmd: systemctl start "{{ pkg[dist].systemd if ('systemd' in pkg[dist]) and percona_postgresql_version !='' else os[dist][soft].systemd_service if soft else db_systemd_service }}"
 
 - name: Create LDAP user in postgres
   when: (postgresql_version != '' or percona_postgresql_version != '') and ldap_server_ip != '' and db_user != ''
@@ -73,7 +73,7 @@
 - name: Setup PMM client with postgres
   when: pmm_url != '' and (postgresql_version != '' or percona_postgresql_version != '')
   shell:
-    cmd: /bin/bash -e /vagrant/tools/setup_pmm.sh "{{soft}}" postgres "{{db_password}}" pmm_user "{{db_password}}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}" "{{ 'yes' if pmm_client_version != '' and (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') or percona_postgresql_version.startswith('13.') ) else 'no' }}"
+    cmd: /bin/bash -e /vagrant/tools/setup_pmm.sh "{{soft}}" postgres "{{db_password}}" pmm_user "{{db_password}}" "{{ pkg[dist].systemd if ('systemd' in pkg[dist]) and percona_postgresql_version !='' else os[dist][soft].systemd_service if soft else db_systemd_service }}" "{{ 'yes' if pmm_client_version != '' and (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') or percona_postgresql_version.startswith('13.') ) else 'no' }}"
     creates: /root/pmm-postgresql.applied
 
 - name: Setup PGPool
