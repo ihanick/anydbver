@@ -53,10 +53,25 @@
     cmd: dnf -qy module disable postgresql ; touch /root/dist-postgresql.disabled
     creates: /root/dist-postgresql.disabled
 
-- name: refresh percona repo
-  when: >
-    percona_postgresql_version != ''
-    and (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and is_percona_repo_required != ''
+- name: Install gpg for apt-key
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+  package: name=gpg state=present
+
+- name: Add postgres.org Apt key
+  when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and postgresql_version != ''
+  ansible.builtin.apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+
+- name: Add postgres.org Apt repo (PGDG)
+  when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and postgresql_version != ''
+  lineinfile:
+    create: yes
+    path: /etc/apt/sources.list.d/pgdg.list
+    line: "deb http://apt.postgresql.org/pub/repos/apt {{dist}}-pgdg main"
+
+- name: refresh apt repo
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
   apt:
     update_cache: yes
 

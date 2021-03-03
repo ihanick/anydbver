@@ -10,7 +10,6 @@
     ldap_server != '' or
     kerberos_server != '' or
     percona_proxysql_version != '' or
-    postgresql_version != '' or
     pgpool_version != ''
     ) and
     (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
@@ -29,7 +28,8 @@
 - name: install apt db packages (pkg name)
   when: >
     (
-    sysbench_version != ''
+    sysbench_version != '' or
+    postgresql_version != ''
     ) and
     (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
   apt:

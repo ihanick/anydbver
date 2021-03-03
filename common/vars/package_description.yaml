@@ -129,6 +129,20 @@ focal:
     install_packages:
       - "sysbench={{sysbench_version}}.{{dist}}"
 
+  postgresql:
+    systemd_service: "postgresql@{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-main"
+    cnf_file: "/var/lib/pgsql/{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}/data/postgresql.conf"
+    repo_url: https://yum.postgresql.org/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+    install_packages:
+      - "libpq5={{ postgresql_version }}"
+      - "postgresql-client-common={{postgresql_version2}}"
+      - "postgresql-client-{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}={{ postgresql_version }}"
+      - "postgresql-common={{postgresql_version2}}"
+      - "postgresql-{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}={{ postgresql_version }}"
+    development_packages:
+      - "postgresql-server-dev-{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}={{postgresql_version}}"
+      - "libpq-dev={{ postgresql_version }}"
+
 el7:
   repo_url: "https://repo.percona.com/yum/percona-release-latest.noarch.rpm"
   ps56:

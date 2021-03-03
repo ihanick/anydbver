@@ -482,6 +482,12 @@ EOF
 13.0
 13.1
 EOF
+  cat > .version-info/pg.focal.txt <<EOF
+13.2-1.pgdg20.04+1
+EOF
+  cat > .version-info/pg2.focal.txt <<EOF
+13.2-1.pgdg20.04+1 225.pgdg20.04+1
+EOF
   cat > .version-info/pko4psmdb.txt <<EOF
 master
 0.1.0
@@ -783,7 +789,12 @@ deploy_node() {
     fi
     if [[ $i == "postgresql" ]] || [[ $i == "postgresql:"* ]] || [[ $i == "pg" ]] || [[ $i == "pg:"* ]] ; then
       search_for_latest_version pg "$i"
-      DEP_ENV="$DEP_ENV PG=$VER"
+      test -f .version-info/pg2.${NODE_OS}.txt && PG_VER2=$(grep "$VER" .version-info/pg2.${NODE_OS}.txt|cut -d' ' -f2|tail -n 1 )
+      if [ "x$PG_VER2" != "x" ] ; then
+        DEP_ENV="$DEP_ENV PG=$VER PG2=$PG_VER2"
+      else
+        DEP_ENV="$DEP_ENV PG=$VER"
+      fi
     fi
     if [[ $i == "percona-postgresql" ]] || [[ $i == "percona-postgresql:"* ]] || [[ $i == "ppg" ]] || [[ $i == "ppg:"* ]] ; then
       search_for_latest_version ppg "$i"

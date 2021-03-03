@@ -78,6 +78,7 @@
     kerberos_client: "{{ lookup('vars', 'extra_kerberos_client', default=lookup('env','KERBEROS_CLIENT',default='') ) }}"
     mydumper_version: "{{ lookup('vars', 'extra_mydumper_version', default=lookup('env','MYDUMPER',default='') ) }}"
     postgresql_version: "{{ lookup('vars', 'extra_postgresql_version', default=lookup('env','PG',default='') ) }}"
+    postgresql_version2: "{{ lookup('vars', 'extra_postgresql_version2', default=lookup('env','PG2',default='') ) }}"
 
     percona_server_name: "{{ 'percona-server' if percona_server_version.startswith('8.0') else 'Percona-Server' }}"
     percona_server_major_ver: "{{ '' if percona_server_version.startswith('8.0') else '-57' if percona_server_version.startswith('5.7') else '-56' if percona_server_version.startswith('5.6') else '' }}"
