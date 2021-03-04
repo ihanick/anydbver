@@ -106,9 +106,13 @@
 - name: Install mydumper
   when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and mydumper_version != ''
   yum:
-    name: "{{os[dist].mydumper.install_packages}}"
+    name: "{{mydumper[dist].install_packages}}"
     state: present
     disable_gpg_check: yes
+- name: Install mydumper (deb)
+  when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+  apt:
+    deb: "{{mydumper[dist].install_packages}}"
 
 - name: Install MySQL connector java
   when: mysql_connector_java_version != ''

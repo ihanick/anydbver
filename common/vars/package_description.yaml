@@ -323,10 +323,6 @@ el7:
     install_packages:
       - krb5-server
       - krb5-workstation
-  mydumper:
-    install_packages:
-      - "https://github.com/maxbube/mydumper/releases/download/v{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version|regex_replace('-[0-9]+$')}}/mydumper-{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version}}.el7.x86_64.rpm"
-
   postgresql:
     systemd_service: "postgresql-{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}"
     cnf_file: "/var/lib/pgsql/{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}/data/postgresql.conf"
@@ -344,9 +340,6 @@ el8:
     systemd_service: "proxysql"
     install_packages:
       - "proxysql-{{proxysql_version}}"
-  mydumper:
-    install_packages:
-      - "https://github.com/maxbube/mydumper/releases/download/v{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version|regex_replace('-[0-9]+$')}}/mydumper-{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version}}.el8.x86_64.rpm"
   mysql_connector_java:
     install_packages:
       - java-1.8.0-openjdk.x86_64

@@ -560,6 +560,9 @@ EOF
 0.9.5-1
 10.1-2
 EOF
+ cat > .version-info/mydumper.focal.txt <<EOF
+10.1-2
+EOF
 
  cat > .version-info/mysql-jdbc.txt <<EOF
 8.0.17-1
