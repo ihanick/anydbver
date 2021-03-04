@@ -88,7 +88,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1"
     echo "$0 deploy ps:5.7 hostname:leader.percona.local node1 ps:5.7 hostname:follower.percona.local leader:default"
     echo "$0 deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row"
-    echo "$0 deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1 node3 orchestrator master:default"
+    echo "$0 deploy hn:ps0 ps:5.7 node1 hn:ps1 ps:5.7 master:default node2 hn:ps2 ps:5.7 master:node1 node3 hn:orc orchestrator master:default"
     echo "$0 deploy samba node1 ps samba-dc:default"
     echo "$0 deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default"
     echo -e $0' deploy \\\n pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default \\\n node3 pxc:5.7 cluster:cluster2 node4 pxc:5.7 cluster:cluster2 galera-master:node3 node5 pxc:5.7 cluster:cluster2 galera-master:node3'
