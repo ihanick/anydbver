@@ -74,14 +74,6 @@
     name: "percona-xtrabackup{{ '-24' if percona_xtrabackup_version.startswith('2.4') else '-80' if percona_xtrabackup_version.startswith('8.0')  else '' }}-{{ percona_xtrabackup_version }}.{{dist}}.x86_64"
     state: present
 
-- name: ProxySQL
-  when: proxysql_version !=''
-  block:
-    - name: install ProxySQL deb package
-      when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'
-      apt:
-        deb: "{{os[dist][soft].url}}"
-
 - name: InnoDB ruby
   when: innodb_ruby_version != ''
   block:
@@ -110,7 +102,7 @@
     state: present
     disable_gpg_check: yes
 - name: Install mydumper (deb)
-  when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+  when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and mydumper_version != ''
   apt:
     deb: "{{mydumper[dist].install_packages}}"
 

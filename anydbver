@@ -550,6 +550,13 @@ EOF
     | perl -ne '/proxysql-([0-9.-]*).centos8.x86_64.rpm/ and print "$1\n"' \
     | sort -n -t . -k1,1 -k2,2 -k3,3 \
     > .version-info/proxysql.el8.txt
+  curl -sL \
+    https://repo.proxysql.com/ProxySQL/proxysql-2.0.x/focal/ \
+    https://repo.proxysql.com/ProxySQL/proxysql-2.1.x/focal/ \
+    | perl -ne '/proxysql_([0-9.-]*)-ubuntu20_amd64.deb/ and print "$1\n"' \
+    | sort -n -t . -k1,1 -k2,2 -k3,3 \
+    > .version-info/proxysql.focal.txt
+
 
   cat > .version-info/mydumper.el7.txt <<EOF
 0.9.3-41

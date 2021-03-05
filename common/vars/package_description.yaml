@@ -143,6 +143,11 @@ focal:
       - "postgresql-server-dev-{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}={{postgresql_version}}"
       - "libpq-dev={{ postgresql_version }}"
 
+  proxysql:
+    systemd_service: "proxysql"
+    install_packages:
+      - "https://repo.proxysql.com/ProxySQL/proxysql-{{'2.1.x' if proxysql_version.startswith('2.1.') else '2.0.x' if proxysql_version.startswith('2.0.') else ''}}/focal/proxysql_{{proxysql_version}}-ubuntu20_amd64.deb"
+
 el7:
   repo_url: "https://repo.percona.com/yum/percona-release-latest.noarch.rpm"
   ps56:
