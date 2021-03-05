@@ -34,6 +34,10 @@ setupOS() {
     IMG="images:oracle/8/$ARCH"
     PACKAGES="$PACKAGES oracle-epel-release-el8 python3 tar"
     PYTHON_INT=/usr/bin/python3
+  elif [ "x$1" == "xbionic" ] ; then
+    IMG="images:ubuntu/bionic/$ARCH"
+    PYTHON_INT=/usr/bin/python3
+    OS_TYPE=deb
   elif [ "x$1" == "xfocal" ] ; then
     IMG="images:ubuntu/focal/$ARCH"
     PYTHON_INT=/usr/bin/python3

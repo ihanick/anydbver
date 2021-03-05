@@ -148,6 +148,19 @@ focal:
     install_packages:
       - "https://repo.proxysql.com/ProxySQL/proxysql-{{'2.1.x' if proxysql_version.startswith('2.1.') else '2.0.x' if proxysql_version.startswith('2.0.') else ''}}/focal/proxysql_{{proxysql_version}}-ubuntu20_amd64.deb"
 
+  mariadb_server:
+    systemd_service: "mariadb"
+    cnf_file: '/etc/mysql/mariadb.conf.d/zz_mysqld.cnf'
+    install_packages:
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mysql-common_{{mariadb_version}}+maria~focal_all.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-common_{{mariadb_version}}+maria~focal_all.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/libmariadb3_{{mariadb_version}}+maria~focal_amd64.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-client-core-10.5_{{mariadb_version}}+maria~focal_amd64.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-server-core-10.5_{{mariadb_version}}+maria~focal_amd64.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-client-10.5_{{mariadb_version}}+maria~focal_amd64.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-server-10.5_{{mariadb_version}}+maria~focal_amd64.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-server_{{mariadb_version}}+maria~focal_all.deb"
+
 el7:
   repo_url: "https://repo.percona.com/yum/percona-release-latest.noarch.rpm"
   ps56:
