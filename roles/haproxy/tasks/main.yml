@@ -1,0 +1,17 @@
+---
+# tasks file for haproxy
+- name: Install HAProxy
+  package:
+    name: haproxy
+    state: present
+
+- name: create haproxy config from template
+  template:
+    src: "{{playbook_dir}}/roles/haproxy/templates/haproxy.{{ 'galera' if haproxy_galera !='' else 'pg' if haproxy_galera !='' else '' }}.cfg.j2"
+    dest: "/etc/haproxy/haproxy.cfg"
+
+- name: start haproxy
+  systemd:
+    name: haproxy
+    state: restarted
+    enabled: True

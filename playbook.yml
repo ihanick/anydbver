@@ -57,6 +57,8 @@
     mongos_shard:  "{{ lookup('vars', 'extra_mongos_shard', default=lookup('env','MONGOS_SHARD',default='') ) }}"
     proxysql_version: "{{ lookup('vars', 'extra_proxysql_version', default=lookup('env','PROXYSQL',default='') ) }}"
     percona_proxysql_version: "{{ lookup('vars', 'extra_percona_proxysql_version', default=lookup('env','PERCONA_PROXYSQL',default='') ) }}"
+    haproxy_pg: "{{ lookup('vars', 'extra_haproxy_pg', default=lookup('env','HAPROXY_PG',default='') ) }}"
+    haproxy_galera: "{{ lookup('vars', 'extra_haproxy_galera', default=lookup('env','HAPROXY_GALERA',default='') ) }}"
     mariadb_version: "{{ lookup('vars', 'extra_mariadb_version', default=lookup('env','MARIADB',default='') ) }}"
     galera:  "{{ lookup('vars', 'extra_galera', default=lookup('env','GALERA',default='') ) }}"
     mysql_version: "{{ lookup('vars', 'extra_mysql_version', default=lookup('env','MYSQL',default='') ) }}"
@@ -214,6 +216,11 @@
       when: vault_version != '' or samba_ad != '' or ldap_server != '' or kerberos_client != ''
       include_role:
         name: user_security
+
+    - name: HAProxy
+      when: haproxy_pg != '' or haproxy_galera != ''
+      include_role:
+        name: haproxy
 
     - name: Postgresql Role
       when: postgresql_version != '' or percona_postgresql_version != '' or odyssey_version != '' or walg_version != '' or pgpool_version != ''

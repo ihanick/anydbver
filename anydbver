@@ -93,6 +93,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default"
     echo -e $0' deploy \\\n pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default \\\n node3 pxc:5.7 cluster:cluster2 node4 pxc:5.7 cluster:cluster2 galera-master:node3 node5 pxc:5.7 cluster:cluster2 galera-master:node3'
     echo "$0 deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 garbd galera-master:default"
+    echo -e $0' deploy \\\n  haproxy-galera:node1,node2,node3 \\\n  node1 pxc clustercheck \\\n  node2 pxc galera-master:node1 clustercheck \\\n  node3 pxc galera-master:node1 clustercheck'
     echo "$0 deploy ps:8.0 group-replication node1 ps:8.0 group-replication master:default node2 ps:8.0 group-replication master:default"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-mongo"
@@ -741,6 +742,18 @@ deploy_node() {
       search_for_latest_version proxysql "$i"
       DEP_ENV="$DEP_ENV PROXYSQL=$VER"
     fi
+    if [[ $i == "haproxy" ]] ; then
+      DEP_ENV="$DEP_ENV HAPROXY=1"
+    fi
+    if [[ $i == "haproxy-galera:"* ]] ; then
+      HAPROXY_HOSTS=$(get_version "$i")
+      DEP_ENV="$DEP_ENV HAPROXY_GALERA=$HAPROXY_HOSTS"
+    fi
+    if [[ $i == "haproxy-postgresql:"* || $i == "haproxy-pg:"* ]] ; then
+      HAPROXY_HOSTS=$(get_version "$i")
+      DEP_ENV="$DEP_ENV HAPROXY_PG=$HAPROXY_HOSTS"
+    fi
+
     if [[ $i == "percona-proxysql" ]] || [[ $i == "percona-proxysql:"* ]] ; then
       search_for_latest_version percona-proxysql "$i"
       DEP_ENV="$DEP_ENV PERCONA_PROXYSQL=$VER"
@@ -939,6 +952,9 @@ deploy_node() {
     if [[ $i == "ldap-simple" ]] ; then
       FEATURES+=( ldap_simple )
     fi
+    if [[ $i == "clustercheck" ]] ; then
+      FEATURES+=( clustercheck )
+    fi
     if [[ $i == "backup" ]] ; then
       FEATURES+=( backup )
     fi
@@ -1037,7 +1053,7 @@ deploy_node() {
   fi
   [[ "$DEP_ENV" == *DB_PASS* ]] || DEP_ENV="$DEP_ENV DB_PASS=secret"
   [[ "$DEP_ENV" == *START* ]] || DEP_ENV="$DEP_ENV START=1"
-  if [[ "$DEP_ENV" == *'GALERA='* ]] || [[ "$DEP_ENV" == *'PXC='* ]] ; then
+  if [[ "$DEP_ENV" != *'HAPROXY_GALERA='* && "$DEP_ENV" == *'GALERA='* ]] || [[ "$DEP_ENV" == *'PXC='* ]] ; then
     [[ "$DEP_ENV" == *CLUSTER=* ]] || DEP_ENV="$DEP_ENV CLUSTER=cluster1"
     CLUSTER_NAME=$(echo "$DEP_ENV" | sed -re 's/^.*CLUSTER=([^ ]+).*$/\1/' )
     test -f secret/${CLUSTER_NAME}-ssl.tar.gz && rm -f secret/${CLUSTER_NAME}-ssl.tar.gz
@@ -1047,9 +1063,9 @@ deploy_node() {
   fi
   if  [[ "$DEP_ENV" == *DB_OPTS* ]] ; then
     :
-  elif [[ "$DEP_ENV" == *'GALERA='* ]] && [[ "$DEP_ENV" == *'MARIADB=10.3'* ]] ; then
+  elif [[ "$DEP_ENV" != *'HAPROXY_GALERA='* && "$DEP_ENV" == *'GALERA='* ]] && [[ "$DEP_ENV" == *'MARIADB=10.3'* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mariadb/galera3.cnf"
-  elif [[ "$DEP_ENV" == *'GALERA='* ]] ; then
+  elif [[ "$DEP_ENV" != *'HAPROXY_GALERA='* && "$DEP_ENV" == *'GALERA='* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mariadb/galera.cnf"
   elif [[ "$DEP_ENV" == *'PXC=5'* ]] ; then
     DEP_ENV="$DEP_ENV DB_OPTS=mysql/pxc5657.cnf"
@@ -1205,6 +1221,29 @@ pre_deploy_hook() {
     SAMBA_SID=$(find_samba_sid $MASTER_NODE)
     i=$(echo "$i"|sed -e "s/SAMBA_IP=$MASTER_NODE/SAMBA_IP=$MASTER_IP SAMBA_SID=$SAMBA_SID/g")
   fi
+  if echo "$i" | grep -q HAPROXY_PG ; then
+    HAPROXY_NODES_LIST=( )
+    HAPROXY_NODES=$(echo "$i" | perl -ne '/HAPROXY_PG=(\S*) / and print $1')
+    for n in $(echo "$HAPROXY_NODES"|tr , '\n')
+    do
+      n_ip=$(find_node_ip $n)
+      HAPROXY_NODES_LIST+=( ${n_ip} )
+    done
+    HAPROXY_PG=$( join_ws , "${HAPROXY_NODES_LIST[@]}" )
+    i=$(echo "$i"|sed -e "s|HAPROXY_PG=$HAPROXY_NODES|HAPROXY_PG=$HAPROXY_PG|g")
+  fi
+  if echo "$i" | grep -q HAPROXY_GALERA ; then
+    HAPROXY_NODES_LIST=( )
+    HAPROXY_NODES=$(echo "$i" | perl -ne '/HAPROXY_GALERA=(\S*) / and print $1')
+    for n in $(echo "$HAPROXY_NODES"|tr , '\n')
+    do
+      n_ip=$(find_node_ip $n)
+      HAPROXY_NODES_LIST+=( ${n_ip} )
+    done
+    HAPROXY_GALERA=$( join_ws , "${HAPROXY_NODES_LIST[@]}" )
+    i=$(echo "$i"|sed -e "s|HAPROXY_GALERA=$HAPROXY_NODES|HAPROXY_GALERA=$HAPROXY_GALERA|g")
+  fi
+
   if echo "$i" | grep -q MONGOS_CFG ; then
     CFG_NODES_LIST=( )
     CFG_NODES_FULL=$(echo "$i" | perl -ne '/MONGOS_CFG=(\S*) / and print $1')
@@ -1274,7 +1313,7 @@ post_deploy_hook_after_all_nodes() {
 
   # after all nodes deploy
   if [[ $i != *PKO4PXC=* && $i == *CLUSTER=* && $i == *PXC=* ]] || [[ $i == *CLUSTER=* && $i == *GALERA=* ]] ; then
-    ./anydbver ssh $NODE bash /vagrant/tools/fix_wsrep_cluster_address.sh
+    [[ $DRY_RUN == 0 ]] && ./anydbver ssh $NODE bash /vagrant/tools/fix_wsrep_cluster_address.sh
   fi
 }
 

@@ -98,6 +98,27 @@
         dest: /srv/java/ConnectorTest.java
         mode: '0644'
 
+- name: Enable clustercheck
+  when: percona_xtradb_cluster_version != '' and ('clustercheck' in db_features.split(','))
+  block:
+    - name: Create clustercheck default user
+      command:
+        cmd: mysql -e "create user if not exists clustercheckuser@localhost identified by 'clustercheckpassword!'"
+    - name: install xinetd
+      package:
+        name: xinetd
+        state: present
+    - name: Create xinetd service
+      when: percona_xtradb_cluster_version.startswith('8.0')
+      copy:
+        src: "{{playbook_dir}}/roles/haproxy/files/mysqlchk"
+        dest: /etc/xinetd.d/mysqlchk
+    - name: start xinetd
+      systemd:
+        name: xinetd
+        state: restarted
+        enabled: True
+
 - name: Enable MySQL Audit plugin
   when: percona_server_version != '' and start_db != '' and ('audit' in db_features.split(','))
   shell:

@@ -1,0 +1,38 @@
+global
+     log 127.0.0.1   local0
+     log 127.0.0.1   local1 notice
+     maxconn 4096
+     uid 99
+     gid 99
+     daemon
+     #debug
+     #quiet
+
+defaults
+     log     global
+     mode    http
+     option  tcplog
+     option  dontlognull
+     retries 3
+     redispatch
+     maxconn 2000
+     contimeout      5000
+     clitimeout      50000
+     srvtimeout      50000
+
+frontend stats
+    bind *:8404
+    stats enable
+    stats uri /stats
+    stats refresh 10s
+    stats admin if LOCALHOST
+
+frontend mysql-cluster
+     bind *:3306
+     mode tcp
+     balance roundrobin
+     option  httpchk
+
+{% for host in galera_servers %}
+     server db{{ loop.index }} {{host}}:3306 check port 9200 inter 12000 rise 3 fall 3
+{% endfor %}
