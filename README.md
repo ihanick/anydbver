@@ -59,6 +59,11 @@ Deploy:
   node6 psmdb:4.2 mongos-cfg:cfg0/node3,node4,node5 mongos-shard:rs0/default,node1,node2
 ./anydbver deploy sysbench
 ./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:default node3 proxysql master:default
+./anydbver deploy \
+  haproxy-galera:node1,node2,node3 \
+  node1 pxc clustercheck \
+  node2 pxc galera-master:node1 clustercheck \
+  node3 pxc galera-master:node1 clustercheck
 
 ./anydbver deploy mongo help
 ```
@@ -87,6 +92,38 @@ anydbver stores lists of version for each database product in temporary files. Y
 ```bash
 ./anydbver update
 ```
+
+## Container OS image
+
+By default, containers are based on CentOS 7. Newer distributions are not supporting all old database versions, but you still can use CentOS 8, Oracle Enterprise linux 7 and 8 or Ubuntu 20.04 Focal Fossa:
+
+```bash
+./anydbver deploy \
+  ps:5.7 os:el7 \
+  node1 ps:5.7 os:el8 master:default \
+  node2 ps:5.7 os:focal master:default \
+  node3 ps:5.7 os:oel7 master:default \
+  node4 ps:5.7 os:oel8 master:default \
+  node5 ps:5.7 os:bionic master:default
+
+for i in default node{1,2,3,4,5} ; do ./anydbver ssh $i grep PRETTY_NAME /etc/os-release ; done
+PRETTY_NAME="CentOS Linux 7 (Core)"
+PRETTY_NAME="CentOS Linux 8"
+PRETTY_NAME="Ubuntu 20.04.2 LTS"
+PRETTY_NAME="Oracle Linux Server 7.9"
+PRETTY_NAME="Oracle Linux Server 8.3"
+PRETTY_NAME="Ubuntu 18.04.5 LTS"
+```
+
+Default os could be changed with `--os osname`. Put it right after deploy keyword:
+```bash
+./anydbver deploy --os el8 ps node1 ps master:default
+```
+Default OS is not disabling explicit os specification:
+```
+./anydbver deploy --os el8 ps node1 ps master:default node2 os:el7 ps
+```
+
 
 ## Allows to install a specific version of:
 

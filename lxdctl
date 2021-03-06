@@ -26,14 +26,17 @@ setupOS() {
     IMG="images:centos/8/$ARCH"
     PACKAGES="$PACKAGES python3 tar"
     PYTHON_INT=/usr/bin/python3
+    OS_TYPE=rpm
   elif [ "x$1" == "xoel7" ] ; then
     IMG="images:oracle/7/$ARCH"
     PACKAGES=''
     PYTHON_INT=/usr/bin/python2.7
+    OS_TYPE=rpm
   elif [ "x$1" == "xoel8" ] ; then
     IMG="images:oracle/8/$ARCH"
     PACKAGES="$PACKAGES oracle-epel-release-el8 python3 tar"
     PYTHON_INT=/usr/bin/python3
+    OS_TYPE=rpm
   elif [ "x$1" == "xbionic" ] ; then
     IMG="images:ubuntu/bionic/$ARCH"
     PYTHON_INT=/usr/bin/python3
@@ -46,6 +49,7 @@ setupOS() {
     IMG="images:centos/7/$ARCH"
     PACKAGES=''
     PYTHON_INT=/usr/bin/python2.7
+    OS_TYPE=rpm
   fi
 }
 

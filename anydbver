@@ -634,6 +634,9 @@ cat > .version-info/vault.txt <<EOF
 1.6.1
 EOF
 
+  for i in .version-info/*.el7.txt ; do cp $i ${i/.el7.txt/.oel7.txt} ; done
+  for i in .version-info/*.el8.txt ; do cp $i ${i/.el8.txt/.oel8.txt} ; done
+
 }
 
 
