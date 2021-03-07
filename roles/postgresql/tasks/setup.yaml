@@ -82,3 +82,27 @@
     cmd: /bin/bash /vagrant/tools/setup_pg_pool.sh "{{master_ip}}" "{{db_password}}"
     creates: /root/pgpool.applied
 
+- name: Enable xinetd 
+  when: (postgresql_version != '' or percona_postgresql_version != '') and ('clustercheck' in db_features.split(','))
+  block:
+    - name: create haproxy config from template
+      template:
+        src: "{{playbook_dir}}/roles/postgresql/templates/pgsqlchk.j2"
+        dest: "/usr/local/bin/pgsqlchk"
+        mode: '0755'
+    - name: install xinetd
+      package:
+        name: xinetd
+        state: present
+    - name: Create xinetd service
+      copy:
+        src: "{{playbook_dir}}/roles/haproxy/files/pgchk"
+        dest: /etc/xinetd.d/pgchk
+    - name: start xinetd
+      systemd:
+        name: xinetd
+        state: restarted
+        enabled: True
+
+
+

@@ -33,6 +33,6 @@ frontend mysql-cluster
      balance roundrobin
      option  httpchk
 
-{% for host in galera_servers %}
+{% for host in upstream_servers %}
      server db{{ loop.index }} {{host}}:3306 check port 9200 inter 12000 rise 3 fall 3
 {% endfor %}

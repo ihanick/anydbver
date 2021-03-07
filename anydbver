@@ -104,6 +104,7 @@ if [ "x$2" = "xhelp" ] ; then
     echo "$0 deploy pg:12.3"
     echo "$0 deploy pg:12.3 node1 pg:12.3 master:default"
     echo "$0 deploy pg:13 patroni node1 pg:13 master:default patroni etcd-ip:default node2 pg:13 master:default patroni etcd-ip:default"
+    echo "$0 deploy haproxy-pg:node1,node2,node3 node1 pg clustercheck node2 pg clustercheck master:node1 node3 pg clustercheck master:node1"
     echo "$0 deploy pmm node1 ppg pmm-client pmm-server:default"
     echo "$0 deploy psmdb"
     echo "$0 deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0"
