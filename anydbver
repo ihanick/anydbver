@@ -349,6 +349,10 @@ EOF
     | sed -re 's/^.*HREF="mysql-community-server-(.[-.0-9]+).el.*/\1/i' \
     | sort -t. -k 1,1n -k 2,2n -k 3,3n \
     > .version-info/mysql.el8.txt
+  cat > .version-info/mysql.focal.txt <<EOF
+8.0.22-1
+8.0.23-1
+EOF
 
 if test -f /usr/bin/which && which jq &>/dev/null ; then
   curl -s 'https://hub.docker.com/v2/repositories/percona/pmm-server/tags/?page_size=10000' \

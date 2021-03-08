@@ -35,6 +35,11 @@
         (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
       shell:
         cmd: "yum-config-manager --disable mysql80-community; yum-config-manager --enable mysql56-community"
+    - name: Install apt repository
+      when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') 
+      apt:
+        deb: https://dev.mysql.com/get/mysql-apt-config_0.8.16-1_all.deb
+
 
 - name: Disable Redhat MySQL module
   when: (mysql_version != '' or percona_server_version != '' or percona_xtradb_cluster_version != '') and dist == 'el8'
