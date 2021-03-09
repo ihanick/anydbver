@@ -265,29 +265,6 @@ el7:
   mariadb_server:
     systemd_service: "mariadb"
     cnf_file: '/etc/my.cnf.d/zz_mysqld.cnf'
-    # https://downloads.mariadb.com/MariaDB/mariadb-10.2.12/yum/centos7-amd64/rpms/MariaDB-10.2.12-centos7-x86_64-common.rpm
-    # https://downloads.mariadb.com/MariaDB/mariadb-10.2.13/yum/centos7-amd64/rpms/MariaDB-10.2.13-centos73-x86_64-common.rpm
-    # https://downloads.mariadb.com/MariaDB/mariadb-10.2.23/yum/centos7-amd64/rpms/MariaDB-10.2.22-centos73-x86_64-common.rpm
-    # https://downloads.mariadb.com/MariaDB/mariadb-10.2.23/yum/centos7-amd64/rpms/MariaDB-common-10.2.23-1.el7.centos.x86_64.rpm
-    # https://archive.mariadb.org/mariadb-10.3.22/yum/centos7-amd64/rpms/MariaDB-common-10.3.22-1.el7.centos.x86_64.rpm
-    install_packages:
-      - "{{ mariadb_url }}/MariaDB/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos7-amd64/rpms/MariaDB-common-{{mariadb_version}}.el7.centos.x86_64.rpm"
-      - "{{ mariadb_url }}/MariaDB/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos7-amd64/rpms/MariaDB-client-{{mariadb_version}}.el7.centos.x86_64.rpm"
-      - "{{ mariadb_url }}/MariaDB/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos7-amd64/rpms/MariaDB-server-{{mariadb_version}}.el7.centos.x86_64.rpm"
-    galera_packages:
-      - "{{ mariadb_url }}/MariaDB/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos7-amd64/rpms/galera{{'-4' if mariadb_version.startswith('10.4') or mariadb_version.startswith('10.5') else '' }}-{{galera}}.el7.centos.x86_64.rpm"
-    10.1.29:
-      install_packages:
-        - "{{ mariadb_url }}/MariaDB/mariadb-10.1.29/yum/centos7-amd64/rpms/MariaDB-10.1.29-centos7-x86_64-common.rpm"
-        - "{{ mariadb_url }}/MariaDB/mariadb-10.1.29/yum/centos7-amd64/rpms/MariaDB-10.1.29-centos7-x86_64-client.rpm"
-        - "{{ mariadb_url }}/MariaDB/mariadb-10.1.29/yum/centos7-amd64/rpms/MariaDB-10.1.29-centos7-x86_64-server.rpm"
-    10.3.22:
-      install_packages:
-        - "https://archive.mariadb.org/mariadb-10.3.22/yum/centos7-amd64/rpms/MariaDB-common-10.3.22-1.el7.centos.x86_64.rpm"
-        - "https://archive.mariadb.org/mariadb-10.3.22/yum/centos7-amd64/rpms/MariaDB-client-10.3.22-1.el7.centos.x86_64.rpm"
-        - "https://archive.mariadb.org/mariadb-10.3.22/yum/centos7-amd64/rpms/MariaDB-server-10.3.22-1.el7.centos.x86_64.rpm"
-    galera_packages:
-        - "https://archive.mariadb.org//mariadb-10.3.22/yum/centos7-amd64/rpms/galera-25.3.28-1.rhel7.el7.centos.x86_64.rpm"
   mysql:
     repo_url: https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm
     systemd_service: "mysqld"
@@ -453,10 +430,7 @@ el8:
   mariadb_server:
     systemd_service: "mariadb"
     cnf_file: '/etc/my.cnf.d/zz_mysqld.cnf'
-    install_packages:
-      - "MariaDB-common-{{mariadb_version}}.el8.x86_64"
-      - "MariaDB-client-{{mariadb_version}}.el8.x86_64"
-      - "MariaDB-server-{{mariadb_version}}.el8.x86_64"
+
   mysql:
     repo_url: https://dev.mysql.com/get/mysql80-community-release-el8-1.noarch.rpm
     systemd_service: "mysqld"

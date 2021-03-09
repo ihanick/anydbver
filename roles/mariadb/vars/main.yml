@@ -1,2 +1,34 @@
 ---
 # vars file for mariadb
+# https://archive.mariadb.org/
+# http://yum.mariadb.org/10.4/centos7-amd64/rpms/
+# https://downloads.mariadb.com/MariaDB/mariadb-10.2.12/yum/centos7-amd64/rpms/MariaDB-10.2.12-centos7-x86_64-common.rpm
+# https://downloads.mariadb.com/MariaDB/mariadb-10.2.13/yum/centos7-amd64/rpms/MariaDB-10.2.13-centos73-x86_64-common.rpm
+# https://downloads.mariadb.com/MariaDB/mariadb-10.2.23/yum/centos7-amd64/rpms/MariaDB-10.2.22-centos73-x86_64-common.rpm
+# https://downloads.mariadb.com/MariaDB/mariadb-10.2.23/yum/centos7-amd64/rpms/MariaDB-common-10.2.23-1.el7.centos.x86_64.rpm
+# https://archive.mariadb.org/mariadb-10.3.22/yum/centos7-amd64/rpms/MariaDB-common-10.3.22-1.el7.centos.x86_64.rpm
+
+mariadb_ver_short: "{{ mariadb_version | regex_replace('^[0-9]+\\.[0-9]+\\.([0-9]+)(-.*)?$', '\\1') }}"
+is_archived_ver: >-
+  {{
+    (mariadb_version.startswith('10.3.') and (mariadb_ver_short|int) > 15 and (mariadb_ver_short|int) <= 26)
+    or (mariadb_version.startswith('10.4.') and (mariadb_ver_short|int) < 16 )
+    or (mariadb_version.startswith('10.5.') and (mariadb_ver_short|int) <= 7)
+  }}
+mariadb_archived_rpm: "https://archive.mariadb.org/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos{{dist|regex_replace('^el','')}}-amd64/rpms/PACKAGE-{{mariadb_version}}.{{dist}}.centos.x86_64.rpm"
+mariadb_archived_galera_rpm: "https://archive.mariadb.org/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos{{dist|regex_replace('^el','')}}-amd64/rpms/galera-{{galera}}.rhel{{dist|regex_replace('^el','')}}.{{dist}}.centos.x86_64.rpm"
+mariadb_normal_rpm: "{{ mariadb_url }}/MariaDB/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos{{dist|regex_replace('^el','')}}-amd64/rpms/PACKAGE-{{mariadb_version}}.{{dist}}{{'.centos' if dist == 'el7' else ''}}.x86_64.rpm"
+mariadb_normal_galera_rpm: "{{ mariadb_url }}/MariaDB/mariadb-{{mariadb_version|regex_replace('-.*$','')}}/yum/centos{{dist|regex_replace('^el','')}}-amd64/rpms/galera{{'-4' if mariadb_version.startswith('10.4') or mariadb_version.startswith('10.5') else '' }}-{{galera}}.{{dist}}{{'.centos' if dist == 'el7' else ''}}.x86_64.rpm"
+mariadb_rpm: "{{ mariadb_archived_rpm if is_archived_ver else mariadb_normal_rpm }}"
+mariadb_galera_rpm: "{{ mariadb_archived_galera_rpm if is_archived_ver else mariadb_normal_galera_rpm }}"
+mariadb_base_rpms:
+  - "{{mariadb_rpm|regex_replace('PACKAGE', 'MariaDB-common')}}"
+  - "{{mariadb_rpm|regex_replace('PACKAGE', 'MariaDB-client')}}"
+  - "{{mariadb_rpm|regex_replace('PACKAGE', 'MariaDB-server')}}"
+
+mariadb_rpms: >-
+  {{ mariadb_base_rpms +
+    ( [mariadb_galera_rpm] if galera != '' else [] ) +
+    ( [(mariadb_rpm|regex_replace('PACKAGE', 'MariaDB-rocksdb-engine'))] if (rocksdb_enabled|bool) else [] )
+  }}
+

@@ -16,16 +16,8 @@
   when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux'
   yum:
     state: present
-    name: >-
-      {{
-        (os[dist][soft][mariadb_version].install_packages if mariadb_version in os[dist][soft] else os[dist][soft].install_packages) +
-        ( [] if galera == '' or os[dist][soft].galera_packages == '' else
-          os[dist][soft].galera_packages) +
-        ( [] if debug_packages == '' else
-          os[dist][soft].install_debug_packages) +
-        ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else
-          os[dist][soft].rocksdb_packages)
-      }}
+    disable_gpg_check: yes
+    name: "{{mariadb_rpms}}"
 
 - name: Install gpg for apt-key
   when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'

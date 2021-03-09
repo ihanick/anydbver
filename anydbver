@@ -311,26 +311,22 @@ refresh_percona_server_version_info() {
 
   :> .version-info/mariadb.el7.txt
   :> .version-info/mariadb.el8.txt
-  cat > .version-info/mariadb.el7.txt <<EOF
-10.1.29
-10.3.22
-EOF
 
-  for maver in 10.3 10.4 10.5 ; do
-    curl -sL http://yum.mariadb.org/$maver/centos7-amd64/rpms/| perl -ne '/MariaDB-server-(\d[^"]*).el7.centos.x86_64.rpm/ and print "$1\n"' >> .version-info/mariadb.el7.txt
-    curl -sL http://yum.mariadb.org/$maver/centos8-amd64/rpms/| perl -ne '/MariaDB-server-(\d[^"]*).el8.x86_64.rpm/ and print "$1\n"' >> .version-info/mariadb.el8.txt
-  done
-
+  for i in $(curl -sL https://archive.mariadb.org/|grep -F mariadb-10.|sed -re 's,^.*href="mariadb-(10\.[0-9]+\.[0-9]+)/.*$,\1,'|grep -v '[a-zA-Z]') ; do echo https://archive.mariadb.org/mariadb-$i/yum/centos7-amd64/rpms/ ; done|xargs curl -sL |sort -u > .version-info/mariadb-pkg.list.txt
+  perl -ne '/MariaDB-server-(\d[^"]*).el7.centos.x86_64.rpm/ and print "$1\n"' .version-info/mariadb-pkg.list.txt|sort -n -t . -k1,1 -k2,2 -k3,3|uniq > .version-info/mariadb.el7.txt
+  rm -f .version-info/mariadb-pkg.list.txt
   for ver in $(grep 10.[3-5] .version-info/mariadb.el7.txt) ; do
     short_ver=$(echo $ver|sed -re 's/-[0-9]+$//')
-    for galera_ver in $( curl -sL https://mirrors.ukfast.co.uk/sites/mariadb/mariadb-${short_ver}/yum/centos7-amd64/rpms/|grep galera|grep -v rhel7|sed -re 's/<a href="galera-([0-9]+-)?([^>]+)\.el7\.centos\.x86_64\.rpm">.*$/\2/' ) ; do
+    for galera_ver in $( curl -sL https://archive.mariadb.org/mariadb-$short_ver/yum/centos7-amd64/rpms/ |grep galera|sed -re 's/^.*<a href="galera-([0-9]+-)?([^>]+)\.rhel7\.el7\.centos\.x86_64\.rpm" title=.*$/\2/' | egrep -v '[a-zA-Z]' ) ; do
       echo -n "$ver "
       echo $galera_ver
     done
   done > .version-info/mariadb-galera.el7.txt
-  cat >> .version-info/mariadb-galera.el7.txt <<EOF
-10.3.27-1 25.3.30-1
-EOF
+
+  for maver in 10.3 10.4 10.5 ; do
+    curl -sL http://yum.mariadb.org/$maver/centos8-amd64/rpms/| perl -ne '/MariaDB-server-(\d[^"]*).el8.x86_64.rpm/ and print "$1\n"' >> .version-info/mariadb.el8.txt
+  done
+
   for ver in $(grep 10.[3-5] .version-info/mariadb.el8.txt) ; do
     short_ver=$(echo $ver|sed -re 's/-[0-9]+$//')
     for galera_ver in $( curl -sL https://mirrors.ukfast.co.uk/sites/mariadb/mariadb-${short_ver}/yum/centos8-amd64/rpms/|grep galera|grep -v rhel8|sed -re 's/<a href="galera-([0-9]+-)?([^>]+)\.el8\.x86_64\.rpm">.*$/\2/' ) ; do
