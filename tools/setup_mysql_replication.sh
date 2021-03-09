@@ -45,8 +45,11 @@ EOF
   fi
 else
   if [[ "x$TYPE" == "xgtid" ]] ; then
-      mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;show master status\G' > "$MINF"
-      GTID= $( awk -F': ' '/Executed_Gtid_Set/ {print $2}' "$MINF" )
+      GTID=$(mysql --host $MASTER_IP -e 'show master status\G' |tr "\n" ' '|sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
+      if [ "x$GTID" = "x" ] ; then
+        mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;'
+        GTID=$(mysql --host $MASTER_IP -e 'show master status\G' |tr "\n" ' '|sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
+      fi
 
       if [[ "$SOFT" = pxc* ]] ; then
         systemctl stop $MYSQLD_UNIT

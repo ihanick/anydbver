@@ -313,6 +313,7 @@ refresh_percona_server_version_info() {
   :> .version-info/mariadb.el8.txt
   cat > .version-info/mariadb.el7.txt <<EOF
 10.1.29
+10.3.22
 EOF
 
   for maver in 10.3 10.4 10.5 ; do
@@ -327,6 +328,9 @@ EOF
       echo $galera_ver
     done
   done > .version-info/mariadb-galera.el7.txt
+  cat >> .version-info/mariadb-galera.el7.txt <<EOF
+10.3.27-1 25.3.30-1
+EOF
   for ver in $(grep 10.[3-5] .version-info/mariadb.el8.txt) ; do
     short_ver=$(echo $ver|sed -re 's/-[0-9]+$//')
     for galera_ver in $( curl -sL https://mirrors.ukfast.co.uk/sites/mariadb/mariadb-${short_ver}/yum/centos8-amd64/rpms/|grep galera|grep -v rhel8|sed -re 's/<a href="galera-([0-9]+-)?([^>]+)\.el8\.x86_64\.rpm">.*$/\2/' ) ; do
