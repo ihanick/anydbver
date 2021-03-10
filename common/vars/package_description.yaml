@@ -69,11 +69,13 @@ bionic:
   proxysql:
     install_packages:
       - "https://github.com/sysown/proxysql/releases/download/v{{proxysql_version}}/proxysql_{{proxysql_version}}-ubuntu18_amd64.deb"
+
   orchestrator:
-    download_packages: {}
+    systemd_service: "orchestrator"
     install_packages:
-      - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-cli_{{orchestrator_version}}_amd64.deb"
-      - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator_{{orchestrator_version}}_amd64.deb"
+      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-cli_{{orchestrator_version}}_amd64.deb"
+      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator_{{orchestrator_version}}_amd64.deb"
+      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-client_{{orchestrator_version}}_amd64.deb"
 
 focal:
   repo_pkg: "/root/percona-release_latest.focal_all.deb"
@@ -162,6 +164,13 @@ focal:
     systemd_service: "proxysql"
     install_packages:
       - "https://repo.proxysql.com/ProxySQL/proxysql-{{'2.1.x' if proxysql_version.startswith('2.1.') else '2.0.x' if proxysql_version.startswith('2.0.') else ''}}/focal/proxysql_{{proxysql_version}}-ubuntu20_amd64.deb"
+
+  orchestrator:
+    systemd_service: "orchestrator"
+    install_packages:
+      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-cli_{{orchestrator_version}}_amd64.deb"
+      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator_{{orchestrator_version}}_amd64.deb"
+      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-client_{{orchestrator_version}}_amd64.deb"
 
   mariadb_server:
     systemd_service: "mariadb"
