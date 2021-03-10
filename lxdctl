@@ -292,6 +292,14 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
   if [ "x$ONLY_NODE" != "x" ] && [ "x${USER}.$ONLY_NODE" != "x$i" ] ; then
       continue
   fi
+  if [ "x${OSes[$i]}" != "x" ] ; then
+    setupOS ${OSes[$i]} 
+    NODE_OS=${OSes[$i]}
+  else
+    setupOS $OS
+    NODE_OS=$OS
+  fi
+
   c=$NAMESPACE${i//./-}
   IP='127.0.0.1'
   while [ "x$IP" = 'x127.0.0.1' ] ; do
