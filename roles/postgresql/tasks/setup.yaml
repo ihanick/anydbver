@@ -27,6 +27,7 @@
   shell:
     cmd: >-
       echo {{ db_password }} > /tmp/root-pw.txt;
+      echo export PGUSER=postgres PGHOSTADDR=$(node_ip.sh) >> /root/.bash_profile;
       PGSETUP_INITDB_OPTIONS="--pwfile=/tmp/root-pw.txt {{ '' if pmm_url == '' else '-A md5' }}" /usr/pgsql-{{maj}}/bin/postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else '-'+maj}}-setup initdb;
       echo "listen_addresses = '*'" >> {{pg_conf_dir}}/postgresql.conf;
       echo 'host    all             all             0.0.0.0/0            {{'md5' if ldap_server_ip == '' else 'ldap ldapurl="ldap://'+ldap_server_ip+':389/dc=percona,dc=local?uid?sub"' }}' >> {{pg_conf_dir}}/pg_hba.conf;
