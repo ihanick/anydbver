@@ -215,7 +215,7 @@ if [ "x$1" = "xdestroy" ] || [ "x$1" = "x--destroy" ] || [ $DESTROY -eq 1 ] ; th
   if [ "x$1" = "x" ] ; then
     # delete everything by default
     lxc ls ${NAMESPACE//./-}${USER//./-} --format=yaml|grep "name: ${NAMESPACE//./-}${USER//./-}"|awk -F: '{print $2}'|xargs --no-run-if-empty lxc delete --force
-    rm -f ${NAMESPACE}ansible_hosts configs/${NAMESPACE}hosts
+    rm -f ${NAMESPACE}ansible_hosts configs/${NAMESPACE}hosts ${NAMESPACE}ssh_config
   else
     while [[ $# -gt 0 ]]; do
       i="$NAMESPACE$USER.$1"
@@ -223,6 +223,8 @@ if [ "x$1" = "xdestroy" ] || [ "x$1" = "x--destroy" ] || [ $DESTROY -eq 1 ] ; th
       c=${i//./-}
       lxc delete --force "$c"
       sed -i -e "/$i/d" ${NAMESPACE}ansible_hosts
+      tr "\n" "\r" < ${NAMESPACE}ssh_config  | sed -e "s/Host ${i/$USER./}[^0-9].*id_rsa//" | tr "\r" "\n" > ${NAMESPACE}ssh_config_
+      mv ${NAMESPACE}ssh_config_ ${NAMESPACE}ssh_config
     done
   fi
   exit 0
@@ -315,6 +317,16 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
     SHORT_NAME=$(echo "${HOSTNAMES[$i]}" | cut -d. -f 1)
     echo "$IP ${HOSTNAMES[$i]} $SHORT_NAME" >> configs/${NAMESPACE}hosts
   fi
+
+  cat >> ${NAMESPACE}ssh_config <<EOF
+Host ${i/$USER./} ${HOSTNAMES[$i]} $SHORT_NAME
+   User root
+   HostName $IP
+   StrictHostKeyChecking no
+   UserKnownHostsFile /dev/null
+   IdentityFile $PWD/secret/id_rsa
+EOF
+
 done
 
 

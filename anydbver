@@ -436,17 +436,21 @@ EOF
 12.5-1
 13.0-1
 13.1-1
+13.2-2
 EOF
   cp .version-info/ppg.el7.txt .version-info/ppg.el8.txt
   cat > .version-info/ppg2.el8.txt <<EOF
 13.1-1 223-1
+13.2-2
 EOF
 
   cat > .version-info/ppg.focal.txt <<EOF
 13-1.1
+13-2.2
 EOF
   cat > .version-info/ppg2.focal.txt <<EOF
 13-1.1 223-1
+13-2.2 225-1
 EOF
 
   cat > .version-info/pg.el7.txt <<EOF
@@ -479,6 +483,7 @@ EOF
 12.5
 13.0
 13.1
+13.2
 EOF
   cat > .version-info/pg.el8.txt <<EOF
 11.0
@@ -496,6 +501,7 @@ EOF
 12.4
 13.0
 13.1
+13.2
 EOF
   cat > .version-info/pg.focal.txt <<EOF
 13.2-1.pgdg20.04+1

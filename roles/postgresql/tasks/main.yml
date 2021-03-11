@@ -45,6 +45,7 @@
   yum:
     name: "{{os[dist][soft].repo_url}}"
     state: present
+    disable_gpg_check: yes
 
 - name: Postgresql repo on el8, disable dnf module postgresql
   when: postgresql_version != '' and dist == 'el8'

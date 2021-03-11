@@ -14,6 +14,7 @@ if [[ $PG_STAT_MONITOR = yes ]] ; then
 else
   psql -h $(/vagrant/tools/node_ip.sh) -U $USER -c "ALTER SYSTEM SET shared_preload_libraries TO 'pg_stat_statements'"
 fi
+# https://bugzilla.redhat.com/show_bug.cgi?id=1875056
 systemctl restart $SYSTEMD_UNIT
 psql -h $(/vagrant/tools/node_ip.sh) -U $USER -c "CREATE DATABASE $PMM_USER"
 psql -h $(/vagrant/tools/node_ip.sh) -U $USER -c "CREATE EXTENSION pg_stat_statements"

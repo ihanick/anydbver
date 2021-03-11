@@ -185,6 +185,10 @@ focal:
       - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-server-10.5_{{mariadb_version}}+maria~focal_amd64.deb"
       - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-server_{{mariadb_version}}+maria~focal_all.deb"
 
+  pmm_client:
+    install_packages:
+      - "https://downloads.percona.com/downloads/pmm2/{{pmm_client_version | regex_replace('-[0-9]+$', '')}}/binary/debian/focal/x86_64/pmm{{'2' if pmm_client_version.startswith('2') else ''}}-client_{{pmm_client_version}}.{{dist}}_amd64.deb"
+
 el7:
   repo_url: "https://repo.percona.com/yum/percona-release-latest.noarch.rpm"
   ps56:

@@ -1,0 +1,32 @@
+- name: install apt db packages (pkg name)
+  when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+  apt:
+    deb: "{{item}}"
+  with_items: "{{os[dist].pmm_client.install_packages }}"
+
+- name: install PMM client rpm packages
+  when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  yum:
+    name: "{{os[dist].pmm_client.install_packages }}"
+    state: present
+    disable_gpg_check: "{{ 'yes' if os[dist].pmm_client.install_packages[0].startswith('http') else 'no' }}"
+
+- name: Setup pmm-admin PMM2
+  when: pmm_client_version.startswith('2.') and pmm_url != ''
+  register: pmm_admin_config
+  changed_when: "'already exists' not in pmm_admin_config.stdout"
+  shell:
+    cmd: '/usr/bin/pmm-admin config --server-insecure-tls --server-url="{{pmm_url}}" || true'
+- name: Setup pmm-admin PMM1
+  when: pmm_client_version.startswith('1.') and pmm_url != ''
+  register: pmm_admin_config
+  changed_when: "'already exists' not in pmm_admin_config.stdout"
+  shell:
+    cmd: >-
+      pmm-admin config
+      --server-insecure-ssl
+      --server=$(echo "{{pmm_url}}"|awk -F '[/:@]' '{print $6}'):$(echo "{{pmm_url}}"|awk -F '[/:@]' '{print $7}')
+      --server-user=$(echo "{{pmm_url}}"|awk -F '[/:@]' '{print $4}')
+      --server-password=$(echo "{{pmm_url}}"|awk -F '[/:@]' '{print $5}') || true
+
+
