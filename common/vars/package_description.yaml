@@ -408,7 +408,6 @@ el8:
     systemd_service: "mysqld"
     cnf_file: "/etc/percona-xtradb-cluster.conf.d/zz_mysqld.cnf"
     install_packages:
-      - "{{ percona_mysql_name }}-shared-compat{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
       - "{{ percona_mysql_name }}-shared{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
       - "{{ percona_mysql_name }}-client{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
       - "percona-xtrabackup-24{{ '-'+percona_xtrabackup_version if percona_xtrabackup_version !='' else '' }}"
