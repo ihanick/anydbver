@@ -19,7 +19,7 @@
 - name: Setup LDAP on client (Debian)
   when: ldap_server_ip != '' and (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
   command:
-    cmd: /bin/bash /vagrant/tools/setup_ldap_server_ubuntu.sh "{{ldap_server_ip}}" ldapadm "{{db_password}}"
+    cmd: /bin/bash /vagrant/tools/setup_ldap_client_ubuntu.sh "{{ldap_server_ip}}" ldapadm "{{db_password}}"
     creates: /root/ldap-client.configured
 
 - name: Setup Kerberos server

@@ -20,16 +20,19 @@ frontend stats
 
 frontend pgReadWrite
     bind *:5432
-    option pgsql-check user primaryuser
     default-server inter 3s fall 3
+    option httpchk
+    http-check expect status 200
 {% for host in upstream_servers %}
-     server pg{{ loop.index }} {{host}}:5432 check port 5432
+     server pg{{ loop.index }} {{host}}:5432 check port 9200
 {% endfor %}
 
 frontend pgReadOnly
     bind *:5433
     option pgsql-check user standbyuser
     default-server inter 3s fall 3
+    option httpchk
+    http-check expect status 206
 {% for host in upstream_servers %}
-     server pg{{ loop.index }} {{host}}:5432 check port 5432
+     server pg{{ loop.index }} {{host}}:5432 check port 9200
 {% endfor %}

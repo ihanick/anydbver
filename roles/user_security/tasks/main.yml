@@ -12,6 +12,7 @@
     name: vault
 
 - name: Install db packages
+  when: ldap_server != '' or kerberos_server != ''
   include_tasks: common/tasks/install_db_packages.yml
 
 - name: Install Samba Active Directory server

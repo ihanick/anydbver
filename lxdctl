@@ -45,6 +45,16 @@ setupOS() {
     IMG="images:ubuntu/focal/$ARCH"
     PYTHON_INT=/usr/bin/python3
     OS_TYPE=deb
+  elif [ "x$1" == "xstretch" ] ; then
+    IMG="images:debian/9/$ARCH"
+    PYTHON_INT=/usr/bin/python3
+    PACKAGES="$PACKAGES python3"
+    OS_TYPE=deb
+  elif [ "x$1" == "xbuster" ] ; then
+    IMG="images:debian/10/$ARCH"
+    PYTHON_INT=/usr/bin/python3
+    PACKAGES="$PACKAGES python3"
+    OS_TYPE=deb
   else # default CentOS 7
     IMG="images:centos/7/$ARCH"
     PACKAGES=''
