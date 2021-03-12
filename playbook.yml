@@ -193,7 +193,7 @@
       include_tasks: roles/tools_and_monitoring/tasks/pmm-client.yaml
 
     - name: User Security LDAP, PAM, Active Directory, Vault, Kerberos
-      when: vault_version != '' or samba_ad != '' or ldap_server != '' or kerberos_client != ''
+      when: vault_version != '' or samba_ad != '' or ldap_server != '' or ldap_server_ip != '' or kerberos_server != '' or kerberos_client != ''
       include_role:
         name: user_security
 
