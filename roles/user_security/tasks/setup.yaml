@@ -11,9 +11,15 @@
     creates: /root/ldaprootpasswd.ldif
 
 - name: Setup LDAP on client
-  when: ldap_server_ip != ''
+  when: ldap_server_ip != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   command:
     cmd: /bin/bash /vagrant/tools/setup_ldap_client.sh "{{ldap_server_ip}}"
+    creates: /root/ldap-client.configured
+
+- name: Setup LDAP on client (Debian)
+  when: ldap_server_ip != '' and (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_ldap_server_ubuntu.sh "{{ldap_server_ip}}" ldapadm "{{db_password}}"
     creates: /root/ldap-client.configured
 
 - name: Setup Kerberos server
