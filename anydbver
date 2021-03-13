@@ -16,11 +16,11 @@ print_help() {
   exit 0
 }
 
-if [ "x$1" = "xhelp" ] ; then
+if [ "x$1" = "xhelp" -o "x$1" = "x--help" ] ; then
   print_help
 fi
 
-if [ "x$1" = "xdeploy" ] && ([ "x$2" = "xpsmdb" -o "x$2" = "xmongo" -o "xmongodb"  ] ) && [ "x$3" = "xhelp" ] ; then
+if [ "x$1" = "xdeploy" ] && ([ "x$2" = "xpsmdb" -o "x$2" = "xmongo" -o "xmongodb"  ] ) && [ "x$3" = "xhelp" -o "x$3" = "x--help" ] ; then
     echo "Deploy mongodb/psmdb: "
     echo "$0 deploy psmdb"
     echo "$0 deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0"
@@ -66,7 +66,7 @@ EOF
     exit 0
 fi
 
-if [ "x$2" = "xhelp" ] ; then
+if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
   if [ "x$1" = "xdeploy" ] ; then
     echo "Deploy: "
     echo "$0 deploy percona-server:8.0.16"

@@ -1,0 +1,4 @@
+OPTIONS="-f /etc/mongos.conf"
+STDOUT="/var/log/mongo/mongos.stdout"
+STDERR="/var/log/mongo/mongos.stderr"
+NUMACTL="numactl --interleave=all"

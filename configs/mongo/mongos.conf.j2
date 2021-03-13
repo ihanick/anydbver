@@ -1,14 +1,14 @@
 systemLog:
   destination: file
   logAppend: true
-  path: /var/log/mongo/mongos.log
+  path: {{ mongos_log }}
 processManagement:
   fork: true
   pidFilePath: /var/run/mongod.pid
 sharding:
   configDB: {{ mongos_cfg }}
 security:
-  keyFile: "/etc/cfg0-keyfile"
+  keyFile: "/etc/{{ mongos_keyfile }}"
 net:
   port: 27017
   bindIp: 0.0.0.0
