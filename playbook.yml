@@ -7,9 +7,7 @@
       {{
       'el7' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and ansible_distribution_version.startswith('7') else
       'el8' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and ansible_distribution_version.startswith('8') else
-      'bionic' if ansible_distribution_release == 'bionic' else
-      'focal' if ansible_distribution_release == 'focal' else
-      ''
+      ansible_distribution_release
       }}
     percona_server_version: "{{ lookup('vars', 'extra_percona_server_version', default=lookup('env', 'PS', default='') ) }}"
     rocksdb_enabled: "{{ lookup('vars', 'extra_rocksdb_enabled', default=lookup('env', 'ROCKSDB', default='') ) }}"
