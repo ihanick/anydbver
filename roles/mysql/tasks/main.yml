@@ -3,10 +3,17 @@
 - name: Enable EPEL
   when: >
     orchestrator_version != '' and
-    (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+    (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
   package:
     name: epel-release
     state: present
+- name: Enable EPEL (Oracle Linux 7)
+  when: ansible_distribution == 'OracleLinux' and dist == 'el7'
+  yum_repository:
+    name: epel
+    description: EPEL YUM repo
+    baseurl: https://yum.oracle.com/repo/OracleLinux/OL7/developer_EPEL/$basearch/
+    gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
 - name: enable Percona MySQL 8.0 repo
   when: percona_server_version.startswith('8.0') or percona_xtradb_cluster_version.startswith('8.0')
   command:

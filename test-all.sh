@@ -17,21 +17,17 @@ for os in el7 el8 oel7 oel8 stretch buster bionic focal ; do
       done
     fi
   done
+
+  if [[ "x$1" = "x" || "x$1" = "xpxc" ]] ; then
+    for ver in 5.6 5.7 8.0; do
+      [[ $ver == "5.6" && ( $os == el8 || $os == oel8 || $os == focal || $os == buster ) ]] && continue
+      ./anydbver deploy --os $os pxc:$ver node1 pxc:$ver galera-master:default node2 pxc:$ver galera-master:default >> test-run.log
+      ./anydbver ssh default mysql -e "'show status'" 2>/dev/null|grep wsrep_cluster_size|grep -q 3 || echo "$os pxc $ver: FAIL"
+    done
+  fi
+
 done
 
-if [[ "x$1" = "x" || "x$1" = "xps-el8" ]] ; then
-  for ver in 8.0 ; do 
-    ./anydbver deploy ps:$ver >> test-run.log
-    ./anydbver ssh default mysql -e "'select version()'" 2>/dev/null |grep -q $ver || echo "ps-el8: FAIL"
-  done
-fi
-
-if [[ "x$1" = "x" || "x$1" = "xpxc" ]] ; then
-  for ver in 5.6 5.7 8.0; do
-    ./anydbver deploy pxc:$ver node1 pxc:$ver galera-master:default node2 pxc:$ver galera-master:default >> test-run.log
-    ./anydbver ssh default mysql -e "'show status'" 2>/dev/null|grep wsrep_cluster_size|grep -q 3 || echo "pxc $ver: FAIL"
-  done
-fi
 
 
 if [[ "x$1" = "x" || "x$1" = "xmariadb" ]] ; then
