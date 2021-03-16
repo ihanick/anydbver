@@ -51,7 +51,7 @@ stretch:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "pxc-57"
     systemd_service: "mysql"
-    cnf_file: "/etc/mysql/percona-xtradb-cluster.conf.d/mysqld.cnf"
+    cnf_file: "/etc/mysql/percona-xtradb-cluster.conf.d/wsrep.cnf"
     install_packages:
       - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
       - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
@@ -129,7 +129,7 @@ buster:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "pxc-57"
     systemd_service: "mysql"
-    cnf_file: "/etc/mysql/percona-xtradb-cluster.conf.d/mysqld.cnf"
+    cnf_file: "/etc/mysql/percona-xtradb-cluster.conf.d/wsrep.cnf"
     install_packages:
       - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
       - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
