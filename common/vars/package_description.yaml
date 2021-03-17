@@ -69,6 +69,19 @@ stretch:
       - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
       - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
       - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+  mysql:
+    systemd_service: "mysql"
+    cnf_file: '/etc/mysql/mysql.conf.d/mysqld.cnf'
+    install_packages:
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-common_{{mysql_version}}debian9_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-plugins_{{mysql_version}}debian9_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/libmysqlclient21_{{mysql_version}}debian9_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-core_{{mysql_version}}debian9_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client_{{mysql_version}}debian9_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-client_{{mysql_version}}debian9_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server-core_{{mysql_version}}debian9_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server_{{mysql_version}}debian9_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-server_{{mysql_version}}debian9_amd64.deb"
   proxysql:
     install_packages:
       - "https://github.com/sysown/proxysql/releases/download/v{{proxysql_version}}/proxysql_{{proxysql_version}}-ubuntu18_amd64.deb"
@@ -147,6 +160,19 @@ buster:
       - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
       - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
       - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+  mysql:
+    systemd_service: "mysql"
+    cnf_file: '/etc/mysql/mysql.conf.d/mysqld.cnf'
+    install_packages:
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-common_{{mysql_version}}debian10_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-plugins_{{mysql_version}}debian10_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/libmysqlclient21_{{mysql_version}}debian10_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-core_{{mysql_version}}debian10_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client_{{mysql_version}}debian10_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-client_{{mysql_version}}debian10_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server-core_{{mysql_version}}debian10_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server_{{mysql_version}}debian10_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-server_{{mysql_version}}debian10_amd64.deb"
   proxysql:
     install_packages:
       - "https://github.com/sysown/proxysql/releases/download/v{{proxysql_version}}/proxysql_{{proxysql_version}}-ubuntu18_amd64.deb"
@@ -233,6 +259,19 @@ bionic:
       - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-cli_{{orchestrator_version}}_amd64.deb"
       - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator_{{orchestrator_version}}_amd64.deb"
       - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-client_{{orchestrator_version}}_amd64.deb"
+  mysql:
+    systemd_service: "mysql"
+    cnf_file: '/etc/mysql/mysql.conf.d/mysqld.cnf'
+    install_packages:
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-common_{{mysql_version}}ubuntu18.04_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-plugins_{{mysql_version}}ubuntu18.04_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/libmysqlclient21_{{mysql_version}}ubuntu18.04_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-core_{{mysql_version}}ubuntu18.04_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client_{{mysql_version}}ubuntu18.04_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-client_{{mysql_version}}ubuntu18.04_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server-core_{{mysql_version}}ubuntu18.04_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server_{{mysql_version}}ubuntu18.04_amd64.deb"
+      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-server_{{mysql_version}}ubuntu18.04_amd64.deb"
 
 focal:
   repo_pkg: "/root/percona-release_latest.focal_all.deb"
