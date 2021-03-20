@@ -15,6 +15,27 @@ pkg:
       - "{{ psmdb_name }}{{ psmdb_major_ver }}-server-{{ psmdb_version }}.{{ dist }}.x86_64"
       - "{{ psmdb_name }}{{ psmdb_major_ver }}-mongos-{{ psmdb_version }}.{{ dist }}.x86_64"
       - "{{ psmdb_name }}{{ psmdb_major_ver }}-{{ psmdb_version }}.{{ dist }}.x86_64"
+  stretch:
+    install_packages:
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}-tools={{ psmdb_version }}.{{ dist }}"
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}-shell={{ psmdb_version }}.{{ dist }}"
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}-server={{ psmdb_version }}.{{ dist }}"
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}-mongos={{ psmdb_version }}.{{ dist }}"
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}={{ psmdb_version }}.{{ dist }}"
+  buster:
+    install_packages:
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}-tools={{ psmdb_version }}.{{ dist }}"
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}-shell={{ psmdb_version }}.{{ dist }}"
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}-server={{ psmdb_version }}.{{ dist }}"
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}-mongos={{ psmdb_version }}.{{ dist }}"
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}={{ psmdb_version }}.{{ dist }}"
+  bionic:
+    install_packages:
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}-tools={{ psmdb_version }}.{{ dist }}"
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}-shell={{ psmdb_version }}.{{ dist }}"
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}-server={{ psmdb_version }}.{{ dist }}"
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}-mongos={{ psmdb_version }}.{{ dist }}"
+      - "{{ psmdb_name }}{{ psmdb_major_ver }}={{ psmdb_version }}.{{ dist }}"
   focal:
     install_packages:
       - "{{ psmdb_name }}{{ psmdb_major_ver }}-tools={{ psmdb_version }}.{{ dist }}"

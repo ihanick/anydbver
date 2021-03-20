@@ -58,7 +58,15 @@
 - name: Create MongoDB database
   when: db_password != "" and psmdb_version != ""
   shell:
-    cmd: "systemctl start mongod;until mongo --eval 'print(\"waited for connection\")' &>/dev/null ; do sleep 2 ; done;/bin/percona-server-mongodb-enable-auth.sh -q;mongo admin --eval 'db.changeUserPassword(\"dba\", \"{{ db_password }}\")';systemctl stop mongod;sed -i -e 's/127.0.0.1/0.0.0.0/g' /etc/mongod.conf;echo 'db = connect(\"mongodb://dba:{{ db_password }}@127.0.0.1:27017/admin\")' > /root/.mongorc.js"
+    cmd: >-
+      systemctl start mongod;
+      until mongo --eval 'print("waited for connection")' &>/dev/null ; do sleep 2 ; done;
+      mongo admin --eval 'db.createUser({user:"dba", pwd: "{{ db_password }}", roles: ["root"]})';
+      percona-server-mongodb-enable-auth.sh -q;
+      mongo admin --eval 'db.changeUserPassword("dba", "{{ db_password }}")';
+      systemctl stop mongod;
+      sed -i -e 's/127.0.0.1/0.0.0.0/g' /etc/mongod.conf;
+      echo 'db = connect("mongodb://dba:{{ db_password }}@127.0.0.1:27017/admin")' > /root/.mongorc.js
     creates: /root/.mongorc.js
 
 - name: configure MongoDB replica options
