@@ -76,7 +76,7 @@ if [ "x$1" = "xssh" ] ; then
     echo "No such host, try to deploy or add it"
     exit 1
   fi
-  [ -t 0 ] && INTERACTIVE=-t 
+  [ -t 0 -a -t 1 ] && INTERACTIVE=-t 
   exec ssh -o LogLevel=error -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa $INTERACTIVE root@$IP "$@"
   exit 0
 fi

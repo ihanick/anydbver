@@ -151,7 +151,7 @@
         path: /vagrant/tools/node_ip.sh
       register: vagrant_dir_mounted
     - name: sync configs and tools
-      when: (not vagrant_dir_mounted.stat.exists) or sync_is_required != ''
+      #      when: (not vagrant_dir_mounted.stat.exists) or sync_is_required != ''
       include_tasks: common/tasks/copy_files.yaml
 
     - name: MariaDB Role
