@@ -12,7 +12,7 @@
     creates: /root/.my.cnf
 
 - name: enable wsrep provider
-  when: percona_xtradb_cluster_version.startswith('5.6') and dist == 'stretch'
+  when: percona_xtradb_cluster_version.startswith('5.6') and (dist == 'stretch' or dist == 'bionic')
   copy:
     dest: /etc/mysql/my.cnf
     content: |

@@ -5,9 +5,15 @@
     creates: /root/samba.configured
 
 - name: Setup LDAP server
-  when: ldap_server != ''
+  when: ldap_server != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   command:
     cmd: /bin/bash /vagrant/tools/setup_ldap_server.sh "{{db_user}}" "{{db_password}}" "ssl"
+    creates: /root/ldaprootpasswd.ldif
+
+- name: Setup LDAP server (deb)
+  when: ldap_server != '' and (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_ldap_server_ubuntu.sh "{{db_user}}" "{{db_password}}" "ssl"
     creates: /root/ldaprootpasswd.ldif
 
 - name: Setup LDAP on client

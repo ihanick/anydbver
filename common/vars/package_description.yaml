@@ -221,7 +221,7 @@ bionic:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "pxc-56"
     systemd_service: "mysql"
-    cnf_file: "/etc/mysql/percona-xtradb-cluster.conf.d/mysqld.cnf"
+    cnf_file: "/etc/mysql/my.cnf"
     install_packages:
       - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
       - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
@@ -272,6 +272,12 @@ bionic:
       - "{{ 'https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server-core_'+mysql_version+'ubuntu18.04_amd64.deb' if mysql_version.startswith('8.0') else '' }}"
       - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server_{{mysql_version}}ubuntu18.04_amd64.deb"
       - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-server_{{mysql_version}}ubuntu18.04_amd64.deb"
+
+  ldap_server:
+    systemd_service: slapd
+    install_packages:
+      - slapd
+      - ldap-utils
 
 focal:
   repo_pkg: "/root/percona-release_latest.focal_all.deb"

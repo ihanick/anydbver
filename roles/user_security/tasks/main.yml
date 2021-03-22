@@ -11,6 +11,11 @@
   include_role:
     name: vault
 
+- name: pre-install setup LDAP server
+  when: ldap_server != '' and dist == 'bionic'
+  command:
+    cmd: /bin/bash /vagrant/tools/pre-setup_ldap_server.sh "{{db_user}}" "{{db_password}}" percona.local
+
 - name: Install db packages
   when: ldap_server != '' or kerberos_server != ''
   include_tasks: common/tasks/install_db_packages.yml
