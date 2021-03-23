@@ -233,7 +233,7 @@ bionic:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "pxc-57"
     systemd_service: "mysql"
-    cnf_file: "/etc/mysql/percona-xtradb-cluster.conf.d/mysqld.cnf"
+    cnf_file: "/etc/mysql/percona-xtradb-cluster.conf.d/wsrep.cnf"
     install_packages:
       - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
       - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
@@ -245,10 +245,10 @@ bionic:
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/mysql.conf.d/mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9]+)$', '.\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9]+)$', '.\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9]+)$', '.\\1') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9]+)$', '.\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9-]+)$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9-]+)$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9-]+)$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9-]+)$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
   proxysql:
     install_packages:
       - "https://github.com/sysown/proxysql/releases/download/v{{proxysql_version}}/proxysql_{{proxysql_version}}-ubuntu18_amd64.deb"
