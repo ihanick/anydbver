@@ -26,16 +26,16 @@ for os in el7 el8 oel7 oel8 stretch buster bionic focal ; do
     done
   fi
 
-done
-
-
-
 if [[ "x$1" = "x" || "x$1" = "xmariadb" ]] ; then
   for ver in 10.3 10.4 10.5; do
     ./anydbver deploy mariadb:$ver >> test-run.log
     ./anydbver ssh default mysql -e "'select version()'" 2>/dev/null |grep -q $ver || echo "mariadb: FAIL"
   done
 fi
+
+done
+
+
 
 if [[ "x$1" = "x" || "x$1" = "xmariadb-galera" ]] ; then
   for ver in 10.3 10.4 10.5; do

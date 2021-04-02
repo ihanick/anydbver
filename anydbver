@@ -454,7 +454,7 @@ EOF
   cp .version-info/ppg.el7.txt .version-info/ppg.el8.txt
   cat > .version-info/ppg2.el8.txt <<EOF
 13.1-1 223-1
-13.2-2
+13.2-2 223-1
 EOF
 
   cat > .version-info/ppg.focal.txt <<EOF
