@@ -292,7 +292,7 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
     fi
     if [[ $ANYDBVER_CACHE_OS_IMG == 1 ]] ; then
       lxc stop $c
-      lxc publish ihanick-default --alias ${USER}-${NODE_OS}-empty
+      lxc publish $c --alias ${USER}-${NODE_OS}-empty
       lxc start $c
     fi
   fi

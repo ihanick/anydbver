@@ -1488,7 +1488,7 @@ if [ "x$1" = "xdeploy" ] ; then
     printf "%s\n" "$i"
 
     CACHE_IMG=$(echo "$i"| sed -re 's/^.*CACHE_IMG=([^ ]+) .*/\1/')
-    if [[ "$i" == *CACHE_IMG=* ]] && [ "x$CACHE_IMG" != "x" ] && ./lxdctl --has-cache $CACHE_IMG ; then
+    if [[ "$i" == *CACHE_IMG=* ]] && [ "x$CACHE_IMG" != "x" ] && ./lxdctl $NAMESPACE_CMD --has-cache $CACHE_IMG ; then
       echo "Using existing cache image $CACHE_IMG skipping ansible run"
     elif [[ "$i" == *PARALLEL=1* && $DRY_RUN == 0  ]] ; then
       bash -c "$i" &> $( mktemp deploy.log.XXXXXX ) &
@@ -1498,7 +1498,7 @@ if [ "x$1" = "xdeploy" ] ; then
       if [[ "$i" == *CACHE_IMG=* ]] && [ "x$CACHE_IMG" != "x" ] ; then
         NODE=$(echo "$i"| sed -re 's/^.*\.([^.]+)[ ]* playbook.yml/\1/')
         echo "Caching $CACHE_IMG on node $NODE"
-        ./lxdctl --snapshot $CACHE_IMG $NODE
+        ./lxdctl $NAMESPACE_CMD --snapshot $CACHE_IMG $NODE
       fi
     fi
     post_deploy_hook "$i"
