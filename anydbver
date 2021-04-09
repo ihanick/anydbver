@@ -106,6 +106,8 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy pg:13 patroni node1 pg:13 master:default patroni etcd-ip:default node2 pg:13 master:default patroni etcd-ip:default"
     echo "$0 deploy haproxy-pg:node1,node2,node3 node1 pg clustercheck node2 pg clustercheck master:node1 node3 pg clustercheck master:node1"
     echo "$0 deploy pmm node1 ppg pmm-client pmm-server:default"
+    echo "$0 deploy postgresql sysbench sysbench-pg:default oltp_read_write"
+    echo -e $0' deploy percona-postgresql \\\n  sysbench sysbench-pg:default oltp_read_write # prepare, execute run_sysbench.sh to start sysbench'
     echo "$0 deploy psmdb"
     echo "$0 deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0"
     echo -e $0' deploy \\\n psmdb:4.2 replica-set:rs0 shardsrv \\\n node1 psmdb:4.2 master:default replica-set:rs0 shardsrv \\\n node2 psmdb:4.2 master:default replica-set:rs0 shardsrv \\\n node3 psmdb:4.2 configsrv replica-set:cfg0 \\\n node4 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \\\n node5 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \\\n node6 psmdb:4.2 mongos-cfg:cfg0/node3,node4,node5 mongos-shard:rs0/default,node1,node2'
@@ -995,6 +997,9 @@ deploy_node() {
     if [[ $i == "rbr" ]] || [[ $i == "row" ]] || [[ $i == "row-based-replication" ]] || [[ $i == "row_based_replication" ]] ; then
       ROW_REPLICATION=1
     fi
+    if [[ $i == "oltp_read_write" ]] ; then
+      FEATURES+=( sysbench_oltp_read_write )
+    fi
     if [[ $i == "ldap-simple" ]] ; then
       FEATURES+=( ldap_simple )
     fi
@@ -1062,6 +1067,14 @@ deploy_node() {
         VAULT_NODE=default
       fi
       DEP_ENV="$DEP_ENV VAULT_URL=$VAULT_NODE"
+    fi
+    if [[ $i == "sysbench-pg" ]] || [[ $i == "sysbench-pg:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        SYSBENCH_PG=$(get_version "$i")
+      else
+        SYSBENCH_PG=default
+      fi
+      DEP_ENV="$DEP_ENV SYSBENCH_PG=$SYSBENCH_PG"
     fi
 
     if [[ $i == "ldap" ]] || [[ $i == "ldap-server"* ]] ; then
@@ -1239,6 +1252,11 @@ pre_deploy_hook() {
     LDAP_NODE=$(echo "$i" | perl -ne '/LDAP_IP=(\S*) / and print $1')
     LDAP_IP=$(find_node_ip $LDAP_NODE)
     i=$(echo "$i"|sed -e "s/LDAP_IP=$LDAP_NODE/LDAP_IP=$LDAP_IP/g")
+  fi
+  if echo "$i" | grep -q SYSBENCH_PG ; then
+    SYSBENCH_NODE=$(echo "$i" | perl -ne '/SYSBENCH_PG=(\S*) / and print $1')
+    SYSBENCH_PG=$(find_node_ip $SYSBENCH_NODE)
+    i=$(echo "$i"|sed -e "s/SYSBENCH_PG=$SYSBENCH_NODE/SYSBENCH_PG=$SYSBENCH_PG/g")
   fi
   if echo "$i" | grep -q ETCD_IP ; then
     ETCD_NODE=$(echo "$i" | perl -ne '/ETCD_IP=(\S*) / and print $1')

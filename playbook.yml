@@ -64,6 +64,7 @@
     orchestrator_version: "{{ lookup('vars', 'extra_orchestrator_version', default=lookup('env','ORCHESTRATOR',default='') ) }}"
     debug_packages: "{{ lookup('vars', 'extra_debug_packages', default=lookup('env','DEBUG_PACKAGES',default='') ) }}"
     sysbench_version: "{{ lookup('vars', 'extra_sysbench_version', default=lookup('env','SYSBENCH',default='') ) }}"
+    sysbench_pg: "{{ lookup('vars', 'extra_sysbench_version', default=lookup('env','SYSBENCH_PG',default='') ) }}"
     mysql_random_data_load_version: "{{ lookup('vars', 'extra_mysql_random_data_load_version', default=lookup('env','MYSQL_RANDOM_DATA',default='') ) }}"
     mysql_connector_java_version: "{{ lookup('vars', 'extra_mysql_connector_java_version', default=lookup('env','MYSQL_JAVA',default='') ) }}"
     innodb_ruby_version: "{{ lookup('vars', 'extra_innodb_ruby_version', default=lookup('env','INNODB_RUBY',default='') ) }}"
@@ -125,13 +126,13 @@
       'pgpool' if pgpool_version != '' else
       'ppg11' if percona_postgresql_version.startswith('11') else
       'ppg12' if percona_postgresql_version.startswith('12') else
+      'ppg13' if percona_postgresql_version.startswith('13') else
       'proxysql' if proxysql_version != '' else
       'percona_proxysql' if percona_proxysql_version != '' else
       'mariadb_server' if mariadb_version != '' else
       'mysql' if mysql_version != '' else
       'mysql_router' if mysql_router_version != '' else
       'orchestrator' if orchestrator_version != '' else
-      'sysbench' if sysbench_version != '' else
       'ldap_server' if ldap_server != '' else
       'kerberos_server' if kerberos_server != '' else
       'postgresql' if postgresql_version != '' else
@@ -228,7 +229,6 @@
         mysql_random_data_load_version != '' or
         proxysql_version != '' or
         percona_proxysql_version != '' or
-        sysbench_version != '' or
         mysql_connector_java_version != '' or
         orchestrator_version != ''
       include_role:
@@ -243,4 +243,8 @@
       when: pmm_server_version != "" or percona_toolkit_version != ""
       include_role:
         name: tools_and_monitoring
+    - name: benchmarks
+      when: sysbench_version != "" or sysbench_pg != ""
+      include_role:
+        name: benchmarks
 

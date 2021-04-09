@@ -476,6 +476,9 @@ el7:
   ppg12:
     systemd_service: 'postgresql-12'
     cnf_file: '/var/lib/pgsql/12/data/postgresql.conf'
+  ppg13:
+    systemd_service: 'postgresql-13'
+    cnf_file: '/var/lib/pgsql/13/data/postgresql.conf'
 
   mariadb_server:
     systemd_service: "mariadb"

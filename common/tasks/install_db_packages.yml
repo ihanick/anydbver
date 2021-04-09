@@ -27,7 +27,6 @@
 - name: install apt db packages (pkg name)
   when: >
     (
-    sysbench_version != '' or
     ldap_server != '' or
     postgresql_version != ''
     ) and
@@ -52,7 +51,6 @@
     mysql_router_version != '' or
     orchestrator_version != '' or
     proxysql_version != '' or
-    sysbench_version != '' or
     ldap_server != '' or
     kerberos_server != '' or
     percona_proxysql_version != '' or
