@@ -23,6 +23,7 @@
     vault_version: "{{ lookup('vars', 'extra_percona_vault_version', default=lookup('env', 'VAULT', default='') ) }}"
     percona_postgresql_version: "{{ lookup('vars', 'extra_percona_postgresql_version', default=lookup('env', 'PPGSQL', default='') ) }}"
     percona_postgresql_version2: "{{ lookup('vars', 'extra_percona_postgresql_version2', default=lookup('env', 'PPGSQL2', default='') ) }}"
+    pg_logical_db: "{{ lookup('vars', 'extra_pg_logical_db', default=lookup('env', 'PG_LOGICAL_DB', default='') ) }}"
     patroni_version: "{{ lookup('vars', 'extra_percona_patroni_version', default=lookup('env', 'PATRONI', default='') ) }}"
     pgpool_version: "{{ lookup('vars', 'extra_pgpool_version', default=lookup('env', 'PGPOOL', default='') ) }}"
     odyssey_version: "{{ lookup('vars', 'extra_odyssey_version', default=lookup('env', 'ODYSSEY', default='') ) }}"

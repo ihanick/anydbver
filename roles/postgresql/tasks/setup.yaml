@@ -59,20 +59,26 @@
     cmd: /bin/bash /vagrant/tools/setup_pg_kerberos.sh "{{db_user}}" "{{db_password}}"
     creates: /etc/sysconfig/pgsql/krb5.keytab
 
-- name: Setup and start streaming physical replication with slots
+- name: Start database with systemd (logical replication)
+  when: start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and replication_type == 'logical'
+  command:
+    cmd: systemctl start "{{pg_systemd_svc}}"
+
+- name: Setup and start Postgresql replication
   when: master_ip != '' and ( percona_postgresql_version != '' or postgresql_version != '')
   vars:
     maj: "{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1') if postgresql_version != '' else percona_postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')   }}"
   shell:
     cmd: >-
       /bin/bash /vagrant/tools/setup_postgresql_replication.sh
-      streaming_physical_slots
+      {{replication_type if replication_type !='' else 'streaming_physical_slots'}}
       {{master_ip}}
       postgres
       {{db_password}}
       postgres
       {{pg_data_dir}}
       postgresql-{{maj}}
+      {{pg_logical_db}}
     creates: /root/replication.configured
 
 - name: Start database with systemd
