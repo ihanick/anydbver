@@ -172,6 +172,8 @@ kernel.panic = 10
 kernel.panic_on_oops = 1
 ```
 
+Multi-user LXD setup requires high values for sysctl `user.max_inotify_watches` like 64k or 100k instead of default 8k to prevent "Error: No space left on device" problem.
+
 In order to prevent dns issues inside k8s containers: https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/
 `reply from unexpected source` problem could be solved with loading `br_netfilter` module
 ```
@@ -199,3 +201,106 @@ lxc profile device add $USER root disk type=disk pool=$USER path=/
 lxc network create lxdbr0
 lxc profile device add $USER eth0 nic name=eth0 network=lxdbr0 type=nic
 ```
+
+## Anydbver command line parameters structure
+Huge number of anydbver parameters and parameters order could be confusing.
+./anydbver deploy command is:
+* A list of node definitions
+```
+./anydbver deploy \
+    node0 <what to install and how to setup on node0> \
+    node1 <what to install and how to setup on node1>
+```
+* You can omit a default node name (named `default` or `node0`)
+```
+./anydbver deploy \
+          <what to install and how to setup on node0> \
+    node1 <what to install and how to setup on node1>
+```
+* You can't inject gaps in the node list, the following example finished with error, because only default and node1 nodes are created:
+```
+./anydbver deploy node2 percona-server:5.6
+[WARNING]: Could not match supplied host pattern, ignoring: ihanick.node2
+ERROR! Specified hosts and/or --limit does not match any hosts
+```
+* Installation/setup parameters could be configurable: `optionname:parameter`. Usually it's a version, e.g. percona-server:5.7 or percona-server:5.7.31. Other parameters requires node name or host name:
+```
+./anydbver deploy \
+          mysql:5.7 hostname:server0.example.com \
+    node1 mysql:5.7 master:server0.example.com
+```
+* Sometimes it's required to run multiple actions on the same host after configuring other hosts, you can repeat nodename name
+```
+./anydbver deploy \
+          <what to install and how to setup on node0> \
+    node1 <what to install and how to setup on node1> \
+    node0 <stage 2 installation/setup steps on node0>
+```
+
+
+### The full list of parameters
+* `hostname`, short `hn`
+* `virtual-machine`, use KVM virtual machine 
+* `parallel` apply ansible configuration in parallel for this and previous nodes (unstable)
+* `cache`, required to add cache image name: `cache:ps-5.7.31` . After first run save container as an image. For next anydbver executions use image do not run ansible
+* `mysql`
+* `mysql-router`
+* `sysbench`
+* `proxysql`
+* `haproxy`
+* `haproxy-galera`
+* `haproxy-postgresql`, short `haproxy-pg`
+* `percona-proxysql`
+* `mydumper`
+* `mysql-jdbc`
+* `percona-toolkit`
+* `orchestrator`
+* `percona-xtradb-cluster`
+* `psmdb, `mongo`
+* `mongos-cfg`
+* `mongos-shard`
+* `configsrv`
+* `shardsrv`
+* `mariadb`, short `maria`
+* `mariadb-galera`
+* `cluster`
+* `galera-master`
+* `postgresql`, short `pg`
+* `percona-postgresql`, short `ppg`
+* `k8s-mongo`
+* `k8s-pxc`
+* `k8s-minio`
+* `k8s-pmm`
+* `replica-set`
+* `k8s-pg`
+* `master_ip`, short master, alias `leader`
+* `etcd-ip`
+* `proxysql-ip`
+* `group-replication`
+* `logical, required parameter the database name, e.g. `logical:sbtest`
+* `samba-ad`, short `samba`
+* `samba-dc`, required parameter - samba server name
+* `vault`
+* `patroni`
+* `rbr`, alias `row`, `row-based-replication`
+* `oltp_read_write`
+* `ldap-simple`
+* `clustercheck`
+* `backup`
+* `gtid`
+* `garbd`
+* `development`, short devel
+* `master`
+* `utf8mb3`, short `utf8`
+* `install`
+* `pmm`
+* `pmm-client`
+* `pmm-server`, required parameter PMM server node name.
+* `vault-server`, required parameter hashicorp vault server node name.
+* `sysbench-pg`, required parameter - Postgresql server node name to benchmark.
+* `ldap-server`, short `ldap`
+* `ldap-master`, alias `ldap-leader`, OpenLDAP server node name
+* `k3s-master`, alias `k3s-leader`
+* `k3s`, `k8s`, `kubernetes`
+* `kube-config`
+
