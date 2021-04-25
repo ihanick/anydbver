@@ -29,6 +29,7 @@
         (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
       yum:
         name: "{{os[dist][soft].repo_url}}"
+        disable_gpg_check: yes
         state: present
     - name: Switch mysql repo 5.7
       when: >
