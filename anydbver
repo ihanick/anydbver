@@ -317,6 +317,14 @@ refresh_percona_server_version_info() {
    | perl -ne '/proxysql[0-9]*-([0-9.-]*).el8.x86_64.rpm/ and print "$1\n"' \
    | sort -n -t . -k1,1 -k2,2 -k3,3 > .version-info/percona-proxysql.el8.txt
 
+  curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/ \
+    | perl -ne '/percona-xtrabackup(?:-[0-9]+)-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' \
+    | sort -n -t . -k1,1 -k2,2 -k3,3 > .version-info/xtrabackup.el7.txt
+  curl -sL https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/ \
+    | perl -ne '/percona-xtrabackup(?:-[0-9]+)-([0-9.-]*).el8.x86_64.rpm/ and print "$1\n"' \
+    | sort -n -t . -k1,1 -k2,2 -k3,3 > .version-info/xtrabackup.el8.txt
+
+
   :> .version-info/mariadb.el7.txt
   :> .version-info/mariadb.el8.txt
 
@@ -791,6 +799,10 @@ deploy_node() {
     if [[ $i == "proxysql" ]] || [[ $i == "proxysql:"* ]] ; then
       search_for_latest_version proxysql "$i"
       DEP_ENV="$DEP_ENV PROXYSQL=$VER"
+    fi
+    if [[ $i == "xtrabackup" ]] || [[ $i == "xtrabackup:"* ]] || [[ $i == "percona-xtrabackup" ]] || [[ $i == "percona-xtrabackup:"* ]] || [[ $i == "pxb" ]] || [[ $i == "pxb:"* ]] ; then
+      search_for_latest_version xtrabackup "$i"
+      DEP_ENV="$DEP_ENV PXB=$VER"
     fi
     if [[ $i == "haproxy" ]] ; then
       DEP_ENV="$DEP_ENV HAPROXY=1"
