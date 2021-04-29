@@ -653,6 +653,12 @@ EOF
  sed -e 's/-1//' .version-info/orchestrator.el7.txt > .version-info/orchestrator.focal.txt
  sed -e 's/-1//' .version-info/orchestrator.el7.txt > .version-info/orchestrator.bionic.txt
 
+  curl -sL https://repo.percona.com/pbm/yum/release/7/RPMS/x86_64/ \
+    | perl -ne '/percona-backup-mongodb-([^"]*).el7.x86_64.rpm/ and print "$1\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 > .version-info/pbm.el7.txt
+  curl -sL https://repo.percona.com/pbm/yum/release/7/RPMS/x86_64/ \
+    | perl -ne '/percona-backup-mongodb-([^"]*).el8.x86_64.rpm/ and print "$1\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 > .version-info/pbm.el8.txt
+
+
   curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/ \
     | perl -ne '/Percona-Server-MongoDB(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 > .version-info/psmdb.el7.txt
   curl -sL https://repo.percona.com/psmdb-40/yum/release/7/RPMS/x86_64/ \
@@ -852,6 +858,10 @@ deploy_node() {
     if [[ $i == "psmdb" ]] || [[ $i == "psmdb:"* ]] || [[ $i == "mongo" ]] || [[ $i == "mongo:"* ]] ; then
       search_for_latest_version psmdb "$i"
       DEP_ENV="$DEP_ENV PSMDB=$VER DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf"
+    fi
+    if [[ $i == "pbm" ]] || [[ $i == "pbm:"* ]] || [[ $i == "percona-backup-mongodb" ]] || [[ $i == "percona-backup-mongodb:"* ]] ; then
+      search_for_latest_version pbm "$i"
+      DEP_ENV="$DEP_ENV PBM=$VER "
     fi
 
     if [[ $i == "mongos-cfg:"* ]] ; then
