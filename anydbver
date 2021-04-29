@@ -74,6 +74,7 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy percona-server"
     echo "$0 deploy ps:5.7"
     echo "$0 deploy ps:5.7 mydumper"
+    echo "$0 deploy ps:5.7 perf devel"
     echo "$0 deploy hn:vault.percona.local vault node1 ps:8.0 vault-server:vault.percona.local"
     echo "$0 deploy ps:5.7 percona-toolkit"
     echo "$0 deploy mysql"
@@ -807,6 +808,9 @@ deploy_node() {
     if [[ $i == "haproxy" ]] ; then
       DEP_ENV="$DEP_ENV HAPROXY=1"
     fi
+    if [[ $i == "perf" ]] ; then
+      DEP_ENV="$DEP_ENV PERF=1"
+    fi
     if [[ $i == "haproxy-galera:"* ]] ; then
       HAPROXY_HOSTS=$(get_version "$i")
       DEP_ENV="$DEP_ENV HAPROXY_GALERA=$HAPROXY_HOSTS"
@@ -1492,7 +1496,7 @@ if [ "x$1" = "xdeploy" ] ; then
     if [ $? != 0 ] ; then
       exit 1
     fi
-    echo "$DEPCMD"|egrep -q 'PMM_SERVER|K8S|K3S|PKO|SAMBA_AD' && PRIV_CONTAINER_REQUIRED=1
+    echo "$DEPCMD"|egrep -q 'PMM_SERVER|K8S|K3S|PKO|SAMBA_AD|PERF' && PRIV_CONTAINER_REQUIRED=1
     if [[ "$DEPCMD" == *"HOSTNAME="* ]] ; then
       HOSTNAMES_CMD="$HOSTNAMES_CMD --hostname $NODE="$(echo "$DEPCMD"| sed -re 's/^.*HOSTNAME=([^ ]+) .*/\1/')
     fi

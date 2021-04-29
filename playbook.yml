@@ -56,6 +56,7 @@
     mongos_shard:  "{{ lookup('vars', 'extra_mongos_shard', default=lookup('env','MONGOS_SHARD',default='') ) }}"
     proxysql_version: "{{ lookup('vars', 'extra_proxysql_version', default=lookup('env','PROXYSQL',default='') ) }}"
     percona_proxysql_version: "{{ lookup('vars', 'extra_percona_proxysql_version', default=lookup('env','PERCONA_PROXYSQL',default='') ) }}"
+    perf: "{{ lookup('vars', 'extra_perf', default=lookup('env','PERF',default='') ) }}"
     haproxy_pg: "{{ lookup('vars', 'extra_haproxy_pg', default=lookup('env','HAPROXY_PG',default='') ) }}"
     haproxy_galera: "{{ lookup('vars', 'extra_haproxy_galera', default=lookup('env','HAPROXY_GALERA',default='') ) }}"
     mariadb_version: "{{ lookup('vars', 'extra_mariadb_version', default=lookup('env','MARIADB',default='') ) }}"
@@ -241,7 +242,7 @@
         name: kubernetes
 
     - name: PMM, Percona Toolkit Role
-      when: pmm_server_version != "" or percona_toolkit_version != ""
+      when: pmm_server_version != "" or percona_toolkit_version != "" or perf != ""
       include_role:
         name: tools_and_monitoring
     - name: benchmarks

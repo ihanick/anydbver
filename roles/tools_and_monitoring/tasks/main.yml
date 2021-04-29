@@ -16,3 +16,9 @@
 - name: PMM Setup tasks
   when: install_only == ''
   include_tasks: setup.yaml
+
+- name: install Perf
+  when: perf != ""
+  package:
+    name: perf
+    state: present
