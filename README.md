@@ -29,16 +29,40 @@ Deploy:
 ./anydbver deploy percona-server:8.0
 ./anydbver deploy percona-server
 ./anydbver deploy ps:5.7
+./anydbver deploy ps:5.7 mydumper
+./anydbver deploy ps:8.0.22 xtrabackup
+./anydbver deploy ps:5.7 perf devel
+./anydbver deploy hn:vault.percona.local vault node1 ps:8.0 vault-server:vault.percona.local
+./anydbver deploy ps:5.7 percona-toolkit
+./anydbver deploy ps:8.0.22 hn:ps0 node1 ps:8.0.22 hn:ps1 node2 ps:8.0.22 hn:ps2 master:ps0 node2 ps:8.0.22 master:ps1 channel:ps1ch
+./anydbver deploy mysql
+./anydbver deploy \
+  hn:mysql_rs0_gr0 mysql:8.0.18 group-replication \
+  node1 hn:mysql_rs0_gr1 mysql:8.0.18 group-replication master:default \
+  node2 hn:mysql_rs0_gr2 mysql:8.0.18 group-replication master:default \
+  node3 hn:mysql_rs0_router mysql-router:8.0.18 master:default
 ./anydbver deploy mariadb:10.4
 ./anydbver deploy maria:10.4
 ./anydbver deploy mariadb node1 mariadb master:default
 ./anydbver deploy mariadb node1 mariadb master:default default mariadb master:node1 node2 mariadb master:node1
+./anydbver deploy mariadb-cluster:10.3.26:25.3.30
 ./anydbver deploy mariadb-cluster:10.4 node1 mariadb-cluster:10.4 galera-master:default node2 mariadb-cluster:10.4 galera-master:default
-./anydbver deploy deploy ldap node1 ldap-master:default ps:5.7
+./anydbver deploy ldap node1 ldap-master:default ps:5.7
 ./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1
+./anydbver deploy ps:5.7 hostname:leader.percona.local node1 ps:5.7 hostname:follower.percona.local leader:default
 ./anydbver deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row
+./anydbver deploy hn:ps0 ps:5.7 node1 hn:ps1 ps:5.7 master:default node2 hn:ps2 ps:5.7 master:node1 node3 hn:orc orchestrator master:default
 ./anydbver deploy samba node1 ps samba-dc:default
 ./anydbver deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default
+./anydbver deploy \
+ pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default \
+ node3 pxc:5.7 cluster:cluster2 node4 pxc:5.7 cluster:cluster2 galera-master:node3 node5 pxc:5.7 cluster:cluster2 galera-master:node3
+./anydbver deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 garbd galera-master:default
+./anydbver deploy \
+  haproxy-galera:node1,node2,node3 \
+  node1 pxc clustercheck \
+  node2 pxc galera-master:node1 clustercheck \
+  node3 pxc galera-master:node1 clustercheck
 ./anydbver deploy ps:8.0 group-replication node1 ps:8.0 group-replication master:default node2 ps:8.0 group-replication master:default
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-mongo
@@ -47,25 +71,125 @@ Deploy:
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pmm k8s-pxc backup
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg
 ./anydbver deploy pg:12.3
+./anydbver deploy pg:12.3 node1 pg:12.3 master:default
+./anydbver deploy pg:13 patroni node1 pg:13 master:default patroni etcd-ip:default node2 pg:13 master:default patroni etcd-ip:default
+./anydbver deploy haproxy-pg:node1,node2,node3 node1 pg clustercheck node2 pg clustercheck master:node1 node3 pg clustercheck master:node1
+./anydbver deploy pmm node1 ppg pmm-client pmm-server:default
+./anydbver deploy postgresql sysbench sysbench-pg:default oltp_read_write
+./anydbver deploy percona-postgresql \
+  sysbench sysbench-pg:default oltp_read_write # prepare, execute run_sysbench.sh to start sysbench
+./anydbver deploy \
+        postgresql sysbench sysbench-pg:default oltp_read_write  \
+  node1 postgresql master:default logical:sbtest  \
+  node2 postgresql master:default logical:sbtest
+./lxdctl  --destroy
 ./anydbver deploy psmdb
 ./anydbver deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0
 ./anydbver deploy \
-  psmdb:4.2 replica-set:rs0 shardsrv \
-  node1 psmdb:4.2 master:default replica-set:rs0 shardsrv \
-  node2 psmdb:4.2 master:default replica-set:rs0 shardsrv \
-  node3 psmdb:4.2 configsrv replica-set:cfg0 \
-  node4 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \
-  node5 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \
-  node6 psmdb:4.2 mongos-cfg:cfg0/node3,node4,node5 mongos-shard:rs0/default,node1,node2
+ psmdb:4.2 replica-set:rs0 shardsrv \
+ node1 psmdb:4.2 master:default replica-set:rs0 shardsrv \
+ node2 psmdb:4.2 master:default replica-set:rs0 shardsrv \
+ node3 psmdb:4.2 configsrv replica-set:cfg0 \
+ node4 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \
+ node5 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \
+ node6 psmdb:4.2 mongos-cfg:cfg0/node3,node4,node5 mongos-shard:rs0/default,node1,node2
+./anydbver deploy ldap node1 ldap-master:default psmdb:4.2
+./anydbver deploy samba node1 psmdb:4.2 samba-dc:default
 ./anydbver deploy sysbench
 ./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:default node3 proxysql master:default
+./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:default \
+  node3 proxysql master:default node4 proxysql proxysql-ip:node3 node5 proxysql proxysql-ip:node3
+./anydbver deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default node3 proxysql galera-master:default
+./anydbver deploy pxc node1 pxc galera-master:default node2 pxc galera-master:default node3 proxysql galera-master:default
+./anydbver deploy pmm node1 ps:5.7 pmm-client pmm-server:default
+./anydbver deploy pmm:1.17.4 node1 ps:5.7 pmm-client:1.17.4 pmm-server:default
+./anydbver deploy mongo help
+./anydbver deploy psmdb help
+[ihanick@msil anydbver]$ ^C
+[ihanick@msil anydbver]$ vim anydbver 
+[ihanick@msil anydbver]$ ./anydbver deploy help
+Deploy: 
+./anydbver deploy percona-server:8.0.16
+./anydbver deploy percona-server:8.0
+./anydbver deploy percona-server
+./anydbver deploy ps:5.7
+./anydbver deploy ps:5.7 mydumper
+./anydbver deploy ps:8.0.22 xtrabackup
+./anydbver deploy ps:5.7 perf devel
+./anydbver deploy hn:vault.percona.local vault node1 ps:8.0 vault-server:vault.percona.local
+./anydbver deploy ps:5.7 percona-toolkit
+./anydbver deploy ps:8.0.22 hn:ps0 node1 ps:8.0.22 hn:ps1 node2 ps:8.0.22 hn:ps2 master:ps0 node2 ps:8.0.22 master:ps1 channel:ps1ch
+./anydbver deploy mysql
+./anydbver deploy \
+  hn:mysql_rs0_gr0 mysql:8.0.18 group-replication \
+  node1 hn:mysql_rs0_gr1 mysql:8.0.18 group-replication master:default \
+  node2 hn:mysql_rs0_gr2 mysql:8.0.18 group-replication master:default \
+  node3 hn:mysql_rs0_router mysql-router:8.0.18 master:default
+./anydbver deploy mariadb:10.4
+./anydbver deploy maria:10.4
+./anydbver deploy mariadb node1 mariadb master:default
+./anydbver deploy mariadb node1 mariadb master:default default mariadb master:node1 node2 mariadb master:node1
+./anydbver deploy mariadb-cluster:10.3.26:25.3.30
+./anydbver deploy mariadb-cluster:10.4 node1 mariadb-cluster:10.4 galera-master:default node2 mariadb-cluster:10.4 galera-master:default
+./anydbver deploy ldap node1 ldap-master:default ps:5.7
+./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:node1
+./anydbver deploy ps:5.7 hostname:leader.percona.local node1 ps:5.7 hostname:follower.percona.local leader:default
+./anydbver deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row
+./anydbver deploy hn:ps0 ps:5.7 node1 hn:ps1 ps:5.7 master:default node2 hn:ps2 ps:5.7 master:node1 node3 hn:orc orchestrator master:default
+./anydbver deploy samba node1 ps samba-dc:default
+./anydbver deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default
+./anydbver deploy \
+ pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default \
+ node3 pxc:5.7 cluster:cluster2 node4 pxc:5.7 cluster:cluster2 galera-master:node3 node5 pxc:5.7 cluster:cluster2 galera-master:node3
+./anydbver deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 garbd galera-master:default
 ./anydbver deploy \
   haproxy-galera:node1,node2,node3 \
   node1 pxc clustercheck \
   node2 pxc galera-master:node1 clustercheck \
   node3 pxc galera-master:node1 clustercheck
-
+./anydbver deploy ps:8.0 group-replication node1 ps:8.0 group-replication master:default node2 ps:8.0 group-replication master:default
+./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default
+./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-mongo
+./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-mongo
+./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pxc
+./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pmm k8s-pxc backup
+./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg
+./anydbver deploy pg:12.3
+./anydbver deploy pg:12.3 node1 pg:12.3 master:default
+./anydbver deploy pg:13 patroni node1 pg:13 master:default patroni etcd-ip:default node2 pg:13 master:default patroni etcd-ip:default
+./anydbver deploy haproxy-pg:node1,node2,node3 node1 pg clustercheck node2 pg clustercheck master:node1 node3 pg clustercheck master:node1
+./anydbver deploy pmm node1 ppg pmm-client pmm-server:default
+./anydbver deploy postgresql sysbench sysbench-pg:default oltp_read_write
+./anydbver deploy percona-postgresql \
+  sysbench sysbench-pg:default oltp_read_write # prepare, execute run_sysbench.sh to start sysbench
+./anydbver deploy \
+        postgresql sysbench sysbench-pg:default oltp_read_write  \
+  node1 postgresql master:default logical:sbtest  \
+  node2 postgresql master:default logical:sbtest
+./lxdctl  --destroy
+./anydbver deploy psmdb
+./anydbver deploy mongo pbm
+./anydbver deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0
+./anydbver deploy \
+ psmdb:4.2 replica-set:rs0 shardsrv \
+ node1 psmdb:4.2 master:default replica-set:rs0 shardsrv \
+ node2 psmdb:4.2 master:default replica-set:rs0 shardsrv \
+ node3 psmdb:4.2 configsrv replica-set:cfg0 \
+ node4 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \
+ node5 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \
+ node6 psmdb:4.2 mongos-cfg:cfg0/node3,node4,node5 mongos-shard:rs0/default,node1,node2
+./anydbver deploy ldap node1 ldap-master:default psmdb:4.2
+./anydbver deploy samba node1 psmdb:4.2 samba-dc:default
+./anydbver deploy sysbench
+./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:default node3 proxysql master:default
+./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:default \
+  node3 proxysql master:default node4 proxysql proxysql-ip:node3 node5 proxysql proxysql-ip:node3
+./anydbver deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default node3 proxysql galera-master:default
+./anydbver deploy pxc node1 pxc galera-master:default node2 pxc galera-master:default node3 proxysql galera-master:default
+./anydbver deploy pmm node1 ps:5.7 pmm-client pmm-server:default
+./anydbver deploy pmm:1.17.4 node1 ps:5.7 pmm-client:1.17.4 pmm-server:default
 ./anydbver deploy mongo help
+./anydbver deploy psmdb help
 ```
 
 ## Connect to selected node via ssh:
@@ -251,12 +375,15 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `haproxy-galera`
 * `haproxy-postgresql`, short `haproxy-pg`
 * `percona-proxysql`
+* `percona-server`, short `ps`
+* `percona-xtrabackup`, short `pxb`
 * `mydumper`
 * `mysql-jdbc`
 * `percona-toolkit`
 * `orchestrator`
 * `percona-xtradb-cluster`
 * `psmdb, `mongo`
+* `percona-backup-mongodb`, short `pbm`
 * `mongos-cfg`
 * `mongos-shard`
 * `configsrv`
@@ -274,6 +401,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `replica-set`
 * `k8s-pg`
 * `master_ip`, short master, alias `leader`
+* `channel`, mysql replication channel
 * `etcd-ip`
 * `proxysql-ip`
 * `group-replication`
@@ -290,7 +418,6 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `gtid`
 * `garbd`
 * `development`, short devel
-* `master`
 * `utf8mb3`, short `utf8`
 * `install`
 * `pmm`
@@ -303,4 +430,5 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `k3s-master`, alias `k3s-leader`
 * `k3s`, `k8s`, `kubernetes`
 * `kube-config`
+* `perf`, install Linux Perf
 
