@@ -8,6 +8,7 @@ SOFT=$5
 CNF_FILE=$6
 MYSQLD_UNIT=$7
 CLUSTER_NAME=${8:-'pxc-cluster'}
+CHANNEL=$9
 
 SERVER_ID=$(ip addr ls|grep 'inet '|grep -v '127.0.0.1'|awk '{print $2}'|cut -d/ -f 1|awk -F '\\.' '{print ($1 * 2^24) + ($2 * 2^16) + ($3 * 2^8) + $4}')
 
@@ -67,14 +68,24 @@ EOF
           CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;
           START SLAVE;
 EOF
-      else
-        mysql << EOF
-        RESET MASTER;
-        SET GLOBAL GTID_PURGED='${GTID}';
-        STOP SLAVE;
-        CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;
-        START SLAVE;
+      else # GTID, non-pxc
+        if [[ "x$CHANNEL" = x ]] ; then
+          mysql << EOF
+          RESET MASTER;
+          SET GLOBAL GTID_PURGED='${GTID}';
+          STOP SLAVE;
+          CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;
+          START SLAVE;
 EOF
+        else
+          mysql << EOF
+          RESET MASTER;
+          SET GLOBAL GTID_PURGED=CONCAT(@@gtid_purged, ',${GTID}');
+          STOP SLAVE;
+          CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_AUTO_POSITION=1, MASTER_SSL=1 FOR CHANNEL '${CHANNEL}';
+          START SLAVE;
+EOF
+        fi
       fi
 
 

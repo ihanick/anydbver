@@ -45,6 +45,7 @@
     k3s_flannel_backend: "{{ lookup('vars', 'extra_k3s_flannel_backend', default=lookup('env','K3S_FLANNEL_BACKEND',default='vxlan') ) }}"
     kube_config: "{{ lookup('vars', 'extra_kube_config', default=lookup('env','KUBE_CONFIG',default='') ) }}"
     master_ip: "{{ lookup('vars', 'extra_master_ip', default=lookup('env','DB_IP',default='') ) }}"
+    channel: "{{ lookup('vars', 'extra_channel', default=lookup('env','CHANNEL',default='') ) }}"
     etcd_ip: "{{ lookup('vars', 'extra_etcd_ip', default=lookup('env','ETCD_IP',default='') ) }}"
     proxysql_ip: "{{ lookup('vars', 'extra_proxysql_ip', default=lookup('env','PROXYSQL_IP',default='') ) }}"
     replication_type: "{{ lookup('vars', 'extra_replication_type', default=lookup('env','REPLICATION_TYPE',default='') ) }}"

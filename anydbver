@@ -77,6 +77,7 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy ps:5.7 perf devel"
     echo "$0 deploy hn:vault.percona.local vault node1 ps:8.0 vault-server:vault.percona.local"
     echo "$0 deploy ps:5.7 percona-toolkit"
+    echo "$0 deploy ps:8.0.22 hn:ps0 node1 ps:8.0.22 hn:ps1 node2 ps:8.0.22 hn:ps2 master:ps0 node2 ps:8.0.22 master:ps1 channel:ps1ch"
     echo "$0 deploy mysql"
     echo -e $0' deploy \\\n  hn:mysql_rs0_gr0 mysql:8.0.18 group-replication \\\n  node1 hn:mysql_rs0_gr1 mysql:8.0.18 group-replication master:default \\\n  node2 hn:mysql_rs0_gr2 mysql:8.0.18 group-replication master:default \\\n  node3 hn:mysql_rs0_router mysql-router:8.0.18 master:default'
     echo "$0 deploy mariadb:10.4"
@@ -963,6 +964,10 @@ deploy_node() {
         VER=$(tail -n 1   .version-info/zalando_pg.txt)
         DEP_ENV="$DEP_ENV K8S_PG=$VER"
       fi
+    fi
+    if [[ $i == "channel:"* ]] ; then
+      CHANNEL=$(get_version "$i")
+      DEP_ENV="$DEP_ENV CHANNEL=$CHANNEL"
     fi
     if [[ $i == "master_ip" ]] || [[ $i == "master_ip:"* ]] || [[ $i == "master" ]] || [[ $i == "master:"* ]] || [[ $i == "leader:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
