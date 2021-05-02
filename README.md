@@ -363,72 +363,71 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 
 
 ### The full list of parameters
-* `hostname`, short `hn`
-* `virtual-machine`, use KVM virtual machine 
-* `parallel` apply ansible configuration in parallel for this and previous nodes (unstable)
+* `backup`
 * `cache`, required to add cache image name: `cache:ps-5.7.31` . After first run save container as an image. For next anydbver executions use image do not run ansible
-* `mysql`
-* `mysql-router`
-* `sysbench`
-* `proxysql`
-* `haproxy`
+* `channel`, mysql replication channel
+* `cluster`
+* `clustercheck`
+* `configsrv`
+* `development`, short devel
+* `etcd-ip`
+* `galera-master`
+* `garbd`
+* `group-replication`
+* `gtid`
 * `haproxy-galera`
 * `haproxy-postgresql`, short `haproxy-pg`
-* `percona-proxysql`
-* `percona-server`, short `ps`
-* `percona-xtrabackup`, short `pxb`
-* `mydumper`
-* `mysql-jdbc`
-* `percona-toolkit`
-* `orchestrator`
-* `percona-xtradb-cluster`
-* `psmdb, `mongo`
-* `percona-backup-mongodb`, short `pbm`
-* `mongos-cfg`
-* `mongos-shard`
-* `configsrv`
-* `shardsrv`
-* `mariadb`, short `maria`
-* `mariadb-galera`
-* `cluster`
-* `galera-master`
-* `postgresql`, short `pg`
-* `percona-postgresql`, short `ppg`
-* `k8s-mongo`
-* `k8s-pxc`
-* `k8s-minio`
-* `k8s-pmm`
-* `replica-set`
-* `k8s-pg`
-* `master_ip`, short master, alias `leader`
-* `channel`, mysql replication channel
-* `etcd-ip`
-* `proxysql-ip`
-* `group-replication`
-* `logical, required parameter the database name, e.g. `logical:sbtest`
-* `samba-ad`, short `samba`
-* `samba-dc`, required parameter - samba server name
-* `vault`
-* `patroni`
-* `rbr`, alias `row`, `row-based-replication`
-* `oltp_read_write`
-* `ldap-simple`
-* `clustercheck`
-* `backup`
-* `gtid`
-* `garbd`
-* `development`, short devel
-* `utf8mb3`, short `utf8`
+* `haproxy`
+* `hostname`, short `hn`
 * `install`
-* `pmm`
-* `pmm-client`
-* `pmm-server`, required parameter PMM server node name.
-* `vault-server`, required parameter hashicorp vault server node name.
-* `sysbench-pg`, required parameter - Postgresql server node name to benchmark.
-* `ldap-server`, short `ldap`
-* `ldap-master`, alias `ldap-leader`, OpenLDAP server node name
 * `k3s-master`, alias `k3s-leader`
 * `k3s`, `k8s`, `kubernetes`
+* `k8s-minio`
+* `k8s-mongo`
+* `k8s-pg`
+* `k8s-pmm`
+* `k8s-pxc`
 * `kube-config`
+* `ldap-master`, alias `ldap-leader`, OpenLDAP server node name
+* `ldap-server`, short `ldap`
+* `ldap-simple`
+* `logical, required parameter the database name, e.g. `logical:sbtest`
+* `mariadb-galera`
+* `mariadb`, short `maria`
+* `master_ip`, short master, alias `leader`
+* `mongos-cfg`
+* `mongos-shard`
+* `mydumper`
+* `mysql-jdbc`
+* `mysql-router`
+* `mysql`
+* `oltp_read_write`
+* `orchestrator`
+* `parallel` apply ansible configuration in parallel for this and previous nodes (unstable)
+* `patroni`
+* `percona-backup-mongodb`, short `pbm`
+* `percona-postgresql`, short `ppg`
+* `percona-proxysql`
+* `percona-server`, short `ps`
+* `percona-toolkit`
+* `percona-xtrabackup`, short `pxb`
+* `percona-xtradb-cluster`
 * `perf`, install Linux Perf
-
+* `pmm-client`
+* `pmm-server`, required parameter PMM server node name.
+* `pmm`
+* `postgresql`, short `pg`
+* `proxysql-ip`
+* `proxysql`
+* `psmdb, `mongo`
+* `rbr`, alias `row`, `row-based-replication`
+* `replica-set`
+* `samba-ad`, short `samba`
+* `samba-dc`, required parameter - samba server name
+* `shardsrv`
+* `sysbench-pg`, required parameter - Postgresql server node name to benchmark.
+* `sysbench`
+* `utf8mb3`, short `utf8`
+* `vault-server`, required parameter hashicorp vault server node name.
+* `vault`
+* `virtual-machine`, use KVM virtual machine
