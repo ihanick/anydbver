@@ -6,11 +6,19 @@ PASS=$2
 cd /etc/pgpool-II
 pg_md5 --md5auth --username=$USER $PASS
 
-echo $(/vagrant/tools/node_ip.sh):5432:*:$USER:$PASS > ~/.pgpass
-echo "*:5432:*:$USER:$PASS" >> ~/.pgpass
+cat > ~/.pgpass <<EOF
+*:*:*:$USER:$PASS
+EOF
 chmod 0600 ~/.pgpass
 
+export PGHOSTADDR=$MASTER
 SLAVE=$(psql -X -A -d $DB -U $USER -h $MASTER -t -c 'select client_addr from pg_stat_replication LIMIT 1')
+
+if psql -d $DB -U $USER -h $MASTER -c 'show password_encryption;'|grep -q scram ; then
+  cat > /etc/pgpool-II/pool_passwd <<EOF
+$USER:$PASS
+EOF
+fi
 
 if [ $SLAVE != "" ] ; then
   sed \
@@ -33,5 +41,13 @@ else
       -e "s/^port = 9999/port = 5432/" \
       pgpool.conf.sample-stream > /etc/pgpool-II/pgpool.conf
 fi
+
+if ss -nl|grep -q :5432 ; then
+  sed -i \
+      -e "s/^port = 5432/port = 9999/" \
+      /etc/pgpool-II/pgpool.conf
+fi
+
+systemctl start pgpool
 
 touch /root/pgpool.applied

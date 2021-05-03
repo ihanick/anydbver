@@ -43,7 +43,7 @@
 - name: Postgresql repo
   when: postgresql_version != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   yum:
-    name: "{{os[dist][soft].repo_url}}"
+    name: "{{os[dist].postgresql.repo_url}}"
     state: present
     disable_gpg_check: yes
 
@@ -131,6 +131,13 @@
           tar -C /usr/bin/ -xzf /tmp/walg.tar.gz;
           rm -rf /tmp/walg.tar.gz
         creates: /usr/bin/wal-g
+
+- name: Install PGPool
+  when: pgpool_version != ''
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items: "{{os[dist].pgpool.install_packages}}"
 
 - name: Postgres Setup tasks
   when: install_only == ''

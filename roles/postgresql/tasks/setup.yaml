@@ -1,85 +1,90 @@
 # https://bugzilla.redhat.com/show_bug.cgi?id=1875056
-- name: Directory for pg systemd service override
-  file:
-    path: "/etc/systemd/system/{{pg_systemd_svc}}.service.d"
-    state: directory
-- name: Disable killmode=mixed in pg systemd service
-  copy:
-    dest: "/etc/systemd/system/{{pg_systemd_svc}}.service.d/override.conf"
-    content: |
-      [Service]
-      KillMode=process
-- name: refresh pg systemd service
-  systemd:
-    daemon_reload: yes
+- stat: path="/root/{{ db_opts_file | basename }}.applied"
+  register: pg_opt_file
+- name: Configure Postgresql
+  when: not pg_opt_file.stat.exists
+  block:
+    - name: Directory for pg systemd service override
+      file:
+        path: "/etc/systemd/system/{{pg_systemd_svc}}.service.d"
+        state: directory
+    - name: Disable killmode=mixed in pg systemd service
+      copy:
+        dest: "/etc/systemd/system/{{pg_systemd_svc}}.service.d/override.conf"
+        content: |
+          [Service]
+          KillMode=process
+    - name: refresh pg systemd service
+      systemd:
+        daemon_reload: yes
 
-- name: change postgresql password on debian-based
-  when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
-  shell:
-    cmd: sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD '{{ db_password }}'"
-- name: Stop postgresql database if running
-  when: db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)
-  command:
-    cmd: systemctl stop "{{ pkg[dist].systemd if ('systemd' in pkg[dist]) and percona_postgresql_version !='' else os[dist][soft].systemd_service if soft else db_systemd_service }}"
+    - name: change postgresql password on debian-based
+      when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+      shell:
+        cmd: sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD '{{ db_password }}'"
+    - name: Stop postgresql database if running
+      when: db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)
+      command:
+        cmd: systemctl stop "{{ pkg[dist].systemd if ('systemd' in pkg[dist]) and percona_postgresql_version !='' else os[dist][soft].systemd_service if soft else db_systemd_service }}"
 
-- name: Create Postgres Database
-  when: (percona_postgresql_version != '' or postgresql_version != '' ) and db_password != ""
-  shell:
-    cmd: >-
-      echo {{ db_password }} > /tmp/root-pw.txt;
-      echo export PGUSER=postgres PGHOSTADDR=$(node_ip.sh) >> /root/.bash_profile;
-      PGSETUP_INITDB_OPTIONS="--pwfile=/tmp/root-pw.txt {{ '' if pmm_url == '' else '-A md5' }}" /usr/pgsql-{{maj}}/bin/postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else '-'+maj}}-setup initdb;
-      echo "listen_addresses = '*'" >> {{pg_conf_dir}}/postgresql.conf;
-      echo 'host    all             all             0.0.0.0/0            {{'md5' if ldap_server_ip == '' else 'ldap ldapurl="ldap://'+ldap_server_ip+':389/dc=percona,dc=local?uid?sub"' }}' >> {{pg_conf_dir}}/pg_hba.conf;
-      echo 'host    replication     all             0.0.0.0/0            md5' >> {{pg_conf_dir}}/pg_hba.conf;
-      echo 'host    replication     all             127.0.0.1/32         md5' >> {{pg_conf_dir}}/pg_hba.conf;
-      echo 'host    replication     all             ::1/128              md5' >> {{pg_conf_dir}}/pg_hba.conf;
-      echo 'host    all             all             127.0.0.1/32         md5' >> {{pg_conf_dir}}/pg_hba.conf;
-      echo 'host    all             all             ::1/128              md5' >> {{pg_conf_dir}}/pg_hba.conf;
-      sed -i -r -e 's/^(host.*ident)/#\1/' {{pg_conf_dir}}/pg_hba.conf;
-      echo $(/bin/bash /vagrant/tools/node_ip.sh):5432:*:postgres:{{db_password}} > ~/.pgpass ;
-      chmod 0600 ~/.pgpass
-    creates: "/root/.pgpass"
+    - name: Create Postgres Database
+      when: (percona_postgresql_version != '' or postgresql_version != '' ) and db_password != ""
+      shell:
+        cmd: >-
+          echo {{ db_password }} > /tmp/root-pw.txt;
+          echo export PGUSER=postgres PGHOSTADDR=$(node_ip.sh) >> /root/.bash_profile;
+          PGSETUP_INITDB_OPTIONS="--pwfile=/tmp/root-pw.txt {{ '' if pmm_url == '' else '-A md5' }}" /usr/pgsql-{{maj}}/bin/postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else '-'+maj}}-setup initdb;
+          echo "listen_addresses = '*'" >> {{pg_conf_dir}}/postgresql.conf;
+          echo 'host    all             all             0.0.0.0/0            {{'md5' if ldap_server_ip == '' else 'ldap ldapurl="ldap://'+ldap_server_ip+':389/dc=percona,dc=local?uid?sub"' }}' >> {{pg_conf_dir}}/pg_hba.conf;
+          echo 'host    replication     all             0.0.0.0/0            md5' >> {{pg_conf_dir}}/pg_hba.conf;
+          echo 'host    replication     all             127.0.0.1/32         md5' >> {{pg_conf_dir}}/pg_hba.conf;
+          echo 'host    replication     all             ::1/128              md5' >> {{pg_conf_dir}}/pg_hba.conf;
+          echo 'host    all             all             127.0.0.1/32         md5' >> {{pg_conf_dir}}/pg_hba.conf;
+          echo 'host    all             all             ::1/128              md5' >> {{pg_conf_dir}}/pg_hba.conf;
+          sed -i -r -e 's/^(host.*ident)/#\1/' {{pg_conf_dir}}/pg_hba.conf;
+          echo $(/bin/bash /vagrant/tools/node_ip.sh):5432:*:postgres:{{db_password}} > ~/.pgpass ;
+          chmod 0600 ~/.pgpass
+        creates: "/root/.pgpass"
 
-- name: Apply database options from file
-  when: db_opts_file != '' and (postgresql_version != '' or percona_postgresql_version != '')
-  command:
-    cmd: >-
-      /bin/bash /vagrant/tools/apply_mysql_conf.sh
-      "{{ os[dist][soft].cnf_file }}"
-      "/vagrant/configs/{{ db_opts_file }}"
-      "{{cluster_name}}"
-      "{{db_user}}"
-      "{{db_password}}"
-    creates: "/root/{{ db_opts_file | basename }}.applied"
+    - name: Apply database options from file
+      when: db_opts_file != '' and (postgresql_version != '' or percona_postgresql_version != '')
+      command:
+        cmd: >-
+          /bin/bash /vagrant/tools/apply_mysql_conf.sh
+          "{{ os[dist][soft].cnf_file }}"
+          "/vagrant/configs/{{ db_opts_file }}"
+          "{{cluster_name}}"
+          "{{db_user}}"
+          "{{db_password}}"
+        creates: "/root/{{ db_opts_file | basename }}.applied"
 
-- name: Setup Kerberos for PG
-  when: kerberos_client != '' and (postgresql_version != '' or percona_postgresql_version != '')
-  command:
-    cmd: /bin/bash /vagrant/tools/setup_pg_kerberos.sh "{{db_user}}" "{{db_password}}"
-    creates: /etc/sysconfig/pgsql/krb5.keytab
+    - name: Setup Kerberos for PG
+      when: kerberos_client != '' and (postgresql_version != '' or percona_postgresql_version != '')
+      command:
+        cmd: /bin/bash /vagrant/tools/setup_pg_kerberos.sh "{{db_user}}" "{{db_password}}"
+        creates: /etc/sysconfig/pgsql/krb5.keytab
 
-- name: Start database with systemd (logical replication)
-  when: start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and replication_type == 'logical'
-  command:
-    cmd: systemctl start "{{pg_systemd_svc}}"
+    - name: Start database with systemd (logical replication)
+      when: start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and replication_type == 'logical'
+      command:
+        cmd: systemctl start "{{pg_systemd_svc}}"
 
-- name: Setup and start Postgresql replication
-  when: master_ip != '' and ( percona_postgresql_version != '' or postgresql_version != '')
-  vars:
-    maj: "{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1') if postgresql_version != '' else percona_postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')   }}"
-  shell:
-    cmd: >-
-      /bin/bash /vagrant/tools/setup_postgresql_replication.sh
-      {{replication_type if replication_type !='' else 'streaming_physical_slots'}}
-      {{master_ip}}
-      postgres
-      {{db_password}}
-      postgres
-      {{pg_data_dir}}
-      postgresql-{{maj}}
-      {{pg_logical_db}}
-    creates: /root/replication.configured
+    - name: Setup and start Postgresql replication
+      when: master_ip != '' and ( percona_postgresql_version != '' or postgresql_version != '')
+      vars:
+        maj: "{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1') if postgresql_version != '' else percona_postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')   }}"
+      shell:
+        cmd: >-
+          /bin/bash /vagrant/tools/setup_postgresql_replication.sh
+          {{replication_type if replication_type !='' else 'streaming_physical_slots'}}
+          {{master_ip}}
+          postgres
+          {{db_password}}
+          postgres
+          {{pg_data_dir}}
+          postgresql-{{maj}}
+          {{pg_logical_db}}
+        creates: /root/replication.configured
 
 - name: Start database with systemd
   when: start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
@@ -106,9 +111,9 @@
     creates: /root/pmm-postgresql.applied
 
 - name: Setup PGPool
-  when: pgpool_version != '' and master_ip != ''
+  when: pgpool_version != '' and backend_ip != ''
   shell:
-    cmd: /bin/bash /vagrant/tools/setup_pg_pool.sh "{{master_ip}}" "{{db_password}}"
+    cmd: /bin/bash /vagrant/tools/setup_pg_pool.sh "{{backend_ip}}" "{{db_password}}"
     creates: /root/pgpool.applied
 
 - name: Enable xinetd 
@@ -132,6 +137,4 @@
         name: xinetd
         state: restarted
         enabled: True
-
-
 

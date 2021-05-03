@@ -47,6 +47,7 @@
     master_ip: "{{ lookup('vars', 'extra_master_ip', default=lookup('env','DB_IP',default='') ) }}"
     channel: "{{ lookup('vars', 'extra_channel', default=lookup('env','CHANNEL',default='') ) }}"
     etcd_ip: "{{ lookup('vars', 'extra_etcd_ip', default=lookup('env','ETCD_IP',default='') ) }}"
+    backend_ip: "{{ lookup('vars', 'extra_backend_ip', default=lookup('env','BACKEND_IP',default='') ) }}"
     proxysql_ip: "{{ lookup('vars', 'extra_proxysql_ip', default=lookup('env','PROXYSQL_IP',default='') ) }}"
     replication_type: "{{ lookup('vars', 'extra_replication_type', default=lookup('env','REPLICATION_TYPE',default='') ) }}"
     cluster_name:  "{{ lookup('vars', 'extra_cluster_name', default=lookup('env','CLUSTER',default='cluster1') ) }}"
@@ -126,7 +127,6 @@
       'pxc57' if percona_xtradb_cluster_version.startswith('5.7') else
       'pxc56' if percona_xtradb_cluster_version.startswith('5.6') else
       'ps56' if percona_server_version.startswith('5.6') else
-      'pgpool' if pgpool_version != '' else
       'ppg11' if percona_postgresql_version.startswith('11') else
       'ppg12' if percona_postgresql_version.startswith('12') else
       'ppg13' if percona_postgresql_version.startswith('13') else

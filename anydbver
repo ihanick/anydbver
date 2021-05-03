@@ -108,13 +108,13 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg"
     echo "$0 deploy pg:12.3"
     echo "$0 deploy pg:12.3 node1 pg:12.3 master:default"
+    echo "$0 deploy pg node1 pg master:default default pg pgpool backend-ip:default"
     echo "$0 deploy pg:13 patroni node1 pg:13 master:default patroni etcd-ip:default node2 pg:13 master:default patroni etcd-ip:default"
     echo "$0 deploy haproxy-pg:node1,node2,node3 node1 pg clustercheck node2 pg clustercheck master:node1 node3 pg clustercheck master:node1"
     echo "$0 deploy pmm node1 ppg pmm-client pmm-server:default"
     echo "$0 deploy postgresql sysbench sysbench-pg:default oltp_read_write"
     echo -e $0' deploy percona-postgresql \\\n  sysbench sysbench-pg:default oltp_read_write # prepare, execute run_sysbench.sh to start sysbench'
-    echo -e $0' deploy \\\n        postgresql sysbench sysbench-pg:default oltp_read_write  \\\n  node1 postgresql master:default logical:sbtest  \\\n  node2 postgresql master:default logical:sbtest
-./lxdctl  --destroy'
+    echo -e $0' deploy \\\n        postgresql sysbench sysbench-pg:default oltp_read_write  \\\n  node1 postgresql master:default logical:sbtest  \\\n  node2 postgresql master:default logical:sbtest'
     echo "$0 deploy psmdb"
     echo "$0 deploy mongo pbm"
     echo "$0 deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0"
@@ -579,6 +579,11 @@ EOF
 1.5.0
 EOF
 
+  cat > .version-info/pgpool.el7.txt <<EOF
+4.2.0-1
+4.2.1-1
+4.2.2-1
+EOF
   cat > .version-info/sysbench.el7.txt <<EOF
 1.0.20-6
 EOF
@@ -812,6 +817,10 @@ deploy_node() {
       search_for_latest_version proxysql "$i"
       DEP_ENV="$DEP_ENV PROXYSQL=$VER"
     fi
+    if [[ $i == "pgpool" ]] || [[ $i == "pgpool:"* ]] ; then
+      search_for_latest_version pgpool "$i"
+      DEP_ENV="$DEP_ENV PGPOOL=$VER"
+    fi
     if [[ $i == "xtrabackup" ]] || [[ $i == "xtrabackup:"* ]] || [[ $i == "percona-xtrabackup" ]] || [[ $i == "percona-xtrabackup:"* ]] || [[ $i == "pxb" ]] || [[ $i == "pxb:"* ]] ; then
       search_for_latest_version xtrabackup "$i"
       DEP_ENV="$DEP_ENV PXB=$VER"
@@ -984,6 +993,10 @@ deploy_node() {
     if [[ $i == "etcd-ip:"* ]] ; then
         ETCD_NODE=$(get_version "$i")
         DEP_ENV="$DEP_ENV ETCD_IP=$ETCD_NODE "
+    fi
+    if [[ $i == "backend-ip:"* ]] ; then
+        BACKEND_NODE=$(get_version "$i")
+        DEP_ENV="$DEP_ENV BACKEND_IP=$BACKEND_NODE "
     fi
     if [[ $i == "proxysql-ip:"* ]] ; then
         PROXYSQL_NODE=$(get_version "$i")
@@ -1304,6 +1317,11 @@ pre_deploy_hook() {
     ETCD_NODE=$(echo "$i" | perl -ne '/ETCD_IP=(\S*) / and print $1')
     ETCD_IP=$(find_node_ip $ETCD_NODE)
     i=$(echo "$i"|sed -e "s/ETCD_IP=$ETCD_NODE/ETCD_IP=$ETCD_IP/g")
+  fi
+  if echo "$i" | grep -q BACKEND_IP ; then
+    BACKEND_NODE=$(echo "$i" | perl -ne '/BACKEND_IP=(\S*) / and print $1')
+    BACKEND_IP=$(find_node_ip $BACKEND_NODE)
+    i=$(echo "$i"|sed -e "s/BACKEND_IP=$BACKEND_NODE/BACKEND_IP=$BACKEND_IP/g")
   fi
   if echo "$i" | grep -q PROXYSQL_IP ; then
     PROXYSQL_NODE=$(echo "$i" | perl -ne '/PROXYSQL_IP=(\S*) / and print $1')

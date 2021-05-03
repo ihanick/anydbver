@@ -541,7 +541,7 @@ el7:
   pgpool:
     systemd_service: pgpool
     install_packages:
-      - "https://www.pgpool.net/yum/rpms/{{ pgpool_version | regex_replace('^([0-9]+\\.[0-9]+)\\..*$','\\1') }}/redhat/rhel-7-x86_64/pgpool-II-pg{{ percona_postgresql_version | regex_replace('\\..*$','') }}-{{pgpool_version}}pgdg.rhel7.x86_64.rpm"
+      - "https://www.pgpool.net/yum/rpms/{{ pgpool_version | regex_replace('^([0-9]+\\.[0-9]+)\\..*$','\\1') }}/redhat/rhel-7-x86_64/pgpool-II-pg{{ percona_postgresql_version | regex_replace('\\..*$','') if percona_postgresql_version != '' else postgresql_version | regex_replace('\\..*$','') }}-{{pgpool_version}}pgdg.rhel7.x86_64.rpm"
 
   ldap_server:
     systemd_service: slapd
