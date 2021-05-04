@@ -585,6 +585,9 @@ EOF
 4.2.1-1
 4.2.2-1
 EOF
+  cat > .version-info/odyssey.el8.txt <<EOF
+1.1
+EOF
   cat > .version-info/sysbench.el7.txt <<EOF
 1.0.20-6
 EOF
@@ -821,6 +824,10 @@ deploy_node() {
     if [[ $i == "pgpool" ]] || [[ $i == "pgpool:"* ]] ; then
       search_for_latest_version pgpool "$i"
       DEP_ENV="$DEP_ENV PGPOOL=$VER"
+    fi
+    if [[ $i == "odyssey" ]] || [[ $i == "odyssey:"* ]] ; then
+      search_for_latest_version odyssey "$i"
+      DEP_ENV="$DEP_ENV ODYSSEY=$VER"
     fi
     if [[ $i == "xtrabackup" ]] || [[ $i == "xtrabackup:"* ]] || [[ $i == "percona-xtrabackup" ]] || [[ $i == "percona-xtrabackup:"* ]] || [[ $i == "pxb" ]] || [[ $i == "pxb:"* ]] ; then
       search_for_latest_version xtrabackup "$i"
