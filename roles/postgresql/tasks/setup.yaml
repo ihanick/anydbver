@@ -98,6 +98,12 @@
       sudo -u postgres createuser "{{db_user}}";
       sudo -u postgres psql -c 'grant all on database postgres to {{db_user}}';
 
+- name: Postgres Samba Active Directory
+  when: samba_ip != '' and samba_pass != '' and samba_sid != '' and (postgresql_version != '' or percona_postgresql_version != '')
+  shell:
+    cmd: /bin/bash /vagrant/tools/setup_samba_ldap_client.sh "{{samba_ip}}" "{{samba_pass}}" "{{samba_sid}}" pg "{{ os[dist][soft].cnf_file }}" "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
+
+
 - name: Setup Odyssey
   when: odyssey_version != '' and master_ip != ''
   shell:

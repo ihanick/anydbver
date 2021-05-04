@@ -79,6 +79,12 @@ EOF
   systemctl restart $MYSQL_SERVICE
 fi
 
+if [ "x$SRV_TYPE" = "xpg" ] ; then
+  sudo -u postgres createuser nihalainen
+  sudo -u postgres psql -c 'grant all on database postgres to nihalainen'
+fi
+
+
 cat << EOF >> /etc/openldap/ldap.conf
 TLS_REQCERT allow
 EOF
