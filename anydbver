@@ -1089,6 +1089,9 @@ deploy_node() {
     if [[ $i == "backup" ]] ; then
       FEATURES+=( backup )
     fi
+    if [[ $i == "pxc57" ]] ; then
+      FEATURES+=( pxc57 )
+    fi
     if [[ $i == "gtid" ]] ; then
       FEATURES+=( gtid )
     fi
