@@ -1,0 +1,26 @@
+---
+# tasks file for docker
+- name: Install yum utils
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux'
+  yum:
+    name: yum-utils
+    disable_gpg_check: yes
+    state: present
+
+- name: Install Docker yum repository
+  when: >
+    (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  shell:
+    cmd: "yum-config-manager -y --add-repo https://download.docker.com/linux/centos/docker-ce.repo"
+- name: Install yum utils
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux'
+  yum:
+    name: docker-ce,docker-ce-cli,containerd.io
+    disable_gpg_check: yes
+    state: present
+
+- name: start dockerd
+  systemd:
+    name: docker
+    state: started
+    enabled: True

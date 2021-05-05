@@ -59,6 +59,7 @@
     proxysql_version: "{{ lookup('vars', 'extra_proxysql_version', default=lookup('env','PROXYSQL',default='') ) }}"
     percona_proxysql_version: "{{ lookup('vars', 'extra_percona_proxysql_version', default=lookup('env','PERCONA_PROXYSQL',default='') ) }}"
     perf: "{{ lookup('vars', 'extra_perf', default=lookup('env','PERF',default='') ) }}"
+    docker: "{{ lookup('vars', 'extra_docker', default=lookup('env','DOCKER',default='') ) }}"
     haproxy_pg: "{{ lookup('vars', 'extra_haproxy_pg', default=lookup('env','HAPROXY_PG',default='') ) }}"
     haproxy_galera: "{{ lookup('vars', 'extra_haproxy_galera', default=lookup('env','HAPROXY_GALERA',default='') ) }}"
     mariadb_version: "{{ lookup('vars', 'extra_mariadb_version', default=lookup('env','MARIADB',default='') ) }}"
@@ -157,6 +158,11 @@
     - name: sync configs and tools
       #      when: (not vagrant_dir_mounted.stat.exists) or sync_is_required != ''
       include_tasks: common/tasks/copy_files.yaml
+
+    - name: Docker Role
+      when: docker != ''
+      include_role:
+        name: docker
 
     - name: MariaDB Role
       when: mariadb_version != ''

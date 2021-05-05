@@ -128,6 +128,7 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy pxc node1 pxc galera-master:default node2 pxc galera-master:default node3 proxysql galera-master:default"
     echo "$0 deploy pmm node1 ps:5.7 pmm-client pmm-server:default"
     echo "$0 deploy pmm:1.17.4 node1 ps:5.7 pmm-client:1.17.4 pmm-server:default"
+    echo "$0 deploy docker"
     echo "$0 deploy mongo help"
     echo "$0 deploy psmdb help"
     exit 0
@@ -845,6 +846,9 @@ deploy_node() {
     if [[ $i == "haproxy" ]] ; then
       DEP_ENV="$DEP_ENV HAPROXY=1"
     fi
+    if [[ $i == "docker" ]] ; then
+      DEP_ENV="$DEP_ENV DOCKER=1"
+    fi
     if [[ $i == "perf" ]] ; then
       DEP_ENV="$DEP_ENV PERF=1"
     fi
@@ -1550,7 +1554,7 @@ if [ "x$1" = "xdeploy" ] ; then
     if [ $? != 0 ] ; then
       exit 1
     fi
-    echo "$DEPCMD"|egrep -q 'PMM_SERVER|K8S|K3S|PKO|SAMBA_AD|PERF' && PRIV_CONTAINER_REQUIRED=1
+    echo "$DEPCMD"|egrep -q 'PMM_SERVER|K8S|K3S|PKO|SAMBA_AD|PERF|DOCKER' && PRIV_CONTAINER_REQUIRED=1
     if [[ "$DEPCMD" == *"HOSTNAME="* ]] ; then
       HOSTNAMES_CMD="$HOSTNAMES_CMD --hostname $NODE="$(echo "$DEPCMD"| sed -re 's/^.*HOSTNAME=([^ ]+) .*/\1/')
     fi

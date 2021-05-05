@@ -104,6 +104,7 @@ Deploy:
 ./anydbver deploy pxc node1 pxc galera-master:default node2 pxc galera-master:default node3 proxysql galera-master:default
 ./anydbver deploy pmm node1 ps:5.7 pmm-client pmm-server:default
 ./anydbver deploy pmm:1.17.4 node1 ps:5.7 pmm-client:1.17.4 pmm-server:default
+./anydbver deploy docker
 ./anydbver deploy mongo help
 ./anydbver deploy psmdb help
 ```
@@ -287,6 +288,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `clustercheck`
 * `configsrv`
 * `development`, short devel
+* `docker`, installs Docker
 * `etcd-ip`
 * `galera-master`
 * `garbd`
@@ -318,6 +320,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `mysql-jdbc`
 * `mysql-router`
 * `mysql`
+* `odyssey`, Installs Yandex Odyssey
 * `oltp_read_write`
 * `orchestrator`
 * `parallel` apply ansible configuration in parallel for this and previous nodes (unstable)
@@ -344,8 +347,9 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `samba-dc`, required parameter - samba server name
 * `shardsrv`
 * `sysbench-pg`, required parameter - Postgresql server node name to benchmark.
-* `sysbench`
+* `sysbench`, installs sysbench package
 * `utf8mb3`, short `utf8`
 * `vault-server`, required parameter hashicorp vault server node name.
 * `vault`
 * `virtual-machine`, use KVM virtual machine
+* `wal-g`, installs WAL-g
