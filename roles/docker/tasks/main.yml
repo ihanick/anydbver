@@ -24,3 +24,8 @@
     name: docker
     state: started
     enabled: True
+
+- name: Setup local Docker registry
+  when: docker_registry != '' and server_hostname != ''
+  shell:
+    cmd: bash /vagrant/tools/setup_docker_registry.sh "{{ server_hostname }}"

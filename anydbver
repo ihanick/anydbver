@@ -129,6 +129,7 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy pmm node1 ps:5.7 pmm-client pmm-server:default"
     echo "$0 deploy pmm:1.17.4 node1 ps:5.7 pmm-client:1.17.4 pmm-server:default"
     echo "$0 deploy docker"
+    echo "$0 deploy docker docker-registry hn:registry.percona.local"
     echo "$0 deploy mongo help"
     echo "$0 deploy psmdb help"
     exit 0
@@ -848,6 +849,9 @@ deploy_node() {
     fi
     if [[ $i == "docker" ]] ; then
       DEP_ENV="$DEP_ENV DOCKER=1"
+    fi
+    if [[ $i == "docker-registry" ]] ; then
+      DEP_ENV="$DEP_ENV DOCKER_REGISTRY=1"
     fi
     if [[ $i == "perf" ]] ; then
       DEP_ENV="$DEP_ENV PERF=1"

@@ -105,6 +105,7 @@ Deploy:
 ./anydbver deploy pmm node1 ps:5.7 pmm-client pmm-server:default
 ./anydbver deploy pmm:1.17.4 node1 ps:5.7 pmm-client:1.17.4 pmm-server:default
 ./anydbver deploy docker
+./anydbver deploy docker docker-registry hn:registry.percona.local
 ./anydbver deploy mongo help
 ./anydbver deploy psmdb help
 ```
@@ -289,6 +290,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `configsrv`
 * `development`, short devel
 * `docker`, installs Docker
+* `docker-registry`, configures load Docker registry
 * `etcd-ip`
 * `galera-master`
 * `garbd`

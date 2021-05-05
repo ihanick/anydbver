@@ -60,6 +60,8 @@
     percona_proxysql_version: "{{ lookup('vars', 'extra_percona_proxysql_version', default=lookup('env','PERCONA_PROXYSQL',default='') ) }}"
     perf: "{{ lookup('vars', 'extra_perf', default=lookup('env','PERF',default='') ) }}"
     docker: "{{ lookup('vars', 'extra_docker', default=lookup('env','DOCKER',default='') ) }}"
+    docker_registry: "{{ lookup('vars', 'extra_docker_registry', default=lookup('env','DOCKER_REGISTRY',default='') ) }}"
+    server_hostname: "{{ lookup('vars', 'extra_server_hostname', default=lookup('env','HOSTNAME',default='') ) }}"
     haproxy_pg: "{{ lookup('vars', 'extra_haproxy_pg', default=lookup('env','HAPROXY_PG',default='') ) }}"
     haproxy_galera: "{{ lookup('vars', 'extra_haproxy_galera', default=lookup('env','HAPROXY_GALERA',default='') ) }}"
     mariadb_version: "{{ lookup('vars', 'extra_mariadb_version', default=lookup('env','MARIADB',default='') ) }}"
