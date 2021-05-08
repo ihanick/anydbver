@@ -32,6 +32,7 @@ Deploy:
 ./anydbver deploy ps:5.7 mydumper
 ./anydbver deploy ps:8.0.22 xtrabackup
 ./anydbver deploy ps:5.7 perf devel
+./anydbver deploy ps node1 sysbench sysbench-mysql:default oltp_read_write
 ./anydbver deploy hn:vault.percona.local vault node1 ps:8.0 vault-server:vault.percona.local
 ./anydbver deploy ps:5.7 percona-toolkit
 ./anydbver deploy ps:8.0.22 hn:ps0 node1 ps:8.0.22 hn:ps1 node2 ps:8.0.22 hn:ps2 master:ps0 node2 ps:8.0.22 master:ps1 channel:ps1ch
@@ -69,6 +70,7 @@ Deploy:
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-mongo
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pxc
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pmm k8s-pxc backup
+./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pxc backup pxc57
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg
 ./anydbver deploy pg:12.3
 ./anydbver deploy pg:12.3 node1 pg:12.3 master:default
@@ -343,13 +345,15 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `proxysql-ip`
 * `proxysql`
 * `psmdb`, `mongo`
+* `pxc57`, Use Percona XtraDB Cluster 5.7 with Kubernetes
 * `rbr`, alias `row`, `row-based-replication`
 * `replica-set`
-* `samba-ad`, short `samba`
+* `samba-ad`, short `samba`, install Samba with Active Directory support
 * `samba-dc`, required parameter - samba server name
-* `shardsrv`
-* `sysbench-pg`, required parameter - Postgresql server node name to benchmark.
+* `shardsrv`, mark MongoDB server as shard data node
 * `sysbench`, installs sysbench package
+* `sysbench-mysql`, required parameter - MySQL server node name to benchmark.
+* `sysbench-pg`, required parameter - Postgresql server node name to benchmark.
 * `utf8mb3`, short `utf8`
 * `vault-server`, required parameter hashicorp vault server node name.
 * `vault`

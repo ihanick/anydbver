@@ -60,7 +60,7 @@
       /usr/local/bin/yq merge -x /root/{{ percona_k8s_op_name }}/deploy/cr.yaml /vagrant/configs/k8s/cr-mysql-pxc57.yaml
       > /root/{{ percona_k8s_op_name }}/deploy/cr-pxc57.yaml;
       mv /root/{{ percona_k8s_op_name }}/deploy/cr-pxc57.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
-      sed -i -e 's/1\.4\.0/{{percona_k8s_op_pxc_version}}/g' /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
+      sed -i -e 's,percona-xtradb-cluster-operator:1.4.0-pxc5.7,percona-xtradb-cluster:5.7.33-31.49,' -e 's/1\.4\.0/{{percona_k8s_op_pxc_version}}/g' -e 's/SmartUpdate/RollingUpdate/' /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
       touch /root/{{ percona_k8s_op_name }}-k8s.pxc57.applied
     creates: /root/{{ percona_k8s_op_name }}-k8s.pxc57.applied
 - name: Prepare cr.yaml file for Percona K8S operators (backup)

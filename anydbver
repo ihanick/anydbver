@@ -78,6 +78,7 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy ps:5.7 mydumper"
     echo "$0 deploy ps:8.0.22 xtrabackup"
     echo "$0 deploy ps:5.7 perf devel"
+    echo "$0 deploy ps node1 sysbench sysbench-mysql:default oltp_read_write"
     echo "$0 deploy hn:vault.percona.local vault node1 ps:8.0 vault-server:vault.percona.local"
     echo "$0 deploy ps:5.7 percona-toolkit"
     echo "$0 deploy ps:8.0.22 hn:ps0 node1 ps:8.0.22 hn:ps1 node2 ps:8.0.22 hn:ps2 master:ps0 node2 ps:8.0.22 master:ps1 channel:ps1ch"
@@ -105,6 +106,7 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-mongo"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pxc"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pmm k8s-pxc backup"
+    echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pxc backup pxc57"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg"
     echo "$0 deploy pg:12.3"
     echo "$0 deploy pg:12.3 node1 pg:12.3 master:default"
@@ -1159,6 +1161,14 @@ deploy_node() {
       fi
       DEP_ENV="$DEP_ENV SYSBENCH_PG=$SYSBENCH_PG"
     fi
+    if [[ $i == "sysbench-mysql" ]] || [[ $i == "sysbench-mysql:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        SYSBENCH_MYSQL=$(get_version "$i")
+      else
+        SYSBENCH_MYSQL=default
+      fi
+      DEP_ENV="$DEP_ENV SYSBENCH_MYSQL=$SYSBENCH_MYSQL"
+    fi
 
     if [[ $i == "ldap" ]] || [[ $i == "ldap-server"* ]] ; then
       DEP_ENV="$DEP_ENV LDAP_SERVER=1 DB_USER=dba DB_PASS=secret"
@@ -1340,6 +1350,11 @@ pre_deploy_hook() {
     SYSBENCH_NODE=$(echo "$i" | perl -ne '/SYSBENCH_PG=(\S*) / and print $1')
     SYSBENCH_PG=$(find_node_ip $SYSBENCH_NODE)
     i=$(echo "$i"|sed -e "s/SYSBENCH_PG=$SYSBENCH_NODE/SYSBENCH_PG=$SYSBENCH_PG/g")
+  fi
+  if echo "$i" | grep -q SYSBENCH_MYSQL ; then
+    SYSBENCH_NODE=$(echo "$i" | perl -ne '/SYSBENCH_MYSQL=(\S*) / and print $1')
+    SYSBENCH_MYSQL=$(find_node_ip $SYSBENCH_NODE)
+    i=$(echo "$i"|sed -e "s/SYSBENCH_MYSQL=$SYSBENCH_NODE/SYSBENCH_MYSQL=$SYSBENCH_MYSQL/g")
   fi
   if echo "$i" | grep -q ETCD_IP ; then
     ETCD_NODE=$(echo "$i" | perl -ne '/ETCD_IP=(\S*) / and print $1')
