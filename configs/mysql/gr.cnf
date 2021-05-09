@@ -10,3 +10,6 @@ log-slave-updates
 transaction_write_set_extraction=XXHASH64
 master_info_repository=TABLE
 relay_log_info_repository=TABLE
+binlog_transaction_dependency_tracking=WRITESET
+slave_parallel_type=LOGICAL_CLOCK
+slave_preserve_commit_order=ON
