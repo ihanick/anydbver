@@ -34,7 +34,8 @@
     db_features: "{{ lookup('vars', 'extra_db_features', default=lookup('env','DB_FEATURES',default='') ) }}"
     percona_k8s_op_pxc_version: "{{ lookup('vars', 'extra_percona_k8s_op_pxc_version', default=lookup('env','PKO4PXC',default='') ) }}"
     percona_k8s_op_psmdb_version: "{{ lookup('vars', 'extra_percona_k8s_op_psmdb_version', default=lookup('env','PKO4PSMDB',default='') ) }}"
-    zalando_pg_op_version: "{{ lookup('vars', 'extra_zalando_pg_op_version', default=lookup('env','K8S_PG',default='') ) }}"
+    percona_pg_op_version: "{{ lookup('vars', 'extra_percona_pg_op_version', default=lookup('env','K8S_PG',default='') ) }}"
+    zalando_pg_op_version: "{{ lookup('vars', 'extra_zalando_pg_op_version', default=lookup('env','K8S_PG_ZALANDO',default='') ) }}"
     start_db: "{{ lookup('vars', 'extra_start_db', default=lookup('env','START',default='') ) }}"
     db_opts_file: "{{ lookup('vars', 'extra_db_opts_file', default=lookup('env','DB_OPTS',default='') ) }}"
     k3s_token: "{{ lookup('vars', 'extra_k3s_token', default=lookup('env','K3S_TOKEN',default='') ) }}"
@@ -247,7 +248,7 @@
         name: mysql
 
     - name: Kubernetes Role
-      when: zalando_pg_op_version != '' or percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or k3s_url != '' or k3s_version != '' or kube_config != ''
+      when: percona_pg_op_version != '' or zalando_pg_op_version != '' or percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or k3s_url != '' or k3s_version != '' or kube_config != ''
       include_role:
         name: kubernetes
 

@@ -72,6 +72,7 @@ Deploy:
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pmm k8s-pxc backup
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pxc backup pxc57
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg
+./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg-zalando
 ./anydbver deploy pg:12.3
 ./anydbver deploy pg:12.3 node1 pg:12.3 master:default
 ./anydbver deploy pg node1 pg master:default default pg pgpool backend-ip:default
@@ -307,7 +308,8 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `k3s`, `k8s`, `kubernetes`
 * `k8s-minio`
 * `k8s-mongo`
-* `k8s-pg`
+* `k8s-pg`, Percona Postgresql Operator
+* `k8s-pg-zalando`, Zalando Postgresql Operator
 * `k8s-pmm`
 * `k8s-pxc`
 * `kube-config`

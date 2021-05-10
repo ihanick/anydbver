@@ -2,7 +2,7 @@
 # tasks file for kubernetes
 - name: Install k3s, kubernetes distribution
   include_tasks: kubernetes_install.yaml
-  when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or zalando_pg_op_version != '' or (k3s_url != '' and k3s_token != '') or k3s_version != '') and kube_config == ''
+  when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or zalando_pg_op_version != '' or percona_pg_op_version != '' or (k3s_url != '' and k3s_token != '') or k3s_version != '') and kube_config == ''
 
 - name: helm tasks
   when: k3s_url == ''
@@ -32,7 +32,7 @@
 
 
 - name: Install git for Percona Operator setup
-  when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != "" or zalando_pg_op_version != ""
+  when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != "" or zalando_pg_op_version != "" or percona_pg_op_version != ''
   package:
     name: git
     state: present
