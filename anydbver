@@ -342,9 +342,9 @@ refresh_percona_server_version_info() {
   for i in $(curl -sL https://archive.mariadb.org/|grep -F mariadb-10.|sed -re 's,^.*href="mariadb-(10\.[0-9]+\.[0-9]+)/.*$,\1,'|grep -v '[a-zA-Z]') ; do echo https://archive.mariadb.org/mariadb-$i/yum/centos7-amd64/rpms/ ; done|xargs curl -sL |sort -u > .version-info/mariadb-pkg.list.txt
   perl -ne '/MariaDB-server-(\d[^"]*).el7.centos.x86_64.rpm/ and print "$1\n"' .version-info/mariadb-pkg.list.txt|sort -n -t . -k1,1 -k2,2 -k3,3|uniq > .version-info/mariadb.el7.txt
   rm -f .version-info/mariadb-pkg.list.txt
-  for ver in $(grep 10.[3-5] .version-info/mariadb.el7.txt) ; do
+  for ver in $(grep 10.[3-6] .version-info/mariadb.el7.txt) ; do
     short_ver=$(echo $ver|sed -re 's/-[0-9]+$//')
-    for galera_ver in $( curl -sL https://archive.mariadb.org/mariadb-$short_ver/yum/centos7-amd64/rpms/ |grep galera|sed -re 's/^.*<a href="galera-([0-9]+-)?([^>]+)\.el7\.centos\.x86_64\.rpm" title=.*$/\2/' | egrep -v '[a-zA-Z]' ) ; do
+    for galera_ver in $( curl -sL https://archive.mariadb.org/mariadb-$short_ver/yum/centos7-amd64/rpms/ |grep galera|perl -pe 's/^.*<a href="galera-([0-9]+-)?([^>]+)\.rhel7\.el7\.centos\.x86_64\.rpm" title=.*$/\2/;s/^.*<a href="galera-([0-9]+-)?([^>]+)\.el7\.centos\.x86_64\.rpm" title=.*$/\2/' | egrep -v '[a-zA-Z]' ) ; do
       echo -n "$ver "
       echo $galera_ver
     done

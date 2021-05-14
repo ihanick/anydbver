@@ -29,7 +29,7 @@
     url: https://mariadb.org/mariadb_release_signing_key.asc
     state: present
 
-- name: Add MariaDB Apt repo (PGDG)
+- name: Add MariaDB Apt repo
   when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and mariadb_version != ''
   lineinfile:
     create: yes
