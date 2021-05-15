@@ -320,6 +320,10 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
   done
   echo "$i ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ${NAMESPACE}ansible_hosts
 
+  if [ "x$i" = "x${USER}.default" ] ; then
+    echo "${USER}.node0 ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ${NAMESPACE}ansible_hosts
+  fi
+
   if [ "x${HOSTNAMES[$i]}" != "x" ] ; then
     lxc exec $c -- hostnamectl set-hostname "${HOSTNAMES[$i]}"
   fi
