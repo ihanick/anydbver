@@ -3,7 +3,7 @@
   replace:
     path: /etc/systemd/system/k3s.service
     regexp: '/usr/local/bin/k3s server$'
-    replace: '/usr/local/bin/k3s server --no-deploy traefik --flannel-backend={{k3s_flannel_backend}}'
+    replace: "/usr/local/bin/k3s server --no-deploy traefik --flannel-backend={{k3s_flannel_backend if k3s_flannel_backend != '' else 'host-gw'}}"
 - name: Adapt k3s.service for non-master node
   when: k3s_token != "" and k3s_url != ""
   block:
