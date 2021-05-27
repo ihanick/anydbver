@@ -69,6 +69,7 @@ Deploy:
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-mongo
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-mongo
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pxc
+./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default cert-manager k8s-pxc
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pmm k8s-pxc backup
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pxc backup pxc57
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg
@@ -287,6 +288,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `backup`
 * `backend-ip`, Postgresql Primary IP for PGPool II setup
 * `cache`, required to add cache image name: `cache:ps-5.7.31` . After first run save container as an image. For next anydbver executions use image do not run ansible
+* `cert-manager`, `certmanager`, Install Cert Manager before installing operators
 * `channel`, mysql replication channel
 * `cluster`
 * `clustercheck`

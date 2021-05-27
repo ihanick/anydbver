@@ -9,7 +9,7 @@
   include_tasks: helm_install.yaml
 
 - name: Install kubectl
-  when: (k3s_url == '' and k3s_version != '') or kube_config != ''
+  when: kube_config != ''
   block:
     - file: path=/root/.kube state=directory mode='0755'
     - copy:

@@ -43,6 +43,7 @@
     k3s_version: "{{ lookup('vars', 'extra_k3s_version', default=lookup('env','K3S',default='') ) }}"
     k8s_pmm: "{{ lookup('vars', 'extra_k8s_pmm', default=lookup('env','K8S_PMM',default='') ) }}"
     k8s_minio: "{{ lookup('vars', 'extra_k8s_minio', default=lookup('env','K8S_MINIO',default='') ) }}"
+    cert_manager: "{{ lookup('vars', 'extra_cert_manager', default=lookup('env','CERT_MANAGER',default='') ) }}"
     k3s_flannel_backend: "{{ lookup('vars', 'extra_k3s_flannel_backend', default=lookup('env','K3S_FLANNEL_BACKEND',default='vxlan') ) }}"
     kube_config: "{{ lookup('vars', 'extra_kube_config', default=lookup('env','KUBE_CONFIG',default='') ) }}"
     master_ip: "{{ lookup('vars', 'extra_master_ip', default=lookup('env','DB_IP',default='') ) }}"

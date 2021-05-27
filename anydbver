@@ -105,6 +105,7 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-mongo"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-mongo"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pxc"
+    echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default cert-manager k8s-pxc"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pmm k8s-pxc backup"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pxc backup pxc57"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg"
@@ -982,6 +983,9 @@ deploy_node() {
     if [[ $i == "k8s-minio" ]] ; then
         DEP_ENV="$DEP_ENV K8S_MINIO=yes"
     fi
+    if [[ $i == "cert-manager" ]] || [[ $i == "certmanager" ]] ; then
+        DEP_ENV="$DEP_ENV CERT_MANAGER=yes"
+    fi
     if [[ $i == "k8s-pmm" ]] || [[ $i == "k8s-pmm:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
@@ -1341,7 +1345,7 @@ find_node_token() {
       ;;
     lxd)
       MASTER_IP=$(find_node_ip $NODE)
-      ssh -i secret/id_rsa root@$MASTER_IP -o StrictHostKeyChecking=no cat /var/lib/rancher/k3s/server/node-token
+      ./anydbver ssh $NODE cat /var/lib/rancher/k3s/server/node-token
       ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
@@ -1575,7 +1579,7 @@ if [ "x$1" = "xdeploy" ] ; then
     NODE_OS=$2
     shift 2
   fi
-  if [[ "$1" == default || "$1" == node0 ]] ; then
+  if [[ "$1" == default ]] || [[ "$1" == node0 ]] ; then
     shift
   fi
 
@@ -1609,7 +1613,10 @@ if [ "x$1" = "xdeploy" ] ; then
 
     DEPLOY_CMDS+=("$DEPCMD")
     ALL_NODES[$NODE]=1
-    if [[ "$1" == node* || "$1" == default ]] ; then
+    if [[ "$1" == default ]] || [[ "$1" == node0 ]] ; then
+      NODE=default
+      shift
+    elif [[ "$1" == node* ]] ; then
       NODE="$1"
       shift
     fi

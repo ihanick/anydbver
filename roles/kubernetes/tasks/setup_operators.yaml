@@ -1,3 +1,8 @@
+- name: Install cert manager
+  when: cert_manager != ""
+  shell:
+    cmd: kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+
 - name: Install operator
   when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != ""
   shell:
