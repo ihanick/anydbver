@@ -112,3 +112,31 @@ After making an image you can omit all keywords in deployment except for cache:n
 ```
 
 * Currently mysql/Percona Server/Percona Server for MongoDB/MariaDB/Postgres/Patroni/PMM/Samba/k3s support install keyword
+
+* Kubernetes example:
+
+6m32.907s cached:
+```
+./anydbver deploy cache:k3s-master install k3s node1 cache:k3s-worker install k3s-master:default
+./anydbver deploy \
+  node0 cache:k3s-master \
+  node1 cache:k3s-worker \
+  node2 cache:k3s-worker \
+  node3 cache:k3s-worker \
+  node0 k3s \
+  node1 k3s-master:node0 \
+  node2 k3s-master:node0 \
+  node3 k3s-master:node0 \
+  node0 k8s-pxc
+```
+
+10m3.539s without cache:
+```
+./anydbver deploy \
+  node0 k3s \
+  node1 k3s-master:node0 \
+  node2 k3s-master:node0 \
+  node3 k3s-master:node0 \
+  node0 k8s-pxc
+```
+Both k3s-master and k3s-worker caches could be used for all operators, not only for Percona Operator for PXC.
