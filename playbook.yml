@@ -70,6 +70,14 @@
     galera:  "{{ lookup('vars', 'extra_galera', default=lookup('env','GALERA',default='') ) }}"
     mysql_version: "{{ lookup('vars', 'extra_mysql_version', default=lookup('env','MYSQL',default='') ) }}"
     mysql_router_version: "{{ lookup('vars', 'extra_mysql_router_version', default=lookup('env','MYSQL_ROUTER',default='') ) }}"
+    mysql_ndb_data_version: "{{ lookup('vars', 'extra_mysql_ndb_data_version', default=lookup('env','MYSQL_NDB_DATA',default='') ) }}"
+    mysql_ndb_sql_version: "{{ lookup('vars', 'extra_mysql_ndb_sql_version', default=lookup('env','MYSQL_NDB_SQL',default='') ) }}"
+    mysql_ndb_management_version: "{{ lookup('vars', 'extra_mysql_ndb_management_version', default=lookup('env','MYSQL_NDB_MANAGEMENT',default='') ) }}"
+    mysql_ndb_version: "{{ mysql_ndb_data_version if mysql_ndb_data_version != '' else mysql_ndb_sql_version if mysql_ndb_sql_version != '' else mysql_ndb_management_version }}"
+    mysql_ndb_management_nodes: "{{ lookup('vars', 'extra_mysql_ndb_management_nodes', default=lookup('env','NDB_MGMT_NODES',default='') ) }}"
+    mysql_ndb_data_nodes: "{{ lookup('vars', 'extra_mysql_ndb_data_nodes', default=lookup('env','NDB_DATA_NODES',default='') ) }}"
+    mysql_ndb_sql_nodes: "{{ lookup('vars', 'extra_mysql_ndb_sql_nodes', default=lookup('env','NDB_SQL_NODES',default='') ) }}"
+
     orchestrator_version: "{{ lookup('vars', 'extra_orchestrator_version', default=lookup('env','ORCHESTRATOR',default='') ) }}"
     debug_packages: "{{ lookup('vars', 'extra_debug_packages', default=lookup('env','DEBUG_PACKAGES',default='') ) }}"
     sysbench_version: "{{ lookup('vars', 'extra_sysbench_version', default=lookup('env','SYSBENCH',default='') ) }}"
@@ -140,6 +148,7 @@
       'percona_proxysql' if percona_proxysql_version != '' else
       'mariadb_server' if mariadb_version != '' else
       'mysql' if mysql_version != '' else
+      'mysql_ndb' if mysql_ndb_data_version != '' or mysql_ndb_sql_version != '' or mysql_ndb_management_version != ''  else
       'mysql_router' if mysql_router_version != '' else
       'orchestrator' if orchestrator_version != '' else
       'ldap_server' if ldap_server != '' else
@@ -237,6 +246,9 @@
         percona_xtradb_cluster_version != "" or
         percona_xtrabackup_version != "" or
         mysql_router_version != "" or
+        mysql_ndb_data_version != "" or
+        mysql_ndb_sql_version != "" or
+        mysql_ndb_management_version != "" or
         innodb_ruby_version != '' or
         mydumper_version != '' or
         mysql_connector_java_version != '' or

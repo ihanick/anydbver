@@ -84,6 +84,7 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy ps:8.0.22 hn:ps0 node1 ps:8.0.22 hn:ps1 node2 ps:8.0.22 hn:ps2 master:ps0 node2 ps:8.0.22 master:ps1 channel:ps1ch"
     echo "$0 deploy mysql"
     echo -e $0' deploy \\\n  hn:mysql_rs0_gr0 mysql:8.0.18 group-replication \\\n  node1 hn:mysql_rs0_gr1 mysql:8.0.18 group-replication master:default \\\n  node2 hn:mysql_rs0_gr2 mysql:8.0.18 group-replication master:default \\\n  node3 hn:mysql_rs0_router mysql-router:8.0.18 master:default'
+    echo -e $0' deploy \\\n  node0 mysql-ndb-management ndb-data-nodes:node1,node2 ndb-sql-nodes:node3 ndb-connectstring:node0 hn:mgm \\\n  node1 mysql-ndb-data ndb-connectstring:node0 hn:data1 \\\n  node2 mysql-ndb-data ndb-connectstring:node0 hn:data2 \\\n  node3 mysql-ndb-sql ndb-connectstring:node0 hn:sql'
     echo "$0 deploy mariadb:10.4"
     echo "$0 deploy maria:10.4"
     echo "$0 deploy mariadb node1 mariadb master:default"
@@ -386,6 +387,16 @@ refresh_percona_server_version_info() {
   grep debian9 .version-info/mysql-debian-versions.txt|sed -re 's,^.*A HREF="mysql-server_([^"]+)debian.*$,\1,' | egrep -v 'rc|dmr' > .version-info/mysql.stretch.txt
   grep debian10 .version-info/mysql-debian-versions.txt|sed -re 's,^.*A HREF="mysql-server_([^"]+)debian.*$,\1,' | egrep -v 'rc|dmr' > .version-info/mysql.buster.txt
   rm .version-info/mysql-debian-versions.txt
+
+  curl -s \
+    http://repo.mysql.com/yum/mysql-cluster-7.5-community/el/7/x86_64/ \
+    http://repo.mysql.com/yum/mysql-cluster-7.6-community/el/7/x86_64/ \
+    http://repo.mysql.com/yum/mysql-cluster-8.0-community/el/7/x86_64/ \
+    | grep mysql-cluster-community-server | grep -v debuginfo \
+    | sed -re 's/^.*HREF="mysql-cluster-community-server-(.[-.0-9]+).el.*/\1/i' \
+    | sort -t. -k 1,1n -k 2,2n -k 3,3n \
+    > .version-info/mysql_ndb.el7.txt
+
 
 if test -f /usr/bin/which && which jq &>/dev/null ; then
   curl -s 'https://hub.docker.com/v2/repositories/percona/pmm-server/tags/?page_size=10000' \
@@ -824,6 +835,18 @@ deploy_node() {
       search_for_latest_version mysql "$i"
       DEP_ENV="$DEP_ENV MYSQL=$VER"
     fi
+    if [[ $i == "mysql-ndb-sql" ]] || [[ $i == "mysql-ndb-sql:"* ]] ; then
+      search_for_latest_version mysql_ndb "$i"
+      DEP_ENV="$DEP_ENV MYSQL_NDB_SQL=$VER"
+    fi
+    if [[ $i == "mysql-ndb-data" ]] || [[ $i == "mysql-ndb-data:"* ]] ; then
+      search_for_latest_version mysql_ndb "$i"
+      DEP_ENV="$DEP_ENV MYSQL_NDB_DATA=$VER"
+    fi
+    if [[ $i == "mysql-ndb-management" ]] || [[ $i == "mysql-ndb-management:"* ]] ; then
+      search_for_latest_version mysql_ndb "$i"
+      DEP_ENV="$DEP_ENV MYSQL_NDB_MANAGEMENT=$VER"
+    fi
     if [[ $i == "mysql-router" ]] || [[ $i == "mysql-router:"* ]] ; then
       search_for_latest_version mysql "$i"
       DEP_ENV="$DEP_ENV MYSQL_ROUTER=$VER"
@@ -1132,6 +1155,20 @@ deploy_node() {
       DEP_ENV="$DEP_ENV INSTALL_ONLY=1"
     fi
 
+    if [[ $i == "ndb-data-nodes:"* ]] ; then
+      NODES=$(get_version "$i")
+      DEP_ENV="$DEP_ENV NDB_DATA_NODES=$NODES"
+    fi
+    if [[ $i == "ndb-sql-nodes:"* ]] ; then
+      NODES=$(get_version "$i")
+      DEP_ENV="$DEP_ENV NDB_SQL_NODES=$NODES"
+    fi
+    if [[ $i == "ndb-connectstring:"* ]] ; then
+      MGMT_NODES=$(get_version "$i")
+      DEP_ENV="$DEP_ENV NDB_MGMT_NODES=$MGMT_NODES"
+    fi
+
+
     if [[ $i == "configsrv" ]] ; then
       DEP_ENV="$DEP_ENV MONGO_CONFIGSRV=1"
     fi
@@ -1428,6 +1465,40 @@ pre_deploy_hook() {
     done
     HAPROXY_GALERA=$( join_ws , "${HAPROXY_NODES_LIST[@]}" )
     i=$(echo "$i"|sed -e "s|HAPROXY_GALERA=$HAPROXY_NODES|HAPROXY_GALERA=$HAPROXY_GALERA|g")
+  fi
+
+  if echo "$i" | grep -q NDB_MGMT_NODES ; then
+    NDB_NODES_LIST=( )
+    NDB_NODES=$(echo "$i" | perl -ne '/NDB_MGMT_NODES=(\S*) / and print $1')
+    for n in $(echo "$NDB_NODES"|tr , '\n')
+    do
+      n_ip=$(find_node_ip $n)
+      NDB_NODES_LIST+=( ${n_ip} )
+    done
+    NDB_MGMT_NODES=$( join_ws , "${NDB_NODES_LIST[@]}" )
+    i=$(echo "$i"|sed -e "s|NDB_MGMT_NODES=$NDB_NODES|NDB_MGMT_NODES=$NDB_MGMT_NODES|g")
+  fi
+  if echo "$i" | grep -q NDB_SQL_NODES ; then
+    NDB_NODES_LIST=( )
+    NDB_NODES=$(echo "$i" | perl -ne '/NDB_SQL_NODES=(\S*) / and print $1')
+    for n in $(echo "$NDB_NODES"|tr , '\n')
+    do
+      n_ip=$(find_node_ip $n)
+      NDB_NODES_LIST+=( ${n_ip} )
+    done
+    NDB_SQL_NODES=$( join_ws , "${NDB_NODES_LIST[@]}" )
+    i=$(echo "$i"|sed -e "s|NDB_SQL_NODES=$NDB_NODES|NDB_SQL_NODES=$NDB_SQL_NODES|g")
+  fi
+  if echo "$i" | grep -q NDB_DATA_NODES ; then
+    NDB_NODES_LIST=( )
+    NDB_NODES=$(echo "$i" | perl -ne '/NDB_DATA_NODES=(\S*) / and print $1')
+    for n in $(echo "$NDB_NODES"|tr , '\n')
+    do
+      n_ip=$(find_node_ip $n)
+      NDB_NODES_LIST+=( ${n_ip} )
+    done
+    NDB_DATA_NODES=$( join_ws , "${NDB_NODES_LIST[@]}" )
+    i=$(echo "$i"|sed -e "s|NDB_DATA_NODES=$NDB_NODES|NDB_DATA_NODES=$NDB_DATA_NODES|g")
   fi
 
   if echo "$i" | grep -q MONGOS_CFG ; then

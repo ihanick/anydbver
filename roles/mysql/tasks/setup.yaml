@@ -4,7 +4,8 @@
     (
     percona_server_version != '' or
     percona_xtradb_cluster_version != '' or
-    mysql_version != ''
+    mysql_version != '' or
+    mysql_ndb_sql_version != ''
     ) and db_password != '' and
     ('garbd' not in db_features.split(','))
   command:
@@ -72,6 +73,22 @@
       sed -e 's/MySQLTopologyUser":.*/MySQLTopologyUser": "{{ db_user }}",/'
       -e 's/MySQLTopologyPassword":.*/MySQLTopologyPassword": "{{ db_password }}",/'
       /usr/local/orchestrator/orchestrator-sample-sqlite.conf.json > /usr/local/orchestrator/orchestrator.conf.json
+
+- name: Setup NDB management node
+  when: mysql_ndb_management_version != ''
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_ndb_management.sh "{{ mysql_ndb_management_nodes }}" "{{ mysql_ndb_data_nodes }}" "{{ mysql_ndb_sql_nodes }}"
+    creates: /var/lib/mysql-cluster/config.ini
+- name: Setup NDB data node
+  when: mysql_ndb_data_version != ''
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_ndb_data.sh "{{ mysql_ndb_management_nodes }}"
+    creates: /root/ndb.data.configured
+- name: Setup NDB sql node
+  when: mysql_ndb_sql_version != ''
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_ndb_sql.sh "{{ mysql_ndb_management_nodes }}" "{{ os[dist][soft].cnf_file }}"
+    creates: /root/ndb.sql.configured
 
 - name: Start database with systemd
   when: >

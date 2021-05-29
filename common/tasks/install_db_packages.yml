@@ -9,6 +9,7 @@
     proxysql_version != '' or
     kerberos_server != '' or
     percona_proxysql_version != '' or
+    mysql_ndb_data_version != '' or
     pgpool_version != ''
     ) and
     (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
@@ -20,6 +21,7 @@
       ( [] if debug_packages == '' else
         os[dist][soft].install_packages + os[dist][soft].install_debug_packages) +
       ( [] if not ('development' in db_features.split(',') and 'development_packages' in os[dist][soft]) else os[dist][soft].development_packages) +
+      ( [] if not ( mysql_ndb_data_version != '' ) else os[dist][soft].data_packages ) +
       ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else
         os[dist][soft].rocksdb_packages)
     }}
@@ -49,6 +51,9 @@
     percona_xtradb_cluster_version != "" or
     mysql_version != '' or
     mysql_router_version != '' or
+    mysql_ndb_data_version != '' or
+    mysql_ndb_sql_version != '' or
+    mysql_ndb_management_version != '' or
     orchestrator_version != '' or
     proxysql_version != '' or
     ldap_server != '' or
@@ -59,7 +64,7 @@
     ) and
     (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   yum:
-    name: "{{ os[dist][soft].install_packages + ( [] if debug_packages == '' else os[dist][soft].install_debug_packages) + ( [] if replication_type != 'group' or soft == 'proxysql' else os[dist][soft].mysql_shell_packages) + ( [] if not ('development' in db_features.split(',') and 'development_packages' in os[dist][soft]) else os[dist][soft].development_packages) + ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else os[dist][soft].rocksdb_packages) }}"
+    name: "{{ os[dist][soft].install_packages + ( [] if debug_packages == '' else os[dist][soft].install_debug_packages) + ( [] if replication_type != 'group' or soft == 'proxysql' else os[dist][soft].mysql_shell_packages) + ( [] if not ('development' in db_features.split(',') and 'development_packages' in os[dist][soft]) else os[dist][soft].development_packages) + ( [] if not ( mysql_ndb_data_version != '' ) else os[dist][soft].data_packages ) + ( [] if not ( mysql_ndb_sql_version != '' ) else os[dist][soft].sql_packages ) + ( [] if not ( mysql_ndb_management_version != '' ) else os[dist][soft].management_packages ) + ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in os[dist][soft] ) else os[dist][soft].rocksdb_packages) }}"
     state: present
     disable_gpg_check: "{{ 'yes' if os[dist][soft].install_packages[0].startswith('http') else 'no' }}"
 

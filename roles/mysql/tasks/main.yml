@@ -2,7 +2,7 @@
 # tasks file for mysql
 - name: Enable EPEL
   when: >
-    orchestrator_version != '' and
+    (orchestrator_version != '' or mysql_ndb_data_version != '' or mysql_ndb_sql_version != '' or mysql_ndb_management_version != '') and
     (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
   package:
     name: epel-release
@@ -22,7 +22,7 @@
   register: percona_release_enabled
   
 - name: MySQL repo
-  when: mysql_version != '' or mysql_router_version != ''
+  when: mysql_version != '' or mysql_router_version != '' or mysql_ndb_data_version != '' or mysql_ndb_sql_version != '' or mysql_ndb_management_version != ''
   block:
     - name: MySQL 8.0 yum repo
       when: >
@@ -31,6 +31,12 @@
         name: "{{os[dist][soft].repo_url}}"
         disable_gpg_check: yes
         state: present
+    - name: Switch mysql ndb cluster 8.0 repo
+      when: >
+        ( mysql_ndb_data_version.startswith('8.0') or mysql_ndb_sql_version.startswith('8.0') or mysql_ndb_management_version.startswith('8.0') ) and
+        (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+      shell:
+        cmd: "yum-config-manager --disable mysql80-community; yum-config-manager --enable mysql-cluster-8.0-community"
     - name: Switch mysql repo 5.7
       when: >
         mysql_version.startswith('5.7') and
