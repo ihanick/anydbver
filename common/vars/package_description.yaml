@@ -496,7 +496,7 @@ el7:
       - "https://dev.mysql.com/get/Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el7.x86_64.rpm"
   mysql_ndb:
     repo_url: https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm
-    systemd_service: "{{ 'mysqld' if mysql_ndb_sql_version != '' else 'ndbmtd' if mysql_ndb_data_version != '' else 'ndb_mgm' }}"
+    systemd_service: "{{ 'mysqld' if mysql_ndb_sql_version != '' else 'ndbmtd' if mysql_ndb_data_version != '' else 'ndb_mgmd' }}"
     cnf_file: '/etc/my.cnf'
     install_packages:
       - "mysql-cluster-community-common-{{mysql_ndb_version}}.el7.x86_64"

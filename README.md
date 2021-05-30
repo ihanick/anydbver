@@ -328,6 +328,12 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `mysql-jdbc`
 * `mysql-router`
 * `mysql`
+* `mysql-ndb-data`, Install MySQL NDB Cluster data node
+* `mysql-ndb-management`, Install MySQL NDB Cluster management node
+* `mysql-ndb-sql`, Install MySQL NDB Cluster sql node
+* `ndb-connectstring`, List of MySQL NDB Cluster management nodes, comma separated
+* `ndb-data-nodes`, List of MySQL NDB Cluster data nodes, comma separated
+* `ndb-sql-nodes`, List of MySQL NDB Cluster sql nodes, comma separated
 * `odyssey`, Installs Yandex Odyssey
 * `oltp_read_write`
 * `orchestrator`
