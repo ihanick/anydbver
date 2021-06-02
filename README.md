@@ -364,7 +364,8 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `os`, req. OS name see --os, overrides container OS image for the current node
 * `parallel` apply ansible configuration in parallel for this and previous nodes (unstable)
 * `patroni`
-* `percona-backup-mongodb`, short `pbm`
+* `percona-backup-mongodb`, short `pbm`, install PBM
+* `pbm-agent`, setup and start pbm agent and local filesystem for PBM
 * `percona-postgresql`, short `ppg`
 * `percona-proxysql`
 * `percona-server`, short `ps`

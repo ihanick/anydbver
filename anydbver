@@ -64,6 +64,12 @@ $0 deploy \\
   node12  psmdb:4.2.12 mongos-cfg:cfg0/cfg0-0,cfg0-1,cfg0-2 mongos-shard:rs0/rs0-0,rs0-1,rs0-2,rs1/rs1-0,rs1-1,rs1-2,rs2/rs2-0,rs2-1,rs2-2
 $0 deploy mongo pbm
 $0 deploy mongo percona-backup-mongodb
+
+$0 deploy \\
+  --shared-directory \\
+  node0 psmdb replica-set:rs0 pbm pbm-agent \\
+  node1 psmdb master:default replica-set:rs0 pbm pbm-agent \\
+  node2 psmdb master:default replica-set:rs0 pbm pbm-agent
 EOF
 
     exit 0
@@ -1245,6 +1251,10 @@ deploy_node() {
     if [[ $i == "shardsrv" ]] ; then
       DEP_ENV="$DEP_ENV MONGO_SHARDSRV=1"
     fi
+    if [[ $i == "pbm-agent" ]] ; then
+      DEP_ENV="$DEP_ENV PBM_AGENT=1"
+    fi
+
     if [[ $i == "pmm" ]] || [[ $i == "pmm:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")

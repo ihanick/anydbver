@@ -16,6 +16,7 @@
     percona_xtradb_cluster_galera: "{{ lookup('vars', 'extra_percona_xtradb_cluster_galera', default=lookup('env','PXC_GALERA',default='') ) }}"
     psmdb_version: "{{ lookup('vars', 'extra_psmdb_version', default=lookup('env','PSMDB',default='') ) }}"
     pbm_version: "{{ lookup('vars', 'extra_pbm_version', default=lookup('env','PBM',default='') ) }}"
+    pbm_agent: "{{ lookup('vars', 'extra_pbm_agent', default=lookup('env','PBM_AGENT',default='') ) }}"
     pmm_server_version: "{{ lookup('vars', 'extra_pmm_server_version', default=lookup('env','PMM_SERVER',default='') ) }}"
     pmm_client_version: "{{ lookup('vars', 'extra_pmm_client_version', default=lookup('env','PMM_CLIENT',default='') ) }}"
     pmm_url: "{{ lookup('vars', 'extra_pmm_url', default=lookup('env','PMM_URL',default='') ) }}"
@@ -235,7 +236,7 @@
         name: patroni
 
     - name: MongoDB Role
-      when: psmdb_version != '' or pbm_version != ""
+      when: psmdb_version != '' or pbm_version != '' or pbm_agent != ''
       include_role:
         name: mongodb
 
