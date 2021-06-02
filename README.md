@@ -283,11 +283,35 @@ ERROR! Specified hosts and/or --limit does not match any hosts
     node0 <stage 2 installation/setup steps on node0>
 ```
 
+### Global ./anydbver options
+```
+./anydbver --option_name
+```
+
+* `--namespace`, required parameter namespace name, allows to run multiple independent deployment for the same linux user
+
+
+### Global ./anydbver deploy options
+```
+./anydbver deploy --option_name
+```
+
+* `--dry-run`, show ansible commands without actual deploy/servers creation
+* `--os`, required parameter os name (el7,el8,oel7,oel8, focal, bionic), specify OS for every container in a deployment
+  * `el7`, CentOS 7
+  * `el8`, CentOS 8
+  * `oel7`, Oracle Linux 7
+  * `oel8`, Oracle Linux 8
+  * `bionic`, Ubuntu 18.04
+  * `focal`, Ubuntu 20.04
+  * `stretch`, Debian 9
+  * `buster`, Debian 10
+* `--shared-directory`, mount `$PWD/tmp/shared_dir` (LXD containers) as /nfs on each server
 
 ### The full list of parameters
 * `backup`
 * `backend-ip`, Postgresql Primary IP for PGPool II setup
-* `cache`, required to add cache image name: `cache:ps-5.7.31` . After first run save container as an image. For next anydbver executions use image do not run ansible
+* `cache`, required to add cache image name: `cache:ps-5.7.31` . After first run save container as an image. For next anydbver executions use image do not run ansible. You can show existing caches with `./anydbver list-caches`
 * `cert-manager`, `certmanager`, Install Cert Manager before installing operators
 * `channel`, mysql replication channel
 * `cluster`
@@ -337,6 +361,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `odyssey`, Installs Yandex Odyssey
 * `oltp_read_write`
 * `orchestrator`
+* `os`, req. OS name see --os, overrides container OS image for the current node
 * `parallel` apply ansible configuration in parallel for this and previous nodes (unstable)
 * `patroni`
 * `percona-backup-mongodb`, short `pbm`

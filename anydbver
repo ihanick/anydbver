@@ -8,6 +8,7 @@ print_help() {
   echo "$0 update # refresh version information"
   echo "$0 destroy # remove containers and cleanup"
   echo "$0 list # show currently running containers"
+  echo "$0 list-caches # show available caches"
   echo "$0 deploy help"
   echo "$0 add nodeN node_definition # spawn additional node and deploy software on it"
   echo "$0 replace nodeN node_definition # delete existing node, spawn additional and deploy software on it"
@@ -272,6 +273,21 @@ if [ "x$1" = "xlist" ] || [ "x$1" = "xls" ] ; then
   esac
   exit 0
 fi
+if [ "x$1" = "xlist-caches" ] ; then
+  case "$PROVIDER" in
+    podman)
+      exec ./podmanctl list-caches
+      ;;
+    lxd)
+      exec ./lxdctl $NAMESPACE_CMD list-caches
+      ;;
+    *)
+      echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
+      exit 1
+  esac
+  exit 0
+fi
+
 if [ "x$1" = "xdestroy" ] ; then
   shift
   NODE="$1"
@@ -1411,6 +1427,22 @@ if [ "x$1" = "xip" ] ; then
 fi
 
 
+if [ "x$1" = "xmount" ] ; then
+  case "$PROVIDER" in
+    podman)
+      ./podmanctl $NAMESPACE_CMD "$@"
+      ;;
+    lxd)
+      ./lxdctl $NAMESPACE_CMD "$@"
+      ;;
+    *)
+      echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
+      exit 1
+  esac
+  exit 0
+fi
+
+
 find_samba_sid() {
   NODE="$1"
   SAMBA_IP=$(find_node_ip $NODE)
@@ -1684,6 +1716,7 @@ start_node() {
 }
 
 if [ "x$1" = "xdeploy" ] ; then
+  SHARED_DIRECTORY=0
   PRIV_CONTAINER_REQUIRED=0
   HOSTNAMES_CMD=''
   OS_CMD=''
@@ -1704,6 +1737,11 @@ if [ "x$1" = "xdeploy" ] ; then
     NODE_OS=$2
     shift 2
   fi
+  if [[ "$1" == "--shared-directory" ]] ; then
+    SHARED_DIRECTORY=1
+    shift
+  fi
+
   if [[ "$1" == default ]] || [[ "$1" == node0 ]] ; then
     shift
   fi
@@ -1750,6 +1788,22 @@ if [ "x$1" = "xdeploy" ] ; then
   done
 
   start_all_nodes
+
+
+  if [[ $SHARED_DIRECTORY == 1 ]] ; then
+    for i in "${!ALL_NODES[@]}"; do
+      SH_DIR="$PWD/tmp/shared_dir"
+      if ! [ -d "$PWD/tmp/shared_dir" ] ; then
+        mkdir -p "$SH_DIR"
+        chmod ogu+rwX "$SH_DIR"
+      fi
+      if [[ $DRY_RUN == 0 ]] ; then
+        ./anydbver $NAMESPACE_CMD mount "$SH_DIR" $i:/nfs
+      else
+        echo ./anydbver $NAMESPACE_CMD mount "$SH_DIR" $i:/nfs
+      fi
+    done
+  fi
 
   for i in "${DEPLOY_CMDS[@]}"; do
     pre_deploy_hook "$i"

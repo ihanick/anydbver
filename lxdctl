@@ -21,6 +21,14 @@ getip() {
   fi
 }
 
+getcontainer() {
+  NODE="$1"
+  [ "x$NODE" = "xnode0" ] && NODE=default
+  C="$NAMESPACE$(sed -rne '/\<'$NODE'\>/ {s/^([^ ]+)[ ].*$/\1/;p}' ${NAMESPACE}ansible_hosts 2>/dev/null)"
+  CONTAINER=${C//./-}
+}
+
+
 setupOS() {
   if [ "x$1" == "xel8" ] ; then
     IMG="images:centos/8/$ARCH"
@@ -221,6 +229,11 @@ if [ "x$1" = "xlist" ] ; then
   lxc ls ${NAMESPACE//./-}${USER//./-}
   exit 0
 fi
+if [ "x$1" = "xlist-caches" ] ; then
+  lxc image ls local: $USER
+  exit 0
+fi
+
 if [ "x$1" = "xdestroy" ] || [ "x$1" = "x--destroy" ] || [ $DESTROY -eq 1 ] ; then
   [ $DESTROY -eq 1 ] || shift
   if [ "x$1" = "x" ] ; then
@@ -240,6 +253,17 @@ if [ "x$1" = "xdestroy" ] || [ "x$1" = "x--destroy" ] || [ $DESTROY -eq 1 ] ; th
   fi
   exit 0
 fi
+
+if [ "x$1" = "xmount" ] ; then
+  HOSTDIR="$2"
+  NODE=$(echo "$3" | cut -d: -f 1 )
+  DST=$(echo "$3" | cut -d: -f 2- )
+  getcontainer "$NODE"
+
+  lxc config device add $CONTAINER shared_dir disk source="$HOSTDIR" path="$DST"
+  exit 0
+fi
+
 
 
 if [ "x$LXD_PROFILE" != "x" ] ; then
