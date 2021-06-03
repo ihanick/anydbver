@@ -85,14 +85,14 @@ if [ "x$1" = "xssh" ] ; then
     exit 1
   fi
   [ -t 0 -a -t 1 ] && INTERACTIVE=-t 
-  exec ssh -o LogLevel=error -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa $INTERACTIVE root@$IP "$@"
+  exec ssh -F ${NAMESPACE}ssh_config -o LogLevel=error -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa $INTERACTIVE root@$IP "$@"
   exit 0
 fi
 if [ "x$1" = "xscp" ] ; then
   shift
   getip "$1"
   shift
-  exec scp -o LogLevel=error -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP:"$1" "$2"
+  exec scp ${NAMESPACE}ssh_config -o LogLevel=error -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa root@$IP:"$1" "$2"
 fi
 if [ "x$1" = "xip" ] ; then
   shift
