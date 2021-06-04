@@ -1,3 +1,0 @@
-OPTIONS="-f /etc/mongos.conf"
-STDOUT="/var/log/mongodb/mongos.stdout"
-STDERR="/var/log/mongodb/mongos.stderr"

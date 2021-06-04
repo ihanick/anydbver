@@ -1,5 +1,0 @@
-- name: Enable repo.*.local
-  when: lookup('env','LOCAL_REPO_CACHE',default='') != '' and is_percona_repo_required != ''
-  shell:
-    warn: false
-    cmd: sed -i -e 's,/repo.percona.com/,/repo.percona.com.local/,' /etc/yum.repos.d/percona*.repo || true

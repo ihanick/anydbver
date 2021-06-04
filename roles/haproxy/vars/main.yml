@@ -1,3 +1,0 @@
----
-# vars file for haproxy
-upstream_servers: "{{haproxy_galera.split(',') if haproxy_galera != '' else haproxy_pg.split(',') }}"

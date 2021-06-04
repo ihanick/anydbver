@@ -1,4 +1,0 @@
-spec:
-  pmm:
-    enabled: true
-    serverUser: admin

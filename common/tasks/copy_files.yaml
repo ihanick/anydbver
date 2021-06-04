@@ -1,5 +1,0 @@
-- file: path=/vagrant state=directory mode='0755'
-- synchronize: src="{{playbook_dir}}/tools/" dest="/vagrant/tools"
-- synchronize: src="{{playbook_dir}}/configs/" dest="/vagrant/configs"
-- synchronize: src="{{playbook_dir}}/secret/" dest="/vagrant/secret"
-- package: name="iproute{{ '' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') else '2' }}" state=present
