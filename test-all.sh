@@ -11,7 +11,8 @@ for os in el7 el8 oel7 oel8 stretch buster bionic focal ; do
   for m in mysql ps ; do
     if [[ "x$1" = "x" || "x$1" = "x$m" ]] ; then
       for ver in 5.6 5.7 8.0 ; do 
-        [[ $ver == "5.6" && ( $os == el8 || $os == oel8 || $os == focal ) ]] && continue
+        [[ $ver == "5.6" && ( $os == el8 || $os == oel8 || $os == focal || $os == buster || $os == bionic ) ]] && continue
+        [[ $ver == "5.7" && ( $os == el8 || $os == oel8 || $os == focal ) && "$m" == mysql ]] && continue
         ./anydbver deploy --os $os $m:$ver >> test-run.log
         ./anydbver ssh default mysql -e "'select version()'" 2>/dev/null |grep -q $ver || echo "$os: $m:$ver : FAIL"
       done

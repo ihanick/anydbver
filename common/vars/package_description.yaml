@@ -336,15 +336,15 @@ focal:
     systemd_service: "mysql"
     cnf_file: '/etc/mysql/mysql.conf.d/mysqld.cnf'
     install_packages:
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-common_{{mysql_version}}ubuntu20.04_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-plugins_{{mysql_version}}ubuntu20.04_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/libmysqlclient21_{{mysql_version}}ubuntu20.04_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-core_{{mysql_version}}ubuntu20.04_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client_{{mysql_version}}ubuntu20.04_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-client_{{mysql_version}}ubuntu20.04_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server-core_{{mysql_version}}ubuntu20.04_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server_{{mysql_version}}ubuntu20.04_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-server_{{mysql_version}}ubuntu20.04_amd64.deb"
+      - "http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/mysql-common_{{mysql_version}}ubuntu20.04_amd64.deb"
+      - "http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/mysql-community-client-plugins_{{mysql_version}}ubuntu20.04_amd64.deb"
+      - "http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/libmysqlclient21_{{mysql_version}}ubuntu20.04_amd64.deb"
+      - "http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/mysql-community-client-core_{{mysql_version}}ubuntu20.04_amd64.deb"
+      - "http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/mysql-community-client_{{mysql_version}}ubuntu20.04_amd64.deb"
+      - "http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/mysql-client_{{mysql_version}}ubuntu20.04_amd64.deb"
+      - "http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/mysql-community-server-core_{{mysql_version}}ubuntu20.04_amd64.deb"
+      - "http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/mysql-community-server_{{mysql_version}}ubuntu20.04_amd64.deb"
+      - "http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/mysql-server_{{mysql_version}}ubuntu20.04_amd64.deb"
     mysql_shell_packages:
       - "https://dev.mysql.com/get/Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el7.x86_64.rpm"
 
