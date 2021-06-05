@@ -988,6 +988,9 @@ deploy_node() {
     if [[ $i == "haproxy" ]] ; then
       DEP_ENV="$DEP_ENV HAPROXY=1"
     fi
+    if [[ $i == "debug" ]] ; then
+      DEP_ENV="$DEP_ENV DEBUG_PACKAGES=1"
+    fi
     if [[ $i == "docker" ]] ; then
       DEP_ENV="$DEP_ENV DOCKER=1"
     fi

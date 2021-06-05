@@ -317,6 +317,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `cluster`
 * `clustercheck`
 * `configsrv`
+* `debug`, install gdb and debug information packages
 * `development`, short devel
 * `docker`, installs Docker
 * `docker-registry`, configures load Docker registry
