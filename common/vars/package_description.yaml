@@ -580,12 +580,12 @@ el7:
     cnf_file: "/var/lib/pgsql/{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}/data/postgresql.conf"
     repo_url: https://yum.postgresql.org/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
     install_packages:
-      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-libs-{{postgresql_version}}"
-      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-{{postgresql_version}}"
-      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-server-{{postgresql_version}}"
-      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-contrib-{{postgresql_version}}"
+      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-libs-{{postgresql_version}}PGDG.rhel7.x86_64"
+      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-{{postgresql_version}}PGDG.rhel7.x86_64"
+      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-server-{{postgresql_version}}PGDG.rhel7.x86_64"
+      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-contrib-{{postgresql_version}}PGDG.rhel7.x86_64"
     development_packages:
-      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-devel-{{postgresql_version}}"
+      - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-devel-{{postgresql_version}}PGDG.rhel7.x86_64"
 
 el8:
   proxysql:
@@ -696,7 +696,7 @@ el8:
     repo_url: https://yum.postgresql.org/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
     install_packages:
       - glibc-langpack-en
-      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-libs-{{postgresql_version}}"
-      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-{{postgresql_version}}"
-      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-server-{{postgresql_version}}"
-      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-contrib-{{postgresql_version}}"
+      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-libs-{{postgresql_version}}PGDG.rhel8.x86_64"
+      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-{{postgresql_version}}PGDG.rhel8.x86_64"
+      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-server-{{postgresql_version}}PGDG.rhel8.x86_64"
+      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-contrib-{{postgresql_version}}PGDG.rhel8.x86_64"

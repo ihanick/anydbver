@@ -13,6 +13,10 @@ PG_DATA=$(ls -d /var/lib/pgsql/*/data|tail -n 1)
 
 export PATH=$PATH:$PG_BIN
 
+PATRONI_PATH=$(ls /usr/bin/patroni /usr/local/bin/patroni 2>/dev/null|head -n 1)
+
+localectl set-locale LANG=en_US.UTF-8
+
 mkdir /etc/patroni
 chown postgres:postgres /etc/patroni
 
@@ -157,7 +161,7 @@ EnvironmentFile=-/etc/patroni_env.conf
 #ExecStartPre=-/usr/bin/sudo /bin/chown postgres /dev/watchdog
 
 # Start the patroni process
-ExecStart=/usr/local/bin/patroni $PATRONI_CFG
+ExecStart=$PATRONI_PATH $PATRONI_CFG
 
 # Send HUP to reload from patroni.yml
 ExecReload=/bin/kill -s HUP $MAINPID

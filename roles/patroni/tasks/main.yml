@@ -1,5 +1,13 @@
 ---
 # tasks file for patroni
+
+- name: Install OpenStack repo for etcd
+  when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and ansible_distribution_version.startswith('8') 
+  dnf:
+    name: http://mirror.centos.org/centos/8-stream/extras/x86_64/os/Packages/centos-release-openstack-wallaby-1-1.el8.noarch.rpm
+    state: present
+    disable_gpg_check: yes
+
 - name: install Etcd
   package:
     name: "etcd"
@@ -7,8 +15,8 @@
 
 - name: Install patroni
   command:
-    cmd: /bin/bash /vagrant/tools/install_patroni.sh
-    creates: /usr/local/bin/patroni
+    cmd: /bin/bash /vagrant/tools/install_patroni.sh "{{ 'yes' if 'development' in db_features.split(',') else '' }}"
+    creates: "'/usr/local/bin/patroni' if 'development' in db_features.split(',') else '/usr/bin/patroni'"
 
 - name: Patroni Setup tasks
   when: install_only == ''
