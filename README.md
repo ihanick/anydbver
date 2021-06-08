@@ -309,6 +309,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `--shared-directory`, mount `$PWD/tmp/shared_dir` (LXD containers) as /nfs on each server
 
 ### The full list of parameters
+* `anydbver`, fetch docker-podman-k8s branch inside container: running replication setups with unmodified Docker images with docker or podman
 * `backup`
 * `backend-ip`, Postgresql Primary IP for PGPool II setup
 * `cache`, required to add cache image name: `cache:ps-5.7.31` . After first run save container as an image. For next anydbver executions use image do not run ansible. You can show existing caches with `./anydbver list-caches`
@@ -378,6 +379,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `pmm-client`
 * `pmm-server`, required parameter PMM server node name.
 * `pmm`
+* `podman`, install podman for nested "Docker" containers
 * `postgresql`, short `pg`
 * `proxysql-ip`
 * `proxysql`

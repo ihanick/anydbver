@@ -2,7 +2,7 @@
 # tasks file for tools_and_monitoring
 # PMM
 - name: install podman (like docker)
-  when: pmm_server_version != ""
+  when: (pmm_server_version != "" and docker == "") or podman != ""
   package:
     name: podman
     state: present
@@ -13,12 +13,23 @@
     state: present
   with_items: "{{ os[dist]['percona_toolkit'].install_packages }}"
 
-- name: PMM Setup tasks
-  when: install_only == ''
-  include_tasks: setup.yaml
-
 - name: install Perf
   when: perf != ""
   package:
     name: perf
     state: present
+
+- name: install anydbver for docker/podman
+  block:
+    - name: install git
+      package:
+        name: git
+        state: present
+    - name: fetch anydbver
+      command:
+        cmd: git clone -b docker-podman-k8s https://github.com/ihanick/anydbver.git /root/anydbver
+        creates: /root/anydbver
+
+- name: PMM Setup tasks
+  when: install_only == ''
+  include_tasks: setup.yaml

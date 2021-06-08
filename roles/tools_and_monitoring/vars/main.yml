@@ -1,2 +1,3 @@
 ---
 # vars file for tools_and_monitoring
+docker_cmd: "{{ 'docker' if docker != '' else 'podman' }}"

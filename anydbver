@@ -947,6 +947,12 @@ deploy_node() {
     if [[ $i == "docker" ]] ; then
       DEP_ENV="$DEP_ENV DOCKER=1"
     fi
+    if [[ $i == "anydbver" ]] ; then
+      DEP_ENV="$DEP_ENV ANYDBVER=1"
+    fi
+    if [[ $i == "podman" ]] ; then
+      DEP_ENV="$DEP_ENV PODMAN=1"
+    fi
     if [[ $i == "docker-registry" ]] ; then
       DEP_ENV="$DEP_ENV DOCKER_REGISTRY=1"
     fi
@@ -1758,7 +1764,7 @@ if [ "x$1" = "xdeploy" ] ; then
     if [ $? != 0 ] ; then
       exit 1
     fi
-    echo "$DEPCMD"|egrep -q 'PMM_SERVER|K8S|K3S|PKO|SAMBA_AD|PERF|DOCKER' && PRIV_CONTAINER_REQUIRED=1
+    echo "$DEPCMD"|egrep -q 'PMM_SERVER|K8S|K3S|PKO|SAMBA_AD|PERF|DOCKER|PODMAN' && PRIV_CONTAINER_REQUIRED=1
     if [[ "$DEPCMD" == *"HOSTNAME="* ]] ; then
       HOSTNAMES_CMD="$HOSTNAMES_CMD --hostname $NODE="$(echo "$DEPCMD"| sed -re 's/^.*HOSTNAME=([^ ]+) .*/\1/')
     fi

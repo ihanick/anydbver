@@ -62,6 +62,8 @@
     proxysql_version: "{{ lookup('vars', 'extra_proxysql_version', default=lookup('env','PROXYSQL',default='') ) }}"
     percona_proxysql_version: "{{ lookup('vars', 'extra_percona_proxysql_version', default=lookup('env','PERCONA_PROXYSQL',default='') ) }}"
     perf: "{{ lookup('vars', 'extra_perf', default=lookup('env','PERF',default='') ) }}"
+    anydbver: "{{ lookup('vars', 'extra_anydbver', default=lookup('env','ANYDBVER',default='') ) }}"
+    podman: "{{ lookup('vars', 'extra_podman', default=lookup('env','PODMAN',default='') ) }}"
     docker: "{{ lookup('vars', 'extra_docker', default=lookup('env','DOCKER',default='') ) }}"
     docker_registry: "{{ lookup('vars', 'extra_docker_registry', default=lookup('env','DOCKER_REGISTRY',default='') ) }}"
     server_hostname: "{{ lookup('vars', 'extra_server_hostname', default=lookup('env','HOSTNAME',default='') ) }}"
@@ -267,7 +269,7 @@
         name: kubernetes
 
     - name: PMM, Percona Toolkit Role
-      when: pmm_server_version != "" or percona_toolkit_version != "" or perf != ""
+      when: pmm_server_version != "" or percona_toolkit_version != "" or perf != "" or anydbver != ''
       include_role:
         name: tools_and_monitoring
     - name: benchmarks
