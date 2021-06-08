@@ -1,10 +1,21 @@
 #!/bin/bash
+PODMAN_HUB=docker.io/
+SELINUX=0
+sestatus | grep 'SELinux status'|grep -q enabled && SELINUX=1
+
+get_ip() {
+  local SERVER_NAME="$1"
+  RET_SERVER_IP=$(podman inspect --format "{{.NetworkSettings.IPAddress}}" "$SERVER_NAME")
+  [ "$RET_SERVER_IP" == "" ] && RET_SERVER_IP=$(podman inspect --format "{{.NetworkSettings.Networks.myCNI.IPAddress}}" "$SERVER_NAME")
+}
 
 wait_mysql_ready() {
   local SERVER_NAME="$1"
+  get_ip "$SERVER_NAME"
+  local SERVER_IP="$RET_SERVER_IP"
   podman run --name "$SERVER_NAME"-wait-ready --network myCNI --rm -i \
     --entrypoint '' \
-    -e LEADER_HOST="$SERVER_NAME" -e LEADER_USER=root -e LEADER_PASSWORD=secret \
+    -e LEADER_HOST="$SERVER_IP" -e LEADER_USER=root -e LEADER_PASSWORD=secret \
     "$MYSQL_IMG" bash -e <<'WAIT_READY_EOF'
 create_client_my_cnf() {
   local FILE="$1"
@@ -52,10 +63,16 @@ make_snapshot_offline_copy() {
   podman stop "$SRC"
   # podman logs "$SRC"
   podman rm "$SRC"
-  podman unshare chmod ogu+rwX -R "$PWD"/data/"$DST"
-  rm -rf -- data/"$DST"
-  podman unshare cp -a data/"$SRC" data/"$DST"
-  podman unshare rm -f data/"$DST"/auto.cnf
+  if [ $UID == 0 ] ; then
+    rm -rf -- data/"$DST"
+    cp -a data/"$SRC" data/"$DST"
+    rm -f data/"$DST"/auto.cnf
+  else
+    podman unshare chmod ogu+rwX -R "$PWD"/data/"$DST"
+    rm -rf -- data/"$DST"
+    podman unshare cp -a data/"$SRC" data/"$DST"
+    podman unshare rm -f data/"$DST"/auto.cnf
+  fi
   run_mysql "$SRC_ID" "$SRC"
 }
 
@@ -66,11 +83,15 @@ if [ "x$RUN" != x ] ; then
   podman network create myCNI
   if ! [ -d data ] ; then
     mkdir data
-    sudo chcon -R -t container_file_t data sampledb
+    [ "$SELINUX" == 1 ] && sudo chcon -R -t container_file_t data sampledb
   fi
   mkdir -p data/node0 data/node1
   chmod o+rw data/node0 data/node1
-  podman unshare chown 1001:1001 -R "$PWD"/data
+  if [ $UID == 0 ] ; then
+    chown 1001:1001 -R "$PWD"/data
+  else
+    podman unshare chown 1001:1001 -R "$PWD"/data
+  fi
 
   if ! [ -d sampledb/world ] ; then
     mkdir -p sampledb/world
@@ -83,6 +104,7 @@ if [ "x$RUN" != x ] ; then
   fi
 
   [ "$MYSQL_IMG" = "" ] && MYSQL_IMG=mysql:latest
+  MYSQL_IMG="${PODMAN_HUB}${MYSQL_IMG}"
 
   run_mysql 51 node0
 
@@ -92,9 +114,14 @@ if [ "x$RUN" != x ] ; then
 
   run_mysql 52 node1
 
+  get_ip node0
+  LEADER_IP="$RET_SERVER_IP"
+  get_ip node1
+  FOLLOWER_IP="$RET_SERVER_IP"
+
   podman run --name node1-slave-setup --network myCNI -i \
     --entrypoint '' \
-    -e LEADER_HOST=node0 -e LEADER_USER=root -e LEADER_PASSWORD=secret -e FOLLOWER_HOST=node1 -e FOLLOWER_USER=root -e FOLLOWER_PASSWORD=secret \
+    -e LEADER_HOST="$LEADER_IP" -e LEADER_USER=root -e LEADER_PASSWORD=secret -e FOLLOWER_HOST="$FOLLOWER_IP" -e FOLLOWER_USER=root -e FOLLOWER_PASSWORD=secret \
     "$MYSQL_IMG" bash -e < tools/setup_mysql_replication.sh
 
 fi
@@ -103,6 +130,8 @@ fi
 if [ "x$DESTROY" != x ] ; then
   podman rm -fa && true
   podman network rm -f myCNI && true
-  podman unshare chmod ogu+rwX -R "$PWD"/data
+  if [ $UID != 0 ] ; then
+    podman unshare chmod ogu+rwX -R "$PWD"/data
+  fi
   rm -rf -- data/*
 fi
