@@ -1,0 +1,303 @@
+#!/bin/bash
+
+# read arguments
+opts=$(getopt \
+    --longoptions "dry-run,destroy,namespace:" \
+    --name "$(basename "$0")" \
+    --options "" \
+    -- "$@"
+)
+
+eval set --"$opts"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    --namespace)
+      NAMESPACE="$2-"
+      shift 2
+      ;;
+    --destroy)
+      DESTROY=1
+      shift
+      ;;
+      *)
+      break
+      ;;
+  esac
+done
+
+if [ "$1" = "--" ] ; then
+  shift
+fi
+
+
+if [ "$1" == destroy ] ; then
+  DESTROY=1
+  shift
+fi
+
+if [ "$1" == deploy ] ; then
+  DEPLOY=1
+  shift
+fi
+
+
+# Global variables
+NET="${NAMESPACE}${USER}-anydbver"
+
+PODMAN_HUB=docker.io/
+SELINUX=0
+sestatus | grep 'SELinux status'|grep -q enabled && SELINUX=1
+
+
+declare -A SERVER_IDS
+LAST_SERVER_ID=50
+# Functions
+deploy_node() {
+  echo deploy_node "$@"
+  local NODE="$1"
+  shift
+  local arr=("$@")
+
+  for i in "${arr[@]}"; do
+    if [[ "$i" == "percona-server" ]] || [[ "$i" == "percona-server:"* ]] || [[ "$i" == "ps" ]] || [[ "$i" == "ps:"* ]] ; then
+      get_version "$i"
+      MYSQL_IMG=percona/percona-server:"$VER"
+    fi
+    if [[ "$i" == "mysql-server" ]] || [[ "$i" == "mysql-server:"* ]] || [[ "$i" == "mysql" ]] || [[ "$i" == "mysql:"* ]] ; then
+      get_version "$i"
+      MYSQL_IMG=mysql/mysql-server:"$VER"
+    fi
+    if [[ "$i" == "gtid" ]] ; then
+      GTID_OPTS=(--log-slave-updates --enforce_gtid_consistency=ON --gtid_mode=ON)
+    fi
+    if [[ "$i" == "world" ]] ; then
+      if ! [ -d sampledb/world ] ; then
+        mkdir -p sampledb/world
+        curl -sL -o sampledb/world/world.sql.gz https://downloads.mysql.com/docs/world.sql.gz
+        gunzip sampledb/world/world.sql.gz
+      fi
+
+      WORLD_DB=1
+    fi
+    if [[ "$i" == "snapshot" ]] ; then
+      SNAPSHOT=1
+    fi
+    if [[ $i == "master_ip" ]] || [[ $i == "master_ip:"* ]] || [[ $i == "master" ]] || [[ $i == "master:"* ]] || [[ $i == "leader:"* ]] ; then
+      get_version "$i"
+      DB_IP="$VER"
+      if [ "$VER" == latest ] ; then
+        DB_IP=node0
+      fi
+    fi
+
+  done
+
+  if [ "$DB_IP" != "" ] ; then
+    run_mysql_slave "$NODE" "$DB_IP"
+  else
+    run_mysql "$NODE"
+  fi
+}
+
+get_version() {
+  if [[ "$1" == *':'* ]] ; then
+    VER=$(echo "$1" | cut -d: -f2)
+  else
+    VER=latest
+  fi
+}
+
+get_ip() {
+  local SERVER_NAME="$1"
+  while true ; do
+    sleep 1
+    RET_SERVER_IP=$(podman inspect --format "{{.NetworkSettings.IPAddress}}" "$SERVER_NAME")
+    [ "$RET_SERVER_IP" == "" ] && RET_SERVER_IP=$( podman inspect --format json "$SERVER_NAME"| jq -r '.[]|.NetworkSettings.Networks["'"${NET}"'"].IPAddress' )
+    [ "$RET_SERVER_IP" == "" ] && continue
+    [ "$RET_SERVER_IP" == "null" ] && continue
+    break
+  done
+}
+
+get_user_id() {
+  local USR="$1"
+  local IMG="$2"
+  RET_UID=$(podman run --entrypoint '' -i --rm "$IMG" id -u "$USR")
+}
+
+run_mysql() {
+  local SERVER_NAME="$1"
+  local VOLUMES
+
+  if ! [[ -v SERVER_IDS["$SERVER_NAME"] ]] ; then
+    (( LAST_SERVER_ID=LAST_SERVER_ID+1 ))
+    SERVER_IDS[$SERVER_NAME]="$LAST_SERVER_ID"
+  fi
+
+  local SERVER_ID="${SERVER_IDS[$SERVER_NAME]}"
+
+
+  if [ "$WORLD_DB" ] ; then
+    VOLUMES=(-v "$PWD"/sampledb/world:/docker-entrypoint-initdb.d)
+  fi
+
+  get_user_id mysql "$MYSQL_IMG"
+  local MYSQL_UID="$RET_UID"
+  read -r -d '' CMD <<EOF
+  if ! [ -d "$PWD"/data/"$SERVER_NAME" ] ; then
+    mkdir -p "$PWD"/data/"$SERVER_NAME"
+    chmod o+rw "$PWD"/data/"$SERVER_NAME"
+  fi
+  if [ $UID == 0 ] ; then
+    chown $MYSQL_UID:$MYSQL_UID -R "$PWD"/data/"$SERVER_NAME"
+  else
+    podman unshare chown $MYSQL_UID:$MYSQL_UID -R "$PWD"/data/"$SERVER_NAME"
+  fi
+  podman network create "$NET" &>/dev/null || true
+  podman run --name "$SERVER_NAME" --network "$NET" -d --restart=always \
+    ${VOLUMES[@]} \
+    -v "$PWD"/data/"$SERVER_NAME":/var/lib/mysql \
+    -e MYSQL_ROOT_HOST='%' \
+    -e MYSQL_ROOT_PASSWORD=secret "$MYSQL_IMG" \
+    --server-id="$SERVER_ID" --log-bin=mysqld-bin ${GTID_OPTS[@]} --report_host="$SERVER_NAME"
+EOF
+  if [ "$DRY_RUN" == 1 ] ; then
+    echo "$CMD"
+  else
+    eval "$CMD"
+  fi
+}
+
+run_mysql_slave() {
+  local SERVER_NAME="$1"
+  local SRC_NAME="$2"
+
+  if [ "$SNAPSHOT" = 1 ] ; then
+    make_snapshot_offline_copy "$SERVER_NAME" "$SRC_NAME"
+  fi
+
+  read -r -d '' CMD <<EOF
+  run_mysql node1
+  get_ip $SRC_NAME
+  LEADER_IP="\$RET_SERVER_IP"
+  get_ip $SERVER_NAME
+  FOLLOWER_IP="\$RET_SERVER_IP"
+
+  podman run --name node1-slave-setup --network $NET -i \
+    --entrypoint '' \
+    -e LEADER_HOST="\$LEADER_IP" -e LEADER_USER=root -e LEADER_PASSWORD=secret -e FOLLOWER_HOST="\$FOLLOWER_IP" -e FOLLOWER_USER=root -e FOLLOWER_PASSWORD=secret \
+    "$MYSQL_IMG" bash -e < tools/setup_mysql_replication.sh
+EOF
+  if [ "$DRY_RUN" == 1 ] ; then
+    echo "$CMD"
+  else
+    eval "$CMD"
+  fi
+}
+
+make_snapshot_offline_copy() {
+  local DST="$1"
+  local SRC="$2"
+
+  wait_mysql_ready "$SRC"
+  podman stop "$SRC"
+  # podman logs "$SRC"
+  podman rm "$SRC"
+  if [ $UID == 0 ] ; then
+    rm -rf -- data/"$DST"
+    cp -a data/"$SRC" data/"$DST"
+    rm -f data/"$DST"/auto.cnf
+  else
+    [ -d "$PWD"/data/"$DST" ] && podman unshare chmod ogu+rwX -R "$PWD"/data/"$DST"
+    rm -rf -- data/"$DST"
+    podman unshare cp -a data/"$SRC" data/"$DST"
+    podman unshare rm -f data/"$DST"/auto.cnf
+  fi
+  run_mysql "$SRC"
+}
+
+wait_mysql_ready() {
+  local SERVER_NAME="$1"
+  get_ip "$SERVER_NAME"
+  local SERVER_IP="$RET_SERVER_IP"
+  podman run --name "$SERVER_NAME"-wait-ready --network "$NET" --rm -i \
+    --entrypoint '' \
+    -e LEADER_HOST="$SERVER_IP" -e LEADER_USER=root -e LEADER_PASSWORD=secret \
+    "$MYSQL_IMG" bash -e <<'WAIT_READY_EOF'
+create_client_my_cnf() {
+  local FILE="$1"
+  local HOST="$2"
+  local USER="$3"
+  local PASS="$4"
+
+  cat > /tmp/"$FILE".cnf <<EOF
+[client]
+host="$HOST"
+user="$USER"
+password="$PASS"
+EOF
+}
+
+wait_until_mysql_ready() {
+  local FILE="$1"
+  until mysql --defaults-file=/tmp/"$FILE".cnf --silent --connect-timeout=30 --wait -e "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
+}
+
+create_client_my_cnf leader "$LEADER_HOST" "$LEADER_USER" "$LEADER_PASSWORD"
+wait_until_mysql_ready leader
+WAIT_READY_EOF
+}
+
+
+
+
+
+# Command processing
+
+if [ "$DESTROY" == 1 ] ; then
+  echo Destroy
+  read -r -d '' CMD <<EOF
+  podman network rm -f "$NET" && true
+  if [ $UID != 0 ] ; then
+    podman unshare chmod ogu+rwX -R "$PWD"/data
+  fi
+  rm -rf -- "$PWD"/data/*
+EOF
+  if [ "$DRY_RUN" == 1 ] ; then
+    echo "$CMD"
+  else
+    eval "$CMD"
+  fi
+  exit 0
+fi
+
+
+if [ "$DEPLOY" == 1 ] ; then
+  if ! [ -d data ] ; then
+    mkdir data
+    [ "$SELINUX" == 1 ] && sudo chcon -R -t container_file_t data sampledb
+  fi
+
+  DEPLARGS=()
+  NODE=node0
+  while (( "$#" )); do
+    while (( "$#" )); do
+      if [[ "$1" == node* ]] || [[ "$1" == default && $NODE != default ]] ; then
+        break
+      fi
+      DEPLARGS+=("$1")
+      shift
+    done
+
+    if [ "${#DEPLARGS[@]}" -gt 0 ] ; then
+      deploy_node "$NODE" "${DEPLARGS[@]}"
+    fi
+
+    NODE="$1"
+    shift
+  done
+fi
