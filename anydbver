@@ -48,7 +48,7 @@ fi
 # Global variables
 NET="${NAMESPACE}${USER}-anydbver"
 
-PODMAN_HUB=docker.io/
+#PODMAN_HUB=docker.io/
 SELINUX=0
 sestatus | grep 'SELinux status'|grep -q enabled && SELINUX=1
 
@@ -61,6 +61,8 @@ deploy_node() {
   local NODE="$1"
   shift
   local arr=("$@")
+
+  unset MYSQL_IMG GTID_OPTS WORLD_DB DB_ARGUMENTS PAGILA_DB SNAPSHOT DB_IP PG_IMG
 
   for i in "${arr[@]}"; do
     if [[ "$i" == "percona-server" ]] || [[ "$i" == "percona-server:"* ]] || [[ "$i" == "ps" ]] || [[ "$i" == "ps:"* ]] ; then
@@ -83,6 +85,18 @@ deploy_node() {
 
       WORLD_DB=1
     fi
+    if [[ "$i" == "args:"* ]] ; then
+      DB_ARGUMENTS=$(echo "$i" | sed -e 's/args://')
+    fi
+    if [[ "$i" == "pagila" ]] ; then
+      if ! [ -d sampledb/pagila ] ; then
+        mkdir -p sampledb/pagila
+        curl -sL https://github.com/devrimgunduz/pagila/raw/master/pagila-schema.sql https://github.com/devrimgunduz/pagila/raw/master/pagila-data.sql > sampledb/pagila/pagila.sql
+      fi
+
+      PAGILA_DB=1
+    fi
+
     if [[ "$i" == "snapshot" ]] ; then
       SNAPSHOT=1
     fi
@@ -94,12 +108,26 @@ deploy_node() {
       fi
     fi
 
+    if [[ "$i" == "postgresql" ]] || [[ "$i" == "postgresql:"* ]] || [[ "$i" == "pg" ]] || [[ "$i" == "pg:"* ]] ; then
+      get_version "$i"
+      PG_IMG=postgres:"$VER"
+    fi
+
   done
 
-  if [ "$DB_IP" != "" ] ; then
-    run_mysql_slave "$NODE" "$DB_IP"
-  else
-    run_mysql "$NODE"
+  if [ "$MYSQL_IMG" != "" ] ; then
+    if [ "$DB_IP" != "" ] ; then
+      run_mysql_slave "$NODE" "$DB_IP"
+    else
+      run_mysql "$NODE"
+    fi
+  fi
+  if [ "$PG_IMG" != "" ] ; then
+    if [ "$DB_IP" != "" ] ; then
+      run_pg_secondary "$NODE" "$DB_IP"
+    else
+      run_pg "$NODE"
+    fi
   fi
 }
 
@@ -163,7 +191,7 @@ run_mysql() {
     -v "$PWD"/data/"$SERVER_NAME":/var/lib/mysql \
     -e MYSQL_ROOT_HOST='%' \
     -e MYSQL_ROOT_PASSWORD=secret "$MYSQL_IMG" \
-    --server-id="$SERVER_ID" --log-bin=mysqld-bin ${GTID_OPTS[@]} --report_host="$SERVER_NAME"
+    --server-id="$SERVER_ID" --log-bin=mysqld-bin ${GTID_OPTS[@]} --report_host="$SERVER_NAME" $DB_ARGUMENTS
 EOF
   if [ "$DRY_RUN" == 1 ] ; then
     echo "$CMD"
@@ -172,12 +200,46 @@ EOF
   fi
 }
 
+run_pg() {
+  local SERVER_NAME="$1"
+  local VOLUMES
+
+  if [ "$PAGILA_DB" ] ; then
+    VOLUMES=(-v "$PWD"/sampledb/pagila:/docker-entrypoint-initdb.d)
+  fi
+
+  get_user_id postgres "$PG_IMG"
+  local PG_UID="$RET_UID"
+  read -r -d '' CMD <<EOF
+  if ! [ -d "$PWD"/data/"$SERVER_NAME" ] ; then
+    mkdir -p "$PWD"/data/"$SERVER_NAME"
+    chmod o+rw "$PWD"/data/"$SERVER_NAME"
+  fi
+  if [ $UID == 0 ] ; then
+    chown $PG_UID:$PG_UID -R "$PWD"/data/"$SERVER_NAME"
+  else
+    podman unshare chown $PG_UID:$PG_UID -R "$PWD"/data/"$SERVER_NAME"
+  fi
+  podman network create "$NET" &>/dev/null || true
+  podman run --name "$SERVER_NAME" --network "$NET" -d --restart=always \
+    ${VOLUMES[@]} \
+    -v "$PWD"/data/"$SERVER_NAME":/var/lib/postgresql/data \
+    -e POSTGRES_PASSWORD=secret "$PG_IMG"
+EOF
+  if [ "$DRY_RUN" == 1 ] ; then
+    echo "$CMD"
+  else
+    eval "$CMD"
+  fi
+}
+
+
 run_mysql_slave() {
   local SERVER_NAME="$1"
   local SRC_NAME="$2"
 
   if [ "$SNAPSHOT" = 1 ] ; then
-    make_snapshot_offline_copy "$SERVER_NAME" "$SRC_NAME"
+    make_mysql_snapshot_offline_copy "$SERVER_NAME" "$SRC_NAME"
   fi
 
   read -r -d '' CMD <<EOF
@@ -199,7 +261,7 @@ EOF
   fi
 }
 
-make_snapshot_offline_copy() {
+make_mysql_snapshot_offline_copy() {
   local DST="$1"
   local SRC="$2"
 
@@ -219,6 +281,89 @@ make_snapshot_offline_copy() {
   fi
   run_mysql "$SRC"
 }
+
+run_pg_secondary() {
+  local SERVER_NAME="$1"
+  local SRC="$2"
+
+  wait_pg_ready "$SRC"
+
+  if [ $UID == 0 ] ; then
+    sed -i -e '$ a host replication all all md5' "$PWD"/data/"$SRC"/pg_hba.conf
+  else
+    podman unshare sed -i -e '$ a host replication all all md5' "$PWD"/data/"$SRC"/pg_hba.conf
+  fi
+
+  get_ip "$SRC"
+  local SERVER_IP="$RET_SERVER_IP"
+  podman run --name "$SRC"-wait-ready --network "$NET" --rm -i \
+    --entrypoint '' \
+    -e PG_SERVER="$SERVER_IP" -e POSTGRES_PASSWORD=secret -e PGPASSWORD=secret \
+    "$PG_IMG" psql -h "$SERVER_IP" -U postgres -d postgres -c "ALTER SYSTEM SET wal_level = 'hot_standby';" -c "SELECT pg_reload_conf();"
+
+  if [ "$SNAPSHOT" = 1 ] ; then
+    make_pg_snapshot_offline_copy "$SERVER_NAME" "$SRC"
+  else
+    make_pg_basebackup_copy "$SERVER_NAME" "$SRC"
+  fi
+
+  run_pg "$SERVER_NAME"
+}
+
+make_pg_basebackup_copy() {
+  local DST="$1"
+  local SRC="$2"
+
+  if ! [ -d "$PWD"/data/"$DST" ] ; then
+    mkdir -p "$PWD"/data/"$DST"
+    chmod o+rw "$PWD"/data/"$DST"
+  fi
+
+  get_ip "$SRC"
+  local SERVER_IP="$RET_SERVER_IP"
+  podman run --name "$DST"-basebackup --network "$NET" --rm -i \
+    -v "$PWD"/data/"$DST":/var/lib/postgresql/data \
+    --entrypoint '' \
+    -e PG_SERVER="$SERVER_IP" -e POSTGRES_PASSWORD=secret -e PGDATA=/var/lib/postgresql/data -e PGPASSWORD=secret \
+    "$PG_IMG" bash -e <<'WAIT_READY_EOF'
+pg_basebackup -h "$PG_SERVER" -U postgres -D $PGDATA -Fp -Xs -P -R
+WAIT_READY_EOF
+
+}
+
+
+
+make_pg_snapshot_offline_copy() {
+  local DST="$1"
+  local SRC="$2"
+
+  podman stop "$SRC"
+  podman rm "$SRC"
+
+  if [ $UID == 0 ] ; then
+    rm -rf -- "$PWD"/data/"$DST"
+    cp -a "$PWD"/data/"$SRC" "$PWD"/data/"$DST"
+    touch data/"$DST"/standby.signal 
+  else
+    [ -d "$PWD"/data/"$DST" ] && podman unshare chmod ogu+rwX -R "$PWD"/data/"$DST"
+    rm -rf -- data/"$DST"
+    podman unshare cp -a data/"$SRC" data/"$DST"
+    podman unshare touch data/"$DST"/standby.signal 
+  fi
+  run_pg "$SRC"
+
+  get_ip "$SRC"
+
+  local PRIMARY_IP="$RET_SERVER_IP"
+
+  if [ $UID == 0 ] ; then
+    sed -i -e "\$ a primary_conninfo = 'host=$PRIMARY_IP user=postgres password=secret'" data/"$DST"/postgresql.auto.conf
+  else
+    podman unshare sed -i -e "\$ a primary_conninfo = 'host=$PRIMARY_IP user=postgres password=secret'" data/"$DST"/postgresql.auto.conf
+  fi
+}
+
+
 
 wait_mysql_ready() {
   local SERVER_NAME="$1"
@@ -251,6 +396,20 @@ create_client_my_cnf leader "$LEADER_HOST" "$LEADER_USER" "$LEADER_PASSWORD"
 wait_until_mysql_ready leader
 WAIT_READY_EOF
 }
+
+wait_pg_ready() {
+  local SERVER_NAME="$1"
+  get_ip "$SERVER_NAME"
+  local SERVER_IP="$RET_SERVER_IP"
+  podman run --name "$SERVER_NAME"-wait-ready --network "$NET" --rm -i \
+    --entrypoint '' \
+    -e PG_SERVER="$SERVER_IP" -e POSTGRES_PASSWORD=secret -e PGPASSWORD=secret \
+    "$PG_IMG" bash -e <<'WAIT_READY_EOF'
+until psql -h "$PG_SERVER" -U postgres -d postgres -c "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
+WAIT_READY_EOF
+}
+
+
 
 
 
@@ -299,5 +458,6 @@ if [ "$DEPLOY" == 1 ] ; then
 
     NODE="$1"
     shift
+    DEPLARGS=()
   done
 fi

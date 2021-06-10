@@ -24,8 +24,26 @@ The replication/clusters setup is configured with sidecar/init containers.
 ./anydbver deploy ps:5.6 gtid world node1 ps:5.6 snapshot gtid master:node0
 ```
 
+* Arguments
+```
+./anydbver deploy \
+  node0 mysql gtid args:--innodb-log-file-size=512M \
+  node1 gtid mysql args:'--innodb-log-file-size=1G --innodb-flush-log-at-trx-commit=0'
+```
+
 Use `mysql` instead of `ps` for mysql/mysql-server image.
 
+## Postgresql
+
+* Pagila sample database and physical replication secondary created by offline filesystem copy
+```
+./anydbver deploy node0 pg pagila node1 pg snapshot master:node0
+```
+
+* Pagila sample database and physical replication secondary created by `pg_basebackup`
+```
+./anydbver deploy node0 pg pagila node1 pg master:node0
+`
 Destroy:
 ```
 ./anydbver destroy
