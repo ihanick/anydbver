@@ -148,4 +148,5 @@
       --username=dba
       --password="{{db_password}}"
       {{ '--replication-set='+mongo_replicaset if mongo_replicaset != '' else ''}}
+      {{ '--cluster='+cluster_name if cluster_name != '' else ''}}
 
