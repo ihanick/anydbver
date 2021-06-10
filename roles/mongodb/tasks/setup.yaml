@@ -137,3 +137,15 @@
   when: pbm_agent  != ''
   command:
     cmd: /bin/bash /vagrant/tools/setup_pbm_agent.sh "{{mongo_replicaset}}"
+
+- name: Setup pmm-2 client mongo
+  when: pmm_client_version.startswith('2.') and pmm_url != '' and psmdb_version != ''
+  register: pmm_admin_mongo_config
+  changed_when: "'already exists' not in pmm_admin_mongo_config.stdout"
+  shell:
+    cmd: >-
+      pmm-admin add mongodb
+      --username=dba
+      --password="{{db_password}}"
+      {{ '--replication-set='+mongo_replicaset if mongo_replicaset != '' else ''}}
+

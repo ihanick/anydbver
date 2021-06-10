@@ -1,6 +1,6 @@
 k3s:
-  latest_version: '1.19.2'
-  latest_url: "https://github.com/rancher/k3s/releases/download/v1.19.2%2Bk3s1/k3s"
+  latest_version: '1.21.1'
+  latest_url: "https://github.com/rancher/k3s/releases/download/v1.21.1%2Bk3s1/k3s"
 
 stretch:
   repo_pkg: "/root/percona-release_latest.stretch_all.deb"
