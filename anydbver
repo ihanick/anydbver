@@ -52,6 +52,9 @@ NET="${NAMESPACE}${USER}-anydbver"
 SELINUX=0
 sestatus | grep 'SELinux status'|grep -q enabled && SELINUX=1
 
+DOCKER=podman
+docker version &>/dev/null && DOCKER=docker
+
 
 declare -A SERVER_IDS
 LAST_SERVER_ID=50
@@ -143,8 +146,12 @@ get_ip() {
   local SERVER_NAME="$1"
   while true ; do
     sleep 1
-    RET_SERVER_IP=$(podman inspect --format "{{.NetworkSettings.IPAddress}}" "$SERVER_NAME")
-    [ "$RET_SERVER_IP" == "" ] && RET_SERVER_IP=$( podman inspect --format json "$SERVER_NAME"| jq -r '.[]|.NetworkSettings.Networks["'"${NET}"'"].IPAddress' )
+    RET_SERVER_IP=$("$DOCKER" inspect --format "{{.NetworkSettings.IPAddress}}" "$SERVER_NAME")
+    if [ "$DOCKER" == "docker" ] ; then
+      [ "$RET_SERVER_IP" == "" ] && RET_SERVER_IP=$( "$DOCKER" inspect "$SERVER_NAME"| jq -r '.[]|.NetworkSettings.Networks["'"${NET}"'"].IPAddress' )
+    else
+      [ "$RET_SERVER_IP" == "" ] && RET_SERVER_IP=$( "$DOCKER" inspect --format json "$SERVER_NAME"| jq -r '.[]|.NetworkSettings.Networks["'"${NET}"'"].IPAddress' )
+    fi
     [ "$RET_SERVER_IP" == "" ] && continue
     [ "$RET_SERVER_IP" == "null" ] && continue
     break
@@ -154,7 +161,7 @@ get_ip() {
 get_user_id() {
   local USR="$1"
   local IMG="$2"
-  RET_UID=$(podman run --entrypoint '' -i --rm "$IMG" id -u "$USR")
+  RET_UID=$("$DOCKER" run --entrypoint '' -i --rm "$IMG" id -u "$USR")
 }
 
 run_mysql() {
@@ -185,8 +192,8 @@ run_mysql() {
   else
     podman unshare chown $MYSQL_UID:$MYSQL_UID -R "$PWD"/data/"$SERVER_NAME"
   fi
-  podman network create "$NET" &>/dev/null || true
-  podman run --name "$SERVER_NAME" --network "$NET" -d --restart=always \
+  "$DOCKER" network create "$NET" &>/dev/null || true
+  "$DOCKER" run --name "$SERVER_NAME" --network "$NET" -d --restart=always \
     ${VOLUMES[@]} \
     -v "$PWD"/data/"$SERVER_NAME":/var/lib/mysql \
     -e MYSQL_ROOT_HOST='%' \
@@ -220,8 +227,8 @@ run_pg() {
   else
     podman unshare chown $PG_UID:$PG_UID -R "$PWD"/data/"$SERVER_NAME"
   fi
-  podman network create "$NET" &>/dev/null || true
-  podman run --name "$SERVER_NAME" --network "$NET" -d --restart=always \
+  "$DOCKER" network create "$NET" &>/dev/null || true
+  "$DOCKER" run --name "$SERVER_NAME" --network "$NET" -d --restart=always \
     ${VOLUMES[@]} \
     -v "$PWD"/data/"$SERVER_NAME":/var/lib/postgresql/data \
     -e POSTGRES_PASSWORD=secret "$PG_IMG"
@@ -249,7 +256,7 @@ run_mysql_slave() {
   get_ip $SERVER_NAME
   FOLLOWER_IP="\$RET_SERVER_IP"
 
-  podman run --name node1-slave-setup --network $NET -i \
+  "$DOCKER" run --name node1-slave-setup --network $NET -i \
     --entrypoint '' \
     -e LEADER_HOST="\$LEADER_IP" -e LEADER_USER=root -e LEADER_PASSWORD=secret -e FOLLOWER_HOST="\$FOLLOWER_IP" -e FOLLOWER_USER=root -e FOLLOWER_PASSWORD=secret \
     "$MYSQL_IMG" bash -e < tools/setup_mysql_replication.sh
@@ -266,9 +273,9 @@ make_mysql_snapshot_offline_copy() {
   local SRC="$2"
 
   wait_mysql_ready "$SRC"
-  podman stop "$SRC"
+  "$DOCKER" stop "$SRC"
   # podman logs "$SRC"
-  podman rm "$SRC"
+  "$DOCKER" rm "$SRC"
   if [ $UID == 0 ] ; then
     rm -rf -- data/"$DST"
     cp -a data/"$SRC" data/"$DST"
@@ -296,7 +303,7 @@ run_pg_secondary() {
 
   get_ip "$SRC"
   local SERVER_IP="$RET_SERVER_IP"
-  podman run --name "$SRC"-wait-ready --network "$NET" --rm -i \
+  "$DOCKER" run --name "$SRC"-wait-ready --network "$NET" --rm -i \
     --entrypoint '' \
     -e PG_SERVER="$SERVER_IP" -e POSTGRES_PASSWORD=secret -e PGPASSWORD=secret \
     "$PG_IMG" psql -h "$SERVER_IP" -U postgres -d postgres -c "ALTER SYSTEM SET wal_level = 'hot_standby';" -c "SELECT pg_reload_conf();"
@@ -321,7 +328,7 @@ make_pg_basebackup_copy() {
 
   get_ip "$SRC"
   local SERVER_IP="$RET_SERVER_IP"
-  podman run --name "$DST"-basebackup --network "$NET" --rm -i \
+  "$DOCKER" run --name "$DST"-basebackup --network "$NET" --rm -i \
     -v "$PWD"/data/"$DST":/var/lib/postgresql/data \
     --entrypoint '' \
     -e PG_SERVER="$SERVER_IP" -e POSTGRES_PASSWORD=secret -e PGDATA=/var/lib/postgresql/data -e PGPASSWORD=secret \
@@ -337,8 +344,8 @@ make_pg_snapshot_offline_copy() {
   local DST="$1"
   local SRC="$2"
 
-  podman stop "$SRC"
-  podman rm "$SRC"
+  "$DOCKER" stop "$SRC"
+  "$DOCKER" rm "$SRC"
 
   if [ $UID == 0 ] ; then
     rm -rf -- "$PWD"/data/"$DST"
@@ -369,7 +376,7 @@ wait_mysql_ready() {
   local SERVER_NAME="$1"
   get_ip "$SERVER_NAME"
   local SERVER_IP="$RET_SERVER_IP"
-  podman run --name "$SERVER_NAME"-wait-ready --network "$NET" --rm -i \
+  "$DOCKER" run --name "$SERVER_NAME"-wait-ready --network "$NET" --rm -i \
     --entrypoint '' \
     -e LEADER_HOST="$SERVER_IP" -e LEADER_USER=root -e LEADER_PASSWORD=secret \
     "$MYSQL_IMG" bash -e <<'WAIT_READY_EOF'
@@ -401,7 +408,7 @@ wait_pg_ready() {
   local SERVER_NAME="$1"
   get_ip "$SERVER_NAME"
   local SERVER_IP="$RET_SERVER_IP"
-  podman run --name "$SERVER_NAME"-wait-ready --network "$NET" --rm -i \
+  "$DOCKER" run --name "$SERVER_NAME"-wait-ready --network "$NET" --rm -i \
     --entrypoint '' \
     -e PG_SERVER="$SERVER_IP" -e POSTGRES_PASSWORD=secret -e PGPASSWORD=secret \
     "$PG_IMG" bash -e <<'WAIT_READY_EOF'
@@ -419,13 +426,21 @@ WAIT_READY_EOF
 
 if [ "$DESTROY" == 1 ] ; then
   echo Destroy
+  if [ "$DOCKER" == "docker" ] ; then
   read -r -d '' CMD <<EOF
-  podman network rm -f "$NET" && true
+docker ps -a --filter 'network=$NET' --format '{{.ID}}'|xargs docker rm -f && true
+docker network rm "$NET" && true
+rm -rf -- "$PWD"/data/*
+EOF
+  else
+  read -r -d '' CMD <<EOF
+  "$DOCKER" network rm -f "$NET" && true
   if [ $UID != 0 ] ; then
     podman unshare chmod ogu+rwX -R "$PWD"/data
   fi
   rm -rf -- "$PWD"/data/*
 EOF
+  fi
   if [ "$DRY_RUN" == 1 ] ; then
     echo "$CMD"
   else
