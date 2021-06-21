@@ -190,7 +190,11 @@ run_mysql() {
   if [ $UID == 0 ] ; then
     chown $MYSQL_UID:$MYSQL_UID -R "$PWD"/data/"$SERVER_NAME"
   else
-    podman unshare chown $MYSQL_UID:$MYSQL_UID -R "$PWD"/data/"$SERVER_NAME"
+    if [ "$DOCKER" == "docker" ] ; then
+      docker run --rm -i -v "$PWD"/data/"$SERVER_NAME":"$PWD"/data/"$SERVER_NAME" busybox chown $MYSQL_UID:$MYSQL_UID -R "$PWD"/data/"$SERVER_NAME"
+    else
+      podman unshare chown $MYSQL_UID:$MYSQL_UID -R "$PWD"/data/"$SERVER_NAME"
+    fi
   fi
   "$DOCKER" network create "$NET" &>/dev/null || true
   "$DOCKER" run --name "$SERVER_NAME" --network "$NET" -d --restart=always \
@@ -225,7 +229,11 @@ run_pg() {
   if [ $UID == 0 ] ; then
     chown $PG_UID:$PG_UID -R "$PWD"/data/"$SERVER_NAME"
   else
-    podman unshare chown $PG_UID:$PG_UID -R "$PWD"/data/"$SERVER_NAME"
+    if [ "$DOCKER" == "docker" ] ; then
+      docker run --rm -i -v "$PWD"/data/"$SERVER_NAME":"$PWD"/data/"$SERVER_NAME" busybox chown $PG_UID:$PG_UID -R "$PWD"/data/"$SERVER_NAME"
+    else
+      podman unshare chown $PG_UID:$PG_UID -R "$PWD"/data/"$SERVER_NAME"
+    fi
   fi
   "$DOCKER" network create "$NET" &>/dev/null || true
   "$DOCKER" run --name "$SERVER_NAME" --network "$NET" -d --restart=always \
@@ -281,10 +289,17 @@ make_mysql_snapshot_offline_copy() {
     cp -a data/"$SRC" data/"$DST"
     rm -f data/"$DST"/auto.cnf
   else
-    [ -d "$PWD"/data/"$DST" ] && podman unshare chmod ogu+rwX -R "$PWD"/data/"$DST"
-    rm -rf -- data/"$DST"
-    podman unshare cp -a data/"$SRC" data/"$DST"
-    podman unshare rm -f data/"$DST"/auto.cnf
+    if [ "$DOCKER" == "docker" ] ; then
+      [ -d "$PWD"/data/"$DST" ] && docker run --rm -i -v "$PWD"/data/"$DST":"$PWD"/data/"$DST" busybox chmod ogu+rwX -R "$PWD"/data/"$DST"
+      rm -rf -- data/"$DST"
+      docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox cp -a "$PWD"/data/"$SRC" "$PWD"/data/"$DST"
+      docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox rm -f "$PWD"/data/"$DST"/auto.cnf
+    else
+      [ -d "$PWD"/data/"$DST" ] && podman unshare chmod ogu+rwX -R "$PWD"/data/"$DST"
+      rm -rf -- data/"$DST"
+      podman unshare cp -a data/"$SRC" data/"$DST"
+      podman unshare rm -f data/"$DST"/auto.cnf
+    fi
   fi
   run_mysql "$SRC"
 }
@@ -298,7 +313,11 @@ run_pg_secondary() {
   if [ $UID == 0 ] ; then
     sed -i -e '$ a host replication all all md5' "$PWD"/data/"$SRC"/pg_hba.conf
   else
-    podman unshare sed -i -e '$ a host replication all all md5' "$PWD"/data/"$SRC"/pg_hba.conf
+    if [ "$DOCKER" == "docker" ] ; then
+      docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox sed -i -e '$ a host replication all all md5' "$PWD"/data/"$SRC"/pg_hba.conf
+    else
+      podman unshare sed -i -e '$ a host replication all all md5' "$PWD"/data/"$SRC"/pg_hba.conf
+    fi
   fi
 
   get_ip "$SRC"
@@ -352,10 +371,17 @@ make_pg_snapshot_offline_copy() {
     cp -a "$PWD"/data/"$SRC" "$PWD"/data/"$DST"
     touch data/"$DST"/standby.signal 
   else
-    [ -d "$PWD"/data/"$DST" ] && podman unshare chmod ogu+rwX -R "$PWD"/data/"$DST"
-    rm -rf -- data/"$DST"
-    podman unshare cp -a data/"$SRC" data/"$DST"
-    podman unshare touch data/"$DST"/standby.signal 
+    if [ "$DOCKER" == "docker" ] ; then
+      [ -d "$PWD"/data/"$DST" ] && docker run --rm -i -v "$PWD"/data/"$DST":"$PWD"/data/"$DST" busybox chmod ogu+rwX -R "$PWD"/data/"$DST"
+      rm -rf -- data/"$DST"
+      docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox cp -a "$PWD"/data/"$SRC" "$PWD"/data/"$DST"
+      docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox touch "$PWD"/data/"$DST"/standby.signal
+    else
+      [ -d "$PWD"/data/"$DST" ] && podman unshare chmod ogu+rwX -R "$PWD"/data/"$DST"
+      rm -rf -- data/"$DST"
+      podman unshare cp -a data/"$SRC" data/"$DST"
+      podman unshare touch data/"$DST"/standby.signal 
+    fi
   fi
   run_pg "$SRC"
 
@@ -366,7 +392,11 @@ make_pg_snapshot_offline_copy() {
   if [ $UID == 0 ] ; then
     sed -i -e "\$ a primary_conninfo = 'host=$PRIMARY_IP user=postgres password=secret'" data/"$DST"/postgresql.auto.conf
   else
-    podman unshare sed -i -e "\$ a primary_conninfo = 'host=$PRIMARY_IP user=postgres password=secret'" data/"$DST"/postgresql.auto.conf
+    if [ "$DOCKER" == "docker" ] ; then
+      docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox sed -i -e "\$ a primary_conninfo = 'host=$PRIMARY_IP user=postgres password=secret'" "$PWD"/data/"$DST"/postgresql.auto.conf
+    else
+      podman unshare sed -i -e "\$ a primary_conninfo = 'host=$PRIMARY_IP user=postgres password=secret'" "$PWD"/data/"$DST"/postgresql.auto.conf
+    fi
   fi
 }
 
@@ -428,9 +458,13 @@ if [ "$DESTROY" == 1 ] ; then
   echo Destroy
   if [ "$DOCKER" == "docker" ] ; then
   read -r -d '' CMD <<EOF
-docker ps -a --filter 'network=$NET' --format '{{.ID}}'|xargs docker rm -f && true
-docker network rm "$NET" && true
-rm -rf -- "$PWD"/data/*
+  docker ps -a --filter 'network=$NET' --format '{{.ID}}'|xargs docker rm -f && true
+  docker network rm "$NET" && true
+  if [ $UID != 0 ] ; then
+    docker run -i --rm -v "$PWD"/data:"$PWD"/data busybox rm -rf -- "$PWD"/data/*
+  else
+    rm -rf -- "$PWD"/data/*
+  fi
 EOF
   else
   read -r -d '' CMD <<EOF
