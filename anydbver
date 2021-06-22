@@ -29,17 +29,17 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ "$1" = "--" ] ; then
+if [[ "$1" == "--" ]] ; then
   shift
 fi
 
 
-if [ "$1" == destroy ] ; then
+if [[ "$1" == destroy ]] ; then
   DESTROY=1
   shift
 fi
 
-if [ "$1" == deploy ] ; then
+if [[ "$1" == deploy ]] ; then
   DEPLOY=1
   shift
 fi
@@ -63,7 +63,8 @@ deploy_node() {
   echo deploy_node "$@"
   local NODE="$1"
   shift
-  local arr=("$@")
+  local arr
+  arr=( "$@" )
 
   unset MYSQL_IMG GTID_OPTS WORLD_DB DB_ARGUMENTS PAGILA_DB SNAPSHOT DB_IP PG_IMG
 
@@ -80,7 +81,7 @@ deploy_node() {
       GTID_OPTS=(--log-slave-updates --enforce_gtid_consistency=ON --gtid_mode=ON)
     fi
     if [[ "$i" == "world" ]] ; then
-      if ! [ -d sampledb/world ] ; then
+      if ! [[ -d sampledb/world ]] ; then
         mkdir -p sampledb/world
         curl -sL -o sampledb/world/world.sql.gz https://downloads.mysql.com/docs/world.sql.gz
         gunzip sampledb/world/world.sql.gz
@@ -89,10 +90,10 @@ deploy_node() {
       WORLD_DB=1
     fi
     if [[ "$i" == "args:"* ]] ; then
-      DB_ARGUMENTS=$(echo "$i" | sed -e 's/args://')
+      DB_ARGUMENTS="${i//args:/}"
     fi
     if [[ "$i" == "pagila" ]] ; then
-      if ! [ -d sampledb/pagila ] ; then
+      if ! [[ -d sampledb/pagila ]] ; then
         mkdir -p sampledb/pagila
         curl -sL https://github.com/devrimgunduz/pagila/raw/master/pagila-schema.sql https://github.com/devrimgunduz/pagila/raw/master/pagila-data.sql > sampledb/pagila/pagila.sql
       fi
@@ -106,7 +107,7 @@ deploy_node() {
     if [[ $i == "master_ip" ]] || [[ $i == "master_ip:"* ]] || [[ $i == "master" ]] || [[ $i == "master:"* ]] || [[ $i == "leader:"* ]] ; then
       get_version "$i"
       DB_IP="$VER"
-      if [ "$VER" == latest ] ; then
+      if [[ "$VER" == latest ]] ; then
         DB_IP=node0
       fi
     fi
@@ -118,15 +119,20 @@ deploy_node() {
 
   done
 
-  if [ "$MYSQL_IMG" != "" ] ; then
-    if [ "$DB_IP" != "" ] ; then
+
+  if [[ "$DB_IP" != "" ]] ; then
+		DB_IP="$USER-$DB_IP"
+	fi
+
+  if [[ "$MYSQL_IMG" != "" ]] ; then
+    if [[ "$DB_IP" != "" ]] ; then
       run_mysql_slave "$NODE" "$DB_IP"
     else
       run_mysql "$NODE"
     fi
   fi
-  if [ "$PG_IMG" != "" ] ; then
-    if [ "$DB_IP" != "" ] ; then
+  if [[ "$PG_IMG" != "" ]] ; then
+    if [[ "$DB_IP" != "" ]] ; then
       run_pg_secondary "$NODE" "$DB_IP"
     else
       run_pg "$NODE"
@@ -147,13 +153,13 @@ get_ip() {
   while true ; do
     sleep 1
     RET_SERVER_IP=$("$DOCKER" inspect --format "{{.NetworkSettings.IPAddress}}" "$SERVER_NAME")
-    if [ "$DOCKER" == "docker" ] ; then
-      [ "$RET_SERVER_IP" == "" ] && RET_SERVER_IP=$( "$DOCKER" inspect "$SERVER_NAME"| jq -r '.[]|.NetworkSettings.Networks["'"${NET}"'"].IPAddress' )
+    if [[ "$DOCKER" == "docker" ]] ; then
+      [[ "$RET_SERVER_IP" == "" ]] && RET_SERVER_IP=$( "$DOCKER" inspect "$SERVER_NAME"| jq -r '.[]|.NetworkSettings.Networks["'"${NET}"'"].IPAddress' )
     else
-      [ "$RET_SERVER_IP" == "" ] && RET_SERVER_IP=$( "$DOCKER" inspect --format json "$SERVER_NAME"| jq -r '.[]|.NetworkSettings.Networks["'"${NET}"'"].IPAddress' )
+      [[ "$RET_SERVER_IP" == "" ]] && RET_SERVER_IP=$( "$DOCKER" inspect --format json "$SERVER_NAME"| jq -r '.[]|.NetworkSettings.Networks["'"${NET}"'"].IPAddress' )
     fi
-    [ "$RET_SERVER_IP" == "" ] && continue
-    [ "$RET_SERVER_IP" == "null" ] && continue
+    [[ "$RET_SERVER_IP" == "" ]] && continue
+    [[ "$RET_SERVER_IP" == "null" ]] && continue
     break
   done
 }
@@ -168,7 +174,7 @@ run_mysql() {
   local SERVER_NAME="$1"
   local VOLUMES
 
-  if ! [[ -v SERVER_IDS["$SERVER_NAME"] ]] ; then
+  if ! [[ SERVER_IDS["$SERVER_NAME"] -gt 0 ]] ; then
     (( LAST_SERVER_ID=LAST_SERVER_ID+1 ))
     SERVER_IDS[$SERVER_NAME]="$LAST_SERVER_ID"
   fi
@@ -176,21 +182,21 @@ run_mysql() {
   local SERVER_ID="${SERVER_IDS[$SERVER_NAME]}"
 
 
-  if [ "$WORLD_DB" ] ; then
+  if [[ "$WORLD_DB" != "" ]] ; then
     VOLUMES=(-v "$PWD"/sampledb/world:/docker-entrypoint-initdb.d)
   fi
 
   get_user_id mysql "$MYSQL_IMG"
   local MYSQL_UID="$RET_UID"
-  read -r -d '' CMD <<EOF
-  if ! [ -d "$PWD"/data/"$SERVER_NAME" ] ; then
+  IFS= read -r -d '' CMD <<EOF || :
+  if ! [[ -d "$PWD"/data/"$SERVER_NAME" ]] ; then
     mkdir -p "$PWD"/data/"$SERVER_NAME"
     chmod o+rw "$PWD"/data/"$SERVER_NAME"
   fi
-  if [ $UID == 0 ] ; then
+  if [[ $UID == 0 ]] ; then
     chown $MYSQL_UID:$MYSQL_UID -R "$PWD"/data/"$SERVER_NAME"
   else
-    if [ "$DOCKER" == "docker" ] ; then
+    if [[ "$DOCKER" == "docker" ]] ; then
       docker run --rm -i -v "$PWD"/data/"$SERVER_NAME":"$PWD"/data/"$SERVER_NAME" busybox chown $MYSQL_UID:$MYSQL_UID -R "$PWD"/data/"$SERVER_NAME"
     else
       podman unshare chown $MYSQL_UID:$MYSQL_UID -R "$PWD"/data/"$SERVER_NAME"
@@ -204,7 +210,7 @@ run_mysql() {
     -e MYSQL_ROOT_PASSWORD=secret "$MYSQL_IMG" \
     --server-id="$SERVER_ID" --log-bin=mysqld-bin ${GTID_OPTS[@]} --report_host="$SERVER_NAME" $DB_ARGUMENTS
 EOF
-  if [ "$DRY_RUN" == 1 ] ; then
+  if [[ "$DRY_RUN" == 1 ]] ; then
     echo "$CMD"
   else
     eval "$CMD"
@@ -215,21 +221,21 @@ run_pg() {
   local SERVER_NAME="$1"
   local VOLUMES
 
-  if [ "$PAGILA_DB" ] ; then
+  if [[ "$PAGILA_DB" != "" ]] ; then
     VOLUMES=(-v "$PWD"/sampledb/pagila:/docker-entrypoint-initdb.d)
   fi
 
   get_user_id postgres "$PG_IMG"
   local PG_UID="$RET_UID"
-  read -r -d '' CMD <<EOF
-  if ! [ -d "$PWD"/data/"$SERVER_NAME" ] ; then
+  IFS= read -r -d '' CMD <<EOF || :
+  if ! [[ -d "$PWD"/data/"$SERVER_NAME" ]] ; then
     mkdir -p "$PWD"/data/"$SERVER_NAME"
     chmod o+rw "$PWD"/data/"$SERVER_NAME"
   fi
-  if [ $UID == 0 ] ; then
+  if [[ $UID == 0 ]] ; then
     chown $PG_UID:$PG_UID -R "$PWD"/data/"$SERVER_NAME"
   else
-    if [ "$DOCKER" == "docker" ] ; then
+    if [[ "$DOCKER" == "docker" ]] ; then
       docker run --rm -i -v "$PWD"/data/"$SERVER_NAME":"$PWD"/data/"$SERVER_NAME" busybox chown $PG_UID:$PG_UID -R "$PWD"/data/"$SERVER_NAME"
     else
       podman unshare chown $PG_UID:$PG_UID -R "$PWD"/data/"$SERVER_NAME"
@@ -241,7 +247,7 @@ run_pg() {
     -v "$PWD"/data/"$SERVER_NAME":/var/lib/postgresql/data \
     -e POSTGRES_PASSWORD=secret "$PG_IMG"
 EOF
-  if [ "$DRY_RUN" == 1 ] ; then
+  if [[ "$DRY_RUN" == 1 ]] ; then
     echo "$CMD"
   else
     eval "$CMD"
@@ -253,23 +259,23 @@ run_mysql_slave() {
   local SERVER_NAME="$1"
   local SRC_NAME="$2"
 
-  if [ "$SNAPSHOT" = 1 ] ; then
+  if [[ "$SNAPSHOT" = 1 ]] ; then
     make_mysql_snapshot_offline_copy "$SERVER_NAME" "$SRC_NAME"
   fi
 
-  read -r -d '' CMD <<EOF
-  run_mysql node1
+  IFS= read -r -d '' CMD <<EOF || :
+  run_mysql "$SERVER_NAME"
   get_ip $SRC_NAME
   LEADER_IP="\$RET_SERVER_IP"
   get_ip $SERVER_NAME
   FOLLOWER_IP="\$RET_SERVER_IP"
 
-  "$DOCKER" run --name node1-slave-setup --network $NET -i \
+  "$DOCKER" run --name "$SERVER_NAME"-slave-setup --network $NET -i \
     --entrypoint '' \
     -e LEADER_HOST="\$LEADER_IP" -e LEADER_USER=root -e LEADER_PASSWORD=secret -e FOLLOWER_HOST="\$FOLLOWER_IP" -e FOLLOWER_USER=root -e FOLLOWER_PASSWORD=secret \
     "$MYSQL_IMG" bash -e < tools/setup_mysql_replication.sh
 EOF
-  if [ "$DRY_RUN" == 1 ] ; then
+  if [[ "$DRY_RUN" == 1 ]] ; then
     echo "$CMD"
   else
     eval "$CMD"
@@ -284,18 +290,18 @@ make_mysql_snapshot_offline_copy() {
   "$DOCKER" stop "$SRC"
   # podman logs "$SRC"
   "$DOCKER" rm "$SRC"
-  if [ $UID == 0 ] ; then
+  if [[ $UID == 0 ]] ; then
     rm -rf -- data/"$DST"
     cp -a data/"$SRC" data/"$DST"
     rm -f data/"$DST"/auto.cnf
   else
-    if [ "$DOCKER" == "docker" ] ; then
-      [ -d "$PWD"/data/"$DST" ] && docker run --rm -i -v "$PWD"/data/"$DST":"$PWD"/data/"$DST" busybox chmod ogu+rwX -R "$PWD"/data/"$DST"
+    if [[ "$DOCKER" == "docker" ]] ; then
+      [[ -d "$PWD"/data/"$DST" ]] && docker run --rm -i -v "$PWD"/data/"$DST":"$PWD"/data/"$DST" busybox chmod ogu+rwX -R "$PWD"/data/"$DST"
       rm -rf -- data/"$DST"
       docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox cp -a "$PWD"/data/"$SRC" "$PWD"/data/"$DST"
       docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox rm -f "$PWD"/data/"$DST"/auto.cnf
     else
-      [ -d "$PWD"/data/"$DST" ] && podman unshare chmod ogu+rwX -R "$PWD"/data/"$DST"
+      [[ -d "$PWD"/data/"$DST" ]] && podman unshare chmod ogu+rwX -R "$PWD"/data/"$DST"
       rm -rf -- data/"$DST"
       podman unshare cp -a data/"$SRC" data/"$DST"
       podman unshare rm -f data/"$DST"/auto.cnf
@@ -310,10 +316,10 @@ run_pg_secondary() {
 
   wait_pg_ready "$SRC"
 
-  if [ $UID == 0 ] ; then
+  if [[ $UID == 0 ]] ; then
     sed -i -e '$ a host replication all all md5' "$PWD"/data/"$SRC"/pg_hba.conf
   else
-    if [ "$DOCKER" == "docker" ] ; then
+    if [[ "$DOCKER" == "docker" ]] ; then
       docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox sed -i -e '$ a host replication all all md5' "$PWD"/data/"$SRC"/pg_hba.conf
     else
       podman unshare sed -i -e '$ a host replication all all md5' "$PWD"/data/"$SRC"/pg_hba.conf
@@ -327,7 +333,7 @@ run_pg_secondary() {
     -e PG_SERVER="$SERVER_IP" -e POSTGRES_PASSWORD=secret -e PGPASSWORD=secret \
     "$PG_IMG" psql -h "$SERVER_IP" -U postgres -d postgres -c "ALTER SYSTEM SET wal_level = 'hot_standby';" -c "SELECT pg_reload_conf();"
 
-  if [ "$SNAPSHOT" = 1 ] ; then
+  if [[ "$SNAPSHOT" = 1 ]] ; then
     make_pg_snapshot_offline_copy "$SERVER_NAME" "$SRC"
   else
     make_pg_basebackup_copy "$SERVER_NAME" "$SRC"
@@ -340,7 +346,7 @@ make_pg_basebackup_copy() {
   local DST="$1"
   local SRC="$2"
 
-  if ! [ -d "$PWD"/data/"$DST" ] ; then
+  if ! [[ -d "$PWD"/data/"$DST" ]] ; then
     mkdir -p "$PWD"/data/"$DST"
     chmod o+rw "$PWD"/data/"$DST"
   fi
@@ -366,18 +372,18 @@ make_pg_snapshot_offline_copy() {
   "$DOCKER" stop "$SRC"
   "$DOCKER" rm "$SRC"
 
-  if [ $UID == 0 ] ; then
+  if [[ $UID == 0 ]] ; then
     rm -rf -- "$PWD"/data/"$DST"
     cp -a "$PWD"/data/"$SRC" "$PWD"/data/"$DST"
     touch data/"$DST"/standby.signal 
   else
-    if [ "$DOCKER" == "docker" ] ; then
-      [ -d "$PWD"/data/"$DST" ] && docker run --rm -i -v "$PWD"/data/"$DST":"$PWD"/data/"$DST" busybox chmod ogu+rwX -R "$PWD"/data/"$DST"
+    if [[ "$DOCKER" == "docker" ]] ; then
+      [[ -d "$PWD"/data/"$DST" ]] && docker run --rm -i -v "$PWD"/data/"$DST":"$PWD"/data/"$DST" busybox chmod ogu+rwX -R "$PWD"/data/"$DST"
       rm -rf -- data/"$DST"
       docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox cp -a "$PWD"/data/"$SRC" "$PWD"/data/"$DST"
       docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox touch "$PWD"/data/"$DST"/standby.signal
     else
-      [ -d "$PWD"/data/"$DST" ] && podman unshare chmod ogu+rwX -R "$PWD"/data/"$DST"
+      [[ -d "$PWD"/data/"$DST" ]] && podman unshare chmod ogu+rwX -R "$PWD"/data/"$DST"
       rm -rf -- data/"$DST"
       podman unshare cp -a data/"$SRC" data/"$DST"
       podman unshare touch data/"$DST"/standby.signal 
@@ -389,10 +395,10 @@ make_pg_snapshot_offline_copy() {
 
   local PRIMARY_IP="$RET_SERVER_IP"
 
-  if [ $UID == 0 ] ; then
+  if [[ $UID == 0 ]] ; then
     sed -i -e "\$ a primary_conninfo = 'host=$PRIMARY_IP user=postgres password=secret'" data/"$DST"/postgresql.auto.conf
   else
-    if [ "$DOCKER" == "docker" ] ; then
+    if [[ "$DOCKER" == "docker" ]] ; then
       docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox sed -i -e "\$ a primary_conninfo = 'host=$PRIMARY_IP user=postgres password=secret'" "$PWD"/data/"$DST"/postgresql.auto.conf
     else
       podman unshare sed -i -e "\$ a primary_conninfo = 'host=$PRIMARY_IP user=postgres password=secret'" "$PWD"/data/"$DST"/postgresql.auto.conf
@@ -454,28 +460,15 @@ WAIT_READY_EOF
 
 # Command processing
 
-if [ "$DESTROY" == 1 ] ; then
+if [[ "$DESTROY" == 1 ]] ; then
   echo Destroy
-  if [ "$DOCKER" == "docker" ] ; then
-  read -r -d '' CMD <<EOF
-  docker ps -a --filter 'network=$NET' --format '{{.ID}}'|xargs docker rm -f && true
-  docker network rm "$NET" && true
-  if [ $UID != 0 ] ; then
-    docker run -i --rm -v "$PWD"/data:"$PWD"/data busybox rm -rf -- "$PWD"/data/*
-  else
-    rm -rf -- "$PWD"/data/*
-  fi
+  IFS= read -r -d '' CMD <<EOF || :
+  "$DOCKER" ps -a --filter 'network=$NET' --format '{{.ID}}'|xargs "$DOCKER" rm -f || :
+  "$DOCKER" network rm "$NET" || :
+  "$DOCKER" run -i --rm -v "$PWD"/data:"$PWD"/data busybox rm -rf -- "$PWD"/data/* || :
 EOF
-  else
-  read -r -d '' CMD <<EOF
-  "$DOCKER" network rm -f "$NET" && true
-  if [ $UID != 0 ] ; then
-    podman unshare chmod ogu+rwX -R "$PWD"/data
-  fi
-  rm -rf -- "$PWD"/data/*
-EOF
-  fi
-  if [ "$DRY_RUN" == 1 ] ; then
+
+  if [[ "$DRY_RUN" == 1 ]] ; then
     echo "$CMD"
   else
     eval "$CMD"
@@ -484,16 +477,16 @@ EOF
 fi
 
 
-if [ "$DEPLOY" == 1 ] ; then
-  if ! [ -d data ] ; then
+if [[ "$DEPLOY" == 1 ]] ; then
+  if ! [[ -d data ]] ; then
     mkdir data
-    [ "$SELINUX" == 1 ] && sudo chcon -R -t container_file_t data sampledb
+    [[ "$SELINUX" == 1 ]] && sudo chcon -R -t container_file_t data sampledb
   fi
 
   DEPLARGS=()
   NODE=node0
-  while (( "$#" )); do
-    while (( "$#" )); do
+  while [[ "$#" -gt 0 ]] ; do
+    while [[ "$#" -gt 0 ]] ; do
       if [[ "$1" == node* ]] || [[ "$1" == default && $NODE != default ]] ; then
         break
       fi
@@ -501,12 +494,14 @@ if [ "$DEPLOY" == 1 ] ; then
       shift
     done
 
-    if [ "${#DEPLARGS[@]}" -gt 0 ] ; then
-      deploy_node "$NODE" "${DEPLARGS[@]}"
+    if [[ "${#DEPLARGS[@]}" -gt 0 ]] ; then
+      deploy_node "$USER-$NODE" "${DEPLARGS[@]}"
     fi
 
-    NODE="$1"
-    shift
+    if [[ "$#" -gt 0 ]] ; then
+      NODE="$1"
+      shift
+    fi
     DEPLARGS=()
   done
 fi
