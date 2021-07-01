@@ -2,7 +2,7 @@
 
 # read arguments
 opts=$(getopt \
-    --longoptions "dry-run,destroy,namespace:" \
+    --longoptions "dry-run,destroy,namespace:,provider:" \
     --name "$(basename "$0")" \
     --options "" \
     -- "$@"
@@ -17,6 +17,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --namespace)
       NAMESPACE="$2-"
+      shift 2
+      ;;
+    --provider)
+      PROVIDER="$2"
       shift 2
       ;;
     --destroy)
@@ -181,6 +185,83 @@ run_mysql() {
 
   local SERVER_ID="${SERVER_IDS[$SERVER_NAME]}"
 
+  if [[ "$PROVIDER" == "kubernetes" ]] ; then
+    cat <<EOYAML | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: datadir-$SERVER_NAME
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 6G
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: initdir-$SERVER_NAME
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 6G
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: $SERVER_NAME
+spec:
+  containers:
+  - name: mysql
+    env:
+    - name: MYSQL_ROOT_PASSWORD
+      value: secret
+    image: $MYSQL_IMG
+    imagePullPolicy: IfNotPresent
+    args:
+      - --server-id=$SERVER_ID
+      - --log-bin=mysqld-bin
+      - --report_host=$SERVER_NAME
+      - --log-slave-updates
+      - --enforce_gtid_consistency=ON
+      - --gtid_mode=ON
+    volumeMounts:
+    - mountPath: /var/lib/mysql
+      name: datadir
+    - mountPath: /docker-entrypoint-initdb.d
+      name: initdir
+  initContainers:
+  - name: worlddb
+    image: $MYSQL_IMG
+    imagePullPolicy: IfNotPresent
+    command:
+      - sh
+      - "-c"
+      - |
+        /bin/bash <<'EOF'
+        [ -f /docker-entrypoint-initdb.d/world.sql.gz ] || curl -sL -o /docker-entrypoint-initdb.d/world.sql.gz https://downloads.mysql.com/docs/world.sql.gz
+
+        EOF
+    volumeMounts:
+    - mountPath: /var/lib/mysql
+      name: datadir
+    - mountPath: /docker-entrypoint-initdb.d
+      name: initdir
+
+  restartPolicy: Always
+  volumes:
+  - name: datadir
+    persistentVolumeClaim:
+      claimName: datadir-$SERVER_NAME
+  - name: initdir
+    persistentVolumeClaim:
+      claimName: initdir-$SERVER_NAME
+EOYAML
+    return 0
+  fi
 
   if [[ "$WORLD_DB" != "" ]] ; then
     VOLUMES=(-v "$PWD"/sampledb/world:/docker-entrypoint-initdb.d)
@@ -495,7 +576,13 @@ if [[ "$DEPLOY" == 1 ]] ; then
     done
 
     if [[ "${#DEPLARGS[@]}" -gt 0 ]] ; then
-      deploy_node "$USER-$NODE" "${DEPLARGS[@]}"
+      if [[ "$PROVIDER" == "kubernetes" ]] ; then
+        DEPLOYMENT_NAME="$NODE"
+      else
+        DEPLOYMENT_NAME="$USER-$NODE"
+      fi
+
+      deploy_node "$DEPLOYMENT_NAME" "${DEPLARGS[@]}"
     fi
 
     if [[ "$#" -gt 0 ]] ; then
