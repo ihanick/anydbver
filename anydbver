@@ -481,32 +481,32 @@ refresh_percona_server_version_info() {
   done > .version-info/mariadb-galera.el8.txt
 
   curl -s \
-    http://repo.mysql.com/yum/mysql-5.6-community/el/7/x86_64/ \
-    http://repo.mysql.com/yum/mysql-5.7-community/el/7/x86_64/ \
-    http://repo.mysql.com/yum/mysql-8.0-community/el/7/x86_64/ \
+    https://repo.mysql.com/yum/mysql-5.6-community/el/7/x86_64/ \
+    https://repo.mysql.com/yum/mysql-5.7-community/el/7/x86_64/ \
+    https://repo.mysql.com/yum/mysql-8.0-community/el/7/x86_64/ \
     | sed -rne 's/^.*HREF="mysql-community-server-([0-9].*)\.el.\.x86_64\.rpm".*$/\1/p' \
     | sort -t. -k 1,1n -k 2,2n -k 3,3n \
     > .version-info/mysql.el7.txt
   curl -s \
-    http://repo.mysql.com/yum/mysql-8.0-community/el/8/x86_64/ \
+    https://repo.mysql.com/yum/mysql-8.0-community/el/8/x86_64/ \
     | sed -rne 's/^.*HREF="mysql-community-server-([0-9].*)\.el.\.x86_64\.rpm".*$/\1/p' \
     | sort -t. -k 1,1n -k 2,2n -k 3,3n \
     > .version-info/mysql.el8.txt
 
-  curl -sL http://repo.mysql.com/apt/ubuntu/pool/mysql-5.6/m/mysql-community/ http://repo.mysql.com/apt/ubuntu/pool/mysql-5.7/m/mysql-community/ http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/ > .version-info/mysql-ubuntu-versions.txt
+  curl -sL https://repo.mysql.com/apt/ubuntu/pool/mysql-5.6/m/mysql-community/ https://repo.mysql.com/apt/ubuntu/pool/mysql-5.7/m/mysql-community/ https://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/ > .version-info/mysql-ubuntu-versions.txt
   sed -rne 's/^.*HREF="mysql-community-server_([0-9].*)ubuntu18.04_amd64\.deb.*$/\1/p' .version-info/mysql-ubuntu-versions.txt | sort -t. -k 1,1n -k 2,2n -k 3,3n > .version-info/mysql.bionic.txt
   sed -rne 's/^.*HREF="mysql-community-server_([0-9].*)ubuntu20.04_amd64\.deb.*$/\1/p' .version-info/mysql-ubuntu-versions.txt | sort -t. -k 1,1n -k 2,2n -k 3,3n > .version-info/mysql.focal.txt
   rm .version-info/mysql-ubuntu-versions.txt
 
-  curl -sL http://repo.mysql.com/apt/debian/pool/mysql-5.6/m/mysql-community/ http://repo.mysql.com/apt/debian/pool/mysql-5.7/m/mysql-community/ http://repo.mysql.com/apt/debian/pool/mysql-8.0/m/mysql-community/|egrep -i 'mysql-server_.*(debian9|debian10)_amd64.deb' > .version-info/mysql-debian-versions.txt
+  curl -sL https://repo.mysql.com/apt/debian/pool/mysql-5.6/m/mysql-community/ https://repo.mysql.com/apt/debian/pool/mysql-5.7/m/mysql-community/ https://repo.mysql.com/apt/debian/pool/mysql-8.0/m/mysql-community/|egrep -i 'mysql-server_.*(debian9|debian10)_amd64.deb' > .version-info/mysql-debian-versions.txt
   grep debian9 .version-info/mysql-debian-versions.txt|sed -re 's,^.*A HREF="mysql-server_([^"]+)debian.*$,\1,' | egrep -v 'rc|dmr' > .version-info/mysql.stretch.txt
   grep debian10 .version-info/mysql-debian-versions.txt|sed -re 's,^.*A HREF="mysql-server_([^"]+)debian.*$,\1,' | egrep -v 'rc|dmr' > .version-info/mysql.buster.txt
   rm .version-info/mysql-debian-versions.txt
 
   curl -s \
-    http://repo.mysql.com/yum/mysql-cluster-7.5-community/el/7/x86_64/ \
-    http://repo.mysql.com/yum/mysql-cluster-7.6-community/el/7/x86_64/ \
-    http://repo.mysql.com/yum/mysql-cluster-8.0-community/el/7/x86_64/ \
+    https://repo.mysql.com/yum/mysql-cluster-7.5-community/el/7/x86_64/ \
+    https://repo.mysql.com/yum/mysql-cluster-7.6-community/el/7/x86_64/ \
+    https://repo.mysql.com/yum/mysql-cluster-8.0-community/el/7/x86_64/ \
     | grep mysql-cluster-community-server | grep -v debuginfo \
     | sed -re 's/^.*HREF="mysql-cluster-community-server-(.[-.0-9]+).el.*/\1/i' \
     | sort -t. -k 1,1n -k 2,2n -k 3,3n \
