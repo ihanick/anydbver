@@ -5,7 +5,7 @@
   when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or zalando_pg_op_version != '' or percona_pg_op_version != '' or (k3s_url != '' and k3s_token != '') or k3s_version != '') and kube_config == ''
 
 - name: helm tasks
-  when: (k3s_url == '' and k3s_version != '') or kube_config != ''
+  when: (k3s_url == '' and k3s_version != '') or kube_config != '' or k8s_minio != ''
   include_tasks: helm_install.yaml
 
 - name: Install kubectl
