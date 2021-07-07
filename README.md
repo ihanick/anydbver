@@ -48,3 +48,10 @@ Destroy:
 ```
 ./anydbver destroy
 ```
+
+## Kubernetes
+
+Run mysql master-slave in Kubernetes without operators
+```
+./anydbver --provider kubernetes deploy node0 mysql node1 mysql master:node0
+```

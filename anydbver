@@ -87,8 +87,7 @@ deploy_node() {
     if [[ "$i" == "world" ]] ; then
       if ! [[ -d sampledb/world ]] ; then
         mkdir -p sampledb/world
-        curl -sL -o sampledb/world/world.sql.gz https://downloads.mysql.com/docs/world.sql.gz
-        gunzip sampledb/world/world.sql.gz
+        curl -sL https://downloads.mysql.com/docs/world-db.tar.gz |tar -C sampledb/world/ --strip-components 1 -xz
       fi
 
       WORLD_DB=1
@@ -125,8 +124,12 @@ deploy_node() {
 
 
   if [[ "$DB_IP" != "" ]] ; then
-		DB_IP="$USER-$DB_IP"
-	fi
+    if [[ "$PROVIDER" == "kubernetes" ]] ; then
+      DB_IP="$DB_IP"
+    else
+      DB_IP="$USER-$DB_IP"
+    fi
+  fi
 
   if [[ "$MYSQL_IMG" != "" ]] ; then
     if [[ "$DB_IP" != "" ]] ; then
@@ -210,15 +213,32 @@ spec:
       storage: 6G
 ---
 apiVersion: v1
+kind: Service
+metadata:
+  name: $SERVER_NAME
+spec:
+  selector:
+    name: $SERVER_NAME
+  clusterIP: None
+  ports:
+  - name: mysql
+    port: 3306
+    targetPort: 3306
+---
+apiVersion: v1
 kind: Pod
 metadata:
   name: $SERVER_NAME
+  labels:
+    name: $SERVER_NAME
 spec:
   containers:
   - name: mysql
     env:
     - name: MYSQL_ROOT_PASSWORD
       value: secret
+    - name: MYSQL_ROOT_HOST
+      value: "%"
     image: $MYSQL_IMG
     imagePullPolicy: IfNotPresent
     args:
@@ -235,15 +255,20 @@ spec:
       name: initdir
   initContainers:
   - name: worlddb
-    image: $MYSQL_IMG
+    env:
+    - name: MYSQL_ROOT_PASSWORD
+      value: secret
+    image: curlimages/curl
     imagePullPolicy: IfNotPresent
     command:
       - sh
       - "-c"
       - |
-        /bin/bash <<'EOF'
-        [ -f /docker-entrypoint-initdb.d/world.sql.gz ] || curl -sL -o /docker-entrypoint-initdb.d/world.sql.gz https://downloads.mysql.com/docs/world.sql.gz
-
+        /bin/sh <<'EOF'
+        cat > /docker-entrypoint-initdb.d/root.sql <<CREATE_ROOT_EOF
+        INSTALL PLUGIN clone SONAME 'mysql_clone.so';
+        CREATE_ROOT_EOF
+        [ -f /docker-entrypoint-initdb.d/world.sql ] || curl -sL https://downloads.mysql.com/docs/world-db.tar.gz |tar -C /docker-entrypoint-initdb.d/ --strip-components 1 -xz
         EOF
     volumeMounts:
     - mountPath: /var/lib/mysql
@@ -411,6 +436,135 @@ EOF
 run_mysql_slave() {
   local SERVER_NAME="$1"
   local SRC_NAME="$2"
+
+  if ! [[ SERVER_IDS["$SERVER_NAME"] -gt 0 ]] ; then
+    (( LAST_SERVER_ID=LAST_SERVER_ID+1 ))
+    SERVER_IDS[$SERVER_NAME]="$LAST_SERVER_ID"
+  fi
+
+  local SERVER_ID="${SERVER_IDS[$SERVER_NAME]}"
+
+
+  if [[ "$PROVIDER" == "kubernetes" ]] ; then
+    cat <<EOYAML | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: datadir-$SERVER_NAME
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 6G
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: initdir-$SERVER_NAME
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 6G
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: $SERVER_NAME
+spec:
+  selector:
+    name: $SERVER_NAME
+  clusterIP: None
+  ports:
+  - name: mysql
+    port: 3306
+    targetPort: 3306
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: $SERVER_NAME
+  labels:
+    name: $SERVER_NAME
+spec:
+  containers:
+  - name: mysql
+    env:
+    - name: MYSQL_ROOT_PASSWORD
+      value: secret
+    - name: MYSQL_ROOT_HOST
+      value: "%"
+    image: $MYSQL_IMG
+    imagePullPolicy: IfNotPresent
+    args:
+      - --server-id=$SERVER_ID
+      - --log-bin=mysqld-bin
+      - --report_host=$SERVER_NAME
+      - --log-slave-updates
+      - --enforce_gtid_consistency=ON
+      - --gtid_mode=ON
+    volumeMounts:
+    - mountPath: /var/lib/mysql
+      name: datadir
+    - mountPath: /docker-entrypoint-initdb.d
+      name: initdir
+  initContainers:
+  - name: worlddb
+    env:
+    - name: MYSQL_ROOT_PASSWORD
+      value: secret
+    image: $MYSQL_IMG
+    imagePullPolicy: IfNotPresent
+    command:
+      - sh
+      - "-c"
+      - |
+        /bin/bash <<'EOF'
+        cat > /docker-entrypoint-initdb.d/root.sql <<CREATE_ROOT_EOF
+        CREATE USER root@'%' IDENTIFIED BY '\$MYSQL_ROOT_PASSWORD';
+        GRANT ALL PRIVILEGES ON *.* TO root@'%' WITH GRANT OPTION;
+        ALTER USER root@localhost IDENTIFIED BY '\$MYSQL_ROOT_PASSWORD';
+        INSTALL PLUGIN clone SONAME 'mysql_clone.so';
+        SET GLOBAL clone_valid_donor_list = '$SRC_NAME:3306';
+        CLONE INSTANCE FROM 'root'@'$SRC_NAME':3306 IDENTIFIED BY '\$MYSQL_ROOT_PASSWORD';
+        CREATE_ROOT_EOF
+
+        cat > /docker-entrypoint-initdb.d/slave.sql <<SLAVE_EOF
+        CHANGE MASTER TO MASTER_USER='root',MASTER_PASSWORD='\$MYSQL_ROOT_PASSWORD', MASTER_HOST='$SRC_NAME', MASTER_AUTO_POSITION=1;
+        SHUTDOWN;
+        SLAVE_EOF
+
+        mysqld -u mysql --initialize-insecure
+        echo "Empty database is created"
+        until mysql -u root -p"\$MYSQL_ROOT_PASSWORD" -h $SRC_NAME --silent --connect-timeout=30 --wait -e "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
+        echo "Master Started"
+        mysqld -u mysql --init-file=/docker-entrypoint-initdb.d/root.sql
+        echo "Setup slave"
+        mysqld -u mysql --init-file=/docker-entrypoint-initdb.d/slave.sql --server-id=$SERVER_ID --log-bin=mysqld-bin --report_host=$SERVER_NAME --log-slave-updates --enforce_gtid_consistency=ON --gtid_mode=ON
+        echo "MySQL initialized"
+        rm /docker-entrypoint-initdb.d/root.sql /docker-entrypoint-initdb.d/slave.sql
+        EOF
+    volumeMounts:
+    - mountPath: /var/lib/mysql
+      name: datadir
+    - mountPath: /docker-entrypoint-initdb.d
+      name: initdir
+
+  restartPolicy: Always
+  volumes:
+  - name: datadir
+    persistentVolumeClaim:
+      claimName: datadir-$SERVER_NAME
+  - name: initdir
+    persistentVolumeClaim:
+      claimName: initdir-$SERVER_NAME
+EOYAML
+    return 0
+  fi
+
+
 
   if [[ "$SNAPSHOT" = 1 ]] ; then
     make_mysql_snapshot_offline_copy "$SERVER_NAME" "$SRC_NAME"
