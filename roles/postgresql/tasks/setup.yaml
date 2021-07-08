@@ -144,3 +144,33 @@
         state: restarted
         enabled: True
 
+# archive_mode = 'on'
+# archive_command = 'source /etc/wal-g.env && /usr/bin/wal-g wal-push %p'
+# archive_timeout = '60'
+# restore_command = 'source /etc/wal-g.env && /usr/bin/wal-g wal-fetch %f %p'
+- name: Setup WAL-G and MinIO
+  when: walg_version != '' and minio_url != ''
+  block:
+    - name: Create WAL-G environment file
+      copy:
+        dest: /etc/wal-g.env
+        owner: root
+        group: postgres
+        mode: 0660
+        content: |
+          export AWS_ACCESS_KEY_ID="UkVQTEFDRS1XSVRILUFXUy1BQ0NFU1MtS0VZ"
+          export AWS_SECRET_ACCESS_KEY="UkVQTEFDRS1XSVRILUFXUy1TRUNSRVQtS0VZ"
+          export AWS_ENDPOINT={{ minio_url }}
+          export AWS_REGION=us-east-1
+          export AWS_S3_FORCE_PATH_STYLE=true
+          export WALE_S3_PREFIX=s3://backup
+          export PGHOST=$(node_ip.sh)
+    - name: Enable archiving in postgresql.conf
+      blockinfile:
+        path: "{{pg_conf_dir}}/postgresql.conf"
+        block: |
+          archive_mode = 'on'
+          archive_command = 'source /etc/wal-g.env && /usr/bin/wal-g wal-push %p'
+          archive_timeout = '60'
+          restore_command = 'source /etc/wal-g.env && /usr/bin/wal-g wal-fetch %f %p'
+

@@ -213,6 +213,7 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg-zalando"
     echo "$0 deploy pg:12.3"
     echo "$0 deploy pg:12.3 node1 pg:12.3 master:default"
+    echo "$0 deploy pg wal-g minio-ip:node1 node1 minio"
     echo "$0 deploy pg node1 pg master:default default pg pgpool backend-ip:default"
     echo "$0 deploy pg:13 patroni node1 pg:13 master:default patroni etcd-ip:default node2 pg:13 master:default patroni etcd-ip:default"
     echo "$0 deploy haproxy-pg:node1,node2,node3 node1 pg clustercheck node2 pg clustercheck master:node1 node3 pg clustercheck master:node1"
@@ -938,6 +939,11 @@ deploy_node() {
       search_for_latest_version walg "$i"
       DEP_ENV="$DEP_ENV WALG=$VER"
     fi
+    if [[ $i == "minio-ip" ]] || [[ $i == "minio-ip:"* ]] ; then
+      MINIO_HOST=$(get_version "$i")
+      DEP_ENV="$DEP_ENV MINIO_URL=$MINIO_HOST"
+    fi
+
     if [[ $i == "xtrabackup" ]] || [[ $i == "xtrabackup:"* ]] || [[ $i == "percona-xtrabackup" ]] || [[ $i == "percona-xtrabackup:"* ]] || [[ $i == "pxb" ]] || [[ $i == "pxb:"* ]] ; then
       search_for_latest_version xtrabackup "$i"
       DEP_ENV="$DEP_ENV PXB=$VER"
@@ -1082,6 +1088,10 @@ deploy_node() {
     if [[ $i == "k8s-minio" ]] ; then
         DEP_ENV="$DEP_ENV K8S_MINIO=yes"
     fi
+    if [[ $i == "minio" ]] ; then
+        DEP_ENV="$DEP_ENV MINIO=yes"
+    fi
+
     if [[ $i == "cert-manager" ]] || [[ $i == "certmanager" ]] ; then
         DEP_ENV="$DEP_ENV CERT_MANAGER=yes"
     fi
@@ -1497,6 +1507,11 @@ pre_deploy_hook() {
     LDAP_NODE=$(echo "$i" | perl -ne '/LDAP_IP=(\S*) / and print $1')
     LDAP_IP=$(find_node_ip $LDAP_NODE)
     i=$(echo "$i"|sed -e "s/LDAP_IP=$LDAP_NODE/LDAP_IP=$LDAP_IP/g")
+  fi
+  if echo "$i" | grep -q MINIO_URL ; then
+    MINIO_NODE=$(echo "$i" | perl -ne '/MINIO_URL=(\S*) / and print $1')
+    MINIO_URL=$(find_node_ip $MINIO_NODE)
+    i=$(echo "$i"|sed -e "s,MINIO_URL=$MINIO_NODE,MINIO_URL=http://$MINIO_URL:9199,g")
   fi
   if echo "$i" | grep -q SYSBENCH_PG ; then
     SYSBENCH_NODE=$(echo "$i" | perl -ne '/SYSBENCH_PG=(\S*) / and print $1')
