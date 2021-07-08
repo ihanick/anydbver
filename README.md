@@ -76,6 +76,7 @@ Deploy:
 ./anydbver deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg-zalando
 ./anydbver deploy pg:12.3
 ./anydbver deploy pg:12.3 node1 pg:12.3 master:default
+./anydbver deploy pg wal-g minio-ip:node1 node1 minio
 ./anydbver deploy pg node1 pg master:default default pg pgpool backend-ip:default
 ./anydbver deploy pg:13 patroni node1 pg:13 master:default patroni etcd-ip:default node2 pg:13 master:default patroni etcd-ip:default
 ./anydbver deploy haproxy-pg:node1,node2,node3 node1 pg clustercheck node2 pg clustercheck master:node1 node3 pg clustercheck master:node1
@@ -348,6 +349,8 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `mariadb-galera`
 * `mariadb`, short `maria`
 * `master_ip`, short master, alias `leader`
+* `minio`, Install standalone MinIO
+* `minio-ip`, node name for minio server
 * `mongos-cfg`
 * `mongos-shard`
 * `mydumper`
