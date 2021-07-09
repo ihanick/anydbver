@@ -55,7 +55,9 @@
           echo -e "MINIO_VOLUMES=\"/home/minio\"\nMINIO_OPTS=\"--address :9199\"\nMINIO_ROOT_USER=UkVQTEFDRS1XSVRILUFXUy1BQ0NFU1MtS0VZ\nMINIO_ROOT_PASSWORD=UkVQTEFDRS1XSVRILUFXUy1TRUNSRVQtS0VZ" > /etc/sysconfig/minio;
           chmod +x /usr/local/bin/minio /usr/local/bin/mc;
           systemctl daemon-reload;
-          systemctl start minio.service
+          systemctl start minio.service;
+          export MC_HOST_localhost=http://UkVQTEFDRS1XSVRILUFXUy1BQ0NFU1MtS0VZ:UkVQTEFDRS1XSVRILUFXUy1TRUNSRVQtS0VZ@localhost:9199;
+          /usr/local/bin/mc mb localhost/backup
 
 - name: PMM Setup tasks
   when: install_only == ''
