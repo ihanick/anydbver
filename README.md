@@ -28,6 +28,7 @@ Deploy:
 ./anydbver deploy percona-server:8.0.16
 ./anydbver deploy percona-server:8.0
 ./anydbver deploy percona-server
+./anydbver deploy percona-server rocksdb
 ./anydbver deploy ps:5.7
 ./anydbver deploy ps:5.7 mydumper
 ./anydbver deploy ps:8.0.22 xtrabackup
@@ -390,6 +391,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `pxc57`, Use Percona XtraDB Cluster 5.7 with Kubernetes
 * `rbr`, alias `row`, `row-based-replication`
 * `replica-set`
+* `rocksdb`, Install MyRocks (RocksDB) MySQL storage engine
 * `samba-ad`, short `samba`, install Samba with Active Directory support
 * `samba-dc`, required parameter - samba server name
 * `shardsrv`, mark MongoDB server as shard data node

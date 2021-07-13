@@ -120,6 +120,7 @@ if [ "x$1" = "xdeploy" ] && ([ "x$2" = "xmysql" -o "x$2" = "xpercona-server" -o 
     echo "$0 deploy percona-server:8.0.16"
     echo "$0 deploy percona-server:8.0"
     echo "$0 deploy percona-server"
+    echo "$0 deploy percona-server rocksdb"
     echo "$0 deploy ps:5.7"
     echo "$0 deploy ps:5.7 mydumper"
     echo "$0 deploy ps:8.0.22 xtrabackup"
@@ -956,6 +957,9 @@ deploy_node() {
     fi
     if [[ $i == "docker" ]] ; then
       DEP_ENV="$DEP_ENV DOCKER=1"
+    fi
+    if [[ $i == "rocksdb" ]] ; then
+      DEP_ENV="$DEP_ENV ROCKSDB=1"
     fi
     if [[ $i == "anydbver" ]] ; then
       DEP_ENV="$DEP_ENV ANYDBVER=1"

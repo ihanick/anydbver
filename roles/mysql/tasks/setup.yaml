@@ -165,6 +165,11 @@
   shell:
     cmd: mysql -e "INSTALL PLUGIN audit_log SONAME 'audit_log.so'"
 
+- name: Enable RocksDB
+  when: percona_server_version != '' and rocksdb_enabled|bool
+  shell:
+    cmd: ps-admin --enable-rocksdb -uroot -u{{db_user}} -p{{db_password}}
+
 - name: Setup ProxySQL replication hostgroup
   when: (proxysql_version != '' or percona_proxysql_version != '') and master_ip != '' and replication_type != 'galera' and replication_type != 'group'
   shell:
