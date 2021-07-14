@@ -16,6 +16,18 @@
     cmd: /usr/bin/percona-release enable psmdb-44
     creates: /etc/yum.repos.d/percona-psmdb-44-release.repo
 
+- name: Enable MongoDB Community repository
+  when: mongo_org_version.startswith('5.0')
+  copy:
+    dest: "/etc/yum.repos.d/mongodb-org-5.0.repo"
+    content: |
+      [mongodb-org-5.0]
+      name=MongoDB Repository
+      baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/5.0/x86_64/
+      gpgcheck=0
+      enabled=1
+      gpgkey=https://www.mongodb.org/static/pgp/server-5.0.asc
+
 - name: Enable local repo.* caching
   include_tasks: common/tasks/repo_cache.yaml
 
@@ -46,6 +58,13 @@
     - "http://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-mongos-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
     - "http://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
 
+- name: install MongoDB Community
+  when: mongo_org_version.startswith('5.0')
+  yum:
+    name: "{{pkg[dist].install_packages}}"
+    state: present
+
+
 - name: install Percona Backup for MongoDB
   when: pbm_version != ""
   yum:
@@ -53,7 +72,7 @@
     state: present
 
 - name: Download yq
-  when: (psmdb_version != "" and db_opts_file != '') or mongo_configsrv  != ''
+  when: ( (psmdb_version != "" or mongo_org_version != "") and db_opts_file != '') or mongo_configsrv  != ''
   get_url:
     url: 'https://github.com/mikefarah/yq/releases/download/3.3.0/yq_linux_amd64'
     dest: /usr/local/bin/yq

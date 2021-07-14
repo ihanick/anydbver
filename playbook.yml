@@ -15,6 +15,7 @@
     percona_xtradb_cluster_version: "{{ lookup('vars', 'extra_percona_xtradb_cluster_version', default=lookup('env','PXC',default='') ) }}"
     percona_xtradb_cluster_galera: "{{ lookup('vars', 'extra_percona_xtradb_cluster_galera', default=lookup('env','PXC_GALERA',default='') ) }}"
     psmdb_version: "{{ lookup('vars', 'extra_psmdb_version', default=lookup('env','PSMDB',default='') ) }}"
+    mongo_org_version: "{{ lookup('vars', 'extra_mongo_org_version', default=lookup('env','MONGO_ORG',default='') ) }}"
     pbm_version: "{{ lookup('vars', 'extra_pbm_version', default=lookup('env','PBM',default='') ) }}"
     pbm_agent: "{{ lookup('vars', 'extra_pbm_agent', default=lookup('env','PBM_AGENT',default='') ) }}"
     pmm_server_version: "{{ lookup('vars', 'extra_pmm_server_version', default=lookup('env','PMM_SERVER',default='') ) }}"
@@ -120,7 +121,7 @@
     percona_postgresql_major_ver: "{{ '95' if percona_postgresql_version.startswith('9.5') else '96' if percona_postgresql_version.startswith('9.6') else '10' if percona_postgresql_version.startswith('10') else '11' if percona_postgresql_version.startswith('11') else '12' if percona_postgresql_version.startswith('12') else '13' if percona_postgresql_version.startswith('13') else '' }}"
     percona_k8s_op_name: "percona-{{ 'xtradb-cluster' if percona_k8s_op_pxc_version != '' else 'server-mongodb' if percona_k8s_op_psmdb_version != '' else '' }}-operator"
     percona_k8s_op_version: "{{ percona_k8s_op_pxc_version if percona_k8s_op_pxc_version != '' else percona_k8s_op_psmdb_version }}"
-    db_systemd_service: "{{ 'mongod' if psmdb_version != '' else ('postgresql-' + percona_postgresql_major_ver) if percona_postgresql_version != '' else '' }}"
+    db_systemd_service: "{{ 'mongod' if psmdb_version != '' or mongo_org_version != '' else ('postgresql-' + percona_postgresql_major_ver) if percona_postgresql_version != '' else '' }}"
     mariadb_url: "{{ 'http://downloads.mariadb.com.local' if lookup('env','LOCAL_REPO_CACHE',default='') != '' else 'https://downloads.mariadb.com' }}"
     install_only: "{{ lookup('vars', 'extra_install_only', default=lookup('env','INSTALL_ONLY',default='') ) }}"
     is_percona_repo_required: >-
@@ -240,7 +241,7 @@
         name: patroni
 
     - name: MongoDB Role
-      when: psmdb_version != '' or pbm_version != '' or pbm_agent != ''
+      when: psmdb_version != '' or pbm_version != '' or pbm_agent != '' or mongo_org_version != ''
       include_role:
         name: mongodb
 

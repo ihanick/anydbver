@@ -25,6 +25,7 @@ if [ "x$1" = "xdeploy" ] && ([ "x$2" = "xpsmdb" -o "x$2" = "xmongo" -o "x$2" = "
     echo "Deploy mongodb/psmdb: "
     echo "$0 deploy psmdb"
     echo "$0 deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0"
+    echo "$0 deploy node0 mongo-community replica-set:rs0 node1 mongo-community master:default replica-set:rs0 node2 mongo-community master:default replica-set:rs0"
     echo -e $0' deploy \\\n  psmdb:4.2 replica-set:rs0 shardsrv \\\n  node1 psmdb:4.2 master:default replica-set:rs0 shardsrv \\\n  node2 psmdb:4.2 master:default replica-set:rs0 shardsrv \\\n  node3 psmdb:4.2 configsrv replica-set:cfg0 \\\n  node4 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \\\n  node5 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \\\n  node6 psmdb:4.2 mongos-cfg:cfg0/node3,node4,node5 mongos-shard:rs0/default,node1,node2'
     echo "$0 deploy ldap node1 ldap-master:default psmdb:4.2"
     echo "$0 deploy samba node1 psmdb:4.2 samba-dc:default"
@@ -801,6 +802,8 @@ EOF
 4.4.4-6
 EOF
 
+curl -sL https://repo.mongodb.org/yum/redhat/7/mongodb-org/3.0/x86_64/RPMS/ https://repo.mongodb.org/yum/redhat/7/mongodb-org/3.1/x86_64/RPMS/ https://repo.mongodb.org/yum/redhat/7/mongodb-org/3.2/x86_64/RPMS/ https://repo.mongodb.org/yum/redhat/7/mongodb-org/3.3/x86_64/RPMS/ https://repo.mongodb.org/yum/redhat/7/mongodb-org/3.4/x86_64/RPMS/ https://repo.mongodb.org/yum/redhat/7/mongodb-org/3.5/x86_64/RPMS/ https://repo.mongodb.org/yum/redhat/7/mongodb-org/3.6/x86_64/RPMS/ https://repo.mongodb.org/yum/redhat/7/mongodb-org/3.7/x86_64/RPMS/ https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.0/x86_64/RPMS/ https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.1/x86_64/RPMS/ https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.2/x86_64/RPMS/ https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.3/x86_64/RPMS/ https://repo.mongodb.org/yum/redhat/7/mongodb-org/4.4/x86_64/RPMS/ https://repo.mongodb.org/yum/redhat/7/mongodb-org/5.0/x86_64/RPMS/ | perl -ne '/mongodb-org-server-([^>]*).el7.x86_64.rpm/ and print "$1\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 > .version-info/mongo-org.el7.txt
+
 cat > .version-info/vault.txt <<EOF
 1.6.1
 EOF
@@ -1018,6 +1021,10 @@ deploy_node() {
     if [[ $i == "pbm" ]] || [[ $i == "pbm:"* ]] || [[ $i == "percona-backup-mongodb" ]] || [[ $i == "percona-backup-mongodb:"* ]] ; then
       search_for_latest_version pbm "$i"
       DEP_ENV="$DEP_ENV PBM=$VER "
+    fi
+    if [[ $i == "mongo-community" ]] || [[ $i == "mongo-community:"* ]] ; then
+      search_for_latest_version mongo-org "$i"
+      DEP_ENV="$DEP_ENV MONGO_ORG=$VER DB_USER=dba DB_PASS=secret START=1 DB_OPTS=mongo/enable_wt.conf"
     fi
 
     if [[ $i == "mongos-cfg:"* ]] ; then

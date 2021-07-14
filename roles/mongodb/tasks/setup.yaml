@@ -1,5 +1,5 @@
 - name: Apply Mongo database options from file
-  when: psmdb_version != "" and db_opts_file != ''
+  when: (psmdb_version != "" or mongo_org_version != "") and db_opts_file != ''
   block:
     - name: Merge conf file part and main config
       command:
@@ -56,21 +56,22 @@
         db_systemd_service: mongos
 
 - name: Create MongoDB database
-  when: db_password != "" and psmdb_version != ""
+  when: db_password != "" and (psmdb_version != "" or mongo_org_version != '' )
   shell:
     cmd: >-
       systemctl start mongod;
       until mongo --eval 'print("waited for connection")' &>/dev/null ; do sleep 2 ; done;
       mongo admin --eval 'db.createUser({user:"dba", pwd: "{{ db_password }}", roles: ["root"]})';
-      percona-server-mongodb-enable-auth.sh -q;
+      {{ 'true && ' if psmdb_version != '' else 'false &&' }} percona-server-mongodb-enable-auth.sh -q;
       mongo admin --eval 'db.changeUserPassword("dba", "{{ db_password }}")';
+      /usr/local/bin/yq merge -i /etc/mongod.conf "/vagrant/configs/mongo/authorization.conf"
       systemctl stop mongod;
       sed -i -e 's/127.0.0.1/0.0.0.0/g' /etc/mongod.conf;
       echo 'db = connect("mongodb://dba:{{ db_password }}@127.0.0.1:27017/admin")' > /root/.mongorc.js
     creates: /root/.mongorc.js
 
 - name: configure MongoDB replica options
-  when: db_password != '' and psmdb_version != '' and mongo_replicaset != ''
+  when: db_password != '' and (psmdb_version != '' or mongo_org_version != '') and mongo_replicaset != ''
   block:
     - name: copy keyfile
       copy:
@@ -117,10 +118,10 @@
 - name: Start database with systemd
   when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
   command:
-    cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
+    cmd: systemctl restart "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
 
 - name: Init or join Mongo replicaset
-  when: db_password != '' and psmdb_version != '' and mongo_replicaset != ''
+  when: db_password != '' and (psmdb_version != '' or mongo_org_version != '') and mongo_replicaset != ''
   block:
     - name: init replicaset
       when: master_ip == ''

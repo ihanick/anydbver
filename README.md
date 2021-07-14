@@ -92,6 +92,7 @@ Deploy:
 ./anydbver deploy psmdb
 ./anydbver deploy mongo pbm
 ./anydbver deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0
+./anydbver deploy node0 mongo-community replica-set:rs0 node1 mongo-community master:default replica-set:rs0 node2 mongo-community master:default replica-set:rs0
 ./anydbver deploy \
  psmdb:4.2 replica-set:rs0 shardsrv \
  node1 psmdb:4.2 master:default replica-set:rs0 shardsrv \
@@ -352,6 +353,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `master_ip`, short master, alias `leader`
 * `minio`, Install standalone MinIO
 * `minio-ip`, node name for minio server
+* `mongo-community`, Install MongoDB Community edition from mongodb.com
 * `mongos-cfg`
 * `mongos-shard`
 * `mydumper`

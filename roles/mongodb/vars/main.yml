@@ -1,13 +1,15 @@
 ---
 # vars file for mongodb
+pkg_prefix: "{{ psmdb_name+psmdb_major_ver if psmdb_version != '' else 'mongodb-org' }}"
+pkg_version: "{{ psmdb_version if psmdb_version != '' else mongo_org_version }}"
 pkg:
   el7:
     install_packages:
-      - "{{ psmdb_name }}{{ psmdb_major_ver }}-tools-{{ psmdb_version }}.{{ dist }}.x86_64"
-      - "{{ psmdb_name }}{{ psmdb_major_ver }}-shell-{{ psmdb_version }}.{{ dist }}.x86_64"
-      - "{{ psmdb_name }}{{ psmdb_major_ver }}-server-{{ psmdb_version }}.{{ dist }}.x86_64"
-      - "{{ psmdb_name }}{{ psmdb_major_ver }}-mongos-{{ psmdb_version }}.{{ dist }}.x86_64"
-      - "{{ psmdb_name }}{{ psmdb_major_ver }}-{{ psmdb_version }}.{{ dist }}.x86_64"
+      - "{{ pkg_prefix }}-tools-{{ pkg_version }}.{{ dist }}.x86_64"
+      - "{{ pkg_prefix }}-shell-{{ pkg_version }}.{{ dist }}.x86_64"
+      - "{{ pkg_prefix }}-server-{{ pkg_version }}.{{ dist }}.x86_64"
+      - "{{ pkg_prefix }}-mongos-{{ pkg_version }}.{{ dist }}.x86_64"
+      - "{{ pkg_prefix }}-{{ pkg_version }}.{{ dist }}.x86_64"
   el8:
     install_packages:
       - "{{ psmdb_name }}{{ psmdb_major_ver }}-tools-{{ psmdb_version }}.{{ dist }}.x86_64"
