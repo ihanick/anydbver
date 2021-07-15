@@ -382,9 +382,7 @@ fi
 if [ "x$1" = "xdestroy" ] || [[ "$DESTROY" == 1 ]] ; then
   shift
   NODE="$1"
-  if [ "x$NODE" = "x" ] ; then
-    NODE=default
-  else
+  if [[ "x$NODE" != "x" ]] ; then
     shift
   fi
   case "$PROVIDER" in
@@ -398,7 +396,7 @@ if [ "x$1" = "xdestroy" ] || [[ "$DESTROY" == 1 ]] ; then
       exec ./podmanctl --destroy
       ;;
     lxd)
-      exec ./lxdctl $NAMESPACE_CMD --destroy
+      exec ./lxdctl $NAMESPACE_CMD --destroy $NODE
       ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
