@@ -17,16 +17,16 @@
     creates: /etc/yum.repos.d/percona-psmdb-44-release.repo
 
 - name: Enable MongoDB Community repository
-  when: mongo_org_version.startswith('5.0')
+  when: mongo_org_version != ''
   copy:
-    dest: "/etc/yum.repos.d/mongodb-org-5.0.repo"
+    dest: "/etc/yum.repos.d/mongodb-org-{{pkg_major}}.repo"
     content: |
-      [mongodb-org-5.0]
+      [mongodb-org-{{pkg_major}}]
       name=MongoDB Repository
-      baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/5.0/x86_64/
+      baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/{{pkg_major}}/x86_64/
       gpgcheck=0
       enabled=1
-      gpgkey=https://www.mongodb.org/static/pgp/server-5.0.asc
+      gpgkey=https://www.mongodb.org/static/pgp/server-{{pkg_major}}.asc
 
 - name: Enable local repo.* caching
   include_tasks: common/tasks/repo_cache.yaml
@@ -59,7 +59,7 @@
     - "http://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
 
 - name: install MongoDB Community
-  when: mongo_org_version.startswith('5.0')
+  when: mongo_org_version != ''
   yum:
     name: "{{pkg[dist].install_packages}}"
     state: present

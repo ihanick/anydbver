@@ -2,6 +2,7 @@
 # vars file for mongodb
 pkg_prefix: "{{ psmdb_name+psmdb_major_ver if psmdb_version != '' else 'mongodb-org' }}"
 pkg_version: "{{ psmdb_version if psmdb_version != '' else mongo_org_version }}"
+pkg_major: "{{ pkg_version | regex_search('^[0-9]+[.][0-9]+') }}"
 pkg:
   el7:
     install_packages:
