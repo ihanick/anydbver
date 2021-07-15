@@ -15,7 +15,7 @@ SNAPSHOT=''
 getip() {
   NODE="$1"
   [ "x$NODE" = "xnode0" ] && NODE=default
-  IP="$(sed -ne '/\<'$NODE'\>/ {s/^.*ansible_host=//;s/ .*$//;p}' ${NAMESPACE}ansible_hosts 2>/dev/null)"
+  IP="$(sed -ne '/\<'$NODE'\>/ {s/^.*ansible_host=//;s/ .*$//;p}' ${NAMESPACE}ansible_hosts 2>/dev/null | head -n 1)"
   if [ "x$IP" = "x" ] ; then
     IP="$(sed -ne '/\<'$NODE'\>/ {s/ .*$//;p}' configs/${NAMESPACE}hosts 2>/dev/null|head -n 1)"
   fi

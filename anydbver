@@ -1916,11 +1916,7 @@ if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] || [ "x$1" = "xreplace" ] ; then
   DEPLOY_CMDS=()
   NODE=default
   shift
-  DRY_RUN=0
-  if [[ "$1" == "--dry-run" ]] ; then
-    DRY_RUN=1
-    shift
-  fi
+
   if [[ "$1" == default ]] || [[ "$1" == node* ]] ; then
     NODE=$1
     shift
