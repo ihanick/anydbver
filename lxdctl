@@ -108,7 +108,7 @@ fi
 
 # read arguments
 opts=$(getopt \
-    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:,hostname:,vm:,only-node:,privileged,namespace:,snapshot:,cache:,has-cache:" \
+    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:,hostname:,vm:,only-node:,privileged,namespace:,snapshot:,cache:,has-cache:,fix-ip" \
     --name "$(basename "$0")" \
     --options "" \
     -- "$@"
@@ -198,6 +198,10 @@ while [[ $# -gt 0 ]]; do
       DESTROY=1
       shift
       ;;
+    --fix-ip)
+      FIX_IP=1
+      shift
+      ;;
       *)
       break
       ;;
@@ -222,6 +226,33 @@ if [ "x$SNAPSHOT" != "x" ] ; then
   lxc publish $c --alias ${USER}-${OS}-${SNAPSHOT}
   lxc start $c
 
+  exit 0
+fi
+
+if [ "x$FIX_IP" != "x" ] ; then
+  if [ ! -f ${NAMESPACE}ansible_hosts ]  ; then
+    echo "Not deployed"
+    exit 1
+  fi
+  for NODE in $(awk '{print $1}' ${NAMESPACE}ansible_hosts |rev|cut -d. -f 1|rev) ; do
+    C="$NAMESPACE$USER.$NODE";
+    CONTAINER="${C//./-}";
+    CIP=$( lxc exec "$CONTAINER" node_ip.sh 2>/dev/null )
+    [ "x$CIP" == "x" ] && continue
+
+    getip "$NODE"
+    [ "x$IP" = "x" ] && continue
+
+    if [[ "$IP" != "$CIP" ]] ; then
+      if [[ "$NODE" == default ]] ; then
+        sed -i -re '/\.(default|node0)\>/{s/ansible_host=\S+/ansible_host='$CIP'/}' ${NAMESPACE}ansible_hosts
+      else
+        sed -i -re '/\.('$NODE')\>/{s/ansible_host=\S+/ansible_host='$CIP'/}' ${NAMESPACE}ansible_hosts
+      fi
+      sed -i -e "s/$IP/$CIP/" configs/${NAMESPACE}hosts
+      echo "Fixed IP for $NODE: $CIP" ;
+    fi
+  done
   exit 0
 fi
 

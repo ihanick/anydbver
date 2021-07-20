@@ -4,6 +4,7 @@
 print_help() {
   echo "Usage: "
   echo "$0 configure provider:lxd"
+  echo "$0 fix ip # update container ip addresses"
   echo "$0 ssh default or $0 ssh node1"
   echo "$0 update # refresh version information"
   echo "$0 destroy # remove containers and cleanup"
@@ -376,6 +377,10 @@ if [ "x$1" = "xlist-caches" ] ; then
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
       exit 1
   esac
+  exit 0
+fi
+if [ "x$1" = "xfix" ] && [ "x$2" = "xip" ] ; then
+  exec ./lxdctl $NAMESPACE_CMD --fix-ip
   exit 0
 fi
 
