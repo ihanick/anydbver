@@ -980,6 +980,11 @@ deploy_node() {
       search_for_latest_version pgpool "$i"
       DEP_ENV="$DEP_ENV PGPOOL=$VER"
     fi
+    if [[ $i == "pgbackrest" ]] || [[ $i == "pgbackrest:"* ]] ; then
+      #search_for_latest_version pgbackrest "$i"
+      VER=1
+      DEP_ENV="$DEP_ENV PGBACKREST=$VER"
+    fi
     if [[ $i == "odyssey" ]] || [[ $i == "odyssey:"* ]] ; then
       search_for_latest_version odyssey "$i"
       DEP_ENV="$DEP_ENV ODYSSEY=$VER"

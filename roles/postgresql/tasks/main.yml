@@ -26,7 +26,7 @@
 
 - name: Enable EPEL
   when: >
-    'development' in db_features.split(',') and
+    ( 'development' in db_features.split(',') or pgbackrest_version != '' ) and
     (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   package:
     name: epel-release
@@ -138,6 +138,12 @@
     name: "{{ item }}"
     state: present
   with_items: "{{os[dist].pgpool.install_packages}}"
+
+- name: Install PGBackrest
+  when: pgbackrest_version != ''
+  package:
+    name: pgbackrest
+    state: present
 
 - name: Postgres Setup tasks
   when: install_only == ''

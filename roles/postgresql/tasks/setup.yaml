@@ -181,3 +181,43 @@
         enabled: True
 
 
+- name: pgBackRest filesystem backups
+  when: pgbackrest_version != ''
+  block:
+    - name: pgBackRest stansa information
+      copy:
+        dest: /etc/pgbackrest.conf
+        owner: root
+        group: postgres
+        mode: 0660
+        content: |
+          [global]
+          repo1-path=/var/lib/pgbackrest
+          repo1-retention-full=2
+          [pg0app]
+          pg1-path=/var/lib/pgsql/{{maj}}/data
+          pg1-port=5432
+          # sudo -u postgres pgbackrest stanza-create --stanza=pg0app --log-level-console=info
+          # sudo -u postgres pgbackrest check --stanza=pg0app --log-level-console=info
+          # sudo -u postgres pgbackrest backup --stanza=pg0app --log-level-console=info
+          # sudo -u postgres pgbackrest info
+          # pgbackrest restore --stanza=pg0app --log-level-console=info
+    - name: Enable archiving in postgresql.conf
+      blockinfile:
+        path: "{{pg_conf_dir}}/postgresql.conf"
+        block: |
+          archive_mode = 'on'
+          archive_command = 'pgbackrest --stanza=pg0app archive-push %p'
+          archive_timeout = '60'
+    - name: restart postgresql
+      systemd:
+        name: "{{pg_systemd_svc}}"
+        state: restarted
+        enabled: True
+    - name: Create stanza
+      when: db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)
+      command:
+        cmd: sudo -u postgres pgbackrest stanza-create --stanza=pg0app --log-level-console=info
+
+
+
