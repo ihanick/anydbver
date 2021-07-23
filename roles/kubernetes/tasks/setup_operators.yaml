@@ -123,3 +123,15 @@
       touch /root/zalando_pg.applied
     creates: /root/zalando_pg.applied
 
+- name: install Vites.io operator
+  when: vites_version != ''
+  shell:
+    cmd: >-
+      cd /root;
+      git clone -b v{{ vites_version }} https://github.com/vitessio/vitess.git;
+      cd vitess/examples/operator;
+      until kubectl wait --for=condition=ready -n kube-system pod -l k8s-app=kube-dns &>/dev/null;do sleep 2;done;
+      kubectl apply -f operator.yaml;
+      yum install -y https://github.com/vitessio/vitess/releases/download/v10.0.2/vitess-10.0.2-fc78470.x86_64.rpm;
+      until kubectl wait --for=condition=ready pod -l app=vitess-operator &>/dev/null;do sleep 2;done
+    creates: /root/vites/examples/operator/operator.yaml

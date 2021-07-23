@@ -210,6 +210,7 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-mongo"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pxc"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default cert-manager k8s-pxc"
+    echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default node4 k3s-master:default default vites"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pmm k8s-pxc backup"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-pxc backup pxc57"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-pg"
@@ -723,6 +724,10 @@ EOF
 1.5.0
 EOF
 
+  cat > .version-info/vites.txt <<EOF
+10.0.2
+EOF
+
   cat > .version-info/pgpool.el7.txt <<EOF
 4.2.0-1
 4.2.1-1
@@ -1183,6 +1188,16 @@ deploy_node() {
       else
         VER=$(tail -n 1   .version-info/percona_postgres_op.txt)
         DEP_ENV="$DEP_ENV K8S_PG=$VER"
+      fi
+    fi
+    if [[ $i == "vites" ]] || [[ $i == "vites:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "$VER" .version-info/vites.txt |tail -n 1)
+        DEP_ENV="$DEP_ENV VITES=$VER"
+      else
+        VER=$(tail -n 1   .version-info/vites.txt)
+        DEP_ENV="$DEP_ENV VITES=$VER"
       fi
     fi
     if [[ $i == "k8s-pg-zalando" ]] || [[ $i == "k8s-pg-zalando:"* ]] ; then
