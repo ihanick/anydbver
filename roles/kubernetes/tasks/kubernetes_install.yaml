@@ -21,7 +21,7 @@
   command:
     warn: false
     cmd: >-
-      sed -i -e "/ExecStartPre/a ExecStartPre=-/bin/sh -xc 'test -f /sys/module/apparmor/parameters/enabled && mount --bind /tmp /sys/module/apparmor'" /etc/systemd/system/k3s.service
+      sed -i -e "/ExecStartPre/a ExecStartPre=-/bin/sh -xc 'test -f /sys/module/apparmor/parameters/enabled && mount --bind /tmp /sys/module/apparmor'" "/etc/systemd/system/k3s{{ '' if k3s_url == '' else '-agent' }}.service"
 - name: Fix k3s /dev/kmsg symlink
   file:
     src: /dev/console
