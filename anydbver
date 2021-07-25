@@ -1548,7 +1548,7 @@ find_samba_sid() {
       ssh -i secret/id_rsa root@$SAMBA_IP -o StrictHostKeyChecking=no /opt/samba/bin/wbinfo -D PERCONA|grep SID|awk '{print $3}' 2>/dev/null
       ;;
     lxd)
-      ./anydbver ssh $NODE /opt/samba/bin/wbinfo -D PERCONA|grep SID|awk '{print $3}' 2>/dev/null
+      ./anydbver ssh $NODE -- /opt/samba/bin/wbinfo -D PERCONA|grep SID|awk '{print $3}' 2>/dev/null
       ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
@@ -1565,7 +1565,7 @@ find_node_token() {
       ;;
     lxd)
       MASTER_IP=$(find_node_ip $NODE)
-      ./anydbver ssh $NODE cat /var/lib/rancher/k3s/server/node-token
+      ./anydbver ssh $NODE -- cat /var/lib/rancher/k3s/server/node-token
       ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
@@ -1758,7 +1758,7 @@ post_deploy_hook_after_all_nodes() {
 
   # after all nodes deploy
   if [[ $i != *PKO4PXC=* && $i == *CLUSTER=* && $i == *PXC=* ]] || [[ $i == *CLUSTER=* && $i == *GALERA=* ]] ; then
-    [[ $DRY_RUN == 0 ]] && ./anydbver ssh $NODE bash /vagrant/tools/fix_wsrep_cluster_address.sh </dev/null
+    [[ $DRY_RUN == 0 ]] && ./anydbver ssh $NODE -- bash /vagrant/tools/fix_wsrep_cluster_address.sh </dev/null
   fi
 }
 
