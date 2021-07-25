@@ -99,7 +99,7 @@ if [[ "x$TYPE" == "xgalera" ]] ; then
     # pre-requirement
     # vagrant ssh default -- sudo tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem |vagrant ssh node1 -- sudo tar -C / -xz
     rm -rf /var/lib/mysql/*
-    tar -C / -xzf /vagrant/secret/"${CLUSTER_NAME}-ssl.tar.gz"
+    [ -f /vagrant/secret/"${CLUSTER_NAME}-ssl.tar.gz" ] && tar -C / -xzf /vagrant/secret/"${CLUSTER_NAME}-ssl.tar.gz"
     cat >> "${CNF_FILE}" << EOF
 [mysqld]
 wsrep_cluster_name=${CLUSTER_NAME}
