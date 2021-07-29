@@ -218,7 +218,8 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy pg:12.3"
     echo "$0 deploy pg:12.3 node1 pg:12.3 master:default"
     echo "$0 deploy pg pgbackrest"
-    echo "$0 deploy pg wal-g minio-ip:node1 node1 minio"
+    echo "$0 deploy node0 hn:minio.percona.local minio node1 minio-ip:minio.percona.local pg pgbackrest"
+    echo "$0 deploy node0 hn:minio.percona.local minio node1 minio-ip:minio.percona.local pg wal-g"
     echo "$0 deploy pg node1 pg master:default default pg pgpool backend-ip:default"
     echo "$0 deploy pg:13 patroni node1 pg:13 master:default patroni etcd-ip:default node2 pg:13 master:default patroni etcd-ip:default"
     echo "$0 deploy haproxy-pg:node1,node2,node3 node1 pg clustercheck node2 pg clustercheck master:node1 node3 pg clustercheck master:node1"
@@ -1587,8 +1588,8 @@ pre_deploy_hook() {
   fi
   if echo "$i" | grep -q MINIO_URL ; then
     MINIO_NODE=$(echo "$i" | perl -ne '/MINIO_URL=(\S*) / and print $1')
-    MINIO_URL=$(find_node_ip $MINIO_NODE)
-    i=$(echo "$i"|sed -e "s,MINIO_URL=$MINIO_NODE,MINIO_URL=http://$MINIO_URL:9199,g")
+    #MINIO_URL=$(find_node_ip $MINIO_NODE)
+    i=$(echo "$i"|sed -e "s,MINIO_URL=$MINIO_NODE,MINIO_URL=https://$MINIO_NODE:9443,g")
   fi
   if echo "$i" | grep -q SYSBENCH_PG ; then
     SYSBENCH_NODE=$(echo "$i" | perl -ne '/SYSBENCH_PG=(\S*) / and print $1')
@@ -1745,6 +1746,9 @@ post_deploy_hook() {
         /var/lib/mysql/client-key.pem \
         /var/lib/mysql/server-cert.pem \
         /var/lib/mysql/server-key.pem > secret/${CLUSTER_NAME}-ssl.tar.gz 2>/dev/null
+  fi
+  if echo "$i" | grep -q MINIO= ; then
+    ./anydbver ${NAMESPACE_CMD} ssh $NODE tar cz /etc/minio/certs 2>/dev/null > secret/minio-certs.tar.gz
   fi
 
   if echo "$i" | grep -q VAULT= && ! echo "$i"|grep -q INSTALL_ONLY=1 ; then

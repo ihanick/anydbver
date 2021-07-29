@@ -79,7 +79,8 @@ Deploy:
 ./anydbver deploy pg:12.3
 ./anydbver deploy pg:12.3 node1 pg:12.3 master:default
 ./anydbver deploy pg pgbackrest
-./anydbver deploy pg wal-g minio-ip:node1 node1 minio
+./anydbver deploy node0 hn:minio.percona.local minio node1 minio-ip:minio.percona.local pg pgbackrest
+./anydbver deploy node0 hn:minio.percona.local minio node1 minio-ip:minio.percona.local pg wal-g
 ./anydbver deploy pg node1 pg master:default default pg pgpool backend-ip:default
 ./anydbver deploy pg:13 patroni node1 pg:13 master:default patroni etcd-ip:default node2 pg:13 master:default patroni etcd-ip:default
 ./anydbver deploy haproxy-pg:node1,node2,node3 node1 pg clustercheck node2 pg clustercheck master:node1 node3 pg clustercheck master:node1

@@ -1,0 +1,11 @@
+- name: Setup minio CA
+  shell:
+    warn: false
+    cmd: >-
+      tar -C / -xzf /vagrant/secret/minio-certs.tar.gz;
+      cp /etc/minio/certs/ca.pem /usr/share/pki/ca-trust-source/anchors/minio-ca.pem;
+      chown -R minio /etc/minio/certs;
+      update-ca-trust;
+      curl --compressed -L -s --output /usr/local/bin/mc https://dl.minio.io/client/mc/release/linux-amd64/mc;
+      chmod +x /usr/local/bin/mc;
+      echo 'export MC_HOST_minio=https://UkVQTEFDRS1XSVRILUFXUy1BQ0NFU1MtS0VZ:UkVQTEFDRS1XSVRILUFXUy1TRUNSRVQtS0VZ@minio.percona.local:9443' >> /root/.bashrc

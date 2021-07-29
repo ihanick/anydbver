@@ -47,16 +47,25 @@
       shell:
         warn: false
         cmd: >-
-          curl -L -s --output /usr/local/bin/minio https://dl.minio.io/server/minio/release/linux-amd64/minio;
-          curl -L -s --output /usr/local/bin/mc https://dl.minio.io/client/mc/release/linux-amd64/mc;
+          curl --compressed -L -s --output /usr/local/bin/minio https://dl.minio.io/server/minio/release/linux-amd64/minio;
+          curl --compressed -L -s --output /usr/local/bin/mc https://dl.minio.io/client/mc/release/linux-amd64/mc;
           curl -L -s --output /etc/systemd/system/minio.service https://raw.githubusercontent.com/minio/minio-service/master/linux-systemd/minio.service;
           sed -i -e 's,EnvironmentFile=/etc/default/minio,EnvironmentFile=/etc/sysconfig/minio,' -e 's/minio-user/minio/g' /etc/systemd/system/minio.service;
           useradd -m minio;
-          echo -e "MINIO_VOLUMES=\"/home/minio\"\nMINIO_OPTS=\"--address :9199\"\nMINIO_ROOT_USER=UkVQTEFDRS1XSVRILUFXUy1BQ0NFU1MtS0VZ\nMINIO_ROOT_PASSWORD=UkVQTEFDRS1XSVRILUFXUy1TRUNSRVQtS0VZ" > /etc/sysconfig/minio;
+          echo -e "MINIO_VOLUMES=\"/home/minio\"\nMINIO_OPTS=\"--certs-dir /etc/minio/certs --address :9443\"\nMINIO_ROOT_USER=UkVQTEFDRS1XSVRILUFXUy1BQ0NFU1MtS0VZ\nMINIO_ROOT_PASSWORD=UkVQTEFDRS1XSVRILUFXUy1TRUNSRVQtS0VZ" > /etc/sysconfig/minio;
           chmod +x /usr/local/bin/minio /usr/local/bin/mc;
+          bash /vagrant/tools/generate_ssl_certs.sh minio.percona.local client;
+          mkdir -p /etc/minio/certs;
+          cp /root/ssl/server-key.pem /etc/minio/certs/private.key;
+          cp /root/ssl/server.pem /etc/minio/certs/public.crt;
+          cp /root/ssl/ca.pem /etc/minio/certs/ca.pem;
+          cp /etc/minio/certs/ca.pem /usr/share/pki/ca-trust-source/anchors/minio-ca.pem;
+          chown -R minio /etc/minio/certs;
+          update-ca-trust;
           systemctl daemon-reload;
           systemctl start minio.service;
-          export MC_HOST_localhost=http://UkVQTEFDRS1XSVRILUFXUy1BQ0NFU1MtS0VZ:UkVQTEFDRS1XSVRILUFXUy1TRUNSRVQtS0VZ@localhost:9199;
+          export MC_HOST_localhost=https://UkVQTEFDRS1XSVRILUFXUy1BQ0NFU1MtS0VZ:UkVQTEFDRS1XSVRILUFXUy1TRUNSRVQtS0VZ@minio.percona.local:9443;
+          echo 'export MC_HOST_localhost=https://UkVQTEFDRS1XSVRILUFXUy1BQ0NFU1MtS0VZ:UkVQTEFDRS1XSVRILUFXUy1TRUNSRVQtS0VZ@minio.percona.local:9443' >> ~/.bashrc;
           /usr/local/bin/mc mb localhost/backup
 
 - name: PMM Setup tasks
