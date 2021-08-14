@@ -695,6 +695,8 @@ master
 1.5.0
 1.6.0
 1.7.0
+1.8.0
+1.9.0
 EOF
   cat > .version-info/pko4pxc.txt <<EOF
 master
@@ -710,6 +712,7 @@ master
 1.6.0
 1.7.0
 1.8.0
+1.9.0
 EOF
   cat > .version-info/percona_postgres_op.txt << EOF
 master
