@@ -43,7 +43,7 @@ Use `mysql` instead of `ps` for mysql/mysql-server image.
 * Pagila sample database and physical replication secondary created by `pg_basebackup`
 ```
 ./anydbver deploy node0 pg pagila node1 pg master:node0
-`
+```
 Destroy:
 ```
 ./anydbver destroy
