@@ -1,0 +1,72 @@
+# VAGRANT_VAGRANTFILE=Vagrantfile.fedora vagrant up
+# vagrant ssh
+# sudo ausearch -m avc -ts recent | audit2allow -M snap
+# sudo semodule -i snap.pp
+# sudo reboot
+
+$script = <<-'SCRIPT'
+dnf install -y snapd git ansible kernel-modules kernel-modules-extra openssl grubby
+dnf install -y  kernel-modules-$(uname -r) kernel-modules-extra-$(uname -r)
+grubby --update-kernel=ALL --args="systemd.unified_cgroup_hierarchy=0"
+ln -s /var/lib/snapd/snap /snap
+cat /home/vagrant/selinux-lxd.log | audit2allow -M snap
+semodule -i snap.pp
+setenforce 0
+systemctl start snapd
+snap install lxd
+gpasswd -a vagrant lxd
+cd /home/vagrant/
+git clone https://github.com/ihanick/anydbver.git
+cat >/home/vagrant/anydbver/.anydbver <<EOF
+PROVIDER=lxd
+LXD_PROFILE=vagrant
+K3S_FLANNEL_BACKEND=host-gw
+EOF
+chown vagrant:vagrant -R /home/vagrant/anydbver
+mkdir /home/vagrant/lxc
+lxc storage create vagrant dir source=/home/vagrant/lxc
+lxc profile create vagrant
+lxc profile device add vagrant root disk type=disk pool=vagrant path=/
+lxc network create lxdbr0
+lxc profile device add vagrant eth0 nic name=eth0 network=lxdbr0 type=nic
+echo 'export LXD_PROFILE=vagrant' >> /home/vagrant/.bashrc
+echo 'export K3S_FLANNEL_BACKEND=host-gw' >> /home/vagrant/.bashrc
+sudo -u vagrant bash -c 'export HOME=/home/vagrant;cd /home/vagrant/anydbver;./anydbver update'
+cat > /etc/sysctl.d/50-k3s.conf <<EOF
+vm.overcommit_memory = 1
+vm.overcommit_ratio = 10000
+kernel.panic = 10
+kernel.panic_on_oops = 1
+EOF
+sysctl -p /etc/sysctl.d/50-k3s.conf
+
+cat > /etc/modules-load.d/k3s.conf <<EOF
+br_netfilter
+overlay
+EOF
+modprobe br_netfilter
+modprobe overlay
+
+SCRIPT
+
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "fedora/34-cloud-base"
+  config.vm.synced_folder '.', '/vagrant', disabled: true
+
+  config.vm.provision "file", source: "selinux-lxd.log", destination: "/home/vagrant/selinux-lxd.log"
+
+  config.vm.provision "shell", inline: $script
+
+  config.vm.provision :shell do |shell|
+    shell.privileged = true
+    shell.inline = 'echo rebooting'
+    shell.reboot = true
+  end
+
+  config.vm.provider "virtualbox" do |v|
+    v.customize ["modifyvm", :id, "--uartmode1", "file", File::NULL]
+    v.memory = 4096
+    v.cpus = 2
+  end
+end
