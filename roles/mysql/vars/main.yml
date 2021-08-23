@@ -2,8 +2,8 @@
 # vars file for mysql
 mydumper:
   el7:
-    install_packages: "https://github.com/maxbube/mydumper/releases/download/v{{mydumper_version|regex_replace('-[0-9]+$')}}/mydumper-{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version}}.{{dist}}.x86_64.rpm"
+    install_packages: "https://github.com/maxbube/mydumper/releases/download/v{{mydumper_version|regex_replace('-[0-9]+$') if mydumper_version != '0.10.7-2' else mydumper_version}}/mydumper-{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version}}.{{dist}}.x86_64.rpm"
   el8:
-    install_packages: "https://github.com/maxbube/mydumper/releases/download/v{{mydumper_version|regex_replace('-[0-9]+$')}}/mydumper-{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version}}.{{dist}}.x86_64.rpm"
+    install_packages: "https://github.com/maxbube/mydumper/releases/download/v{{mydumper_version|regex_replace('-[0-9]+$') if mydumper_version != '0.10.7-2' else mydumper_version}}/mydumper-{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version}}.{{dist}}.x86_64.rpm"
   focal:
-    install_packages: "https://github.com/maxbube/mydumper/releases/download/v{{mydumper_version|regex_replace('-[0-9]+$')}}/mydumper_{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version}}.{{dist}}_amd64.deb"
+    install_packages: "https://github.com/maxbube/mydumper/releases/download/v{{mydumper_version|regex_replace('-[0-9]+$') if mydumper_version != '0.10.7-2' else mydumper_version}}/mydumper_{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version}}.{{dist}}_amd64.deb"
