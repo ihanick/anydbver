@@ -54,7 +54,7 @@ NET="${NAMESPACE}${USER}-anydbver"
 
 #PODMAN_HUB=docker.io/
 SELINUX=0
-sestatus | grep 'SELinux status'|grep -q enabled && SELINUX=1
+type -P sestatus > /dev/null && sestatus | grep 'SELinux status'|grep -q enabled && SELINUX=1
 
 DOCKER=podman
 docker version &>/dev/null && DOCKER=docker
