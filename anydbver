@@ -299,6 +299,33 @@ if [[ "$1" == "--" ]] ; then
   shift
 fi
 
+setup_existing_hosts() {
+  PYTHON_INT=/usr/bin/python
+
+  :> ${NAMESPACE}ansible_hosts
+
+  for w in ${ANSIBLE_WORKERS//,/ } ; do
+    NODE=${USER}.${w//:*/}
+    IP=${w//*:/}
+
+    if [ "x$NODE" = "x${USER}.node0" ] ; then
+      echo "${USER}.default ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ${NAMESPACE}ansible_hosts
+    fi
+
+    echo "$NODE ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ${NAMESPACE}ansible_hosts
+
+
+    cat >> ${NAMESPACE}ssh_config <<EOF
+Host ${NODE/$USER./}
+   User root
+   HostName $IP
+   StrictHostKeyChecking no
+   UserKnownHostsFile /dev/null
+   IdentityFile ~/.ssh/id_rsa
+EOF
+
+  done
+}
 
 if [ "x$1" = "xconfigure" ] ; then
   while (( "$#" )); do
@@ -312,6 +339,9 @@ if [ "x$1" = "xconfigure" ] ; then
         podman)
           ;;
         lxd)
+          ;;
+        existing)
+          setup_existing_hosts
           ;;
         *)
           echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
@@ -349,6 +379,9 @@ if [ "x$1" = "xssh" ] ; then
     lxd)
       exec ./lxdctl $NAMESPACE_CMD ssh "$NODE" "$@"
       ;;
+    existing)
+      exec ./lxdctl $NAMESPACE_CMD ssh "$NODE" "$@"
+      ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
       exit 1
@@ -361,6 +394,9 @@ if [ "x$1" = "xlist" ] || [ "x$1" = "xls" ] ; then
       ;;
     lxd)
       exec ./lxdctl $NAMESPACE_CMD list
+      ;;
+    existing)
+      echo $ANSIBLE_WORKERS
       ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
@@ -375,6 +411,8 @@ if [ "x$1" = "xlist-caches" ] ; then
       ;;
     lxd)
       exec ./lxdctl $NAMESPACE_CMD list-caches
+      ;;
+    existing)
       ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
@@ -405,6 +443,9 @@ if [ "x$1" = "xdestroy" ] || [[ "$DESTROY" == 1 ]] ; then
       ;;
     lxd)
       exec ./lxdctl $NAMESPACE_CMD --destroy $NODE
+      ;;
+    existing)
+      echo "Please destroy $ANSIBLE_WORKERS manually"
       ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
@@ -1487,10 +1528,22 @@ deploy_node() {
     lxd)
       echo "$DEP_ENV ansible-playbook -i ${NAMESPACE}ansible_hosts --limit $USER.$NODE playbook.yml"
       ;;
+    existing)
+      echo "$DEP_ENV ansible-playbook -i ${NAMESPACE}ansible_hosts --limit $USER.$NODE playbook.yml"
+      ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
       exit 1
   esac
+}
+
+getip() {
+  NODE="$1"
+  [ "x$NODE" = "xnode0" ] && NODE=default
+  IP="$(sed -ne '/\<'$NODE'\>/ {s/^.*ansible_host=//;s/ .*$//;p}' ${NAMESPACE}ansible_hosts 2>/dev/null | head -n 1)"
+  if [ "x$IP" = "x" ] ; then
+    IP="$(sed -ne '/\<'$NODE'\>/ {s/ .*$//;p}' configs/${NAMESPACE}hosts 2>/dev/null|head -n 1)"
+  fi
 }
 
 find_node_ip() {
@@ -1508,6 +1561,10 @@ find_node_ip() {
       ;;
     lxd)
       ./lxdctl $NAMESPACE_CMD ip $NODE
+      ;;
+    existing)
+      getip $NODE
+      echo $IP
       ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
@@ -1554,6 +1611,9 @@ find_samba_sid() {
     lxd)
       ./anydbver ssh $NODE -- /opt/samba/bin/wbinfo -D PERCONA|grep SID|awk '{print $3}' 2>/dev/null
       ;;
+    existing)
+      ./anydbver ssh $NODE -- /opt/samba/bin/wbinfo -D PERCONA|grep SID|awk '{print $3}' 2>/dev/null
+      ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
       exit 1
@@ -1568,6 +1628,10 @@ find_node_token() {
       lxdock shell $NODE -c cat /var/lib/rancher/k3s/server/node-token
       ;;
     lxd)
+      MASTER_IP=$(find_node_ip $NODE)
+      ./anydbver ssh $NODE -- cat /var/lib/rancher/k3s/server/node-token
+      ;;
+    existing)
       MASTER_IP=$(find_node_ip $NODE)
       ./anydbver ssh $NODE -- cat /var/lib/rancher/k3s/server/node-token
       ;;
@@ -1792,6 +1856,8 @@ start_all_nodes() {
         [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD
       fi
       ;;
+    existing)
+      ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
       exit 1
@@ -1817,6 +1883,8 @@ start_node() {
         echo "./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD"
         [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD
       fi
+      ;;
+    existing)
       ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
