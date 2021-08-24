@@ -73,6 +73,14 @@ deploy_node() {
   unset MYSQL_IMG GTID_OPTS WORLD_DB DB_ARGUMENTS PAGILA_DB SNAPSHOT DB_IP PG_IMG
 
   for i in "${arr[@]}"; do
+    if [[ "$i" == "ssh" ]] ; then
+      SSH_IMG=c7-systemd
+    fi
+    if [[ "$i" == "ansible-workers:"* ]] ; then
+      get_version "$i"
+      ANSIBLE_WORKERS="$VER"
+      SSH_IMG=c7-anydbver-ansible
+    fi
     if [[ "$i" == "percona-server" ]] || [[ "$i" == "percona-server:"* ]] || [[ "$i" == "ps" ]] || [[ "$i" == "ps:"* ]] ; then
       get_version "$i"
       MYSQL_IMG=percona/percona-server:"$VER"
@@ -144,6 +152,9 @@ deploy_node() {
     else
       run_pg "$NODE"
     fi
+  fi
+  if [[ "$SSH_IMG" != "" ]] ; then
+      run_ssh_server "$NODE"
   fi
 }
 
@@ -272,6 +283,43 @@ EOF
   fi
 }
 
+
+run_ssh_server() {
+  local SERVER_NAME="$1"
+  if [[ "$ANSIBLE_WORKERS" != "" ]] ; then
+    if [[ "$PROVIDER" == "kubernetes" ]] ; then
+      NODE_PREFIX=""
+    else
+      NODE_PREFIX="$USER-"
+    fi
+
+    IFS= read -r -d '' CMD <<EOF || :
+  ANSIBLE_WORKERS_IP=''
+  for w in \${ANSIBLE_WORKERS//,/ } ; do
+    get_ip "$NODE_PREFIX\$w"
+    ANSIBLE_WORKERS_IP="\$ANSIBLE_WORKERS_IP,\$w:\$RET_SERVER_IP"
+  done
+  ANSIBLE_WORKERS_IP="\${ANSIBLE_WORKERS_IP:1}"
+
+  "$DOCKER" network create "$NET" &>/dev/null || true
+  "$DOCKER" run -d --name "$SERVER_NAME" --network $NET --restart=always --privileged \
+    -e "ANSIBLE_WORKERS=\$ANSIBLE_WORKERS_IP" -e USER=root \
+    "$SSH_IMG"
+EOF
+  else
+    IFS= read -r -d '' CMD <<EOF || :
+  "$DOCKER" network create "$NET" &>/dev/null || true
+  "$DOCKER" run -d --name "$SERVER_NAME" --network $NET --restart=always --privileged \
+    "$SSH_IMG"
+EOF
+  fi
+  if [[ "$DRY_RUN" == 1 ]] ; then
+    echo "$CMD"
+  else
+    eval "$CMD"
+  fi
+
+}
 
 run_mysql_slave() {
   local SERVER_NAME="$1"

@@ -55,3 +55,11 @@ Run mysql master-slave in Kubernetes without operators
 ```
 ./anydbver --provider kubernetes deploy node0 mysql node1 mysql master:node0
 ```
+
+## Using ansible version of anydbver with docker
+```
+./anydbver deploy node0 ssh node1 ssh node2 ssh node3 ansible-workers:node0,node1,node2
+docker exec -it $USER-node3 bash
+cd /root/anydbver
+./anydbver deploy node0 percona-toolkit
+```
