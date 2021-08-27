@@ -96,9 +96,9 @@
       cd percona-postgresql-operator;
       until kubectl wait --for=condition=ready -n kube-system pod -l k8s-app=kube-dns &>/dev/null;do sleep 2;done;
       kubectl create namespace pgo;
-      kubectl apply -f ./deploy/operator.yaml;
+      kubectl apply -n pgo -f ./deploy/operator.yaml;
       until kubectl wait --for=condition=ready pod --namespace pgo -l name=postgres-operator &>/dev/null;do sleep 2;done;
-      kubectl apply -f ./deploy/cr.yaml;
+      kubectl apply -n pgo -f ./deploy/cr.yaml;
 
 
 - name: install Zalando Postgresql Operator

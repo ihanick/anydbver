@@ -758,6 +758,7 @@ EOF
   cat > .version-info/percona_postgres_op.txt << EOF
 master
 0.1.0
+0.2.0
 EOF
   cat > .version-info/zalando_pg.txt <<EOF
 1.0.0
