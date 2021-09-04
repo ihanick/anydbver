@@ -45,6 +45,10 @@ setupOS() {
     PACKAGES="$PACKAGES oracle-epel-release-el8 python3 tar"
     PYTHON_INT=/usr/bin/python3
     OS_TYPE=rpm
+  elif [ "x$1" == "xxenial" ] ; then
+    IMG="images:ubuntu/xenial/$ARCH"
+    PYTHON_INT=/usr/bin/python3
+    OS_TYPE=deb
   elif [ "x$1" == "xbionic" ] ; then
     IMG="images:ubuntu/bionic/$ARCH"
     PYTHON_INT=/usr/bin/python3
