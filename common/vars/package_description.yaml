@@ -184,6 +184,21 @@ buster:
       - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator_{{orchestrator_version}}_amd64.deb"
       - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-client_{{orchestrator_version}}_amd64.deb"
 
+xenial:
+  mariadb_server:
+    systemd_service: "mariadb"
+    cnf_file: '/etc/mysql/mariadb.conf.d/zz_mysqld.cnf'
+    install_packages:
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mysql-common_{{mariadb_version}}+maria~xenial_all.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-common_{{mariadb_version}}+maria~xenial_all.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/libmariadb3_{{mariadb_version}}+maria~xenial_amd64.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-client-core-10.4_{{mariadb_version}}+maria~xenial_amd64.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-client-10.4_{{mariadb_version}}+maria~xenial_amd64.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-server-core-10.4_{{mariadb_version}}+maria~xenial_amd64.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/g/galera-4/galera-4_26.4.8-xenial_amd64.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-server-10.4_{{mariadb_version}}+maria~xenial_amd64.deb"
+      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-server_{{mariadb_version}}+maria~xenial_all.deb"
+
 bionic:
   repo_pkg: "/root/percona-release_latest.bionic_all.deb"
   repo_url: "https://repo.percona.com/apt/percona-release_latest.bionic_all.deb"

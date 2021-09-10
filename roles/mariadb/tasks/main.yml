@@ -21,7 +21,11 @@
 
 - name: Install gpg for apt-key
   when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
-  package: name=gpg state=present
+  package: name=gnupg2 state=present
+
+- name: Install perl
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+  package: name=perl state=present
 
 - name: Add MariaDB Apt key
   when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and mariadb_version != ''
@@ -45,6 +49,7 @@
   when: mariadb_version != '' and (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
   apt:
     deb: "{{item}}"
+    force: yes
   with_items: >-
     {{
       os[dist][soft].install_packages +
