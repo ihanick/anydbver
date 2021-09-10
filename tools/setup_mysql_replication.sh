@@ -18,8 +18,17 @@ if [ "x$SOFT" = "xmariadb_server" ] ; then
       GTID=$(mysql --host $MASTER_IP -N -e "SELECT @@GLOBAL.gtid_current_pos")
       GTID_CUR=$(mysql -N -e "SELECT @@GLOBAL.gtid_current_pos")
 
+      if mysql -Ne "show status like 'wsrep_cluster_size'"|grep -q wsrep_cluster_size ; then
+        IS_GALERA=1
+        systemctl stop $MYSQLD_UNIT
+        mysqld --user=mysql --wsrep-provider=none &>/dev/null &
+        until mysqladmin --silent --connect-timeout=30 --wait=4 ping ; do sleep 5 ; done
+      else
+        IS_GALERA=0
+      fi
+
       if [ "x$GTID" != "x" -a "x$GTID" == "x$GTID_CUR" ] ; then
-	      mysql << EOF
+        mysql << EOF
 STOP SLAVE;
 RESET SLAVE ALL;
 SET GLOBAL gtid_slave_pos = '${GTID}';
@@ -40,6 +49,13 @@ CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTE
 START SLAVE;
 EOF
       fi
+
+      if [[ $IS_GALERA == 1 ]] ; then
+        mysqladmin shutdown
+        systemctl start $MYSQLD_UNIT
+        until mysqladmin --silent --connect-timeout=30 --wait=4 ping ; do sleep 5 ; done
+      fi
+
 
       rm "${MINF}"
       touch /root/replication.configured
