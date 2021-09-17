@@ -724,6 +724,7 @@ EOF
 EOF
   cat > .version-info/pko4psmdb.txt <<EOF
 master
+main
 0.1.0
 0.2.0
 0.2.1
@@ -741,6 +742,7 @@ master
 EOF
   cat > .version-info/pko4pxc.txt <<EOF
 master
+main
 0.1.0
 0.2.0
 0.3.0
@@ -757,6 +759,7 @@ master
 EOF
   cat > .version-info/percona_postgres_op.txt << EOF
 master
+main
 0.1.0
 0.2.0
 EOF
