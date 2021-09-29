@@ -1035,6 +1035,9 @@ deploy_node() {
       search_for_latest_version pgpool "$i"
       DEP_ENV="$DEP_ENV PGPOOL=$VER"
     fi
+    if [[ $i == "pg_stat_monitor" ]] || [[ $i == "pg_stat_monitor:"* ]] ; then
+      DEP_ENV="$DEP_ENV PG_STAT_MONITOR=1"
+    fi
     if [[ $i == "pgbackrest" ]] || [[ $i == "pgbackrest:"* ]] ; then
       #search_for_latest_version pgbackrest "$i"
       VER=1

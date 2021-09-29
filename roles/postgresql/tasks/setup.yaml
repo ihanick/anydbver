@@ -180,6 +180,12 @@
         state: restarted
         enabled: True
 
+- name: Install pg_stat_monitor extension
+  when: pg_stat_monitor != '' and 'development' in db_features.split(',')
+  command:
+    cmd: /bin/bash /vagrant/tools/install_pg_stat_monitor.sh
+    creates: /root/pg_stat_monitor.installed
+
 
 - name: pgBackRest filesystem backups
   when: pgbackrest_version != ''
