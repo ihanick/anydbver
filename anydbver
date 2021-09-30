@@ -223,6 +223,7 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy pg node1 pg master:default default pg pgpool backend-ip:default"
     echo "$0 deploy pg:13 patroni node1 pg:13 master:default patroni etcd-ip:default node2 pg:13 master:default patroni etcd-ip:default"
     echo "$0 deploy haproxy-pg:node1,node2,node3 node1 pg clustercheck node2 pg clustercheck master:node1 node3 pg clustercheck master:node1"
+    echo "$0 deploy node0 pmm node1 pmm-client pmm-server:node0 pg pg_stat_monitor development"
     echo "$0 deploy pmm node1 ppg pmm-client pmm-server:default"
     echo "$0 deploy postgresql sysbench sysbench-pg:default oltp_read_write"
     echo -e $0' deploy percona-postgresql \\\n  sysbench sysbench-pg:default oltp_read_write # prepare, execute run_sysbench.sh to start sysbench'
@@ -648,45 +649,8 @@ fi
   curl -sL https://repo.percona.com/pt/apt/pool/main/p/percona-toolkit/ \
     | perl -ne  '/percona-toolkit_([^"]*).focal_amd64.deb/ and print "$1\n"' | sort -n -t . -k1,1 -k2,2 -k3,3 > .version-info/percona-toolkit.focal.txt
 
-  cat > .version-info/pmm-client.el7.txt <<EOF
-1.10.0-1
-1.11.0-1
-1.12.0-1
-1.13.0-1
-1.14.0-1
-1.14.1-1
-1.15.0-1
-1.16.0-1
-1.17.0-1
-1.17.1-1
-1.17.2-1
-1.17.3-1
-1.17.4-1
-2.0.0-5
-2.0.1-5
-2.1.0-5
-2.2.0-6
-2.2.1-6
-2.2.2-6
-2.3.0-6
-2.4.0-6
-2.5.0-6
-2.6.0-6
-2.6.1-6
-2.8.0-6
-2.9.1-6
-2.10.0-6
-2.10.1-6
-2.11.0-6
-2.11.1-6
-2.12.0-6
-2.13.0-6
-2.14.0-6
-2.15.0-6
-2.16.0-6
-2.17.0-6
-2.18.0-6
-EOF
+  curl -sL https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/     | perl -ne '/pmm2?-client-([0-9.-]*).el7.x86_64.rpm/ and print "$1\n"' | sort -n -t . -k1,1 -k2,2 -k3,3 > .version-info/pmm-client.el7.txt
+  curl -sL https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/     | perl -ne '/pmm2?-client-([0-9.-]*).el8.x86_64.rpm/ and print "$1\n"' | sort -n -t . -k1,1 -k2,2 -k3,3 > .version-info/pmm-client.el8.txt
 
   cat > .version-info/ppg.el7.txt <<EOF
 12.2-4

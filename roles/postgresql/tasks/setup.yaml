@@ -111,10 +111,16 @@
     cmd: /bin/bash /vagrant/tools/setup_pg_odyssey.sh "{{master_ip}}" "{{db_password}}"
     creates: /etc/odyssey/odyssey.conf
 
+- name: Install pg_stat_monitor extension
+  when: pg_stat_monitor != '' and 'development' in db_features.split(',')
+  command:
+    cmd: /bin/bash /vagrant/tools/install_pg_stat_monitor.sh
+    creates: /root/pg_stat_monitor.installed
+
 - name: Setup PMM client with postgres
   when: pmm_url != '' and (postgresql_version != '' or percona_postgresql_version != '')
   shell:
-    cmd: /bin/bash -e /vagrant/tools/setup_pmm.sh "{{soft}}" postgres "{{db_password}}" pmm_user "{{db_password}}" "{{ pkg[dist].systemd if ('systemd' in pkg[dist]) and percona_postgresql_version !='' else os[dist][soft].systemd_service if soft else db_systemd_service }}" "{{ 'yes' if pmm_client_version != '' and (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') or percona_postgresql_version.startswith('13.') ) else 'no' }}"
+    cmd: /bin/bash -e /vagrant/tools/setup_pmm.sh "{{soft}}" postgres "{{db_password}}" pmm_user "{{db_password}}" "{{ pkg[dist].systemd if ('systemd' in pkg[dist]) and percona_postgresql_version !='' else os[dist][soft].systemd_service if soft else db_systemd_service }}" "{{ 'yes' if pmm_client_version != '' and (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') or percona_postgresql_version.startswith('13.') or pg_stat_monitor != '' ) else 'no' }}"
     creates: /root/pmm-postgresql.applied
 
 - name: Setup PGPool
@@ -179,12 +185,6 @@
         name: "{{pg_systemd_svc}}"
         state: restarted
         enabled: True
-
-- name: Install pg_stat_monitor extension
-  when: pg_stat_monitor != '' and 'development' in db_features.split(',')
-  command:
-    cmd: /bin/bash /vagrant/tools/install_pg_stat_monitor.sh
-    creates: /root/pg_stat_monitor.installed
 
 
 - name: pgBackRest filesystem backups

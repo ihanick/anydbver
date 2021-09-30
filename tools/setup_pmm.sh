@@ -23,5 +23,11 @@ if [[ $PG_STAT_MONITOR = yes ]] ; then
   psql -h $(/vagrant/tools/node_ip.sh) -U $USER -d $PMM_USER -c "create extension pg_stat_monitor"
 fi
 #pmm-admin add postgresql --query-source=none --username=$PMM_USER --password="$PMM_PASS" postgres $(/vagrant/tools/node_ip.sh):5432
-pmm-admin add postgresql --username=$PMM_USER --password="$PMM_PASS" postgres $(node_ip.sh):5432
+
+if [[ $PG_STAT_MONITOR = yes ]] ; then
+  pmm-admin add postgresql --query-source=pgstatmonitor --username=$PMM_USER --password="$PMM_PASS" postgres $(node_ip.sh):5432
+else
+  pmm-admin add postgresql --username=$PMM_USER --password="$PMM_PASS" postgres $(node_ip.sh):5432
+fi
+
 touch /root/pmm-postgresql.applied

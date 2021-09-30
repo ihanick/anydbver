@@ -84,6 +84,7 @@ Deploy:
 ./anydbver deploy pg node1 pg master:default default pg pgpool backend-ip:default
 ./anydbver deploy pg:13 patroni node1 pg:13 master:default patroni etcd-ip:default node2 pg:13 master:default patroni etcd-ip:default
 ./anydbver deploy haproxy-pg:node1,node2,node3 node1 pg clustercheck node2 pg clustercheck master:node1 node3 pg clustercheck master:node1
+./anydbver deploy node0 pmm node1 pmm-client pmm-server:node0 pg pg_stat_monitor development
 ./anydbver deploy pmm node1 ppg pmm-client pmm-server:default
 ./anydbver deploy postgresql sysbench sysbench-pg:default oltp_read_write
 ./anydbver deploy percona-postgresql \
@@ -384,6 +385,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `percona-xtrabackup`, short `pxb`
 * `percona-xtradb-cluster`
 * `perf`, install Linux Perf
+* `pg_stat_monitor`, in pair with development installs `pg_stat_monitor` Postgresql extension
 * `pgbackrest`, installs pgBackRest backup solution
 * `pgpool`, installs PGPool II, requires `pg` option for version detection
 * `pmm-client`
