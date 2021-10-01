@@ -1,4 +1,5 @@
 #!/bin/bash
+SYSTEMD_UNIT="$1"
 yum install -y git make
 yum groups install -y "Development Tools"
 export PATH=$PATH:$(ls -d /usr/pgsql-*/bin|tail -n 1)
@@ -9,5 +10,5 @@ make USE_PGXS=1
 make USE_PGXS=1 install
 psql -c "CREATE EXTENSION pg_stat_monitor;"
 psql -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_monitor';"
-systemctl restart postgresql-13
+systemctl restart "$SYSTEMD_UNIT"
 touch /root/pg_stat_monitor.installed

@@ -114,7 +114,7 @@
 - name: Install pg_stat_monitor extension
   when: pg_stat_monitor != '' and 'development' in db_features.split(',')
   command:
-    cmd: /bin/bash /vagrant/tools/install_pg_stat_monitor.sh
+    cmd: /bin/bash /vagrant/tools/install_pg_stat_monitor.sh "{{ pkg[dist].systemd if ('systemd' in pkg[dist]) and percona_postgresql_version !='' else os[dist][soft].systemd_service if soft else db_systemd_service }}"
     creates: /root/pg_stat_monitor.installed
 
 - name: Setup PMM client with postgres
