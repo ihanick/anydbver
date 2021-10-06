@@ -8,13 +8,13 @@ SERVER_ID=$(ip addr ls|grep 'inet '|grep -v '127.0.0.1'|awk '{print $2}'|cut -d/
 if [[ "x$PRIMARY" == "x" ]] ; then
   until mongo --eval 'print("waited for connection")' &>/dev/null ; do sleep 2 ; done
   if grep -q 'clusterRole: configsvr' /etc/mongod.conf ; then
-    mongo -u $USR -p "$PASS" --eval 'rs.initiate( { _id : "'$REPLICATION_SET'", configsvr: true, members: [ { _id: 0, host: "'$( hostname -I | cut -d' ' -f1 )':27017" }, ] })'
+    mongo "mongodb://$USR:$PASS@127.0.0.1:27017/admin" --eval 'rs.initiate( { _id : "'$REPLICATION_SET'", configsvr: true, members: [ { _id: 0, host: "'$( hostname -I | cut -d' ' -f1 )':27017" }, ] })'
   else
-    mongo -u $USR -p "$PASS" --eval 'rs.initiate( { _id : "'$REPLICATION_SET'", members: [ { _id: 0, host: "'$( hostname -I | cut -d' ' -f1 )':27017" }, ] })'
+    mongo "mongodb://$USR:$PASS@127.0.0.1:27017/admin" --eval 'rs.initiate( { _id : "'$REPLICATION_SET'", members: [ { _id: 0, host: "'$( hostname -I | cut -d' ' -f1 )':27017" }, ] })'
   fi
 else
   # wait until local mongod become ready
   until mongo --eval 'print("waited for connection")' &>/dev/null ; do sleep 2 ; done
-  mongo -u $USR -p "$PASS" --host $PRIMARY --eval 'rs.add({ host:"'$( hostname -I | cut -d' ' -f1 )':27017"})'
+  mongo "mongodb://$USR:$PASS@$PRIMARY:27017/admin" --eval 'rs.add({ host:"'$( hostname -I | cut -d' ' -f1 )':27017"})'
 fi
 touch /root/${REPLICATION_SET}.init
