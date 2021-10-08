@@ -841,6 +841,8 @@ EOF
     | perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el7.txt
   curl -sL https://repo.percona.com/pdmdb-4.4/yum/release/7/RPMS/x86_64/ \
     | perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el7.txt
+  curl -sL https://repo.percona.com/pdmdb-5.0/yum/release/7/RPMS/x86_64/ https://repo.percona.com/pdmdb-5.0/yum/testing/7/RPMS/x86_64/ \
+    | perl -ne '/percona-server-mongodb(-\d\d)?-server-([^"]*).el7.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 >> .version-info/psmdb.el7.txt
 # el8
   curl -sL https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/ \
     | perl -ne '/Percona-Server-MongoDB(-\d\d)?-server-([^"]*).el8.x86_64.rpm/ and print "$2\n"'|sort -n --field-separator=. -k 1,1 -k 2,2 -k 3,3 > .version-info/psmdb.el8.txt
