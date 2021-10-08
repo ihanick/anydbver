@@ -86,6 +86,10 @@ EOF
 EOF
       else # GTID, non-pxc
         if [[ "x$CHANNEL" = x ]] ; then
+          # dump restore if source has non-default databases
+          if [[ $(mysql --host $MASTER_IP -Ne 'show databases;'|egrep -v '^(information_schema|performance_schema|mysql|sys)$'|wc -l) -gt 0 ]] ; then
+            mysqldump --host $MASTER_IP --databases $(mysql --host $MASTER_IP -Ne 'show databases;'|egrep -v '^(information_schema|performance_schema|mysql|sys)$') | mysql
+          fi
           mysql << EOF
           RESET MASTER;
           SET GLOBAL GTID_PURGED='${GTID}';

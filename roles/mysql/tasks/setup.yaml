@@ -98,6 +98,22 @@
   command:
     cmd: systemctl start "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
 
+- name: Sample databases
+  when: sample_db != ''
+  block:
+    - name: Install World database
+      when: ('world' in sample_db.split(','))
+      shell:
+        cmd: /bin/bash -e /vagrant/tools/load_sample_db.sh world
+    - name: Install employees database
+      when: ('employees' in sample_db.split(','))
+      shell:
+        cmd: /bin/bash -e /vagrant/tools/load_sample_db.sh employees
+    - name: Install sakila database
+      when: ('sakila' in sample_db.split(','))
+      shell:
+        cmd: /bin/bash -e /vagrant/tools/load_sample_db.sh sakila
+
 - name: Setup and start replication
   when: >
     master_ip != '' and

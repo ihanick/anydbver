@@ -943,6 +943,7 @@ deploy_node() {
   UTF8ENC=0
   NODE_OS="${NODE_OS:-el7}"
   FEATURES=()
+  SAMPLE_DB=()
 
   for i in "${arr[@]}"; do check_os; done
 
@@ -1305,6 +1306,19 @@ deploy_node() {
     if [[ $i == "oltp_read_write" ]] ; then
       FEATURES+=( sysbench_oltp_read_write )
     fi
+    if [[ $i == "world" ]] ; then
+      SAMPLE_DB+=( world )
+    fi
+    if [[ $i == "sakila" ]] ; then
+      SAMPLE_DB+=( sakila )
+    fi
+    if [[ $i == "pagila" ]] ; then
+      SAMPLE_DB+=( pagila )
+    fi
+    if [[ $i == "employees" ]] ; then
+      SAMPLE_DB+=( employees )
+    fi
+
     if [[ $i == "ldap-simple" ]] ; then
       FEATURES+=( ldap_simple )
     fi
@@ -1487,6 +1501,10 @@ deploy_node() {
     DEP_ENV="$DEP_ENV DB_FEATURES=$DB_FEATURES"
   fi
 
+  if [[ ${#SAMPLE_DB[@]} != 0 ]] ; then
+    SAMPLE_DB_LIST=$( join_ws , "${SAMPLE_DB[@]}" )
+    DEP_ENV="$DEP_ENV SAMPLE_DB=$SAMPLE_DB_LIST"
+  fi
 
   case "$PROVIDER" in
     vagrant)
