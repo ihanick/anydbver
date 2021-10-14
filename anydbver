@@ -22,6 +22,11 @@ if [ "x$1" = "xhelp" -o "x$1" = "x--help" ] ; then
   print_help
 fi
 
+if [[ "$1" == "completion" && "$2" == "bash" ]] ; then
+  complete -W "deploy configure fix ssh update destroy list list-caches add replace apply --namespace --dry-run" ./anydbver
+  exit 0
+fi
+
 if [ "x$1" = "xdeploy" ] && ([ "x$2" = "xpsmdb" -o "x$2" = "xmongo" -o "x$2" = "xmongodb"  ] ) && [ "x$3" = "xhelp" -o "x$3" = "x--help" ] ; then
     echo "Deploy mongodb/psmdb: "
     echo "$0 deploy psmdb"
@@ -205,6 +210,7 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 garbd galera-master:default"
     echo -e $0' deploy \\\n  haproxy-galera:node1,node2,node3 \\\n  node1 pxc clustercheck \\\n  node2 pxc galera-master:node1 clustercheck \\\n  node3 pxc galera-master:node1 clustercheck'
     echo "$0 deploy ps:8.0 group-replication node1 ps:8.0 group-replication master:default node2 ps:8.0 group-replication master:default"
+    echo "$0 deploy node0 docker kubeadm hn:master1.percona.local virtual-machine cpu:2 mem:3GB node1 kubeadm-url:master1.percona.local  docker hn:worker1.percona.local virtual-machine cpu:2 mem:3GB node2 kubeadm-url:master1.percona.local docker hn:worker2.percona.local virtual-machine cpu:2 mem:3GB node3  kubeadm-url:master1.percona.local docker hn:worker3.percona.local virtual-machine cpu:2 mem:3GB node0 k8s-pxc kubeadm"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-mongo"
     echo "$0 deploy k3s node1 k3s-master:default node2 k3s-master:default node3 k3s-master:default default k8s-minio k8s-mongo"
@@ -957,6 +963,14 @@ deploy_node() {
     if [[ $i == "virtual-machine" ]] ; then
       DEP_ENV="$DEP_ENV NODE_VM=1"
     fi
+    if [[ $i == "mem:"* || $i == "memory:"* ]] ; then
+      MEMORY=$(get_version "$i")
+      DEP_ENV="$DEP_ENV NODE_MEM=$MEMORY"
+    fi
+    if [[ $i == "cpu:"* ]] ; then
+      CPU=$(get_version "$i")
+      DEP_ENV="$DEP_ENV NODE_CPU=$CPU"
+    fi
     if [[ $i == "parallel" ]] ; then
       DEP_ENV="$DEP_ENV PARALLEL=1"
     fi
@@ -1447,6 +1461,13 @@ deploy_node() {
     if [[ $i == "k3s" ]] || [[ $i == "k3s:"* ]] || [[ $i == "k8s" ]] || [[ $i == "kubernetes" ]] ; then
       DEP_ENV="$DEP_ENV K3S=latest"
     fi
+    if [[ $i == "kubeadm" ]] ; then
+      DEP_ENV="$DEP_ENV KUBEADM=latest"
+    fi
+    if [[ $i == "kubeadm-url:"* ]] ; then
+      KUBE_CTRL=$(get_version "$i")
+      DEP_ENV="$DEP_ENV KUBEADM_URL=$KUBE_CTRL"
+    fi
     if [[ $i == "kube-config:"* ]] ; then
       KUBE_CONFIG=$(get_version "$i")
       DEP_ENV="$DEP_ENV KUBE_CONFIG=$KUBE_CONFIG"
@@ -1840,11 +1861,11 @@ start_all_nodes() {
       echo "./lxdctl $NAMESPACE_CMD --destroy"
       [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --destroy
       if [[ $PRIV_CONTAINER_REQUIRED == 1 ]] ; then
-        echo "./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD"
-        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD
+        echo "./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD $NODE_MEM_CMD $NODE_CPU_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD $NODE_MEM_CMD $NODE_CPU_CMD
       else
-        echo "./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD"
-        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD
+        echo "./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD $NODE_MEM_CMD $NODE_CPU_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD $NODE_MEM_CMD $NODE_CPU_CMD
       fi
       ;;
     existing)
@@ -1868,11 +1889,11 @@ start_node() {
       ;;
     lxd)
       if [[ $PRIV_CONTAINER_REQUIRED == 1 ]] ; then
-        echo "./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD"
-        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --only-node $NODE  --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD
+        echo "./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD $NODE_MEM_CMD $NODE_CPU_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --only-node $NODE  --nodes ${#ALL_NODES[@]} --privileged $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD $NODE_MEM_CMD $NODE_CPU_CMD
       else
-        echo "./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD"
-        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD
+        echo "./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD $NODE_MEM_CMD $NODE_CPU_CMD"
+        [[ $DRY_RUN == 0 ]] && ./lxdctl $NAMESPACE_CMD --only-node $NODE --nodes ${#ALL_NODES[@]} $HOSTNAMES_CMD $OS_CMD $VM_CMD $CACHE_IMG_CMD $NODE_MEM_CMD $NODE_CPU_CMD
       fi
       ;;
     existing)
@@ -1926,6 +1947,14 @@ if [ "x$1" = "xdeploy" ] ; then
     fi
     if [[ "$DEPCMD" == *"NODE_VM="* ]] ; then
       VM_CMD="$VM_CMD --vm $NODE"
+    fi
+    if [[ "$DEPCMD" == *"NODE_MEM="* ]] ; then
+      NODE_MEM="$(echo "$DEPCMD"| sed -re 's/^.*NODE_MEM=([^ ]+) .*/\1/')"
+      NODE_MEM_CMD="$NODE_MEM_CMD --mem $NODE=$NODE_MEM"
+    fi
+    if [[ "$DEPCMD" == *"NODE_CPU="* ]] ; then
+      NODE_CPU="$(echo "$DEPCMD"| sed -re 's/^.*NODE_CPU=([^ ]+) .*/\1/')"
+      NODE_CPU_CMD="$NODE_CPU_CMD --cpu $NODE=$NODE_CPU"
     fi
 
     DEPLOY_CMDS+=("$DEPCMD")
@@ -2002,6 +2031,8 @@ if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] || [ "x$1" = "xreplace" ] ; then
   HOSTNAMES_CMD=''
   OS_CMD=''
   VM_CMD=''
+  NODE_MEM_CMD=''
+  NODE_CPU_CMD=''
   DEPLARGS=()
   DEPLOY_CMDS=()
   NODE=default

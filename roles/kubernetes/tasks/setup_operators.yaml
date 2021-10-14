@@ -25,6 +25,9 @@
   shell:
     warn: false
     cmd: >-
+      if [[ $(cat /proc/meminfo |head -n 1|awk '{print $2}') -lt 4000000 ]] ;
+        then sed -i -e 's/\<1G\>/300M/g' -e 's/\<600m\>/60m/g' /root/{{ percona_k8s_op_name }}/deploy/cr.yaml ;
+      fi;
       mv /root/{{ percona_k8s_op_name }}/deploy/cr-min.yaml /root/{{ percona_k8s_op_name }}/deploy/cr.yaml;
       if test $( kubectl get nodes 2>/dev/null|wc -l ) -lt 3 ;
       then

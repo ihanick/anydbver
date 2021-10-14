@@ -47,6 +47,8 @@
     k3s_token: "{{ lookup('vars', 'extra_k3s_token', default=lookup('env','K3S_TOKEN',default='') ) }}"
     k3s_url: "{{ lookup('vars', 'extra_k3s_url', default=lookup('env','K3S_URL',default='') ) }}"
     k3s_version: "{{ lookup('vars', 'extra_k3s_version', default=lookup('env','K3S',default='') ) }}"
+    kubeadm: "{{ lookup('vars', 'extra_kubeadm_version', default=lookup('env','KUBEADM',default='') ) }}"
+    kubeadm_url: "{{ lookup('vars', 'extra_kubeadm_url', default=lookup('env','KUBEADM_URL',default='') ) }}"
     k8s_pmm: "{{ lookup('vars', 'extra_k8s_pmm', default=lookup('env','K8S_PMM',default='') ) }}"
     k8s_minio: "{{ lookup('vars', 'extra_k8s_minio', default=lookup('env','K8S_MINIO',default='') ) }}"
     minio: "{{ lookup('vars', 'extra_minio', default=lookup('env','MINIO',default='') ) }}"
@@ -275,7 +277,7 @@
         name: mysql
 
     - name: Kubernetes Role
-      when: percona_pg_op_version != '' or zalando_pg_op_version != '' or percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or k3s_url != '' or k3s_version != '' or kube_config != '' or k8s_minio != '' or vites_version != '' or cert_manager != ''
+      when: percona_pg_op_version != '' or zalando_pg_op_version != '' or percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or k3s_url != '' or k3s_version != '' or kube_config != '' or k8s_minio != '' or vites_version != '' or cert_manager != '' or kubeadm != '' or kubeadm_url != ''
       include_role:
         name: kubernetes
 

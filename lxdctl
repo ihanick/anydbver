@@ -112,7 +112,7 @@ fi
 
 # read arguments
 opts=$(getopt \
-    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:,hostname:,vm:,only-node:,privileged,namespace:,snapshot:,cache:,has-cache:,fix-ip" \
+    --longoptions "pmm:,pmm-port:,os:,destroy,k8s,samba:,nodes:,hostname:,vm:,mem:,cpu:,only-node:,privileged,namespace:,snapshot:,cache:,has-cache:,fix-ip" \
     --name "$(basename "$0")" \
     --options "" \
     -- "$@"
@@ -121,6 +121,8 @@ opts=$(getopt \
 declare -A HOSTNAMES
 declare -A OSes
 declare -A VMs
+declare -A MEM_LIMITs
+declare -A CPU_LIMITs
 declare -A CACHE_IMAGES
 
 eval set --$opts
@@ -174,6 +176,18 @@ while [[ $# -gt 0 ]]; do
     --vm)
       NODE_NAME="$2"
       VMs[$USER.$NODE_NAME]="--vm"
+      shift 2
+      ;;
+    --mem)
+      NODE_NAME=$( echo "$2" | cut -d= -f 1)
+      NODE_RAM=$( echo "$2" | cut -d= -f 2)
+      MEM_LIMITs[$USER.$NODE_NAME]="-c limits.memory=$NODE_RAM"
+      shift 2
+      ;;
+    --cpu)
+      NODE_NAME=$( echo "$2" | cut -d= -f 1)
+      NODE_CPU=$( echo "$2" | cut -d= -f 2)
+      CPU_LIMITs[$USER.$NODE_NAME]="-c limits.cpu=$NODE_CPU"
       shift 2
       ;;
     --k8s)
@@ -330,14 +344,21 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
   fi
 
   c=$NAMESPACE${i//./-}
+  if [ "x${VMs[$i]}" != "x" ] ; then
+    # set disk size to 10G
+    lxc profile device set default root size $((10*1024*1024*1024))B
+    CONT_PRIV=''
+  else
+    CONT_PRIV="$LXD_PRIVILEGED_CONTAINERS"
+  fi
   if [ "x${CACHE_IMAGES[$i]}" != "x" ] && lxc image list --format yaml ${USER}-${NODE_OS}-${CACHE_IMAGES[$i]} | grep -q ${USER}-${NODE_OS}-${CACHE_IMAGES[$i]} ; then
-    lxc launch $LXD_PROFILE ${USER}-${NODE_OS}-${CACHE_IMAGES[$i]} $c $LXD_PRIVILEGED_CONTAINERS ${VMs[$i]}
+    lxc launch $LXD_PROFILE ${USER}-${NODE_OS}-${CACHE_IMAGES[$i]} $c $CONT_PRIV ${VMs[$i]} ${MEM_LIMITs[$i]} ${CPU_LIMITs[$i]}
     until lxc exec $c true ; do sleep 2; done
   elif [[ $ANYDBVER_CACHE_OS_IMG == 1 ]] && lxc image list --format yaml ${USER}-${NODE_OS}-empty | grep -q ${USER}-${NODE_OS}-empty ; then
-    lxc launch $LXD_PROFILE ${USER}-${NODE_OS}-empty $c $LXD_PRIVILEGED_CONTAINERS ${VMs[$i]}
+    lxc launch $LXD_PROFILE ${USER}-${NODE_OS}-empty $c $CONT_PRIV ${VMs[$i]} ${MEM_LIMITs[$i]} ${CPU_LIMITs[$i]}
     until lxc exec $c true ; do sleep 2; done
   else
-    lxc launch $LXD_PROFILE $IMG $c $LXD_PRIVILEGED_CONTAINERS ${VMs[$i]}
+    lxc launch $LXD_PROFILE $IMG $c $CONT_PRIV ${VMs[$i]} ${MEM_LIMITs[$i]} ${CPU_LIMITs[$i]}
     until lxc exec $c true ; do sleep 2; done
     lxc exec $c -- mkdir /root/.ssh
     lxc file push secret/id_rsa.pub $c/root/.ssh/authorized_keys

@@ -22,7 +22,12 @@
     warn: false
     cmd: >-
       sed -i -e "/ExecStartPre/a ExecStartPre=-/bin/sh -xc 'test -f /sys/module/apparmor/parameters/enabled && mount --bind /tmp /sys/module/apparmor'" "/etc/systemd/system/k3s{{ '' if k3s_url == '' else '-agent' }}.service"
+- name: check /dev/kmsg exists
+  stat:
+    path: /dev/kmsg
+  register: kmsg
 - name: Fix k3s /dev/kmsg symlink
+  when: kmsg.stat.exists == False
   file:
     src: /dev/console
     dest: /dev/kmsg
