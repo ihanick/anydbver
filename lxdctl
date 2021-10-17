@@ -347,7 +347,7 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
   if [ "x${VMs[$i]}" != "x" ] ; then
     # set disk size to 10G
     lxc profile device set default root size $((10*1024*1024*1024))B
-    CONT_PRIV=''
+    CONT_PRIV=' -c security.secureboot=false '
   else
     CONT_PRIV="$LXD_PRIVILEGED_CONTAINERS"
   fi

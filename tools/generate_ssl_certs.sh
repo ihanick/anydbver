@@ -1,6 +1,7 @@
 #!/bin/bash
 CLIENT_CN="$1"
 SERVER_CN="$2"
+IPNAME=$(echo $SERVER_CN|cut -d. -f 1).$(node_ip.sh).nip.io
 if [ ! -f /usr/local/bin/cfssl ] ; then
   VERSION=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
   VNUMBER=${VERSION#"v"}
@@ -42,7 +43,8 @@ cat <<EOF | cfssl gencert -ca=ca.pem  -ca-key=ca-key.pem -config=./ca-config.jso
   {
     "hosts": [
       "*.percona.local",
-      "${SERVER_CN}"
+      "${SERVER_CN}",
+      "${IPNAME}"
     ],
     "CN": "${SERVER_CN}",
     "names": [
@@ -80,3 +82,4 @@ EOF
 
 yum install -y tar
 tar czf /root/certs.tar.gz ca.pem client.pem client-key.pem server.pem server-key.pem
+cp /root/ssl/ca.pem /etc/pki/ca-trust/source/anchors/${IPNAME}.ca.crt

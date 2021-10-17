@@ -1,3 +1,8 @@
+- name: add private registry for k3s
+  command:
+    warn: false
+    cmd: /bin/bash /vagrant/tools/setup_k3s_docker_registry.sh "{{k3s_registry}}"
+
 - name: Download k3s kubernetes distribution
   uri:
     url: "{{ 'https://github.com/rancher/k3s/releases/download/v'+k3s_version+'%2Bk3s1/k3s' if k3s_version != '' and k3s_version != 'latest' else os.k3s.latest_url }}"

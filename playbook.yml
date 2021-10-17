@@ -47,6 +47,7 @@
     k3s_token: "{{ lookup('vars', 'extra_k3s_token', default=lookup('env','K3S_TOKEN',default='') ) }}"
     k3s_url: "{{ lookup('vars', 'extra_k3s_url', default=lookup('env','K3S_URL',default='') ) }}"
     k3s_version: "{{ lookup('vars', 'extra_k3s_version', default=lookup('env','K3S',default='') ) }}"
+    k3s_registry: "{{ lookup('vars', 'extra_k3s_registry', default=lookup('env','K3S_REGISTRY',default='') ) }}"
     kubeadm: "{{ lookup('vars', 'extra_kubeadm_version', default=lookup('env','KUBEADM',default='') ) }}"
     kubeadm_url: "{{ lookup('vars', 'extra_kubeadm_url', default=lookup('env','KUBEADM_URL',default='') ) }}"
     k8s_pmm: "{{ lookup('vars', 'extra_k8s_pmm', default=lookup('env','K8S_PMM',default='') ) }}"

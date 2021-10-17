@@ -249,6 +249,7 @@ if [ "x$2" = "xhelp" -o "x$2" = "x--help" ] ; then
     echo "$0 deploy pmm:1.17.4 node1 ps:5.7 pmm-client:1.17.4 pmm-server:default"
     echo "$0 deploy docker"
     echo "$0 deploy docker docker-registry hn:registry.percona.local"
+    echo "$0 deploy node0 docker docker-registry hn:registry.percona.local node1 k3s k3s-registry:node0 node2 k3s-master:node1 k3s-registry:node0 node3 k3s-master:node1 k3s-registry:node0 node4 k3s-master:node1 k3s-registry:node0"
     echo "$0 deploy mongo help"
     echo "$0 deploy mysql help"
     echo "$0 deploy psmdb help"
@@ -1458,6 +1459,10 @@ deploy_node() {
       fi
       DEP_ENV="$DEP_ENV K3S_URL=$MASTER_NODE "
     fi
+    if [[ $i == "k3s-registry:"* ]] ; then
+      MASTER_NODE=$(get_version "$i")
+      DEP_ENV="$DEP_ENV K3S_REGISTRY=$MASTER_NODE "
+    fi
     if [[ $i == "k3s" ]] || [[ $i == "k3s:"* ]] || [[ $i == "k8s" ]] || [[ $i == "kubernetes" ]] ; then
       DEP_ENV="$DEP_ENV K3S=latest"
     fi
@@ -1700,6 +1705,11 @@ pre_deploy_hook() {
     MASTER_IP=$(find_node_ip $MASTER_NODE)
     MASTER_TOKEN=$(find_node_token $MASTER_NODE)
     i=$(echo "$i"|sed -e "s,K3S_URL=$MASTER_NODE,K3S_URL=https://$MASTER_IP:6443 K3S_TOKEN=$MASTER_TOKEN,g")
+  fi
+  if echo "$i" | grep -q K3S_REGISTRY ; then
+    MASTER_NODE=$(echo "$i" | perl -ne '/K3S_REGISTRY=(\S*) / and print $1')
+    MASTER_IP=$(find_node_ip $MASTER_NODE)
+    i=$(echo "$i"|sed -e "s,K3S_REGISTRY=$MASTER_NODE,K3S_REGISTRY=\"https://reg:secret@registry.$MASTER_IP.nip.io\",g")
   fi
   if echo "$i" | grep -q PMM_URL ; then
     PMM_NODE=$(echo "$i" | perl -ne '/PMM_URL=(\S*) / and print $1')

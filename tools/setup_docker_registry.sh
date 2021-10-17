@@ -1,5 +1,6 @@
 #!/bin/bash
 FQDN=$1
+IPNAME=$(echo $FQDN|cut -d. -f 1).$(node_ip.sh).nip.io
 bash /vagrant/tools/generate_ssl_certs.sh client.$FQDN $FQDN
 mkdir /etc/ssl/docker-registry
 cd /etc/ssl/docker-registry
@@ -21,6 +22,9 @@ docker run -d \
   registry:2
 
 mkdir -p /etc/docker/certs.d/$FQDN
+mkdir -p /etc/docker/certs.d/$IPNAME
 cp /etc/ssl/docker-registry/ca.pem /etc/docker/certs.d/$FQDN/ca.crt
+cp /etc/ssl/docker-registry/ca.pem /etc/docker/certs.d/$IPNAME/ca.crt
 curl --cacert /etc/ssl/docker-registry/ca.pem -i https://$FQDN/
 docker login --username reg --password secret https://$FQDN/
+docker login --username reg --password secret https://$IPNAME/
