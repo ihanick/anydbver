@@ -15,6 +15,7 @@ print_help() {
   echo "$0 replace nodeN node_definition # delete existing node, spawn additional and deploy software on it"
   echo "$0 apply nodeN node_definition # deploy software on existing node"
   echo "$0 --namespace mynsp <ssh|list|deploy|add|replace|apply> ... # separate deployments operations"
+  echo "$0 port forward # forward port from lxc to Vagrant VM"
   exit 0
 }
 
@@ -2102,6 +2103,15 @@ if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] || [ "x$1" = "xreplace" ] ; then
     post_deploy_hook "$i"
   done
 
+  exit 0
+fi
+
+if [ "x$1" = "xport" ] ; then
+  lxc list
+  read -p 'LXC container name: ' lxcname
+  read -p 'Host VM port: ' vmport
+  read -p 'LXC container port: ' lxcport
+  lxc config device add $lxcname $lxcname:$lxcport proxy listen=tcp:0.0.0.0:$vmport connect=tcp:127.0.0.1:$lxcport
   exit 0
 fi
 
