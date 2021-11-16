@@ -39,6 +39,7 @@ SCRIPT
 Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/focal64"
   config.vm.synced_folder '.', '/vagrant', disabled: true
+  config.vm.network "public_network"
 
   config.vm.provision "shell", inline: $script
 
