@@ -415,5 +415,16 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 
 ## Port forwarding
 
-If you want forward port from lxc container to Vagrant VM run  ```
-./anydbver port forward```. 
+If you want forward port from lxc container to Vagrant VM run
+```
+./anydbver port forward
+```
+
+Start Vagrant box with `ANYDBVER_PUBNET=yes` environment variable to bridge virtual machine with host machine.
+
+## Vagrant bridge mode
+
+You can setup Vagrant virtual machine it and all inner containers to your local network with bridge:
+```
+ANYDBVER_BRIDGE=yes vagrant up
+```
