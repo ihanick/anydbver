@@ -39,6 +39,7 @@ mariadb_rpms: >-
   {{ mariadb_base_rpms +
     ( [mariadb_galera_rpm] if galera != '' else [] ) +
     ( [(mariadb_rpm|regex_replace('PACKAGE', 'MariaDB-rocksdb-engine'))] if (rocksdb_enabled|bool) else [] ) +
+    ( [(mariadb_rpm|regex_replace('PACKAGE', 'MariaDB-backup'))] if (mariabackup|bool) else [] ) +
     ( [(mariadb_rpm|regex_replace('PACKAGE', 'MariaDB-compat'))] if (dist == 'el7') else [] )
   }}
 

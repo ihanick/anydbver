@@ -1055,6 +1055,9 @@ deploy_node() {
     if [[ $i == "rocksdb" ]] ; then
       DEP_ENV="$DEP_ENV ROCKSDB=1"
     fi
+    if [[ $i == "mariabackup" ]] ; then
+      DEP_ENV="$DEP_ENV MARIABACKUP=1"
+    fi
     if [[ $i == "anydbver" ]] ; then
       DEP_ENV="$DEP_ENV ANYDBVER=1"
     fi

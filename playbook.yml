@@ -80,6 +80,7 @@
     haproxy_pg: "{{ lookup('vars', 'extra_haproxy_pg', default=lookup('env','HAPROXY_PG',default='') ) }}"
     haproxy_galera: "{{ lookup('vars', 'extra_haproxy_galera', default=lookup('env','HAPROXY_GALERA',default='') ) }}"
     mariadb_version: "{{ lookup('vars', 'extra_mariadb_version', default=lookup('env','MARIADB',default='') ) }}"
+    mariabackup: "{{ lookup('vars', 'extra_mariabackup', default=lookup('env','MARIABACKUP',default='') ) }}"
     galera:  "{{ lookup('vars', 'extra_galera', default=lookup('env','GALERA',default='') ) }}"
     mysql_version: "{{ lookup('vars', 'extra_mysql_version', default=lookup('env','MYSQL',default='') ) }}"
     mysql_router_version: "{{ lookup('vars', 'extra_mysql_router_version', default=lookup('env','MYSQL_ROUTER',default='') ) }}"
