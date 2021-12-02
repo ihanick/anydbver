@@ -93,8 +93,15 @@
   when: postgresql_version != '' or percona_postgresql_version != ''
   include_tasks: common/tasks/install_db_packages.yml
 
+- name: install Percona Distribution for PostgreSQL (deb)
+  when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and percona_postgresql_version != ''
+  apt:
+    deb: "{{item}}"
+    force: yes
+  with_items: "{{pkg[dist].install_packages}}"
+
 - name: install Percona Distribution for PostgreSQL
-  when: percona_postgresql_version != ''
+  when: percona_postgresql_version != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   package:
     name: "{{ item }}"
     state: present
