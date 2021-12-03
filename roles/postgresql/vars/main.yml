@@ -1,7 +1,7 @@
 ---
 # vars file for postgresql
 maj: "{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)[-.].*$','\\1') if postgresql_version != '' else percona_postgresql_version|regex_replace('^([0-9]+)[-.].*$','\\1')   }}"
-pg_full_ver: "{{percona_postgresql_version|regex_replace('^([0-9]+)-([0-9]+)[.].*$','\\1.\\2')}}"
+pg_full_ver: "{{percona_postgresql_version|regex_replace('^([0-9]+)[-.]([0-9]+)[-.].*$','\\1.\\2')}}"
 pg_deb_url: "https://downloads.percona.com/downloads/postgresql-distribution-{{percona_postgresql_major_ver}}/{{pg_full_ver}}/binary/debian/{{dist}}/x86_64"
 
 pkg:
@@ -22,9 +22,9 @@ pkg:
     systemd: "postgresql@{{percona_postgresql_major_ver}}-main"
     install_packages:
       - "{{pg_deb_url}}/libpq5_{{ percona_postgresql_version }}.{{ dist }}_amd64.deb"
-      - "{{pg_deb_url}}/percona-postgresql-client-common_{{percona_postgresql_version2}}.{{dist}}_all.deb"
-      - "{{pg_deb_url}}/percona-postgresql-common_{{percona_postgresql_version2}}.{{dist}}_all.deb"
-      - "{{pg_deb_url}}/percona-postgresql-client-{{ percona_postgresql_major_ver }}_{{ percona_postgresql_version }}.{{ dist }}_amd64.deb"
+      - "{{ pg_deb_url + '/percona-postgresql-client-common_'+percona_postgresql_version2+'.'+dist+'_all.deb' if percona_postgresql_version.startswith('13-') else '' }}"
+      - "{{ pg_deb_url + '/percona-postgresql-common_'+percona_postgresql_version2+'.'+dist+'_all.deb' if percona_postgresql_version.startswith('13-') else '' }}"
+      - "{{ pg_deb_url + '/percona-postgresql-client-'+percona_postgresql_major_ver+'_'+percona_postgresql_version+'.'+dist+'_amd64.deb' if percona_postgresql_version.startswith('13-') else '' }}"
       - "{{pg_deb_url}}/percona-postgresql-{{ percona_postgresql_major_ver }}_{{ percona_postgresql_version }}.{{ dist }}_amd64.deb"
 
 pg_conf_dir: "{{ '/var/lib/pgsql/'+maj+'/data' if ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux' else '/etc/postgresql/'+maj+'/main'}}"
