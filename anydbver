@@ -1402,7 +1402,11 @@ deploy_node() {
     if [[ $i == "pmm" ]] || [[ $i == "pmm:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
-        VER=$(grep "$VER" .version-info/pmm-server.txt |tail -n 1)
+        if [[ $VER == *'/'* ]] ; then
+          VER="${i/pmm:/}"
+        else
+          VER=$(grep "$VER" .version-info/pmm-server.txt |tail -n 1)
+        fi
       else
         VER=$(tail -n 1 .version-info/pmm-server.txt)
       fi

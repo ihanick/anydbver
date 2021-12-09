@@ -1,3 +1,4 @@
 ---
 # vars file for tools_and_monitoring
 docker_cmd: "{{ 'docker' if docker != '' else 'podman' }}"
+pmm_server_image: "{{ 'percona/pmm-server:' + pmm_server_version if pmm_server_version is regex('^[0-9]') else pmm_server_version }}"
