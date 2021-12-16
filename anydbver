@@ -672,11 +672,20 @@ fi
 13.0-1
 13.1-1
 13.2-2
+13.3-2
+13.4-1
+13.5-1
+13.5-2
 EOF
   cp .version-info/ppg.el7.txt .version-info/ppg.el8.txt
   cat > .version-info/ppg2.el8.txt <<EOF
+13.0-1 221-1
 13.1-1 223-1
 13.2-2 223-1
+13.3-2 226-1
+13.4-1 226-2
+13.5-1 230-1
+13.5-2 230-2
 EOF
 
   cat > .version-info/ppg.focal.txt <<EOF

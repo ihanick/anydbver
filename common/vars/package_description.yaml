@@ -707,6 +707,16 @@ el8:
       - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-cli-{{orchestrator_version}}.x86_64.rpm"
       - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-{{orchestrator_version}}.x86_64.rpm"
 
+  ppg11:
+    systemd_service: 'postgresql-11'
+    cnf_file: '/var/lib/pgsql/11/data/postgresql.conf'
+  ppg12:
+    systemd_service: 'postgresql-12'
+    cnf_file: '/var/lib/pgsql/12/data/postgresql.conf'
+  ppg13:
+    systemd_service: 'postgresql-13'
+    cnf_file: '/var/lib/pgsql/13/data/postgresql.conf'
+
   postgresql:
     systemd_service: "postgresql-{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}"
     cnf_file: "/var/lib/pgsql/{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}/data/postgresql.conf"
