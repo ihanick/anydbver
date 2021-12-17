@@ -40,7 +40,7 @@ if [ "x$1" = "xdeploy" ] && ([ "x$2" = "xpsmdb" -o "x$2" = "xmongo" -o "x$2" = "
 
 cat <<EOF
 openssl rand -base64 756 > secret/cfg0-keyfile
-for keyfile in rs{0,1,2}-keyfile ; do echo cp -L cfg0-keyfile \$keyfile; done
+for keyfile in rs{0,1,2}-keyfile ; do cp -L secret/cfg0-keyfile secret/\$keyfile; done
 $0 deploy install psmdb:4.2.12 cache:psmdb-4.2.12
 $0 deploy \\
   default hostname:rs0-0  cache:psmdb-4.2.12 \\
@@ -56,6 +56,8 @@ $0 deploy \\
   node10  hostname:cfg0-1 cache:psmdb-4.2.12 \\
   node11  hostname:cfg0-2 cache:psmdb-4.2.12 \\
   node12  hostname:route1 cache:psmdb-4.2.12 \\
+  node13  hostname:route1 cache:psmdb-4.2.12 \\
+  node14  hostname:route1 cache:psmdb-4.2.12 \\
   \\
   default psmdb:4.2.12               replica-set:rs0  shardsrv \\
   node1   psmdb:4.2.12 master:rs0-0  replica-set:rs0  shardsrv \\
@@ -69,7 +71,9 @@ $0 deploy \\
   node9   psmdb:4.2.12               replica-set:cfg0 configsrv \\
   node10  psmdb:4.2.12 master:cfg0-0 replica-set:cfg0 configsrv \\
   node11  psmdb:4.2.12 master:cfg0-0 replica-set:cfg0 configsrv \\
-  node12  psmdb:4.2.12 mongos-cfg:cfg0/cfg0-0,cfg0-1,cfg0-2 mongos-shard:rs0/rs0-0,rs0-1,rs0-2,rs1/rs1-0,rs1-1,rs1-2,rs2/rs2-0,rs2-1,rs2-2
+  node12  psmdb:4.2.12 mongos-cfg:cfg0/cfg0-0,cfg0-1,cfg0-2 mongos-shard:rs0/rs0-0,rs0-1,rs0-2,rs1/rs1-0,rs1-1,rs1-2,rs2/rs2-0,rs2-1,rs2-2 \\
+  node13  psmdb:4.2.12 mongos-cfg:cfg0/cfg0-0,cfg0-1,cfg0-2 \\
+  node14  psmdb:4.2.12 mongos-cfg:cfg0/cfg0-0,cfg0-1,cfg0-2
 $0 deploy mongo pbm
 $0 deploy mongo percona-backup-mongodb
 
@@ -1811,7 +1815,7 @@ pre_deploy_hook() {
     CFG_NODES_FULL=$(echo "$i" | perl -ne '/MONGOS_CFG=(\S*) / and print $1')
     CFG_NODES_RS=$(echo "$i" | perl -ne '/MONGOS_CFG=(\S*)\/(\S*) / and print $1')
     CFG_NODES=$(echo "$i" | perl -ne '/MONGOS_CFG=(\S*)\/(\S*) / and print $2')
-    for n in $(echo "$CFG_NODES"|tr , '\n')
+    for n in ${CFG_NODES//,/ }
     do
       n_ip=$(find_node_ip $n)
       CFG_NODES_LIST+=( ${n_ip}:27017 )
@@ -1840,7 +1844,7 @@ pre_deploy_hook() {
       SHARD_RESOLVED_NODES="$SHARD_RESOLVED_NODES$SHARD_NODES_RS/$MONGOS_SHARD"
     done
 
-    IFS=OLDIFS
+    IFS="$OLDIFS"
 
     i=$(echo "$i"|sed -e "s|MONGOS_SHARD=$SHARD_NODES_FULL|MONGOS_SHARD=$SHARD_RESOLVED_NODES|g")
   fi

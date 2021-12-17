@@ -1,12 +1,15 @@
 # MongoDB cheat sheet
 
-## Setup MongoDB Sharded cluster with shards. Each shared is a 3 node replica set
+## Setup MongoDB Sharded cluster with shards.
+
+* Each shared is a 3 node replica set
+* Replica sets should be added only on the first mongos instance
 
 ```
 lxc image rm ${USER}-el7-psmdb-4.2.12 # remove old cache
 # use same keyfile
 openssl rand -base64 756 > secret/cfg0-keyfile
-for i in rs{0,1,2}-keyfile ; do echo cp -L cfg0-keyfile $i; done
+for keyfile in rs{0,1,2}-keyfile ; do cp -L secret/cfg0-keyfile secret/$keyfile; done
 ./anydbver deploy install psmdb:4.2.12 cache:psmdb-4.2.12
 ./anydbver deploy \
   default hostname:rs0-0  cache:psmdb-4.2.12 \
@@ -22,6 +25,8 @@ for i in rs{0,1,2}-keyfile ; do echo cp -L cfg0-keyfile $i; done
   node10  hostname:cfg0-1 cache:psmdb-4.2.12 \
   node11  hostname:cfg0-2 cache:psmdb-4.2.12 \
   node12  hostname:route1 cache:psmdb-4.2.12 \
+  node13  hostname:route1 cache:psmdb-4.2.12 \
+  node14  hostname:route1 cache:psmdb-4.2.12 \
   \
   default psmdb:4.2.12               replica-set:rs0  shardsrv \
   node1   psmdb:4.2.12 master:rs0-0  replica-set:rs0  shardsrv \
@@ -35,5 +40,8 @@ for i in rs{0,1,2}-keyfile ; do echo cp -L cfg0-keyfile $i; done
   node9   psmdb:4.2.12               replica-set:cfg0 configsrv \
   node10  psmdb:4.2.12 master:cfg0-0 replica-set:cfg0 configsrv \
   node11  psmdb:4.2.12 master:cfg0-0 replica-set:cfg0 configsrv \
-  node12  psmdb:4.2.12 mongos-cfg:cfg0/cfg0-0,cfg0-1,cfg0-2 mongos-shard:rs0/rs0-0,rs0-1,rs0-2,rs1/rs1-0,rs1-1,rs1-2,rs2/rs2-0,rs2-1,rs2-2
+  node12  psmdb:4.2.12 mongos-cfg:cfg0/cfg0-0,cfg0-1,cfg0-2 mongos-shard:rs0/rs0-0,rs0-1,rs0-2,rs1/rs1-0,rs1-1,rs1-2,rs2/rs2-0,rs2-1,rs2-2 \
+  node13  psmdb:4.2.12 mongos-cfg:cfg0/cfg0-0,cfg0-1,cfg0-2 \
+  node14  psmdb:4.2.12 mongos-cfg:cfg0/cfg0-0,cfg0-1,cfg0-2
+
 ```

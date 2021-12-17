@@ -51,12 +51,13 @@
       command:
         cmd: /bin/bash /vagrant/tools/setup_mongos.sh "{{ db_user }}" "{{ db_password }}" "{{ mongos_shard }}"
         creates: /root/mongos.configured
+      when: mongos_shard != ''
     - name: Set systemd service to mongos
       set_fact:
         db_systemd_service: mongos
 
 - name: Create MongoDB database
-  when: db_password != "" and (psmdb_version != "" or mongo_org_version != '' )
+  when: db_password != "" and (psmdb_version != "" or mongo_org_version != '' and mongos_cfg == '' )
   shell:
     cmd: >-
       systemctl start mongod;
@@ -117,8 +118,8 @@
 
 - name: Start database with systemd
   when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
-  command:
-    cmd: systemctl restart "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
+  shell:
+    cmd: systemctl stop mongod; systemctl restart "{{ os[dist][soft].systemd_service if soft else db_systemd_service }}"
 
 - name: Init or join Mongo replicaset
   when: db_password != '' and (psmdb_version != '' or mongo_org_version != '') and mongo_replicaset != ''
