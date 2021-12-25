@@ -13,5 +13,6 @@
 - name: Set PMM2 password
   when: ( pmm_server_version.startswith('2.') or (pmm_server_version is regex(':2')) ) and db_password != ''
   command:
-    cmd: "{{docker_cmd}} exec -t pmm-server bash -c  'ln -s /srv/grafana /usr/share/grafana/data; if [[ $(realpath /usr/share/grafana/data/grafana.db) != '/srv/grafana/grafana.db' ]] ; then rm -f /usr/share/grafana/data/grafana.db; ln -s /srv/grafana/grafana.db /usr/share/grafana/data/grafana.db ;fi; grafana-cli --homepath /usr/share/grafana admin reset-admin-password {{db_password}}'"
+    cmd: "{{docker_cmd}} exec -t pmm-server bash -c 'sleep 30;grafana-cli --homepath /usr/share/grafana --configOverrides cfg:default.paths.data=/srv/grafana admin reset-admin-password {{db_password}}'"
+    #cmd: "{{docker_cmd}} exec -t pmm-server bash -c  'ln -s /srv/grafana /usr/share/grafana/data; if [[ $(realpath /usr/share/grafana/data/grafana.db) != '/srv/grafana/grafana.db' ]] ; then mv /usr/share/grafana/data /usr/share/grafana/data1; ln -s /srv/grafana /usr/share/grafana/data ; mv /usr/share/grafana/data1/log /usr/share/grafana/data/ ; fi; sleep 30; grafana-cli --homepath /usr/share/grafana admin reset-admin-password {{db_password}}'"
 

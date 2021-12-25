@@ -1436,7 +1436,7 @@ deploy_node() {
       else
         VER=$(tail -n 1 .version-info/pmm-server.txt)
       fi
-      DEP_ENV="$DEP_ENV PMM_SERVER=$VER DB_PASS=secret"
+      DEP_ENV="$DEP_ENV PMM_SERVER=$VER DB_PASS=verysecretpassword1^"
     fi
     if [[ $i == "pmm-client" ]] || [[ $i == "pmm-client:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
@@ -1524,7 +1524,7 @@ deploy_node() {
   elif [[ "$DEP_ENV" != *DB_USER* ]] ; then
     DEP_ENV="$DEP_ENV DB_USER=root"
   fi
-  [[ "$DEP_ENV" == *DB_PASS* ]] || DEP_ENV="$DEP_ENV DB_PASS=secret"
+  [[ "$DEP_ENV" == *DB_PASS* ]] || DEP_ENV="$DEP_ENV DB_PASS=verysecretpassword1^"
   [[ "$DEP_ENV" == *START* ]] || DEP_ENV="$DEP_ENV START=1"
   if [[ "$DEP_ENV" != *'HAPROXY_GALERA='* && "$DEP_ENV" == *'GALERA='* ]] || [[ "$DEP_ENV" == *'PXC='* ]] ; then
     [[ "$DEP_ENV" == *CLUSTER=* ]] || DEP_ENV="$DEP_ENV CLUSTER=cluster1"

@@ -16,7 +16,10 @@
   register: pmm_admin_config
   changed_when: "'already exists' not in pmm_admin_config.stdout"
   shell:
-    cmd: '/usr/bin/pmm-admin config --server-insecure-tls --server-url="{{pmm_url}}" || true'
+    cmd: >-
+      /usr/bin/pmm-admin config
+      --server-insecure-tls
+      --server-url="{{pmm_url|replace(':secret@', ':'+(db_password|urlencode)+'@')}}" || true
 - name: Setup pmm-admin PMM1
   when: pmm_client_version.startswith('1.') and pmm_url != ''
   register: pmm_admin_config
