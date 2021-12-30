@@ -16,6 +16,7 @@ print_help() {
   echo "$0 apply nodeN node_definition # deploy software on existing node"
   echo "$0 --namespace mynsp <ssh|list|deploy|add|replace|apply> ... # separate deployments operations"
   echo "$0 port forward # forward port from lxc to Vagrant VM"
+  echo "Bash completion: source <($0 completion bash)"
   exit 0
 }
 
@@ -24,9 +25,71 @@ if [ "x$1" = "xhelp" -o "x$1" = "x--help" ] ; then
 fi
 
 if [[ "$1" == "completion" && "$2" == "bash" ]] ; then
-  complete -W "deploy configure fix ssh update destroy list list-caches add replace apply --namespace --dry-run" ./anydbver
+  echo "complete -C './anydbver complete bash' ./anydbver"
   exit 0
 fi
+
+print_completion_variants() {
+  #echo "'$COMP_LINE'" >> ./completion.log
+  local PROG=''
+  local CMD=''
+  local NODE=''
+  local valid_commands=(deploy configure fix ssh update destroy list list-caches add replace apply --namespace --dry-run)
+  local valid_targets=(anydbver backup backend-ip cache cert-manager certmanager channel cluster clustercheck configsrv debug development docker docker-registry etcd-ip galera-master garbd group-replication gtid haproxy-galera haproxy-postgresql haproxy-pg haproxy hostname hn install k3s-master k3s-leader k3s k8s kubernetes k8s-minio k8s-mongo k8s-pg k8s-pg-zalando k8s-pmm k8s-pxc kube-config ldap-master ldap-leader ldap-server ldap ldap-simple logical mariadb-galera mariadb maria master_ip leader minio minio-ip mongo-community mongos-cfg mongos-shard mydumper mysql-jdbc mysql-router mysql mysql-ndb-data mysql-ndb-management ps percona-server pxc pxc: percona-xtradb-cluster percona-xtradb-cluster:)
+  for w in $COMP_LINE ; do
+    if [[ "$PROG" == "" ]] ; then
+      PROG="$w"
+      #echo "Command: '$PROG'" >> ./completion.log
+      continue
+    fi
+    if [[ "$CMD" == ""  ]] ; then
+      if [[ " ${valid_commands[@]} " =~ " ${w} " ]] ; then
+        CMD="$w"
+        #echo "Valid command: '$CMD'" >> ./completion.log
+        continue
+      fi
+    fi
+
+    if [[ "$w" == "node"[0-9] || "$w" == "node"[0-9][0-9] ]] ; then
+      NODE="$w"
+    fi
+  done
+
+  if [[ "${COMP_LINE:$((${#COMP_LINE}-1))}" == " " ]] ; then
+    w=''
+  fi
+
+  if [[ "$CMD" == ""  ]] ; then
+    for i in "${valid_commands[@]}" ; do
+      if [[ "$i" == "$w"* ]] ; then
+        echo "$i"
+      fi
+    done
+  fi
+
+  if [[ "$CMD" == "deploy"  ]] ; then
+    local NEXT_NODE=''
+    if [[ "$NODE" == "" ]] ; then
+      NEXT_NODE=node0
+    else
+      NEXT_NODE=node$(( ${NODE/node/} + 1 ))
+    fi
+    #echo "Last node: $NODE" >> ./completion.log
+    #echo "Last word: $w" >> ./completion.log
+    for i in $NEXT_NODE "${valid_targets[@]}" ; do
+      if [[ "$i" == "$w"* ]] ; then
+        echo "$i"
+      fi
+    done
+  fi
+
+}
+
+if [[ "$1" == "complete" && "$2" == "bash" ]] ; then
+  print_completion_variants
+  exit 0
+fi
+
 
 if [ "x$1" = "xdeploy" ] && ([ "x$2" = "xpsmdb" -o "x$2" = "xmongo" -o "x$2" = "xmongodb"  ] ) && [ "x$3" = "xhelp" -o "x$3" = "x--help" ] ; then
     echo "Deploy mongodb/psmdb: "
