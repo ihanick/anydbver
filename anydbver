@@ -89,6 +89,19 @@ deploy_node() {
       get_version "$i"
       MYSQL_IMG=mysql/mysql-server:"$VER"
     fi
+    if [[ "$i" == "mariadb" ]] || [[ "$i" == "mariadb:"* ]] ; then
+      get_version "$i"
+      MYSQL_IMG=mariadb:"$VER"
+    fi
+    if [[ "$i" == "mongo" || "$i" == "mongodb" || "$i" == "mongo:"* || "$i" == "mongodb:"* ]] ; then
+      get_version "$i"
+      MONGO_IMG=mongo:"$VER"
+    fi
+    if [[ "$i" == "replica-set:"* ]] ; then
+      get_version "$i"
+      MONGO_REPLICASET="$VER"
+    fi
+
     if [[ "$i" == "gtid" ]] ; then
       GTID_OPTS=(--log-slave-updates --enforce_gtid_consistency=ON --gtid_mode=ON)
     fi
@@ -153,6 +166,14 @@ deploy_node() {
       run_pg "$NODE"
     fi
   fi
+  if [[ "$MONGO_IMG" != "" ]] ; then
+    if [[ "$DB_IP" != "" ]] ; then
+      run_mongo_secondary "$NODE" "$DB_IP"
+    else
+      run_mongo "$NODE"
+    fi
+  fi
+
   if [[ "$SSH_IMG" != "" ]] ; then
       run_ssh_server "$NODE"
   fi
@@ -282,6 +303,60 @@ EOF
     eval "$CMD"
   fi
 }
+
+
+run_mongo() {
+  local SERVER_NAME="$1"
+  local VOLUMES
+  local REPSET
+
+  if [[ "$PROVIDER" == "kubernetes" ]] ; then
+    source k8s/mongo_yaml.sh
+    return 0
+  fi
+  if [[ "$MONGO_REPLICASET" != "" ]] ; then
+    test -d data/secret || mkdir data/secret
+    test -f data/secret/"$MONGO_REPLICASET"-keyfile || openssl rand -base64 756 > data/secret/"$MONGO_REPLICASET"-keyfile
+    chmod 0600 data/secret/"$MONGO_REPLICASET"-keyfile
+    VOLUMES=(-v "$PWD"/data/secret:"/etc/secret")
+    REPSET="--replSet $MONGO_REPLICASET --keyFile /etc/secret/$MONGO_REPLICASET-keyfile"
+  fi
+
+  get_user_id mongodb "$MONGO_IMG"
+  local MONGO_UID="$RET_UID"
+  IFS= read -r -d '' CMD <<EOF || :
+  if ! [[ -d "$PWD"/data/"$SERVER_NAME" ]] ; then
+    mkdir -p "$PWD"/data/"$SERVER_NAME"
+    chmod o+rw "$PWD"/data/"$SERVER_NAME"
+  fi
+  if [[ $UID == 0 ]] ; then
+    chown $MONGO_UID:$MONGO_UID -R "$PWD"/data/"$SERVER_NAME"
+  else
+    if [[ "$DOCKER" == "docker" ]] ; then
+      docker run --rm -i -v "$PWD"/data/secret:/etc/secret -v "$PWD"/data/"$SERVER_NAME":"$PWD"/data/"$SERVER_NAME" busybox chown $MONGO_UID:$MONGO_UID -R "$PWD"/data/"$SERVER_NAME" /etc/secret/"$MONGO_REPLICASET"-keyfile
+    else
+      podman unshare chown $MONGO_UID:$MONGO_UID -R "$PWD"/data/"$SERVER_NAME"
+    fi
+  fi
+  "$DOCKER" network create "$NET" &>/dev/null || true
+  "$DOCKER" run --name "$SERVER_NAME" --network "$NET" -d --restart=always \
+    ${VOLUMES[@]} \
+    -v "$PWD"/data/"$SERVER_NAME":/data/db \
+    -e MONGO_INITDB_ROOT_USERNAME=root -e MONGO_INITDB_ROOT_PASSWORD=secret "$MONGO_IMG" --bind_ip 0.0.0.0 $REPSET
+    if [[ "$MONGO_REPLICASET" != "" ]] ; then
+      get_ip "$SERVER_NAME"
+      local SERVER_IP="\$RET_SERVER_IP"
+      "$DOCKER" run --network "$NET" --rm -i -e SERVER_IP="\$SERVER_IP" -e REPLICATION_SET="$MONGO_REPLICASET" --entrypoint '' "$MONGO_IMG" /bin/bash < tools/setup_mongo_replication.sh
+    fi
+EOF
+  if [[ "$DRY_RUN" == 1 ]] ; then
+    echo "$CMD"
+  else
+    eval "$CMD"
+  fi
+}
+
+
 
 
 run_ssh_server() {
