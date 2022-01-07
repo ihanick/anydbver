@@ -5,6 +5,14 @@ This branch is intended to use hub.docker.com images as possible without or with
 
 The replication/clusters setup is configured with sidecar/init containers.
 
+## Installation
+* Install Docker or Podman or setup kubectl with desired default namespace
+* Clone anydbver repository
+```
+git clone --branch docker-podman-k8s https://github.com/ihanick/anydbver.git anydbver-docker
+cd ./anydbver-docker
+```
+
 ## MySQL and Percona Server
 * Use clone and GTID
 
@@ -47,6 +55,15 @@ Use `mysql` instead of `ps` for mysql/mysql-server image.
 Destroy:
 ```
 ./anydbver destroy
+```
+
+## MongoDB
+* Replica set
+```
+./anydbver deploy \
+  node0 mongo:4.4.2 replica-set:rs0 \
+  node1 mongo:4.4.2 replica-set:rs0 master:node0 \
+  node2 mongo:4.4.2 replica-set:rs0 master:node0
 ```
 
 ## Kubernetes

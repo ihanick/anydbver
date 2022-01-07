@@ -168,7 +168,7 @@ deploy_node() {
   fi
   if [[ "$MONGO_IMG" != "" ]] ; then
     if [[ "$DB_IP" != "" ]] ; then
-      run_mongo_secondary "$NODE" "$DB_IP"
+      run_mongo "$NODE" "$DB_IP"
     else
       run_mongo "$NODE"
     fi
@@ -307,6 +307,7 @@ EOF
 
 run_mongo() {
   local SERVER_NAME="$1"
+  local PRIMARY_NAME="$2"
   local VOLUMES
   local REPSET
 
@@ -316,8 +317,10 @@ run_mongo() {
   fi
   if [[ "$MONGO_REPLICASET" != "" ]] ; then
     test -d data/secret || mkdir data/secret
-    test -f data/secret/"$MONGO_REPLICASET"-keyfile || openssl rand -base64 756 > data/secret/"$MONGO_REPLICASET"-keyfile
-    chmod 0600 data/secret/"$MONGO_REPLICASET"-keyfile
+    if ! test -f data/secret/"$MONGO_REPLICASET"-keyfile ; then
+      openssl rand -base64 756 > data/secret/"$MONGO_REPLICASET"-keyfile
+      chmod 0600 data/secret/"$MONGO_REPLICASET"-keyfile
+    fi
     VOLUMES=(-v "$PWD"/data/secret:"/etc/secret")
     REPSET="--replSet $MONGO_REPLICASET --keyFile /etc/secret/$MONGO_REPLICASET-keyfile"
   fi
@@ -346,7 +349,12 @@ run_mongo() {
     if [[ "$MONGO_REPLICASET" != "" ]] ; then
       get_ip "$SERVER_NAME"
       local SERVER_IP="\$RET_SERVER_IP"
-      "$DOCKER" run --network "$NET" --rm -i -e SERVER_IP="\$SERVER_IP" -e REPLICATION_SET="$MONGO_REPLICASET" --entrypoint '' "$MONGO_IMG" /bin/bash < tools/setup_mongo_replication.sh
+      local PRIMARY_IP
+      if [[ "$PRIMARY_NAME" != "" ]] ; then
+        get_ip "$PRIMARY_NAME"
+        PRIMARY_IP="\$RET_SERVER_IP"
+      fi
+      "$DOCKER" run --network "$NET" --rm -i -e SERVER_IP="\$SERVER_IP" -e PRIMARY_IP="\$PRIMARY_IP" -e REPLICATION_SET="$MONGO_REPLICASET" --entrypoint '' "$MONGO_IMG" /bin/bash < tools/setup_mongo_replication.sh
     fi
 EOF
   if [[ "$DRY_RUN" == 1 ]] ; then
