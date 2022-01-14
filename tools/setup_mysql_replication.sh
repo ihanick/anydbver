@@ -134,14 +134,36 @@ EOF
 fi
 
 
+# todo replace with jq
+rawurlencode() {
+  local string="${1}"
+  local strlen=${#string}
+  local encoded=""
+  local pos c o
+
+  for (( pos=0 ; pos<strlen ; pos++ )); do
+     c=${string:$pos:1}
+     case "$c" in
+        [-_.~a-zA-Z0-9] ) o="${c}" ;;
+        * )               printf -v o '%%%02x' "'$c"
+     esac
+     encoded+="${o}"
+  done
+  echo "${encoded}"    # You can either set a return variable (FASTER)
+  REPLY="${encoded}"   #+or echo the result (EASIER)... or both... :p
+}
+
+
 # Group Replication aka InnoDB Cluster
 if [[ "x$TYPE" == "xgroup" ]] ; then
+    rawurlencode "$MASTER_PASSWORD"
+    MASTER_PASSWORD_URIENC="$REPLY"
     MYIP=$(/vagrant/tools/node_ip.sh)
-    if ! mysqlsh "${MASTER_USER}:${MASTER_PASSWORD}@$MASTER_IP" \
+    if ! mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
         -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null|grep -q "$CLUSTER_NAME" ; then
-        mysqlsh "${MASTER_USER}:${MASTER_PASSWORD}@$MASTER_IP" -e "dba.createCluster('$CLUSTER_NAME', {localAddress: '$MASTER_IP:33061'})"
+        mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" -e "dba.createCluster('$CLUSTER_NAME', {localAddress: '$MASTER_IP:33061'})"
     fi
 
-    mysqlsh "${MASTER_USER}:${MASTER_PASSWORD}@$MASTER_IP" \
-        -e "var c=dba.getCluster();c.addInstance('$MASTER_USER:$MASTER_PASSWORD@$MYIP:3306', {localAddress: '$MYIP:33061', recoveryMethod: 'clone', label: '$MYIP'})"
+    mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
+        -e "var c=dba.getCluster();c.addInstance('$MASTER_USER:$MASTER_PASSWORD_URIENC@$MYIP:3306', {localAddress: '$MYIP:33061', recoveryMethod: 'clone', label: '$MYIP'})"
 fi
