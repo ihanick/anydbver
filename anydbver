@@ -978,7 +978,7 @@ cat > .version-info/vault.txt <<EOF
 EOF
 
   for i in .version-info/*.el7.txt ; do cp $i ${i/.el7.txt/.oel7.txt} ; done
-  for i in .version-info/*.el8.txt ; do cp $i ${i/.el8.txt/.oel8.txt} ; done
+  for i in .version-info/*.el8.txt ; do cp $i ${i/.el8.txt/.oel8.txt} ; cp $i ${i/.el8.txt/.rocky8.txt} ; done
 
 }
 

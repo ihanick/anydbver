@@ -5,7 +5,7 @@
   with_items: "{{os[dist].pmm_client.install_packages }}"
 
 - name: install PMM client rpm packages
-  when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   yum:
     name: "{{os[dist].pmm_client.install_packages }}"
     state: present

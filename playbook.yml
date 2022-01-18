@@ -5,8 +5,8 @@
     sync_is_required: "{{ lookup('vars', 'extra_sync_is_required', default=lookup('env', 'SYNC', default='') ) }}"
     dist: >-
       {{
-      'el7' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and ansible_distribution_version.startswith('7') else
-      'el8' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and ansible_distribution_version.startswith('8') else
+      'el7' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and ansible_distribution_version.startswith('7') else
+      'el8' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and ansible_distribution_version.startswith('8') else
       ansible_distribution_release
       }}
     percona_server_version: "{{ lookup('vars', 'extra_percona_server_version', default=lookup('env', 'PS', default='') ) }}"
@@ -198,7 +198,7 @@
         name: mariadb
 
     - name: Install Percona yum Repository
-      when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and is_percona_repo_required != ''
+      when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and is_percona_repo_required != ''
       block:
         - name: install percona yum repo
           yum:

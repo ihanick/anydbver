@@ -9,7 +9,7 @@
 - name: install db packages
   when: >
     sysbench_version != '' and
-    (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+    (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   yum:
     name: "{{ os[dist].sysbench.install_packages }}"
     state: present

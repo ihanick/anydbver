@@ -2,7 +2,7 @@
 # tasks file for patroni
 
 - name: Install OpenStack repo for etcd
-  when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and ansible_distribution_version.startswith('8') 
+  when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and ansible_distribution_version.startswith('8') 
   dnf:
     name: http://mirror.centos.org/centos/8-stream/extras/x86_64/os/Packages/centos-release-openstack-wallaby-1-1.el8.noarch.rpm
     state: present

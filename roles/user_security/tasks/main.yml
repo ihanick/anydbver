@@ -21,7 +21,7 @@
   include_tasks: common/tasks/install_db_packages.yml
 
 - name: Install Samba Active Directory server
-  when: samba_ad != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  when: samba_ad != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   shell:
     cmd: /bin/bash /vagrant/tools/install_samba_ad.sh
     creates: /opt/samba/sbin/samba

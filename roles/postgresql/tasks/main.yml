@@ -27,7 +27,7 @@
 - name: Enable EPEL
   when: >
     ( 'development' in db_features.split(',') or pgbackrest_version != '' ) and
-    (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+    (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   package:
     name: epel-release
     state: present
@@ -35,20 +35,20 @@
 - name: Enable CentOS Linux Software Collections
   when: >
     'development' in db_features.split(',') and
-    (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+    (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   package:
     name: centos-release-scl
     state: present
 
 - name: Postgresql repo
-  when: postgresql_version != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  when: postgresql_version != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   yum:
     name: "{{os[dist].postgresql.repo_url}}"
     state: present
     disable_gpg_check: yes
 
 - name: Add PGDG 9.5 repo
-  when: postgresql_version.startswith('9.5') and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  when: postgresql_version.startswith('9.5') and (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   blockinfile:
     dest: /etc/yum.repos.d/pgdg-redhat-all.repo
     block: |
@@ -101,7 +101,7 @@
   with_items: "{{pkg[dist].install_packages}}"
 
 - name: install Percona Distribution for PostgreSQL
-  when: percona_postgresql_version != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  when: percona_postgresql_version != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   yum:
     name: "{{pkg[dist].install_packages |select()|list}}"
     state: present

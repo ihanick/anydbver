@@ -309,6 +309,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
   * `el8`, CentOS 8
   * `oel7`, Oracle Linux 7
   * `oel8`, Oracle Linux 8
+  * `rocky8`, Rocky Linux 8
   * `bionic`, Ubuntu 18.04
   * `focal`, Ubuntu 20.04
   * `stretch`, Debian 9

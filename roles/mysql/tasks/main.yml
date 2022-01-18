@@ -3,7 +3,7 @@
 - name: Enable EPEL
   when: >
     (orchestrator_version != '' or mysql_ndb_data_version != '' or mysql_ndb_sql_version != '' or mysql_ndb_management_version != '') and
-    (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux')
+    (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux')
   package:
     name: epel-release
     state: present
@@ -26,7 +26,7 @@
   block:
     - name: MySQL 8.0 yum repo
       when: >
-        (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+        (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
       yum:
         name: "{{os[dist][soft].repo_url}}"
         disable_gpg_check: yes
@@ -34,19 +34,19 @@
     - name: Switch mysql ndb cluster 8.0 repo
       when: >
         ( mysql_ndb_data_version.startswith('8.0') or mysql_ndb_sql_version.startswith('8.0') or mysql_ndb_management_version.startswith('8.0') ) and
-        (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+        (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
       shell:
         cmd: "yum-config-manager --disable mysql80-community; yum-config-manager --enable mysql-cluster-8.0-community"
     - name: Switch mysql repo 5.7
       when: >
         mysql_version.startswith('5.7') and
-        (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+        (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
       shell:
         cmd: "yum-config-manager --disable mysql80-community; yum-config-manager --enable mysql57-community"
     - name: Switch mysql repo 5.6
       when: >
         mysql_version.startswith('5.6') and
-        (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+        (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
       shell:
         cmd: "yum-config-manager --disable mysql80-community; yum-config-manager --enable mysql56-community"
     - name: Install apt repository
@@ -63,7 +63,7 @@
 - name: Enable ProxySQL repo
   when: >
     proxysql_version != '' and
-    (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+    (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   ansible.builtin.template:
     src: roles/mysql/templates/proxysql.repo.j2
     dest: /etc/yum.repos.d/proxysql.repo
@@ -75,7 +75,7 @@
   include_tasks: common/tasks/install_db_packages.yml
 
 - name: Install Garbd
-  when: ('garbd' in db_features.split(',')) and (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  when: ('garbd' in db_features.split(',')) and (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   package:
     name: "{{ item }}"
     state: present
@@ -115,7 +115,7 @@
     creates: /usr/local/bin/mysql_random_data_load
 
 - name: Install mydumper
-  when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and mydumper_version != ''
+  when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and mydumper_version != ''
   yum:
     name: "{{mydumper[dist].install_packages}}"
     state: present

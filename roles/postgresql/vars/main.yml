@@ -27,6 +27,6 @@ pkg:
       - "{{ pg_deb_url + '/percona-postgresql-client-'+percona_postgresql_major_ver+'_'+percona_postgresql_version+'.'+dist+'_amd64.deb' if percona_postgresql_version.startswith('13-') else '' }}"
       - "{{pg_deb_url}}/percona-postgresql-{{ percona_postgresql_major_ver }}_{{ percona_postgresql_version }}.{{ dist }}_amd64.deb"
 
-pg_conf_dir: "{{ '/var/lib/pgsql/'+maj+'/data' if ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux' else '/etc/postgresql/'+maj+'/main'}}"
-pg_data_dir: "{{ '/var/lib/pgsql/'+maj+'/data' if ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux' else '/var/lib/postgresql/'+maj+'/main'}}"
+pg_conf_dir: "{{ '/var/lib/pgsql/'+maj+'/data' if ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux' else '/etc/postgresql/'+maj+'/main'}}"
+pg_data_dir: "{{ '/var/lib/pgsql/'+maj+'/data' if ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux' else '/var/lib/postgresql/'+maj+'/main'}}"
 pg_systemd_svc: "{{ pkg[dist].systemd if ('systemd' in pkg[dist]) and percona_postgresql_version !='' else os[dist][soft].systemd_service if soft else db_systemd_service }}"

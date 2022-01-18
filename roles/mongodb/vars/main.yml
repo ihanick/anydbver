@@ -46,5 +46,5 @@ pkg:
       - "{{ psmdb_name }}{{ psmdb_major_ver }}-server={{ psmdb_version }}.{{ dist }}"
       - "{{ psmdb_name }}{{ psmdb_major_ver }}-mongos={{ psmdb_version }}.{{ dist }}"
       - "{{ psmdb_name }}{{ psmdb_major_ver }}={{ psmdb_version }}.{{ dist }}"
-mongos_log: "{{ '/var/log/mongo/mongos.log' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') else '/var/log/mongodb/mongos.log' }}"
+mongos_log: "{{ '/var/log/mongo/mongos.log' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') else '/var/log/mongodb/mongos.log' }}"
 mongos_keyfile: "{{ mongos_cfg | regex_replace('^([^/]*)/.*$', '\\1') }}-keyfile"
