@@ -4,7 +4,7 @@
     cmd: kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
 
 - name: Install operator
-  when: percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != ""
+  when: percona_k8s_op_pxc_version != "" or percona_k8s_op_ps_version != "" or percona_k8s_op_psmdb_version != ""
   shell:
     cmd: >-
       cd /root;
@@ -16,6 +16,7 @@
       kubectl apply -f deploy/backup-s3.yaml;
       until
        kubectl wait --for=condition=ready pod -l name={{ percona_k8s_op_name }} &>/dev/null ||
+       kubectl wait --for=condition=ready pod -l control-plane={{ percona_k8s_op_name if percona_k8s_op_name != 'percona-server-mysql-operator' else 'percona-server-for-mysql-operator' }} &>/dev/null ||
        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name={{ percona_k8s_op_name }} &>/dev/null ;
       do sleep 2;done;
       touch /root/{{ percona_k8s_op_name }}-k8s.multi.applied
@@ -40,7 +41,7 @@
       touch /root/{{ percona_k8s_op_name }}-k8s.single-multi.applied
     creates: /root/{{ percona_k8s_op_name }}-k8s.single-multi.applied
 - name: Prepare cr.yaml file for Percona K8S operators (pmm)
-  when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '') and k8s_pmm != ''
+  when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_ps_version != '' or percona_k8s_op_psmdb_version != '') and k8s_pmm != ''
   shell:
     warn: false
     cmd: >-
@@ -82,7 +83,7 @@
       touch /root/{{ percona_k8s_op_name }}-k8s.backup.applied
     creates: /root/{{ percona_k8s_op_name }}-k8s.backup.applied
 - name: Start database cluster in k8s
-  when: percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != ''
+  when: percona_k8s_op_pxc_version != '' or percona_k8s_op_ps_version != '' or percona_k8s_op_psmdb_version != ''
   shell:
     warn: false
     cmd: >-

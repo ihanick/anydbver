@@ -2,10 +2,10 @@
 # tasks file for kubernetes
 - name: Install k3s, kubernetes distribution
   include_tasks: kubernetes_install.yaml
-  when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or zalando_pg_op_version != '' or percona_pg_op_version != '' or (k3s_url != '' and k3s_token != '') or k3s_version != '') and kube_config == '' and kubeadm == ''
+  when: (percona_k8s_op_pxc_version != '' or percona_k8s_op_ps_version != '' or percona_k8s_op_psmdb_version != '' or zalando_pg_op_version != '' or percona_pg_op_version != '' or (k3s_url != '' and k3s_token != '') or k3s_version != '') and kube_config == '' and kubeadm == ''
 
 - name: Download yq
-  when: percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or kubeadm != '' or (install_only != '' and k3s_url == '' and k3s_version != '')
+  when: percona_k8s_op_pxc_version != '' or percona_k8s_op_ps_version != '' or percona_k8s_op_psmdb_version != '' or kubeadm != '' or (install_only != '' and k3s_url == '' and k3s_version != '')
   get_url:
     url: 'https://github.com/mikefarah/yq/releases/download/3.3.0/yq_linux_amd64'
     dest: /usr/local/bin/yq
@@ -37,7 +37,7 @@
         creates: /usr/bin/kubectl
 
 - name: Install git for Percona Operator setup
-  when: (percona_k8s_op_pxc_version != "" or percona_k8s_op_psmdb_version != "" or zalando_pg_op_version != "" or percona_pg_op_version != '' or vites_version != '' )  or (install_only != '' and k3s_url == '' and k3s_version != '')
+  when: (percona_k8s_op_pxc_version != "" or percona_k8s_op_ps_version != "" or percona_k8s_op_psmdb_version != "" or zalando_pg_op_version != "" or percona_pg_op_version != '' or vites_version != '' )  or (install_only != '' and k3s_url == '' and k3s_version != '')
   package:
     name: git
     state: present

@@ -798,6 +798,10 @@ main
 1.8.0
 1.9.0
 EOF
+  cat > .version-info/pko4ps.txt <<EOF
+main
+0.1.0
+EOF
   cat > .version-info/pko4pxc.txt <<EOF
 master
 main
@@ -1283,6 +1287,16 @@ deploy_node() {
       else
         VER=$(tail -n 1 .version-info/pko4pxc.txt)
         DEP_ENV="$DEP_ENV PKO4PXC=$VER"
+      fi
+    fi
+    if [[ $i == "k8s-ps" ]] || [[ $i == "k8s-ps:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        VER=$(grep "$VER" .version-info/pko4ps.txt |tail -n 1)
+        DEP_ENV="$DEP_ENV PKO4PS=$VER"
+      else
+        VER=$(tail -n 1 .version-info/pko4ps.txt)
+        DEP_ENV="$DEP_ENV PKO4PS=$VER"
       fi
     fi
     if [[ $i == "k8s-minio" ]] ; then
@@ -1953,7 +1967,7 @@ post_deploy_hook_after_all_nodes() {
   NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
 
   # after all nodes deploy
-  if [[ $i != *PKO4PXC=* && $i == *CLUSTER=* && $i == *PXC=* ]] || [[ $i == *CLUSTER=* && $i == *GALERA=* ]] ; then
+  if [[ $i != *PKO4PXC=* && $i != *PKO4PS* && $i == *CLUSTER=* && $i == *PXC=* ]] || [[ $i == *CLUSTER=* && $i == *GALERA=* ]] ; then
     [[ $DRY_RUN == 0 ]] && ./anydbver ssh $NODE -- bash /vagrant/tools/fix_wsrep_cluster_address.sh </dev/null
   fi
 }
