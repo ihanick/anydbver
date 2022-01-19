@@ -57,7 +57,7 @@
 - name: Boostrap MySQL Router
   when: mysql_router_version != '' and master_ip != ''
   command:
-    cmd: mysqlrouter --bootstrap "{{ db_user }}:{{ db_password }}@{{ master_ip }}:3306" --directory /etc/mysqlrouter --user mysqlrouter
+    cmd: mysqlrouter --bootstrap "{{ db_user }}:{{ db_password | urlencode() }}@{{ master_ip }}:3306" --directory /etc/mysqlrouter --user mysqlrouter
 
 - name: Setup Vault keyring plugin for Percona Server
   when: percona_server_version != '' and vault_url != ''
