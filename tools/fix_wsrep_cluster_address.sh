@@ -5,7 +5,7 @@ CNF_FILE=$1
 
 if ! [ -f "$CNF_FILE" ] ; then exit 0 ; fi
 
-NODES=$(mysql -Ne "show status like 'wsrep_incoming_addresses'"|awk '{gsub(/:3306/,"");print $2}')
+NODES=$(mysql -Ne "show status like 'wsrep_incoming_addresses'"|grep -v 'AUTO'|awk '{gsub(/:3306/,"");print $2}')
 
 if grep -q wsrep_cluster_address $CNF_FILE ; then
   sed -i -re "s|^\s*wsrep_cluster_address\s*=.*$|wsrep_cluster_address=gcomm://$NODES|" "$CNF_FILE"

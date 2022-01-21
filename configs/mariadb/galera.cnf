@@ -2,6 +2,7 @@
 innodb_buffer_pool_size=512M
 server_id=55
 report_host=myhost
+wsrep_node_name=myhost
 wsrep_cluster_name=mycluster
 gtid_domain_id=51
 gtid_strict_mode=1

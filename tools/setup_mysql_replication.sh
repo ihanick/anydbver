@@ -115,6 +115,7 @@ EOF
 fi
 
 if [[ "x$TYPE" == "xgalera" ]] ; then
+    MYIP=$(/vagrant/tools/node_ip.sh)
     systemctl stop $MYSQLD_UNIT
     # pre-requirement
     # vagrant ssh default -- sudo tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem |vagrant ssh node1 -- sudo tar -C / -xz
@@ -123,7 +124,7 @@ if [[ "x$TYPE" == "xgalera" ]] ; then
     cat >> "${CNF_FILE}" << EOF
 [mysqld]
 wsrep_cluster_name=${CLUSTER_NAME}
-wsrep_node_name=${CLUSTER_NAME}-node-${SERVER_ID}
+wsrep_node_name=${MYIP}
 wsrep_cluster_address="gcomm://${MASTER_IP}"
 EOF
     mysqld --user=mysql &>/dev/null &
