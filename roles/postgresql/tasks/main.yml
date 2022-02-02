@@ -82,7 +82,7 @@
   lineinfile:
     create: yes
     path: /etc/apt/sources.list.d/pgdg.list
-    line: "deb http://apt.postgresql.org/pub/repos/apt {{dist}}-pgdg main"
+    line: "deb https://apt-archive.postgresql.org/pub/repos/apt {{dist}}-pgdg-archive main"
 
 - name: refresh apt repo
   when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
