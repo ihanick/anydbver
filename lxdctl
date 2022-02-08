@@ -31,7 +31,7 @@ getcontainer() {
 
 setupOS() {
   if [ "x$1" == "xel8" ] ; then
-    IMG="images:centos/8/$ARCH"
+    IMG="images:centos/8-Stream/$ARCH"
     PACKAGES="$PACKAGES python3 tar"
     PYTHON_INT=/usr/bin/python3
     OS_TYPE=rpm
