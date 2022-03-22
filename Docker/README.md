@@ -41,6 +41,11 @@ cd ./anydbver-docker
 
 Use `mysql` instead of `ps` for mysql/mysql-server image.
 
+* Server's cli:
+```
+./anydbver mysql node0
+```
+
 ## Postgresql
 
 * Pagila sample database and physical replication secondary created by offline filesystem copy
@@ -57,6 +62,11 @@ Destroy:
 ./anydbver destroy
 ```
 
+* Server's cli:
+```
+./anydbver psql node0
+```
+
 ## MongoDB
 * Replica set
 ```
@@ -64,6 +74,11 @@ Destroy:
   node0 mongo:4.4.2 replica-set:rs0 \
   node1 mongo:4.4.2 replica-set:rs0 master:node0 \
   node2 mongo:4.4.2 replica-set:rs0 master:node0
+```
+
+* Server's cli:
+```
+./anydbver mongo node0
 ```
 
 ## Kubernetes
