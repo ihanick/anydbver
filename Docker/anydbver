@@ -1,0 +1,699 @@
+#!/bin/bash
+
+# read arguments
+opts=$(getopt \
+    --longoptions "dry-run,destroy,namespace:,provider:" \
+    --name "$(basename "$0")" \
+    --options "" \
+    -- "$@"
+)
+
+eval set --"$opts"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    --namespace)
+      NAMESPACE="$2-"
+      shift 2
+      ;;
+    --provider)
+      PROVIDER="$2"
+      shift 2
+      ;;
+    --destroy)
+      DESTROY=1
+      shift
+      ;;
+      *)
+      break
+      ;;
+  esac
+done
+
+if [[ "$1" == "--" ]] ; then
+  shift
+fi
+
+
+if [[ "$1" == destroy ]] ; then
+  DESTROY=1
+  shift
+fi
+
+if [[ "$1" == deploy ]] ; then
+  DEPLOY=1
+  shift
+fi
+
+
+# Global variables
+NET="${NAMESPACE}${USER}-anydbver"
+
+#PODMAN_HUB=docker.io/
+SELINUX=0
+type -P sestatus > /dev/null && sestatus | grep 'SELinux status'|grep -q enabled && SELINUX=1
+
+DOCKER=podman
+docker version &>/dev/null && DOCKER=docker
+
+if [[ "$1" == mysql || "$1" == psql || "$1" == mongo || "$1" == bash ]] ; then
+  CMD="$1"
+  shift
+  NODE_PREFIX="$USER-"
+  NODE="$1"
+  if [[ "$NODE" == "" ]] ; then
+    NODE=node0
+  fi
+  if [[ "$CMD" == mysql ]] ; then
+    exec $DOCKER exec -it "${NODE_PREFIX}${NODE}" mysql -uroot -psecret
+  elif [[ "$CMD" == psql ]] ; then
+    exec $DOCKER exec -it "${NODE_PREFIX}${NODE}" psql -U postgres
+  elif [[ "$CMD" == mongo ]] ; then
+    exec $DOCKER exec -it "${NODE_PREFIX}${NODE}" mongo -u root --password secret
+  elif [[ "$CMD" == bash ]] ; then
+    exec $DOCKER exec -it "${NODE_PREFIX}${NODE}" bash
+  fi
+fi
+
+
+declare -A SERVER_IDS
+LAST_SERVER_ID=50
+# Functions
+deploy_node() {
+  echo deploy_node "$@"
+  local NODE="$1"
+  shift
+  local arr
+  arr=( "$@" )
+
+  unset MYSQL_IMG GTID_OPTS WORLD_DB DB_ARGUMENTS PAGILA_DB SNAPSHOT DB_IP PG_IMG
+
+  for i in "${arr[@]}"; do
+    if [[ "$i" == "ssh" ]] ; then
+      SSH_IMG=c7-systemd
+    fi
+    if [[ "$i" == "ansible-workers:"* ]] ; then
+      get_version "$i"
+      ANSIBLE_WORKERS="$VER"
+      SSH_IMG=c7-anydbver-ansible
+    fi
+    if [[ "$i" == "percona-server" ]] || [[ "$i" == "percona-server:"* ]] || [[ "$i" == "ps" ]] || [[ "$i" == "ps:"* ]] ; then
+      get_version "$i"
+      MYSQL_IMG=percona/percona-server:"$VER"
+    fi
+    if [[ "$i" == "mysql-server" ]] || [[ "$i" == "mysql-server:"* ]] || [[ "$i" == "mysql" ]] || [[ "$i" == "mysql:"* ]] ; then
+      get_version "$i"
+      MYSQL_IMG=mysql/mysql-server:"$VER"
+    fi
+    if [[ "$i" == "mariadb" ]] || [[ "$i" == "mariadb:"* ]] ; then
+      get_version "$i"
+      MYSQL_IMG=mariadb:"$VER"
+    fi
+    if [[ "$i" == "mongo" || "$i" == "mongodb" || "$i" == "mongo:"* || "$i" == "mongodb:"* ]] ; then
+      get_version "$i"
+      MONGO_IMG=mongo:"$VER"
+    fi
+    if [[ "$i" == "replica-set:"* ]] ; then
+      get_version "$i"
+      MONGO_REPLICASET="$VER"
+    fi
+
+    if [[ "$i" == "gtid" ]] ; then
+      GTID_OPTS=(--log-slave-updates --enforce_gtid_consistency=ON --gtid_mode=ON)
+    fi
+    if [[ "$i" == "world" ]] ; then
+      if ! [[ -d sampledb/world ]] ; then
+        mkdir -p sampledb/world
+        curl -sL https://downloads.mysql.com/docs/world-db.tar.gz |tar -C sampledb/world/ --strip-components 1 -xz
+      fi
+
+      WORLD_DB=1
+    fi
+    if [[ "$i" == "args:"* ]] ; then
+      DB_ARGUMENTS="${i//args:/}"
+    fi
+    if [[ "$i" == "pagila" ]] ; then
+      if ! [[ -d sampledb/pagila ]] ; then
+        mkdir -p sampledb/pagila
+        curl -sL https://github.com/devrimgunduz/pagila/raw/master/pagila-schema.sql https://github.com/devrimgunduz/pagila/raw/master/pagila-data.sql > sampledb/pagila/pagila.sql
+      fi
+
+      PAGILA_DB=1
+    fi
+
+    if [[ "$i" == "snapshot" ]] ; then
+      SNAPSHOT=1
+    fi
+    if [[ $i == "master_ip" ]] || [[ $i == "master_ip:"* ]] || [[ $i == "master" ]] || [[ $i == "master:"* ]] || [[ $i == "leader:"* ]] ; then
+      get_version "$i"
+      DB_IP="$VER"
+      if [[ "$VER" == latest ]] ; then
+        DB_IP=node0
+      fi
+    fi
+
+    if [[ "$i" == "postgresql" ]] || [[ "$i" == "postgresql:"* ]] || [[ "$i" == "pg" ]] || [[ "$i" == "pg:"* ]] ; then
+      get_version "$i"
+      PG_IMG=postgres:"$VER"
+    fi
+
+  done
+
+
+  if [[ "$DB_IP" != "" ]] ; then
+    if [[ "$PROVIDER" == "kubernetes" ]] ; then
+      DB_IP="$DB_IP"
+    else
+      DB_IP="$USER-$DB_IP"
+    fi
+  fi
+
+  if [[ "$MYSQL_IMG" != "" ]] ; then
+    if [[ "$DB_IP" != "" ]] ; then
+      run_mysql_slave "$NODE" "$DB_IP"
+    else
+      run_mysql "$NODE"
+    fi
+  fi
+  if [[ "$PG_IMG" != "" ]] ; then
+    if [[ "$DB_IP" != "" ]] ; then
+      run_pg_secondary "$NODE" "$DB_IP"
+    else
+      run_pg "$NODE"
+    fi
+  fi
+  if [[ "$MONGO_IMG" != "" ]] ; then
+    if [[ "$DB_IP" != "" ]] ; then
+      run_mongo "$NODE" "$DB_IP"
+    else
+      run_mongo "$NODE"
+    fi
+  fi
+
+  if [[ "$SSH_IMG" != "" ]] ; then
+      run_ssh_server "$NODE"
+  fi
+}
+
+get_version() {
+  if [[ "$1" == *':'* ]] ; then
+    VER=$(echo "$1" | cut -d: -f2)
+  else
+    VER=latest
+  fi
+}
+
+get_ip() {
+  local SERVER_NAME="$1"
+  while true ; do
+    sleep 1
+    RET_SERVER_IP=$("$DOCKER" inspect --format "{{.NetworkSettings.IPAddress}}" "$SERVER_NAME")
+    if [[ "$DOCKER" == "docker" ]] ; then
+      [[ "$RET_SERVER_IP" == "" ]] && RET_SERVER_IP=$( "$DOCKER" inspect "$SERVER_NAME"| jq -r '.[]|.NetworkSettings.Networks["'"${NET}"'"].IPAddress' )
+    else
+      [[ "$RET_SERVER_IP" == "" ]] && RET_SERVER_IP=$( "$DOCKER" inspect --format json "$SERVER_NAME"| jq -r '.[]|.NetworkSettings.Networks["'"${NET}"'"].IPAddress' )
+    fi
+    [[ "$RET_SERVER_IP" == "" ]] && continue
+    [[ "$RET_SERVER_IP" == "null" ]] && continue
+    break
+  done
+}
+
+get_user_id() {
+  local USR="$1"
+  local IMG="$2"
+  RET_UID=$("$DOCKER" run --entrypoint '' -i --rm "$IMG" id -u "$USR")
+}
+
+run_mysql() {
+  local SERVER_NAME="$1"
+  local VOLUMES
+
+  if ! [[ SERVER_IDS["$SERVER_NAME"] -gt 0 ]] ; then
+    (( LAST_SERVER_ID=LAST_SERVER_ID+1 ))
+    SERVER_IDS[$SERVER_NAME]="$LAST_SERVER_ID"
+  fi
+
+  local SERVER_ID="${SERVER_IDS[$SERVER_NAME]}"
+
+  if [[ "$PROVIDER" == "kubernetes" ]] ; then
+    source k8s/mysql_yaml.sh
+    return 0
+  fi
+
+  if [[ "$WORLD_DB" != "" ]] ; then
+    VOLUMES=(-v "$PWD"/sampledb/world:/docker-entrypoint-initdb.d)
+  fi
+
+  get_user_id mysql "$MYSQL_IMG"
+  local MYSQL_UID="$RET_UID"
+  IFS= read -r -d '' CMD <<EOF || :
+  if ! [[ -d "$PWD"/data/"$SERVER_NAME" ]] ; then
+    mkdir -p "$PWD"/data/"$SERVER_NAME"
+    chmod o+rw "$PWD"/data/"$SERVER_NAME"
+  fi
+  if [[ $UID == 0 ]] ; then
+    chown $MYSQL_UID:$MYSQL_UID -R "$PWD"/data/"$SERVER_NAME"
+  else
+    if [[ "$DOCKER" == "docker" ]] ; then
+      docker run --rm -i -v "$PWD"/data/"$SERVER_NAME":"$PWD"/data/"$SERVER_NAME" busybox chown $MYSQL_UID:$MYSQL_UID -R "$PWD"/data/"$SERVER_NAME"
+    else
+      podman unshare chown $MYSQL_UID:$MYSQL_UID -R "$PWD"/data/"$SERVER_NAME"
+    fi
+  fi
+  "$DOCKER" network create "$NET" &>/dev/null || true
+  "$DOCKER" run --name "$SERVER_NAME" --network "$NET" -d --restart=always \
+    ${VOLUMES[@]} \
+    -v "$PWD"/data/"$SERVER_NAME":/var/lib/mysql \
+    -e MYSQL_ROOT_HOST='%' \
+    -e MYSQL_ROOT_PASSWORD=secret "$MYSQL_IMG" \
+    --server-id="$SERVER_ID" --log-bin=mysqld-bin ${GTID_OPTS[@]} --report_host="$SERVER_NAME" $DB_ARGUMENTS
+EOF
+  if [[ "$DRY_RUN" == 1 ]] ; then
+    echo "$CMD"
+  else
+    eval "$CMD"
+  fi
+}
+
+run_pg() {
+  local SERVER_NAME="$1"
+  local VOLUMES
+
+  if [[ "$PROVIDER" == "kubernetes" ]] ; then
+    source k8s/pg_yaml.sh
+    return 0
+  fi
+
+
+
+  if [[ "$PAGILA_DB" != "" ]] ; then
+    VOLUMES=(-v "$PWD"/sampledb/pagila:/docker-entrypoint-initdb.d)
+  fi
+
+  get_user_id postgres "$PG_IMG"
+  local PG_UID="$RET_UID"
+  IFS= read -r -d '' CMD <<EOF || :
+  if ! [[ -d "$PWD"/data/"$SERVER_NAME" ]] ; then
+    mkdir -p "$PWD"/data/"$SERVER_NAME"
+    chmod o+rw "$PWD"/data/"$SERVER_NAME"
+  fi
+  if [[ $UID == 0 ]] ; then
+    chown $PG_UID:$PG_UID -R "$PWD"/data/"$SERVER_NAME"
+  else
+    if [[ "$DOCKER" == "docker" ]] ; then
+      docker run --rm -i -v "$PWD"/data/"$SERVER_NAME":"$PWD"/data/"$SERVER_NAME" busybox chown $PG_UID:$PG_UID -R "$PWD"/data/"$SERVER_NAME"
+    else
+      podman unshare chown $PG_UID:$PG_UID -R "$PWD"/data/"$SERVER_NAME"
+    fi
+  fi
+  "$DOCKER" network create "$NET" &>/dev/null || true
+  "$DOCKER" run --name "$SERVER_NAME" --network "$NET" -d --restart=always \
+    ${VOLUMES[@]} \
+    -v "$PWD"/data/"$SERVER_NAME":/var/lib/postgresql/data \
+    -e POSTGRES_PASSWORD=secret "$PG_IMG"
+EOF
+  if [[ "$DRY_RUN" == 1 ]] ; then
+    echo "$CMD"
+  else
+    eval "$CMD"
+  fi
+}
+
+
+run_mongo() {
+  local SERVER_NAME="$1"
+  local PRIMARY_NAME="$2"
+  local VOLUMES
+  local REPSET
+
+  if [[ "$PROVIDER" == "kubernetes" ]] ; then
+    source k8s/mongo_yaml.sh
+    return 0
+  fi
+  if [[ "$MONGO_REPLICASET" != "" ]] ; then
+    test -d data/secret || mkdir data/secret
+    if ! test -f data/secret/"$MONGO_REPLICASET"-keyfile ; then
+      openssl rand -base64 756 > data/secret/"$MONGO_REPLICASET"-keyfile
+      chmod 0600 data/secret/"$MONGO_REPLICASET"-keyfile
+    fi
+    VOLUMES=(-v "$PWD"/data/secret:"/etc/secret")
+    REPSET="--replSet $MONGO_REPLICASET --keyFile /etc/secret/$MONGO_REPLICASET-keyfile"
+  fi
+
+  get_user_id mongodb "$MONGO_IMG"
+  local MONGO_UID="$RET_UID"
+  IFS= read -r -d '' CMD <<EOF || :
+  if ! [[ -d "$PWD"/data/"$SERVER_NAME" ]] ; then
+    mkdir -p "$PWD"/data/"$SERVER_NAME"
+    chmod o+rw "$PWD"/data/"$SERVER_NAME"
+  fi
+  if [[ $UID == 0 ]] ; then
+    chown $MONGO_UID:$MONGO_UID -R "$PWD"/data/"$SERVER_NAME"
+  else
+    if [[ "$DOCKER" == "docker" ]] ; then
+      docker run --rm -i -v "$PWD"/data/secret:/etc/secret -v "$PWD"/data/"$SERVER_NAME":"$PWD"/data/"$SERVER_NAME" busybox chown $MONGO_UID:$MONGO_UID -R "$PWD"/data/"$SERVER_NAME" /etc/secret/"$MONGO_REPLICASET"-keyfile
+    else
+      podman unshare chown $MONGO_UID:$MONGO_UID -R "$PWD"/data/"$SERVER_NAME"
+    fi
+  fi
+  "$DOCKER" network create "$NET" &>/dev/null || true
+  "$DOCKER" run --name "$SERVER_NAME" --network "$NET" -d --restart=always \
+    ${VOLUMES[@]} \
+    -v "$PWD"/data/"$SERVER_NAME":/data/db \
+    -e MONGO_INITDB_ROOT_USERNAME=root -e MONGO_INITDB_ROOT_PASSWORD=secret "$MONGO_IMG" --bind_ip 0.0.0.0 $REPSET
+    if [[ "$MONGO_REPLICASET" != "" ]] ; then
+      get_ip "$SERVER_NAME"
+      local SERVER_IP="\$RET_SERVER_IP"
+      local PRIMARY_IP
+      if [[ "$PRIMARY_NAME" != "" ]] ; then
+        get_ip "$PRIMARY_NAME"
+        PRIMARY_IP="\$RET_SERVER_IP"
+      fi
+      "$DOCKER" run --network "$NET" --rm -i -e SERVER_IP="\$SERVER_IP" -e PRIMARY_IP="\$PRIMARY_IP" -e REPLICATION_SET="$MONGO_REPLICASET" --entrypoint '' "$MONGO_IMG" /bin/bash < tools/setup_mongo_replication.sh
+    fi
+EOF
+  if [[ "$DRY_RUN" == 1 ]] ; then
+    echo "$CMD"
+  else
+    eval "$CMD"
+  fi
+}
+
+
+
+
+run_ssh_server() {
+  local SERVER_NAME="$1"
+  if [[ "$ANSIBLE_WORKERS" != "" ]] ; then
+    if [[ "$PROVIDER" == "kubernetes" ]] ; then
+      NODE_PREFIX=""
+    else
+      NODE_PREFIX="$USER-"
+    fi
+
+    IFS= read -r -d '' CMD <<EOF || :
+  ANSIBLE_WORKERS_IP=''
+  for w in \${ANSIBLE_WORKERS//,/ } ; do
+    get_ip "$NODE_PREFIX\$w"
+    ANSIBLE_WORKERS_IP="\$ANSIBLE_WORKERS_IP,\$w:\$RET_SERVER_IP"
+  done
+  ANSIBLE_WORKERS_IP="\${ANSIBLE_WORKERS_IP:1}"
+
+  "$DOCKER" network create "$NET" &>/dev/null || true
+  "$DOCKER" run -d --name "$SERVER_NAME" --network $NET --restart=always --privileged \
+    -e "ANSIBLE_WORKERS=\$ANSIBLE_WORKERS_IP" -e USER=root \
+    "$SSH_IMG"
+EOF
+  else
+    IFS= read -r -d '' CMD <<EOF || :
+  "$DOCKER" network create "$NET" &>/dev/null || true
+  "$DOCKER" run -d --name "$SERVER_NAME" --network $NET --restart=always --privileged \
+    "$SSH_IMG"
+EOF
+  fi
+  if [[ "$DRY_RUN" == 1 ]] ; then
+    echo "$CMD"
+  else
+    eval "$CMD"
+  fi
+
+}
+
+run_mysql_slave() {
+  local SERVER_NAME="$1"
+  local SRC_NAME="$2"
+
+  if ! [[ SERVER_IDS["$SERVER_NAME"] -gt 0 ]] ; then
+    (( LAST_SERVER_ID=LAST_SERVER_ID+1 ))
+    SERVER_IDS[$SERVER_NAME]="$LAST_SERVER_ID"
+  fi
+
+  local SERVER_ID="${SERVER_IDS[$SERVER_NAME]}"
+
+  if [[ "$PROVIDER" == "kubernetes" ]] ; then
+    source k8s/mysql_slave_yaml.sh
+    return 0
+  fi
+
+
+  if [[ "$SNAPSHOT" = 1 ]] ; then
+    make_mysql_snapshot_offline_copy "$SERVER_NAME" "$SRC_NAME"
+  fi
+
+  IFS= read -r -d '' CMD <<EOF || :
+  run_mysql "$SERVER_NAME"
+  get_ip $SRC_NAME
+  LEADER_IP="\$RET_SERVER_IP"
+  get_ip $SERVER_NAME
+  FOLLOWER_IP="\$RET_SERVER_IP"
+
+  "$DOCKER" run --name "$SERVER_NAME"-slave-setup --network $NET -i \
+    --entrypoint '' \
+    -e LEADER_HOST="\$LEADER_IP" -e LEADER_USER=root -e LEADER_PASSWORD=secret -e FOLLOWER_HOST="\$FOLLOWER_IP" -e FOLLOWER_USER=root -e FOLLOWER_PASSWORD=secret \
+    "$MYSQL_IMG" bash -e < tools/setup_mysql_replication.sh
+EOF
+  if [[ "$DRY_RUN" == 1 ]] ; then
+    echo "$CMD"
+  else
+    eval "$CMD"
+  fi
+}
+
+make_mysql_snapshot_offline_copy() {
+  local DST="$1"
+  local SRC="$2"
+
+  wait_mysql_ready "$SRC"
+  "$DOCKER" stop "$SRC"
+  # podman logs "$SRC"
+  "$DOCKER" rm "$SRC"
+  if [[ $UID == 0 ]] ; then
+    rm -rf -- data/"$DST"
+    cp -a data/"$SRC" data/"$DST"
+    rm -f data/"$DST"/auto.cnf
+  else
+    if [[ "$DOCKER" == "docker" ]] ; then
+      [[ -d "$PWD"/data/"$DST" ]] && docker run --rm -i -v "$PWD"/data/"$DST":"$PWD"/data/"$DST" busybox chmod ogu+rwX -R "$PWD"/data/"$DST"
+      rm -rf -- data/"$DST"
+      docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox cp -a "$PWD"/data/"$SRC" "$PWD"/data/"$DST"
+      docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox rm -f "$PWD"/data/"$DST"/auto.cnf
+    else
+      [[ -d "$PWD"/data/"$DST" ]] && podman unshare chmod ogu+rwX -R "$PWD"/data/"$DST"
+      rm -rf -- data/"$DST"
+      podman unshare cp -a data/"$SRC" data/"$DST"
+      podman unshare rm -f data/"$DST"/auto.cnf
+    fi
+  fi
+  run_mysql "$SRC"
+}
+
+run_pg_secondary() {
+  local SERVER_NAME="$1"
+  local SRC="$2"
+
+  if [[ "$PROVIDER" == "kubernetes" ]] ; then
+    source k8s/pg_replica_yaml.sh
+    return 0
+  fi
+
+  wait_pg_ready "$SRC"
+
+  if [[ $UID == 0 ]] ; then
+    sed -i -e '$ a host replication all all md5' "$PWD"/data/"$SRC"/pg_hba.conf
+  else
+    if [[ "$DOCKER" == "docker" ]] ; then
+      docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox sed -i -e '$ a host replication all all md5' "$PWD"/data/"$SRC"/pg_hba.conf
+    else
+      podman unshare sed -i -e '$ a host replication all all md5' "$PWD"/data/"$SRC"/pg_hba.conf
+    fi
+  fi
+
+  get_ip "$SRC"
+  local SERVER_IP="$RET_SERVER_IP"
+  "$DOCKER" run --name "$SRC"-wait-ready --network "$NET" --rm -i \
+    --entrypoint '' \
+    -e PG_SERVER="$SERVER_IP" -e POSTGRES_PASSWORD=secret -e PGPASSWORD=secret \
+    "$PG_IMG" psql -h "$SERVER_IP" -U postgres -d postgres -c "ALTER SYSTEM SET wal_level = 'hot_standby';" -c "SELECT pg_reload_conf();"
+
+  if [[ "$SNAPSHOT" = 1 ]] ; then
+    make_pg_snapshot_offline_copy "$SERVER_NAME" "$SRC"
+  else
+    make_pg_basebackup_copy "$SERVER_NAME" "$SRC"
+  fi
+
+  run_pg "$SERVER_NAME"
+}
+
+make_pg_basebackup_copy() {
+  local DST="$1"
+  local SRC="$2"
+
+  if ! [[ -d "$PWD"/data/"$DST" ]] ; then
+    mkdir -p "$PWD"/data/"$DST"
+    chmod o+rw "$PWD"/data/"$DST"
+  fi
+
+  get_ip "$SRC"
+  local SERVER_IP="$RET_SERVER_IP"
+  "$DOCKER" run --name "$DST"-basebackup --network "$NET" --rm -i \
+    -v "$PWD"/data/"$DST":/var/lib/postgresql/data \
+    --entrypoint '' \
+    -e PG_SERVER="$SERVER_IP" -e POSTGRES_PASSWORD=secret -e PGDATA=/var/lib/postgresql/data -e PGPASSWORD=secret \
+    "$PG_IMG" bash -e <<'WAIT_READY_EOF'
+pg_basebackup -h "$PG_SERVER" -U postgres -D $PGDATA -Fp -Xs -P -R
+WAIT_READY_EOF
+
+}
+
+
+
+make_pg_snapshot_offline_copy() {
+  local DST="$1"
+  local SRC="$2"
+
+  "$DOCKER" stop "$SRC"
+  "$DOCKER" rm "$SRC"
+
+  if [[ $UID == 0 ]] ; then
+    rm -rf -- "$PWD"/data/"$DST"
+    cp -a "$PWD"/data/"$SRC" "$PWD"/data/"$DST"
+    touch data/"$DST"/standby.signal 
+  else
+    if [[ "$DOCKER" == "docker" ]] ; then
+      [[ -d "$PWD"/data/"$DST" ]] && docker run --rm -i -v "$PWD"/data/"$DST":"$PWD"/data/"$DST" busybox chmod ogu+rwX -R "$PWD"/data/"$DST"
+      rm -rf -- data/"$DST"
+      docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox cp -a "$PWD"/data/"$SRC" "$PWD"/data/"$DST"
+      docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox touch "$PWD"/data/"$DST"/standby.signal
+    else
+      [[ -d "$PWD"/data/"$DST" ]] && podman unshare chmod ogu+rwX -R "$PWD"/data/"$DST"
+      rm -rf -- data/"$DST"
+      podman unshare cp -a data/"$SRC" data/"$DST"
+      podman unshare touch data/"$DST"/standby.signal 
+    fi
+  fi
+  run_pg "$SRC"
+
+  get_ip "$SRC"
+
+  local PRIMARY_IP="$RET_SERVER_IP"
+
+  if [[ $UID == 0 ]] ; then
+    sed -i -e "\$ a primary_conninfo = 'host=$PRIMARY_IP user=postgres password=secret'" data/"$DST"/postgresql.auto.conf
+  else
+    if [[ "$DOCKER" == "docker" ]] ; then
+      docker run --rm -i -v "$PWD"/data:"$PWD"/data busybox sed -i -e "\$ a primary_conninfo = 'host=$PRIMARY_IP user=postgres password=secret'" "$PWD"/data/"$DST"/postgresql.auto.conf
+    else
+      podman unshare sed -i -e "\$ a primary_conninfo = 'host=$PRIMARY_IP user=postgres password=secret'" "$PWD"/data/"$DST"/postgresql.auto.conf
+    fi
+  fi
+}
+
+
+
+wait_mysql_ready() {
+  local SERVER_NAME="$1"
+  get_ip "$SERVER_NAME"
+  local SERVER_IP="$RET_SERVER_IP"
+  "$DOCKER" run --name "$SERVER_NAME"-wait-ready --network "$NET" --rm -i \
+    --entrypoint '' \
+    -e LEADER_HOST="$SERVER_IP" -e LEADER_USER=root -e LEADER_PASSWORD=secret \
+    "$MYSQL_IMG" bash -e <<'WAIT_READY_EOF'
+create_client_my_cnf() {
+  local FILE="$1"
+  local HOST="$2"
+  local USER="$3"
+  local PASS="$4"
+
+  cat > /tmp/"$FILE".cnf <<EOF
+[client]
+host="$HOST"
+user="$USER"
+password="$PASS"
+EOF
+}
+
+wait_until_mysql_ready() {
+  local FILE="$1"
+  until mysql --defaults-file=/tmp/"$FILE".cnf --silent --connect-timeout=30 --wait -e "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
+}
+
+create_client_my_cnf leader "$LEADER_HOST" "$LEADER_USER" "$LEADER_PASSWORD"
+wait_until_mysql_ready leader
+WAIT_READY_EOF
+}
+
+wait_pg_ready() {
+  local SERVER_NAME="$1"
+  get_ip "$SERVER_NAME"
+  local SERVER_IP="$RET_SERVER_IP"
+  "$DOCKER" run --name "$SERVER_NAME"-wait-ready --network "$NET" --rm -i \
+    --entrypoint '' \
+    -e PG_SERVER="$SERVER_IP" -e POSTGRES_PASSWORD=secret -e PGPASSWORD=secret \
+    "$PG_IMG" bash -e <<'WAIT_READY_EOF'
+until psql -h "$PG_SERVER" -U postgres -d postgres -c "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
+WAIT_READY_EOF
+}
+
+
+
+
+
+
+
+# Command processing
+
+if [[ "$DESTROY" == 1 ]] ; then
+  echo Destroy
+  IFS= read -r -d '' CMD <<EOF || :
+  "$DOCKER" ps -a --filter 'network=$NET' --format '{{.ID}}'|xargs "$DOCKER" rm -f || :
+  "$DOCKER" network rm "$NET" || :
+  "$DOCKER" run -i --rm -v "$PWD"/data:"$PWD"/data busybox rm -rf -- "$PWD"/data/* || :
+EOF
+
+  if [[ "$DRY_RUN" == 1 ]] ; then
+    echo "$CMD"
+  else
+    eval "$CMD"
+  fi
+  exit 0
+fi
+
+
+if [[ "$DEPLOY" == 1 ]] ; then
+  if ! [[ -d data ]] ; then
+    mkdir data
+    [[ "$SELINUX" == 1 ]] && sudo chcon -R -t container_file_t data sampledb
+  fi
+
+  DEPLARGS=()
+  NODE=node0
+  while [[ "$#" -gt 0 ]] ; do
+    while [[ "$#" -gt 0 ]] ; do
+      if [[ "$1" == node* ]] || [[ "$1" == default && $NODE != default ]] ; then
+        break
+      fi
+      DEPLARGS+=("$1")
+      shift
+    done
+
+    if [[ "${#DEPLARGS[@]}" -gt 0 ]] ; then
+      if [[ "$PROVIDER" == "kubernetes" ]] ; then
+        DEPLOYMENT_NAME="$NODE"
+      else
+        DEPLOYMENT_NAME="$USER-$NODE"
+      fi
+
+      deploy_node "$DEPLOYMENT_NAME" "${DEPLARGS[@]}"
+    fi
+
+    if [[ "$#" -gt 0 ]] ; then
+      NODE="$1"
+      shift
+    fi
+    DEPLARGS=()
+  done
+fi
