@@ -95,3 +95,34 @@ docker exec -it $USER-node3 bash
 cd /root/anydbver
 ./anydbver deploy node0 percona-toolkit
 ```
+
+## Deploy kubernetes in docker with k3d
+```
+./anydbver deploy k3d
+```
+Wait until kube-system pods startup and you can use `./anydbver --provider kubernetes ...`
+```
+$ ./anydbver --provider kubernetes deploy node0 mysql gtid node1 mysql gtid master:node0
+# wait until nodes ready
+$ ./anydbver --provider kubernetes mysql node0
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 13
+Server version: 8.0.28 MySQL Community Server - GPL
+
+Copyright (c) 2000, 2022, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> show slave hosts;
++-----------+-------+------+-----------+--------------------------------------+
+| Server_id | Host  | Port | Master_id | Slave_UUID                           |
++-----------+-------+------+-----------+--------------------------------------+
+|        52 | node1 | 3306 |        51 | 4ecd6c24-aa5e-11ec-b11a-0abbd41a65fc |
++-----------+-------+------+-----------+--------------------------------------+
+1 row in set, 1 warning (0.00 sec)
+```

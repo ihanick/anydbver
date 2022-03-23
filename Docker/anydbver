@@ -67,14 +67,28 @@ if [[ "$1" == mysql || "$1" == psql || "$1" == mongo || "$1" == bash ]] ; then
   if [[ "$NODE" == "" ]] ; then
     NODE=node0
   fi
-  if [[ "$CMD" == mysql ]] ; then
-    exec $DOCKER exec -it "${NODE_PREFIX}${NODE}" mysql -uroot -psecret
-  elif [[ "$CMD" == psql ]] ; then
-    exec $DOCKER exec -it "${NODE_PREFIX}${NODE}" psql -U postgres
-  elif [[ "$CMD" == mongo ]] ; then
-    exec $DOCKER exec -it "${NODE_PREFIX}${NODE}" mongo -u root --password secret
-  elif [[ "$CMD" == bash ]] ; then
-    exec $DOCKER exec -it "${NODE_PREFIX}${NODE}" bash
+
+  if [[ "$PROVIDER" == "kubernetes" ]] ; then
+    if [[ "$CMD" == mysql ]] ; then
+      exec kubectl exec -it "${NODE}" -- mysql -uroot -psecret
+    elif [[ "$CMD" == psql ]] ; then
+      exec kubectl exec -it "${NODE}" -- psql -U postgres
+    elif [[ "$CMD" == mongo ]] ; then
+      exec kubectl exec -it "${NODE}" -- mongo -u root --password secret
+    elif [[ "$CMD" == bash ]] ; then
+      exec kubectl exec -it "${NODE}" -- bash
+    fi
+
+  else
+    if [[ "$CMD" == mysql ]] ; then
+      exec $DOCKER exec -it "${NODE_PREFIX}${NODE}" mysql -uroot -psecret
+    elif [[ "$CMD" == psql ]] ; then
+      exec $DOCKER exec -it "${NODE_PREFIX}${NODE}" psql -U postgres
+    elif [[ "$CMD" == mongo ]] ; then
+      exec $DOCKER exec -it "${NODE_PREFIX}${NODE}" mongo -u root --password secret
+    elif [[ "$CMD" == bash ]] ; then
+      exec $DOCKER exec -it "${NODE_PREFIX}${NODE}" bash
+    fi
   fi
 fi
 
@@ -92,6 +106,13 @@ deploy_node() {
   unset MYSQL_IMG GTID_OPTS WORLD_DB DB_ARGUMENTS PAGILA_DB SNAPSHOT DB_IP PG_IMG
 
   for i in "${arr[@]}"; do
+    if [[ "$i" == "k3d" ]] ; then
+      if ! test -f tools/k3d ; then
+        curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | K3D_INSTALL_DIR=$PWD/tools USE_SUDO=false bash
+      fi
+      "$DOCKER" network create "$NET" &>/dev/null || true
+      tools/k3d cluster create --network "$NET" -a 3 $USER-cluster1
+    fi
     if [[ "$i" == "ssh" ]] ; then
       SSH_IMG=c7-systemd
     fi
@@ -649,6 +670,7 @@ WAIT_READY_EOF
 if [[ "$DESTROY" == 1 ]] ; then
   echo Destroy
   IFS= read -r -d '' CMD <<EOF || :
+  [ -f tools/k3d ] && docker ps -a|grep -q k3d-$USER-cluster1 && tools/k3d cluster delete $USER-cluster1
   "$DOCKER" ps -a --filter 'network=$NET' --format '{{.ID}}'|xargs "$DOCKER" rm -f || :
   "$DOCKER" network rm "$NET" || :
   "$DOCKER" run -i --rm -v "$PWD"/data:"$PWD"/data busybox rm -rf -- "$PWD"/data/* || :
