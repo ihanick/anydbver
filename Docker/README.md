@@ -126,3 +126,8 @@ mysql> show slave hosts;
 +-----------+-------+------+-----------+--------------------------------------+
 1 row in set, 1 warning (0.00 sec)
 ```
+
+## Deploy kubernetes operators
+```
+./anydbver deploy k8s-pg k3d
+```
