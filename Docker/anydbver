@@ -92,6 +92,37 @@ if [[ "$1" == mysql || "$1" == psql || "$1" == mongo || "$1" == bash ]] ; then
   fi
 fi
 
+vercomp () {
+  if [[ $1 == $2 ]]
+  then
+    return 0
+  fi
+  local IFS=.
+  local i ver1=($1) ver2=($2)
+  # fill empty fields in ver1 with zeros
+  for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
+  do
+    ver1[i]=0
+  done
+  for ((i=0; i<${#ver1[@]}; i++))
+  do
+    if [[ -z ${ver2[i]} ]]
+    then
+      # fill empty fields in ver2 with zeros
+      ver2[i]=0
+    fi
+    if ((10#${ver1[i]} > 10#${ver2[i]}))
+    then
+      return 1
+    fi
+    if ((10#${ver1[i]} < 10#${ver2[i]}))
+    then
+      return 2
+    fi
+  done
+  return 0
+}
+
 
 declare -A SERVER_IDS
 LAST_SERVER_ID=50
@@ -110,7 +141,19 @@ deploy_node() {
       K3D=1
     fi
     if [[ "$i" == "k8s-pg" ]] ; then
-      K8S_PG=1
+      get_version "$i"
+      K8S_OPERATOR=percona-postgresql-operator
+      OPERATOR_VERSION="${VER:-1.1.0}"
+    fi
+    if [[ "$i" == "k8s-pxc" || "$i" == "k8s-pxc:"* ]] ; then
+      get_version "$i"
+      K8S_OPERATOR=percona-xtradb-cluster-operator
+      OPERATOR_VERSION="${VER:-1.10.0}"
+    fi
+    if [[ "$i" == "k8s-mongo" || "$i" == "k8s-mongo:"* ]] ; then
+      get_version "$i"
+      K8S_OPERATOR=percona-server-mongodb-operator
+      OPERATOR_VERSION="${VER:-1.11.0}"
     fi
     if [[ "$i" == "ssh" ]] ; then
       SSH_IMG=c7-systemd
@@ -198,12 +241,23 @@ deploy_node() {
         curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | K3D_INSTALL_DIR=$PWD/tools USE_SUDO=false bash
       fi
       "$DOCKER" network create "$NET" &>/dev/null || true
-      tools/k3d cluster create --network "$NET" -a 3 $USER-cluster1
+      #K3S_VER=v1.23.5-rc4-k3s1
+      K3S_VER=latest
+      # Workaround: service.alpha.kubernetes.io/tolerate-unready-endpoints was removed from recent k8s
+      if [[ "$K8S_OPERATOR" == "percona-xtradb-cluster-operator" ]] ; then
+        # 0 =, 1 >, 2 <
+        vercomp "$OPERATOR_VERSION" "1.10.0"
+        if [[ $? == 2 ]] ; then
+          K3S_VER=v1.19.16-k3s1
+        fi
+      fi
+
+      tools/k3d cluster create -i rancher/k3s:$K3S_VER --network "$NET" -a 3 $USER-cluster1
     fi
   fi
-  if [[ "$K8S_PG" != "" ]] ; then
+  if [[ "$K8S_OPERATOR" != "" ]] ; then
     if [[ "$DRY_RUN" != 1 ]] ; then
-      bash tools/run_k8s_operator.sh
+      bash tools/run_k8s_operator.sh "$K8S_OPERATOR" "$OPERATOR_VERSION"
     fi
   fi
 
@@ -675,6 +729,13 @@ WAIT_READY_EOF
 }
 
 
+update_cmd() {
+  docker pull rancher/k3s:latest
+  docker pull percona/percona-server:latest
+  docker pull percona/percona-server:8.0
+  docker pull percona/percona-server:5.7
+  docker pull percona/percona-server:5.6
+}
 
 
 
@@ -686,7 +747,7 @@ if [[ "$DESTROY" == 1 ]] ; then
   echo Destroy
   IFS= read -r -d '' CMD <<EOF || :
   [ -f tools/k3d ] && docker ps -a|grep -q k3d-$USER-cluster1 && tools/k3d cluster delete $USER-cluster1
-  "$DOCKER" ps -a --filter 'network=$NET' --format '{{.ID}}'|xargs "$DOCKER" rm -f || :
+  "$DOCKER" ps -a --filter 'network=$NET' --format '{{.ID}}'|xargs "$DOCKER" rm -f &>/dev/null || :
   "$DOCKER" network rm "$NET" || :
   "$DOCKER" run -i --rm -v "$PWD"/data:"$PWD"/data busybox rm -rf -- "$PWD"/data/* || :
 EOF

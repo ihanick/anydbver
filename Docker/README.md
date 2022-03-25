@@ -128,6 +128,15 @@ mysql> show slave hosts;
 ```
 
 ## Deploy kubernetes operators
+### Deploy Postgres operator
 ```
 ./anydbver deploy k8s-pg k3d
+```
+### Deploy PXC operator
+```
+./anydbver deploy k3d k8s-pxc:1.10.0
+```
+### Deploy Mongo operator
+```
+./anydbver deploy k3d k8s-mongo:1.11.0
 ```
