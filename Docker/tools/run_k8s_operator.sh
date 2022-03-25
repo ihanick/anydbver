@@ -36,7 +36,7 @@ run_percona_pg_operator() {
   until kubectl wait --for=condition=ready pod --namespace "$NS" -l name=postgres-operator &>/dev/null;do sleep 2;done
   sleep 30
   kubectl apply -n "$NS" -f ./deploy/cr.yaml;
-  until kubectl wait --for=condition=ready --namespace "$PGO" pod -l name=cluster1 &>/dev/null;do sleep 2;done
+  until kubectl wait --for=condition=ready --namespace "$NS" pod -l name=cluster1 &>/dev/null;do sleep 2;done
 
   info_percona_pg_operator
 }
