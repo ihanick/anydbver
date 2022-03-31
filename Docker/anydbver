@@ -140,7 +140,7 @@ deploy_node() {
     if [[ "$i" == "k3d" ]] ; then
       K3D=1
     fi
-    if [[ "$i" == "k8s-pg" ]] ; then
+    if [[ "$i" == "k8s-pg" || "$i" == "k8s-pg:"* ]] ; then
       get_version "$i"
       K8S_OPERATOR=percona-postgresql-operator
       OPERATOR_VERSION="${VER:-1.1.0}"
@@ -257,7 +257,7 @@ deploy_node() {
   fi
   if [[ "$K8S_OPERATOR" != "" ]] ; then
     if [[ "$DRY_RUN" != 1 ]] ; then
-      bash tools/run_k8s_operator.sh "$K8S_OPERATOR" "$OPERATOR_VERSION"
+      python3 tools/run_k8s_operator.py --operator="$K8S_OPERATOR" --version="$OPERATOR_VERSION"
     fi
   fi
 
