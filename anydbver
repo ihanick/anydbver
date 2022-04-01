@@ -333,7 +333,7 @@ DRY_RUN=0
 opts=$(getopt \
     --longoptions "dry-run,destroy,namespace:,provider:,os:,shared-directory" \
     --name "$(basename "$0")" \
-    --options "" \
+    --options "-n:" \
     -- "$@"
 )
 
@@ -344,7 +344,7 @@ while [[ $# -gt 0 ]]; do
       DRY_RUN=1
       shift
       ;;
-    --namespace)
+    --namespace | -n)
       NAMESPACE="$2-"
       NAMESPACE_CMD="--namespace $2"
       shift 2
