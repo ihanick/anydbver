@@ -20,10 +20,10 @@ logger.setLevel(logging.INFO)
 
 #if not data_path.is_dir():
 #  raise Exception("Data directory not exists: {}".format(data_path.resolve()))
-def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True):
+def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
   if print_cmd:
     logger.info(subprocess.list2cmdline(args))
-  process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+  process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True, env=env)
   ret_code = process.wait(timeout=COMMAND_TIMEOUT)
   output = process.communicate()[0].decode('utf-8')
   if ignore_msg and re.search(ignore_msg, output):
@@ -150,17 +150,74 @@ def get_operator_ns(operator_name):
     return "pxc"
   return "default"
 
+def run_helm(cmd, msg):
+  helm_path = Path(__file__).parents[1] / 'data' / 'helm'
+  helm_env = os.environ.copy()
+  helm_env["HELM_CACHE_HOME"] = (helm_path / 'cache').resolve()
+  helm_env["HELM_CONFIG_HOME"] = (helm_path / 'config').resolve()
+  helm_env["HELM_DATA_HOME"] = (helm_path / 'data').resolve()
+  run_fatal(cmd, msg, env=helm_env)
+
+def run_pmm_server(pmm_version):
+  run_fatal(["mkdir", "-p", "data/helm/cache", "data/helm/config", "data/helm/data"], "can't create directories for helm")
+  run_helm(["helm", "repo", "add", "percona", "https://percona-charts.storage.googleapis.com"], "helm repo add problem")
+  run_helm(["helm", "repo", "update"], "helm repo update problem")
+  run_helm(["helm", "install", "monitoring", "percona/pmm-server", "--set", "credentials.username=admin" "--set" "credentials.password=verysecretpassword1^", "--set", "imageTag="+pmm_version, "--set", "platform=kubernetes"], "helm pmm install problem")
+
+def run_minio_server():
+  run_fatal(["mkdir", "-p", "data/helm/cache", "data/helm/config", "data/helm/data"], "can't create directories for helm")
+  run_helm(["helm", "repo", "add", "minio", "https://helm.min.io/"], "helm repo add problem")
+  run_helm(["helm", "repo", "update"], "helm repo update problem")
+  run_helm(["helm", "install", "minio-service", "minio/minio",
+    "--set", "accessKey=REPLACE-WITH-AWS-ACCESS-KEY", "--set", "secretKey=REPLACE-WITH-AWS-SECRET-KEY",
+    "--set", "service.type=ClusterIP", "--set", "configPath=/tmp/.minio/",
+    "--set", "persistence.size=2G", "--set", "buckets[0].name=operator-testing",
+    "--set", "buckets[0].policy=none", "--set", "buckets[0].purge=false",
+    "--set", "environment.MINIO_REGION=us-east-1"
+    ], "helm pmm install problem")
+
+def setup_pmm_client(args):
+  pass
+  # tools/yq ea '. as $item ireduce ({}; . * $item )' data/k8s/percona-xtradb-cluster-operator/deploy/cr.yaml ../configs/k8s/cr-pmm.yaml > cr-pmm.yaml
+
+def enable_pmm(args):
+  if args.pmm == "":
+    return
+  #merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), str((Path(args.conf_path) / "cr-pmm.yaml").resolve()) )
+  # tools/yq ea '. as $item ireduce ({}; . * $item )' data/k8s/percona-xtradb-cluster-operator/deploy/cr.yaml ../configs/k8s/cr-pmm.yaml > data/k8s/percona-xtradb-cluster-operator/deploy/cr-pmm.yaml
+  return
+
+def merge_cr_yaml(yq, cr_path, part_path):
+  cmd = yq + " ea '. as $item ireduce ({}; . * $item )' " + cr_path + " " + part_path + " > " + cr_path + ".tmp && mv " + cr_path + ".tmp " + cr_path
+  logger.info(cmd)
+  os.system(cmd)
+  pass
+
 def setup_operator(args):
   data_path = Path(__file__).parents[1] / 'data' / 'k8s'
 
   if args.cert_manager != "":
     run_cert_manager(cert_manager_ver_compat(args.operator_name, args.operator_version), args.cert_manager)
+  if args.pmm != "":
+    run_pmm_server(args.pmm)
 
   prepare_operator_repository(data_path.resolve(), args.operator_name, args.operator_version)
+  if not args.smart_update:
+    merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), str((Path(args.conf_path) / "cr-smart-update.yaml").resolve()) )
+
   if not k8s_wait_for_ready('kube-system', 'k8s-app=kube-dns'):
     raise Exception("Kubernetes cluster is not available")
   run_fatal(["kubectl", "create", "namespace", args.namespace],
       "Can't create a namespace for the cluster", r"from server \(AlreadyExists\)")
+
+  enable_pmm(args)
+
+  if args.minio:
+    run_minio_server()
+    if args.operator_name == "percona-xtradb-cluster-operator":
+      run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", "./deploy/backup-s3.yaml"], "Can't apply s3 secrets")
+      merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), str((Path(args.conf_path) / "cr-minio.yaml").resolve()) )
+
 
   if args.operator_name == "percona-postgresql-operator":
     run_pg_operator(args.namespace, args.operator_name)
@@ -198,9 +255,17 @@ def main():
   parser.add_argument("--operator", dest="operator_name", type=str, default="percona-postgresql-operator")
   parser.add_argument("--version", dest="operator_version", type=str, default="1.1.0")
   parser.add_argument('--cert-manager', dest="cert_manager", type=str, default="")
+  parser.add_argument('--pmm', dest="pmm", type=str, default="")
+  parser.add_argument('--minio', dest="minio", action='store_true')
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
   parser.add_argument('--info-only', dest="info", action='store_true')
+  parser.add_argument('--smart-update', dest="smart_update", action='store_true')
   args = parser.parse_args()
+
+  args.data_path = (Path(__file__).parents[1] / 'data' / 'k8s').resolve()
+  args.conf_path = (Path(__file__).resolve().parents[2] / 'configs' / 'k8s').resolve()
+  args.yq = str((Path(__file__).parents[0] / 'yq').resolve())
+
   if args.namespace == "":
     args.namespace = get_operator_ns(args.operator_name)
 

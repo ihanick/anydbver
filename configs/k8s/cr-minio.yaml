@@ -7,4 +7,4 @@ spec:
           bucket: operator-testing
           region: us-east-1
           credentialsSecret: my-cluster-name-backup-s3
-          endpointUrl: http://minio-service:9000
+          endpointUrl: http://minio-service.default.svc.cluster.local:9000

@@ -155,6 +155,21 @@ deploy_node() {
       K8S_OPERATOR=percona-server-mongodb-operator
       OPERATOR_VERSION="${VER:-1.11.0}"
     fi
+    if [[ "$i" == "k8s-pmm" || "$i" == "k8s-pmm:"* ]] ; then
+      get_version "$i"
+      K8S_PMM="--pmm=${VER:-2.26.0}"
+    fi
+    if [[ "$i" == "k8s-minio" || "$i" == "k8s-minio:"* ]] ; then
+      get_version "$i"
+      K8S_MINIO="--minio"
+    fi
+    if [[ "$i" == "smart-update" ]] ; then
+      K8S_SMART_UPDATE="--smart-update"
+    fi
+    if [[ "$i" == "cert-manager" || "$i" == "cert-manager:"* ]] ; then
+      get_version "$i"
+      CERT_MANAGER="--cert-manager=${VER:-1.7.2}"
+    fi
     if [[ "$i" == "ssh" ]] ; then
       SSH_IMG=c7-systemd
     fi
@@ -239,6 +254,8 @@ deploy_node() {
     if [[ "$DRY_RUN" != 1 ]] ; then
       if ! test -f tools/k3d ; then
         curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | K3D_INSTALL_DIR=$PWD/tools USE_SUDO=false bash
+	curl -L -s --output tools/yq https://github.com/mikefarah/yq/releases/download/v4.24.2/yq_linux_amd64
+	chmod +x tools/yq
       fi
       "$DOCKER" network create "$NET" &>/dev/null || true
       #K3S_VER=v1.23.5-rc4-k3s1
@@ -257,7 +274,7 @@ deploy_node() {
   fi
   if [[ "$K8S_OPERATOR" != "" ]] ; then
     if [[ "$DRY_RUN" != 1 ]] ; then
-      python3 tools/run_k8s_operator.py --operator="$K8S_OPERATOR" --version="$OPERATOR_VERSION"
+      python3 tools/run_k8s_operator.py --operator="$K8S_OPERATOR" --version="$OPERATOR_VERSION" $CERT_MANAGER $K8S_PMM $K8S_MINIO $K8S_SMART_UPDATE
     fi
   fi
 
