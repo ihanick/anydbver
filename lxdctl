@@ -370,11 +370,12 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
     lxc file push tools/node_ip.sh $c/usr/bin/node_ip.sh
     lxc file push tools/fix_el8_ip.sh $c/usr/bin/fix_el8_ip.sh
     if [[ $OS_TYPE = deb ]] ; then
-       lxc exec $c -- bash -c "export LANG=C;test -f /usr/bin/rsync || (until ping  -c 1 1.1.1.1 &>/dev/null ; do sleep 1; done; apt-get update > /dev/null; for pkg in sudo openssh-server rsync eatmydata curl $PACKAGES; do apt-get install -qq -o=Dpkg::Use-Pty=0 -y \$pkg &> /dev/null ; done); chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd; chmod 0600 /root/.ssh/authorized_keys; chmod 0700 /root/.ssh; chown root:root -R /root/.ssh"
+       lxc exec $c -- bash -c "export LANG=C;test -f /usr/bin/rsync || (until ping  -c 1 1.1.1.1 &>/dev/null ; do sleep 1; done; apt-get update > /dev/null; for pkg in sudo openssh-server rsync eatmydata curl dnsmasq $PACKAGES; do apt-get install -qq -o=Dpkg::Use-Pty=0 -y \$pkg &> /dev/null ; done); chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd; chmod 0600 /root/.ssh/authorized_keys; chmod 0700 /root/.ssh; chown root:root -R /root/.ssh"
       lxc exec $c -- bash -c "systemctl enable ssh;systemctl restart ssh &>/dev/null"
     else
-      lxc exec $c -- bash -c "export LANG=C;bash /usr/bin/fix_el8_ip.sh;test -f /usr/bin/rsync || (until ping  -c 1 1.1.1.1 &>/dev/null ; do sleep 1; done; for pkg in sudo openssh-server iproute rsync $PACKAGES; do yum install -q -y \$pkg ; done); chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd; chmod 0600 /root/.ssh/authorized_keys; chmod 0700 /root/.ssh; chown root:root -R /root/.ssh; yum install -q -y https://repo.percona.com/yum/release/7/RPMS/x86_64/libeatmydata-0.1-00.21.el7.centos.x86_64.rpm"
+      lxc exec $c -- bash -c "export LANG=C;bash /usr/bin/fix_el8_ip.sh;test -f /usr/bin/rsync || (until ping  -c 1 1.1.1.1 &>/dev/null ; do sleep 1; done; for pkg in sudo openssh-server iproute rsync dnsmasq $PACKAGES; do yum install -q -y \$pkg ; done); chmod -R og-rwx /root/.ssh;sed -i -e 's/#UseDNS yes/UseDNS no/' -e 's/#PermitRootLogin.*$/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config;sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd; chmod 0600 /root/.ssh/authorized_keys; chmod 0700 /root/.ssh; chown root:root -R /root/.ssh; yum install -q -y https://repo.percona.com/yum/release/7/RPMS/x86_64/libeatmydata-0.1-00.21.el7.centos.x86_64.rpm"
       lxc exec $c -- bash -c "systemctl enable sshd;systemctl restart sshd"
+
     fi
     if [[ $ANYDBVER_CACHE_OS_IMG == 1 ]] ; then
       lxc stop $c
@@ -410,8 +411,13 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
     echo "${USER}.node0 ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ${NAMESPACE}ansible_hosts
   fi
 
+  if [[ "${USER}.default" == "$i" ]] ; then
+    lxc exec $c -- bash -c "cp /etc/resolv.conf /etc/resolv.conf.orig;echo 'resolv-file=/etc/resolv.conf.orig' > /etc/dnsmasq.d/origresolv.conf;systemctl enable dnsmasq;systemctl restart dnsmasq"
+  fi
+
   if [ "x${HOSTNAMES[$i]}" != "x" ] ; then
     lxc exec $c -- hostnamectl set-hostname "${HOSTNAMES[$i]}"
+    lxc exec $c -- bash -c "echo nameserver $(./lxdctl ip node0) > /etc/resolv.conf"
   fi
 
   if [ "x${HOSTNAMES[$i]}" != "x" ] ; then
@@ -438,4 +444,8 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
   i="$NAMESPACE$i"
   c=${i//./-}
   lxc exec $c -- bash -c "cat >> /etc/hosts" < configs/${NAMESPACE}hosts
+
+  if [[ "${USER}.default" == "$i" ]] ; then
+    lxc exec $c -- bash -c "systemctl enable dnsmasq;systemctl restart dnsmasq"
+  fi
 done
