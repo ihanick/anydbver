@@ -10,6 +10,7 @@ import re
 import sys
 from distutils.version import StrictVersion
 import argparse
+import base64
 
 COMMAND_TIMEOUT=600
 
@@ -158,11 +159,22 @@ def run_helm(cmd, msg):
   helm_env["HELM_DATA_HOME"] = (helm_path / 'data').resolve()
   run_fatal(cmd, msg, env=helm_env)
 
-def run_pmm_server(pmm_version):
+def run_pmm_server(pmm_version, pmm_password):
   run_fatal(["mkdir", "-p", "data/helm/cache", "data/helm/config", "data/helm/data"], "can't create directories for helm")
   run_helm(["helm", "repo", "add", "percona", "https://percona-charts.storage.googleapis.com"], "helm repo add problem")
   run_helm(["helm", "repo", "update"], "helm repo update problem")
-  run_helm(["helm", "install", "monitoring", "percona/pmm-server", "--set", "credentials.username=admin" "--set" "credentials.password=verysecretpassword1^", "--set", "imageTag="+pmm_version, "--set", "platform=kubernetes"], "helm pmm install problem")
+  run_helm(["helm", "install", "monitoring", "percona/pmm-server",
+    "--set", "credentials.username=admin", "--set", "credentials.password="+pmm_password,
+    "--set", "imageTag="+pmm_version, "--set", "platform=kubernetes"],
+    "helm pmm install problem")
+  if not k8s_wait_for_ready("default", "app=monitoring,component=pmm"):
+    raise Exception("PMM Pod is not starting")
+  time.sleep(10)
+  run_fatal(["kubectl", "-n", "default",
+      "exec", "-it", "monitoring-0", "--", "bash", "-c",
+      "grafana-cli --homepath /usr/share/grafana --configOverrides cfg:default.paths.data=/srv/grafana admin reset-admin-password \"$ADMIN_PASSWORD\""],
+      "can't fix pmm password")
+
 
 def run_minio_server():
   run_fatal(["mkdir", "-p", "data/helm/cache", "data/helm/config", "data/helm/data"], "can't create directories for helm")
@@ -176,22 +188,37 @@ def run_minio_server():
     "--set", "environment.MINIO_REGION=us-east-1"
     ], "helm pmm install problem")
 
-def setup_pmm_client(args):
-  pass
-  # tools/yq ea '. as $item ireduce ({}; . * $item )' data/k8s/percona-xtradb-cluster-operator/deploy/cr.yaml ../configs/k8s/cr-pmm.yaml > cr-pmm.yaml
-
-def enable_pmm(args):
-  if args.pmm == "":
-    return
-  #merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), str((Path(args.conf_path) / "cr-pmm.yaml").resolve()) )
-  # tools/yq ea '. as $item ireduce ({}; . * $item )' data/k8s/percona-xtradb-cluster-operator/deploy/cr.yaml ../configs/k8s/cr-pmm.yaml > data/k8s/percona-xtradb-cluster-operator/deploy/cr-pmm.yaml
-  return
-
 def merge_cr_yaml(yq, cr_path, part_path):
   cmd = yq + " ea '. as $item ireduce ({}; . * $item )' " + cr_path + " " + part_path + " > " + cr_path + ".tmp && mv " + cr_path + ".tmp " + cr_path
   logger.info(cmd)
   os.system(cmd)
-  pass
+
+def enable_pmm(args):
+  if args.pmm == "":
+    return
+  deploy_path = Path(args.data_path) / args.operator_name / "deploy" 
+  pmm_secret_path = str((deploy_path / "cr-pmm-secret.yaml").resolve()) 
+  merge_cr_yaml(args.yq, str((deploy_path / "cr.yaml").resolve()), str((Path(args.conf_path) / "cr-pmm.yaml").resolve()) )
+  with open(pmm_secret_path,"w+") as f:
+            f.writelines(
+              """
+              apiVersion: v1
+              kind: Secret
+              type: Opaque
+              metadata:
+                name: my-cluster-secrets
+              data:
+                clustercheck: SHNOU3VCUERyZU1JMURFUmJLSA==
+                monitor: c3ZoN1hvVFB2STNJRUdSZU4xUg==
+                operator: ZFNJRkdDTGQyY3drbVJxYzNuTQ==
+                pmmserver: {pmm_password}
+                proxyadmin: U1ZKWFhRWVFCUnQxc21kcQ==
+                replication: bVRmdFNzRmpvR0lyUVNLQVJPaA==
+                root: QUR2TzJPR3BLT3h4ZzBRaTN1
+                xtrabackup: SFhtcDFVeExLUTE4eDh5a21adw==
+              """.format(pmm_password=base64.b64encode(bytes(args.pmm_password, 'utf-8')).decode('utf-8')))
+  run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", pmm_secret_path ], "Can't apply cluster secret secret with pmmserver")
+
 
 def setup_operator(args):
   data_path = Path(__file__).parents[1] / 'data' / 'k8s'
@@ -199,7 +226,7 @@ def setup_operator(args):
   if args.cert_manager != "":
     run_cert_manager(cert_manager_ver_compat(args.operator_name, args.operator_version), args.cert_manager)
   if args.pmm != "":
-    run_pmm_server(args.pmm)
+    run_pmm_server(args.pmm, args.pmm_password)
 
   prepare_operator_repository(data_path.resolve(), args.operator_name, args.operator_version)
   if not args.smart_update:
@@ -256,6 +283,7 @@ def main():
   parser.add_argument("--version", dest="operator_version", type=str, default="1.1.0")
   parser.add_argument('--cert-manager', dest="cert_manager", type=str, default="")
   parser.add_argument('--pmm', dest="pmm", type=str, default="")
+  parser.add_argument('--pmm-password', dest="pmm_password", type=str, default="verysecretpassword1^")
   parser.add_argument('--minio', dest="minio", action='store_true')
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
   parser.add_argument('--info-only', dest="info", action='store_true')

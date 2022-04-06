@@ -2,3 +2,4 @@ spec:
   pmm:
     enabled: true
     serverUser: admin
+    serverHost: monitoring-service.default.svc.cluster.local
