@@ -59,6 +59,13 @@ def k8s_wait_for_ready(ns, labels):
       time.sleep(2)
   return False
 
+def k8s_check_ready(ns, labels):
+  if run_fatal(["kubectl", "wait", "--for=condition=ready", "-n", ns, "pod", "-l", labels],
+      "Pod ready wait problem",
+      r"error: timed out waiting for the condition on|error: no matching resources found", False) == 0:
+    return True
+  return False
+
 def branch_name(ver):
   if ver == 'latest':
     return 'main'
@@ -86,6 +93,7 @@ def prepare_operator_repository(data_path, operator_name, operator_version):
   else:
     os.chdir(data_path / operator_name)
     run_fatal(["git", "fetch"], "Can't fetch new changes from operator repository at {}".format(os.getcwd()))
+    run_fatal(["git", "reset", "--hard"], "Can't reset operator repository")
     run_fatal(["git", "checkout", branch_name(operator_version)], "Can't checkout operator repository")
 
 def get_containers_list(ns,labels):
@@ -120,7 +128,7 @@ def cluster_labels(op, op_ver):
     return "app.kubernetes.io/instance=my-cluster-name,app.kubernetes.io/component=mongod"
 
 def run_percona_operator(ns, op, op_ver):
-  run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator")
+  run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator", ignore_msg=r"is invalid: status.storedVersions\[[0-9]+\]: Invalid value")
   if not k8s_wait_for_ready(ns, op_labels(op, op_ver)):
     raise Exception("Kubernetes operator is not starting")
   run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/cr.yaml"], "Can't deploy cluster")
@@ -160,6 +168,8 @@ def run_helm(cmd, msg):
   run_fatal(cmd, msg, env=helm_env)
 
 def run_pmm_server(pmm_version, pmm_password):
+  if k8s_check_ready("default", "app=monitoring,component=pmm"):
+    return
   run_fatal(["mkdir", "-p", "data/helm/cache", "data/helm/config", "data/helm/data"], "can't create directories for helm")
   run_helm(["helm", "repo", "add", "percona", "https://percona-charts.storage.googleapis.com"], "helm repo add problem")
   run_helm(["helm", "repo", "update"], "helm repo update problem")
