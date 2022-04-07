@@ -144,5 +144,5 @@ Run two clusters in different namespaces:
 
 ### Deploy Mongo operator
 ```
-./anydbver deploy k3d k8s-mongo:1.11.0
+./anydbver deploy k3d k8s-mongo:1.11.0 k8s-pmm:2.26.0
 ```

@@ -209,24 +209,47 @@ def enable_pmm(args):
   deploy_path = Path(args.data_path) / args.operator_name / "deploy" 
   pmm_secret_path = str((deploy_path / "cr-pmm-secret.yaml").resolve()) 
   merge_cr_yaml(args.yq, str((deploy_path / "cr.yaml").resolve()), str((Path(args.conf_path) / "cr-pmm.yaml").resolve()) )
+  pmm_secrets = ""
+  if args.operator_name == "percona-xtradb-cluster-operator":
+    pmm_secrets = """
+      apiVersion: v1
+      kind: Secret
+      type: Opaque
+      metadata:
+        name: my-cluster-secrets
+      data:
+        clustercheck: SHNOU3VCUERyZU1JMURFUmJLSA==
+        monitor: c3ZoN1hvVFB2STNJRUdSZU4xUg==
+        operator: ZFNJRkdDTGQyY3drbVJxYzNuTQ==
+        pmmserver: {pmm_password}
+        proxyadmin: U1ZKWFhRWVFCUnQxc21kcQ==
+        replication: bVRmdFNzRmpvR0lyUVNLQVJPaA==
+        root: QUR2TzJPR3BLT3h4ZzBRaTN1
+        xtrabackup: SFhtcDFVeExLUTE4eDh5a21adw==
+      """
+  elif args.operator_name == "percona-server-mongodb-operator":
+    pmm_secrets = """
+      apiVersion: v1
+      kind: Secret
+      type: Opaque
+      metadata:
+        name: my-cluster-name-secrets
+      data:
+        MONGODB_BACKUP_PASSWORD: eERlUDJZS0VOWW4xU2tSQQ==
+        MONGODB_BACKUP_USER: YmFja3Vw
+        MONGODB_CLUSTER_ADMIN_PASSWORD: ZWJINjdubm9pWFRlOUFnbk5lNQ==
+        MONGODB_CLUSTER_ADMIN_USER: Y2x1c3RlckFkbWlu
+        MONGODB_CLUSTER_MONITOR_PASSWORD: MTlRellvVGtwQlh3OXljYmhn
+        MONGODB_CLUSTER_MONITOR_USER: Y2x1c3Rlck1vbml0b3I=
+        MONGODB_USER_ADMIN_PASSWORD: a1lmWlBDdlBvMXRjVG04b3U=
+        MONGODB_USER_ADMIN_USER: dXNlckFkbWlu
+        PMM_SERVER_USER: YWRtaW4=
+        PMM_SERVER_PASSWORD: {pmm_password}
+      """
+  else:
+    return
   with open(pmm_secret_path,"w+") as f:
-            f.writelines(
-              """
-              apiVersion: v1
-              kind: Secret
-              type: Opaque
-              metadata:
-                name: my-cluster-secrets
-              data:
-                clustercheck: SHNOU3VCUERyZU1JMURFUmJLSA==
-                monitor: c3ZoN1hvVFB2STNJRUdSZU4xUg==
-                operator: ZFNJRkdDTGQyY3drbVJxYzNuTQ==
-                pmmserver: {pmm_password}
-                proxyadmin: U1ZKWFhRWVFCUnQxc21kcQ==
-                replication: bVRmdFNzRmpvR0lyUVNLQVJPaA==
-                root: QUR2TzJPR3BLT3h4ZzBRaTN1
-                xtrabackup: SFhtcDFVeExLUTE4eDh5a21adw==
-              """.format(pmm_password=base64.b64encode(bytes(args.pmm_password, 'utf-8')).decode('utf-8')))
+            f.writelines(pmm_secrets.format(pmm_password=base64.b64encode(bytes(args.pmm_password, 'utf-8')).decode('utf-8')))
   run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", pmm_secret_path ], "Can't apply cluster secret secret with pmmserver")
 
 
