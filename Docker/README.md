@@ -46,6 +46,20 @@ Use `mysql` instead of `ps` for mysql/mysql-server image.
 ./anydbver mysql node0
 ```
 
+### Test upgrades
+  * Create MySQL 5.5 instance 
+  * Create custom sample database
+  * Stop node0, but keep data directory
+  * Create MariaDB 10.5 instance with custom startup argument
+```
+$ cat sampledb/test/dump.sql 
+create database test1;
+use test1
+create table t(id int auto_increment primary key, ts timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp());
+INSERT INTO t() VALUES(),(),();
+$ ./anydbver deploy node0 mysql:5.5 sampledb:test node0 mariadb:10.5 args:'--mysql56_temporal_format=OFF'
+```
+
 ## Postgresql
 
 * Pagila sample database and physical replication secondary created by offline filesystem copy

@@ -135,7 +135,7 @@ deploy_node() {
   local arr
   arr=( "$@" )
 
-  unset MYSQL_IMG GTID_OPTS WORLD_DB DB_ARGUMENTS PAGILA_DB SNAPSHOT DB_IP PG_IMG
+  unset MYSQL_IMG GTID_OPTS WORLD_DB DB_ARGUMENTS PAGILA_DB SNAPSHOT DB_IP PG_IMG SAMPLEDB K8S_OPERATOR OPERATOR_VERSION K8S_NAMESPACE K3D K3S_VER K8S_PMM K8S_MINIO K8S_SMART_UPDATE
 
   for i in "${arr[@]}"; do
     if [[ "$i" == "k3d:"* || "$i" == "k3d" ]] ; then
@@ -204,6 +204,14 @@ deploy_node() {
     if [[ "$i" == "replica-set:"* ]] ; then
       get_version "$i"
       MONGO_REPLICASET="$VER"
+    fi
+    if [[ "$i" == "sampledb:"* ]] ; then
+      get_version "$i"
+      if [[ -d sampledb/"$VER" ]] ; then
+        SAMPLEDB="$VER"
+      else
+        echo "Ignoring sample database: $VER, 'sampledb/$VER' is not a directory"
+      fi
     fi
 
     if [[ "$i" == "gtid" ]] ; then
@@ -288,6 +296,9 @@ deploy_node() {
       run_mysql_slave "$NODE" "$DB_IP"
     else
       run_mysql "$NODE"
+      if [[ "$DRY_RUN" != 1 ]] ; then
+        wait_mysql_ready "$NODE"
+      fi
     fi
   fi
   if [[ "$PG_IMG" != "" ]] ; then
@@ -360,6 +371,10 @@ run_mysql() {
     VOLUMES=(-v "$PWD"/sampledb/world:/docker-entrypoint-initdb.d)
   fi
 
+  if [[ "$SAMPLEDB" != "" ]] ; then
+    VOLUMES=(-v "$PWD"/sampledb/"$SAMPLEDB":/docker-entrypoint-initdb.d)
+  fi
+
   get_user_id mysql "$MYSQL_IMG"
   local MYSQL_UID="$RET_UID"
   IFS= read -r -d '' CMD <<EOF || :
@@ -375,6 +390,7 @@ run_mysql() {
     else
       podman unshare chown $MYSQL_UID:$MYSQL_UID -R "$PWD"/data/"$SERVER_NAME"
     fi
+    docker inspect -f '{{.State.Status}}' "$SERVER_NAME" 2>/dev/null | grep -q running && docker rm -f "$SERVER_NAME"
   fi
   "$DOCKER" network create "$NET" &>/dev/null || true
   "$DOCKER" run --name "$SERVER_NAME" --network "$NET" -d --restart=always \
