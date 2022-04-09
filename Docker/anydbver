@@ -143,6 +143,11 @@ deploy_node() {
       K3D=1
       K3S_VER="${VER:-latest}"
     fi
+    if [[ "$i" == "k8s-cluster-domain:"* ]] ; then
+      get_version "$i"
+      K8S_CLUSTER_DOMAIN=--k3s-arg\ "--cluster-domain=${VER}@server:0"
+      K8S_CLUSTER_DOMAIN_RUN="--cluster-domain=${VER}"
+    fi
     if [[ "$i" == "k8s-namespace:"* ]] ; then
       get_version "$i"
       K8S_NAMESPACE="--namespace=$VER"
@@ -170,11 +175,16 @@ deploy_node() {
       get_version "$i"
       K8S_MINIO="--minio"
     fi
+    if [[ "$i" == "minio-certs:"* ]] ; then
+      get_version "$i"
+      MINIO_CERTS="--minio-certs=$VER"
+    fi
     if [[ "$i" == "smart-update" ]] ; then
       K8S_SMART_UPDATE="--smart-update"
     fi
     if [[ "$i" == "cert-manager" || "$i" == "cert-manager:"* ]] ; then
       get_version "$i"
+      if [[ "$VER" == "latest" ]] ; then VER=1.7.2 ; fi
       CERT_MANAGER="--cert-manager=${VER:-1.7.2}"
     fi
     if [[ "$i" == "ssh" ]] ; then
@@ -282,12 +292,12 @@ deploy_node() {
         fi
       fi
 
-      tools/k3d cluster create -i rancher/k3s:$K3S_VER --network "$NET" -a 3 $USER-cluster1
+      tools/k3d cluster create -i rancher/k3s:$K3S_VER --network "$NET" -a 3 $USER-cluster1 $K8S_CLUSTER_DOMAIN
     fi
   fi
   if [[ "$K8S_OPERATOR" != "" ]] ; then
     if [[ "$DRY_RUN" != 1 ]] ; then
-      python3 tools/run_k8s_operator.py --operator="$K8S_OPERATOR" --version="$OPERATOR_VERSION" $CERT_MANAGER $K8S_PMM $K8S_MINIO $K8S_SMART_UPDATE $K8S_NAMESPACE
+      python3 tools/run_k8s_operator.py --operator="$K8S_OPERATOR" --version="$OPERATOR_VERSION" $CERT_MANAGER $K8S_PMM $K8S_MINIO $K8S_SMART_UPDATE $K8S_NAMESPACE $MINIO_CERTS $K8S_CLUSTER_DOMAIN_RUN
     fi
   fi
 

@@ -1,0 +1,21 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigning-issuer
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tls-minio
+spec:
+  commonName: minio.example.com
+  secretName: tls-minio
+  dnsNames:
+    # Ingress domain
+    - minio.example.com
+    # Internal domain
+    - minio-service.default.svc.cluster.local
+  issuerRef:
+    name: selfsigning-issuer

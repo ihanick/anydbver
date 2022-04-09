@@ -149,6 +149,7 @@ mysql> show slave hosts;
 ### Deploy PXC operator
 ```
 ./anydbver deploy k3d k8s-pxc:1.10.0
+./anydbver deploy k3d k8s-cluster-domain:example.org k8s-pxc:1.10.0 # use example.org domain in k8s instead of cluster.local
 ```
 
 Run two clusters in different namespaces:

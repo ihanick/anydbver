@@ -19,8 +19,6 @@ logging.basicConfig(format=FORMAT)
 logger = logging.getLogger('run k8s operator')
 logger.setLevel(logging.INFO)
 
-#if not data_path.is_dir():
-#  raise Exception("Data directory not exists: {}".format(data_path.resolve()))
 def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
   if print_cmd:
     logger.info(subprocess.list2cmdline(args))
@@ -186,17 +184,30 @@ def run_pmm_server(pmm_version, pmm_password):
       "can't fix pmm password")
 
 
-def run_minio_server():
+def run_minio_server(args):
+  if args.cert_manager != "" and args.minio_certs == "self-signed":
+    run_fatal(["kubectl", "apply", "-f", str((Path(args.conf_path) / "minio-certs.yaml").resolve())],
+        "Can't create minio certificates")
   run_fatal(["mkdir", "-p", "data/helm/cache", "data/helm/config", "data/helm/data"], "can't create directories for helm")
   run_helm(["helm", "repo", "add", "minio", "https://helm.min.io/"], "helm repo add problem")
   run_helm(["helm", "repo", "update"], "helm repo update problem")
-  run_helm(["helm", "install", "minio-service", "minio/minio",
-    "--set", "accessKey=REPLACE-WITH-AWS-ACCESS-KEY", "--set", "secretKey=REPLACE-WITH-AWS-SECRET-KEY",
-    "--set", "service.type=ClusterIP", "--set", "configPath=/tmp/.minio/",
-    "--set", "persistence.size=2G", "--set", "buckets[0].name=operator-testing",
-    "--set", "buckets[0].policy=none", "--set", "buckets[0].purge=false",
-    "--set", "environment.MINIO_REGION=us-east-1"
-    ], "helm pmm install problem")
+  if args.cert_manager != "" and args.minio_certs == "self-signed":
+    run_helm(["helm", "install", "minio-service", "minio/minio",
+      "--set", "accessKey=REPLACE-WITH-AWS-ACCESS-KEY", "--set", "secretKey=REPLACE-WITH-AWS-SECRET-KEY",
+      "--set", "service.type=ClusterIP", "--set", "configPath=/tmp/.minio/",
+      "--set", "persistence.size=2G", "--set", "buckets[0].name=operator-testing",
+      "--set", "buckets[0].policy=none", "--set", "buckets[0].purge=false",
+      "--set", "environment.MINIO_REGION=us-east-1",
+      "--set", "tls.enabled=true,tls.certSecret=tls-minio,tls.publicCrt=tls.crt,tls.privateKey=tls.key"
+      ], "helm minio+certs install problem")
+  else:
+    run_helm(["helm", "install", "minio-service", "minio/minio",
+      "--set", "accessKey=REPLACE-WITH-AWS-ACCESS-KEY", "--set", "secretKey=REPLACE-WITH-AWS-SECRET-KEY",
+      "--set", "service.type=ClusterIP", "--set", "configPath=/tmp/.minio/",
+      "--set", "persistence.size=2G", "--set", "buckets[0].name=operator-testing",
+      "--set", "buckets[0].policy=none", "--set", "buckets[0].purge=false",
+      "--set", "environment.MINIO_REGION=us-east-1"
+      ], "helm minio install problem")
 
 def merge_cr_yaml(yq, cr_path, part_path):
   cmd = yq + " ea '. as $item ireduce ({}; . * $item )' " + cr_path + " " + part_path + " > " + cr_path + ".tmp && mv " + cr_path + ".tmp " + cr_path
@@ -252,12 +263,35 @@ def enable_pmm(args):
             f.writelines(pmm_secrets.format(pmm_password=base64.b64encode(bytes(args.pmm_password, 'utf-8')).decode('utf-8')))
   run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", pmm_secret_path ], "Can't apply cluster secret secret with pmmserver")
 
+def enable_minio(args):
+  deploy_path = Path(args.data_path) / args.operator_name / "deploy"
+  minio_storage_path = str((deploy_path / "cr-minio.yaml").resolve())
+  proto = "http"
+  if args.minio_certs != "":
+    proto = "https"
+  if args.operator_name == "percona-xtradb-cluster-operator":
+    minio_storage = """
+      spec:
+        backup:
+          storages:
+            minio:
+              type: s3
+              s3:
+                bucket: operator-testing
+                region: us-east-1
+                credentialsSecret: my-cluster-name-backup-s3
+                endpointUrl: {proto}://minio-service.{minio_namespace}.svc.{cluster_domain}:9000
+      """.format(proto=proto, minio_namespace="default", cluster_domain=args.cluster_domain)
+    with open(minio_storage_path,"w+") as f:
+      f.writelines(minio_storage)
+    run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", "./deploy/backup-s3.yaml"], "Can't apply s3 secrets")
+    merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), minio_storage_path )
 
 def setup_operator(args):
   data_path = Path(__file__).parents[1] / 'data' / 'k8s'
 
   if args.cert_manager != "":
-    run_cert_manager(cert_manager_ver_compat(args.operator_name, args.operator_version), args.cert_manager)
+    run_cert_manager(cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager))
   if args.pmm != "":
     run_pmm_server(args.pmm, args.pmm_password)
 
@@ -273,10 +307,8 @@ def setup_operator(args):
   enable_pmm(args)
 
   if args.minio:
-    run_minio_server()
-    if args.operator_name == "percona-xtradb-cluster-operator":
-      run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", "./deploy/backup-s3.yaml"], "Can't apply s3 secrets")
-      merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), str((Path(args.conf_path) / "cr-minio.yaml").resolve()) )
+    run_minio_server(args)
+    enable_minio(args)
 
 
   if args.operator_name == "percona-postgresql-operator":
@@ -315,9 +347,11 @@ def main():
   parser.add_argument("--operator", dest="operator_name", type=str, default="percona-postgresql-operator")
   parser.add_argument("--version", dest="operator_version", type=str, default="1.1.0")
   parser.add_argument('--cert-manager', dest="cert_manager", type=str, default="")
+  parser.add_argument('--cluster-domain', dest="cluster_domain", type=str, default="cluster.local")
   parser.add_argument('--pmm', dest="pmm", type=str, default="")
   parser.add_argument('--pmm-password', dest="pmm_password", type=str, default="verysecretpassword1^")
   parser.add_argument('--minio', dest="minio", action='store_true')
+  parser.add_argument('--minio-certs', dest="minio_certs", type=str, default="")
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
   parser.add_argument('--info-only', dest="info", action='store_true')
   parser.add_argument('--smart-update', dest="smart_update", action='store_true')
