@@ -157,21 +157,20 @@ def get_operator_ns(operator_name):
     return "pxc"
   return "default"
 
-def run_helm(cmd, msg):
-  helm_path = Path(__file__).parents[1] / 'data' / 'helm'
+def run_helm(helm_path, cmd, msg):
   helm_env = os.environ.copy()
   helm_env["HELM_CACHE_HOME"] = (helm_path / 'cache').resolve()
   helm_env["HELM_CONFIG_HOME"] = (helm_path / 'config').resolve()
   helm_env["HELM_DATA_HOME"] = (helm_path / 'data').resolve()
   run_fatal(cmd, msg, env=helm_env)
 
-def run_pmm_server(pmm_version, pmm_password):
+def run_pmm_server(helm_path, pmm_version, pmm_password):
   if k8s_check_ready("default", "app=monitoring,component=pmm"):
     return
-  run_fatal(["mkdir", "-p", "data/helm/cache", "data/helm/config", "data/helm/data"], "can't create directories for helm")
-  run_helm(["helm", "repo", "add", "percona", "https://percona-charts.storage.googleapis.com"], "helm repo add problem")
-  run_helm(["helm", "repo", "update"], "helm repo update problem")
-  run_helm(["helm", "install", "monitoring", "percona/pmm-server",
+  run_fatal(["mkdir", "-p", helm_path / "cache", helm_path / "config", helm_path / "data"], "can't create directories for helm")
+  run_helm(helm_path, ["helm", "repo", "add", "percona", "https://percona-charts.storage.googleapis.com"], "helm repo add problem")
+  run_helm(helm_path, ["helm", "repo", "update"], "helm repo update problem")
+  run_helm(helm_path, ["helm", "install", "monitoring", "percona/pmm-server",
     "--set", "credentials.username=admin", "--set", "credentials.password="+pmm_password,
     "--set", "imageTag="+pmm_version, "--set", "platform=kubernetes"],
     "helm pmm install problem")
@@ -185,23 +184,43 @@ def run_pmm_server(pmm_version, pmm_password):
 
 
 def run_minio_server(args):
+  tls_key_path = Path(args.anydbver_path) / args.minio_certs / "tls.key"
+  tls_crt_path = Path(args.anydbver_path) / args.minio_certs / "tls.crt"
+  if args.minio_certs != "" and args.minio_certs != "self-signed":
+    logger.info("Loading minio secrets from {} and {}".format(str(tls_key_path.resolve()), str(tls_crt_path.resolve())))
+
+  args.minio_custom_ssl = (args.minio_certs != "" 
+      and args.minio_certs != "self-signed"
+      and tls_key_path.is_file()
+      and tls_crt_path.is_file())
+
   if args.cert_manager != "" and args.minio_certs == "self-signed":
     run_fatal(["kubectl", "apply", "-f", str((Path(args.conf_path) / "minio-certs.yaml").resolve())],
         "Can't create minio certificates")
-  run_fatal(["mkdir", "-p", "data/helm/cache", "data/helm/config", "data/helm/data"], "can't create directories for helm")
-  run_helm(["helm", "repo", "add", "minio", "https://helm.min.io/"], "helm repo add problem")
-  run_helm(["helm", "repo", "update"], "helm repo update problem")
-  if args.cert_manager != "" and args.minio_certs == "self-signed":
-    run_helm(["helm", "install", "minio-service", "minio/minio",
+  elif args.minio_custom_ssl:
+    run_fatal(["kubectl", "create", "secret", "generic", "tls-minio",
+      "--from-file="+str(tls_key_path.resolve()),
+      "--from-file="+str(tls_crt_path.resolve())],
+      "can't create minio tls secret")
+
+  run_fatal(["mkdir", "-p",
+    args.helm_path / "cache",
+    args.helm_path / "config",
+    args.helm_path / "data"], "can't create directories for helm")
+  run_helm(args.helm_path, ["helm", "repo", "add", "minio", "https://helm.min.io/"], "helm repo add problem")
+  run_helm(args.helm_path, ["helm", "repo", "update"], "helm repo update problem")
+  if (args.cert_manager != "" and args.minio_certs == "self-signed") or args.minio_custom_ssl:
+    run_helm(args.helm_path, ["helm", "install", "minio-service", "minio/minio",
       "--set", "accessKey=REPLACE-WITH-AWS-ACCESS-KEY", "--set", "secretKey=REPLACE-WITH-AWS-SECRET-KEY",
       "--set", "service.type=ClusterIP", "--set", "configPath=/tmp/.minio/",
       "--set", "persistence.size=2G", "--set", "buckets[0].name=operator-testing",
       "--set", "buckets[0].policy=none", "--set", "buckets[0].purge=false",
       "--set", "environment.MINIO_REGION=us-east-1",
+      "--set", "service.port=443",
       "--set", "tls.enabled=true,tls.certSecret=tls-minio,tls.publicCrt=tls.crt,tls.privateKey=tls.key"
       ], "helm minio+certs install problem")
   else:
-    run_helm(["helm", "install", "minio-service", "minio/minio",
+    run_helm(args.helm_path, ["helm", "install", "minio-service", "minio/minio",
       "--set", "accessKey=REPLACE-WITH-AWS-ACCESS-KEY", "--set", "secretKey=REPLACE-WITH-AWS-SECRET-KEY",
       "--set", "service.type=ClusterIP", "--set", "configPath=/tmp/.minio/",
       "--set", "persistence.size=2G", "--set", "buckets[0].name=operator-testing",
@@ -267,8 +286,10 @@ def enable_minio(args):
   deploy_path = Path(args.data_path) / args.operator_name / "deploy"
   minio_storage_path = str((deploy_path / "cr-minio.yaml").resolve())
   proto = "http"
+  minio_port = 9000
   if args.minio_certs != "":
     proto = "https"
+    minio_port = 443
   if args.operator_name == "percona-xtradb-cluster-operator":
     minio_storage = """
       spec:
@@ -280,12 +301,42 @@ def enable_minio(args):
                 bucket: operator-testing
                 region: us-east-1
                 credentialsSecret: my-cluster-name-backup-s3
-                endpointUrl: {proto}://minio-service.{minio_namespace}.svc.{cluster_domain}:9000
-      """.format(proto=proto, minio_namespace="default", cluster_domain=args.cluster_domain)
+                endpointUrl: {proto}://minio-service.{minio_namespace}.svc.{cluster_domain}:{minio_port}
+      """.format(proto=proto, minio_namespace="default", cluster_domain=args.cluster_domain, minio_port=minio_port)
     with open(minio_storage_path,"w+") as f:
       f.writelines(minio_storage)
     run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", "./deploy/backup-s3.yaml"], "Can't apply s3 secrets")
     merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), minio_storage_path )
+  if args.operator_name == "percona-postgresql-operator":
+    if args.minio_certs == "":
+      logger.warning("Percona Postgresql Operator MinIO backups requires TLS")
+      return
+
+    minio_storage = """
+      spec:
+        backup:
+          storages:
+            minio:
+              bucket: operator-testing
+              endpointUrl: minio-service.{minio_namespace}.svc.{cluster_domain}
+              uriStyle: "path"
+              region: "us-east-1"
+              verifyTLS: false
+              type: "s3"
+          schedule:
+            - name: "sat-night-backup"
+              schedule: "0 0 * * 6"
+              keep: 3
+              type: full
+              storage: minio
+      """.format(minio_namespace="default", cluster_domain=args.cluster_domain)
+    with open(minio_storage_path,"w+") as f:
+      f.writelines(minio_storage)
+    run_fatal(["kubectl", "apply", "-n", args.namespace, "-f",
+      str((Path(args.conf_path) / "cluster1-backrest-repo-config-secret-minio.yaml").resolve()) ], "Can't apply s3 secrets")
+    merge_cr_yaml(args.yq,
+        str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()),
+        minio_storage_path)
 
 def setup_operator(args):
   data_path = Path(__file__).parents[1] / 'data' / 'k8s'
@@ -293,7 +344,7 @@ def setup_operator(args):
   if args.cert_manager != "":
     run_cert_manager(cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager))
   if args.pmm != "":
-    run_pmm_server(args.pmm, args.pmm_password)
+    run_pmm_server(args.helm_path, args.pmm, args.pmm_password)
 
   prepare_operator_repository(data_path.resolve(), args.operator_name, args.operator_version)
   if not args.smart_update:
@@ -357,7 +408,9 @@ def main():
   parser.add_argument('--smart-update', dest="smart_update", action='store_true')
   args = parser.parse_args()
 
-  args.data_path = (Path(__file__).parents[1] / 'data' / 'k8s').resolve()
+  args.anydbver_path = (Path(__file__).parents[1]).resolve()
+  args.helm_path = (Path(__file__).parents[1] / 'data' / 'helm').resolve()
+  args.data_path = (Path(args.anydbver_path) / 'data' / 'k8s').resolve()
   args.conf_path = (Path(__file__).resolve().parents[2] / 'configs' / 'k8s').resolve()
   args.yq = str((Path(__file__).parents[0] / 'yq').resolve())
 
