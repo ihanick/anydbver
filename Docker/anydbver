@@ -82,7 +82,7 @@ if [[ "$1" == mysql || "$1" == psql || "$1" == mongo || "$1" == bash ]] ; then
 
   else
     if [[ "$CMD" == mysql ]] ; then
-      exec $DOCKER exec -it "${NODE_PREFIX}${NODE}" mysql -uroot -psecret
+      exec $DOCKER exec -e LANG=en_US.UTF-8 -it "${NODE_PREFIX}${NODE}" mysql -uroot -psecret
     elif [[ "$CMD" == psql ]] ; then
       exec $DOCKER exec -it "${NODE_PREFIX}${NODE}" psql -U postgres
     elif [[ "$CMD" == mongo ]] ; then
@@ -341,18 +341,30 @@ get_version() {
 
 get_ip() {
   local SERVER_NAME="$1"
-  while true ; do
-    sleep 1
-    RET_SERVER_IP=$("$DOCKER" inspect --format "{{.NetworkSettings.IPAddress}}" "$SERVER_NAME")
-    if [[ "$DOCKER" == "docker" ]] ; then
-      [[ "$RET_SERVER_IP" == "" ]] && RET_SERVER_IP=$( "$DOCKER" inspect "$SERVER_NAME"| jq -r '.[]|.NetworkSettings.Networks["'"${NET}"'"].IPAddress' )
-    else
-      [[ "$RET_SERVER_IP" == "" ]] && RET_SERVER_IP=$( "$DOCKER" inspect --format json "$SERVER_NAME"| jq -r '.[]|.NetworkSettings.Networks["'"${NET}"'"].IPAddress' )
-    fi
-    [[ "$RET_SERVER_IP" == "" ]] && continue
-    [[ "$RET_SERVER_IP" == "null" ]] && continue
-    break
-  done
+
+  if [[ "$PROVIDER" == "kubernetes" ]] ; then
+    while true ; do
+      sleep 1
+      RET_SERVER_IP=$(kubectl get pods "$SERVER_NAME" -o go-template='{{ .status.podIP }}' )
+      [[ "$RET_SERVER_IP" == "" ]] && continue
+      [[ "$RET_SERVER_IP" == "null" ]] && continue
+      [[ "$RET_SERVER_IP" == "<no value>" ]] && continue
+      break
+    done
+  else
+    while true ; do
+      sleep 1
+      RET_SERVER_IP=$("$DOCKER" inspect --format "{{.NetworkSettings.IPAddress}}" "$SERVER_NAME")
+      if [[ "$DOCKER" == "docker" ]] ; then
+        [[ "$RET_SERVER_IP" == "" ]] && RET_SERVER_IP=$( "$DOCKER" inspect "$SERVER_NAME"| jq -r '.[]|.NetworkSettings.Networks["'"${NET}"'"].IPAddress' )
+      else
+        [[ "$RET_SERVER_IP" == "" ]] && RET_SERVER_IP=$( "$DOCKER" inspect --format json "$SERVER_NAME"| jq -r '.[]|.NetworkSettings.Networks["'"${NET}"'"].IPAddress' )
+      fi
+      [[ "$RET_SERVER_IP" == "" ]] && continue
+      [[ "$RET_SERVER_IP" == "null" ]] && continue
+      break
+    done
+  fi
 }
 
 get_user_id() {
@@ -736,6 +748,34 @@ wait_mysql_ready() {
   local SERVER_NAME="$1"
   get_ip "$SERVER_NAME"
   local SERVER_IP="$RET_SERVER_IP"
+
+  if [[ "$PROVIDER" == "kubernetes" ]] ; then
+    until \
+kubectl exec -i node0 -- env LEADER_USER=root LEADER_PASSWORD=secret LEADER_HOST="$SERVER_IP" bash -e <<'WAIT_READY_EOF'
+create_client_my_cnf() {
+  local FILE="$1"
+  local HOST="$2"
+  local USER="$3"
+  local PASS="$4"
+
+  cat > /tmp/"$FILE".cnf <<EOF
+[client]
+host="$HOST"
+user="$USER"
+password="$PASS"
+EOF
+}
+
+wait_until_mysql_ready() {
+  local FILE="$1"
+  until mysql --defaults-file=/tmp/"$FILE".cnf --silent --connect-timeout=30 --wait -e "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
+}
+
+create_client_my_cnf leader "$LEADER_HOST" "$LEADER_USER" "$LEADER_PASSWORD"
+wait_until_mysql_ready leader
+WAIT_READY_EOF
+do sleep 2 ; done
+  else
   "$DOCKER" run --name "$SERVER_NAME"-wait-ready --network "$NET" --rm -i \
     --entrypoint '' \
     -e LEADER_HOST="$SERVER_IP" -e LEADER_USER=root -e LEADER_PASSWORD=secret \
@@ -762,6 +802,7 @@ wait_until_mysql_ready() {
 create_client_my_cnf leader "$LEADER_HOST" "$LEADER_USER" "$LEADER_PASSWORD"
 wait_until_mysql_ready leader
 WAIT_READY_EOF
+  fi
 }
 
 wait_pg_ready() {
