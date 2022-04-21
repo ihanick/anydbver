@@ -60,6 +60,19 @@
       gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-PGDG
       repo_gpgcheck = 0
 
+- name: Add PGDG 9.6 repo
+  when: postgresql_version.startswith('9.6') and (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  blockinfile:
+    dest: /etc/yum.repos.d/pgdg-redhat-all.repo
+    block: |
+      [pgdg96]
+      name=PostgreSQL 9.6 for RHEL/CentOS $releasever - $basearch
+      baseurl=https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-$releasever-$basearch
+      enabled=1
+      gpgcheck=0
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-PGDG
+      repo_gpgcheck = 0
+
 - name: Postgresql repo on el8, disable dnf module postgresql
   when: postgresql_version != '' and dist == 'el8'
   shell:

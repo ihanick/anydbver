@@ -438,7 +438,7 @@ fi
 if [ "x$1" = "xssh" ] ; then
   shift
   NODE="$1"
-  if [ "x$NODE" = "x" ] ; then
+  if [[ "$NODE" == "" || "$NODE" == "--" ]] ; then
     NODE=default
   else
     shift
