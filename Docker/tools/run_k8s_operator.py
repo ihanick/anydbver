@@ -105,6 +105,8 @@ def info_pg_operator(ns):
         subprocess.list2cmdline([ns]), container))
 
 def run_pg_operator(ns, op):
+  run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
+  run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/cr.yaml"], "fix namespace in yaml")
   run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/operator.yaml"], "Can't deploy operator")
   if not k8s_wait_for_ready(ns, "name=postgres-operator"):
     raise Exception("Kubernetes operator is not starting")
@@ -162,7 +164,7 @@ def run_helm(helm_path, cmd, msg):
   helm_env["HELM_CACHE_HOME"] = (helm_path / 'cache').resolve()
   helm_env["HELM_CONFIG_HOME"] = (helm_path / 'config').resolve()
   helm_env["HELM_DATA_HOME"] = (helm_path / 'data').resolve()
-  run_fatal(cmd, msg, env=helm_env)
+  run_fatal(cmd, msg, ignore_msg="cannot re-use a name that is still in use", env=helm_env)
 
 def run_pmm_server(helm_path, pmm_version, pmm_password):
   if k8s_check_ready("default", "app=monitoring,component=pmm"):
@@ -201,7 +203,7 @@ def run_minio_server(args):
     run_fatal(["kubectl", "create", "secret", "generic", "tls-minio",
       "--from-file="+str(tls_key_path.resolve()),
       "--from-file="+str(tls_crt_path.resolve())],
-      "can't create minio tls secret")
+      "can't create minio tls secret", "already exists")
 
   run_fatal(["mkdir", "-p",
     args.helm_path / "cache",
@@ -238,7 +240,18 @@ def enable_pmm(args):
     return
   deploy_path = Path(args.data_path) / args.operator_name / "deploy" 
   pmm_secret_path = str((deploy_path / "cr-pmm-secret.yaml").resolve()) 
-  merge_cr_yaml(args.yq, str((deploy_path / "cr.yaml").resolve()), str((Path(args.conf_path) / "cr-pmm.yaml").resolve()) )
+  pmm_enable_path = str((deploy_path / "cr-pmm-enable.yaml").resolve()) 
+
+
+  pmm_enable_yaml = """
+    spec:
+      pmm:
+        enabled: true
+        serverUser: admin
+        serverHost: monitoring-service.default.svc.{cluster_domain}""".format(cluster_domain=args.cluster_domain)
+  with open(pmm_enable_path,"w+") as f:
+            f.writelines(pmm_enable_yaml)
+  merge_cr_yaml(args.yq, str((deploy_path / "cr.yaml").resolve()), pmm_enable_path )
   pmm_secrets = ""
   if args.operator_name == "percona-xtradb-cluster-operator":
     pmm_secrets = """
