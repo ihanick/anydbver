@@ -1,5 +1,6 @@
 #!/bin/bash
 
+K8S_AGENTS=3
 # read arguments
 opts=$(getopt \
     --longoptions "dry-run,destroy,namespace:,provider:" \
@@ -292,7 +293,16 @@ deploy_node() {
         fi
       fi
 
-      tools/k3d cluster create -i rancher/k3s:$K3S_VER --network "$NET" -a 3 $USER-cluster1 $K8S_CLUSTER_DOMAIN
+      if [[ "$K8S_OPERATOR" == "percona-server-mongodb-operator" ]] ; then
+        # 0 =, 1 >, 2 <
+        vercomp "$OPERATOR_VERSION" "1.7.0"
+        if [[ $? == 2 ]] ; then
+          K3S_VER=v1.19.16-k3s1
+        fi
+      fi
+
+      # INGRESS_PORTS="--api-port 6550 --k3s-arg "--disable=traefik@server:0" --port "80:80@loadbalancer" --port "443:443@loadbalancer" --port "3306:3306@loadbalancer" --api-port 0.0.0.0:6550 --wait"
+      tools/k3d cluster create -i rancher/k3s:$K3S_VER --network "$NET" -a $K8S_AGENTS $USER-cluster1 $K8S_CLUSTER_DOMAIN
     fi
   fi
   if [[ "$K8S_OPERATOR" != "" ]] ; then
