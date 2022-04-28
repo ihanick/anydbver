@@ -295,7 +295,7 @@ deploy_node() {
 
       if [[ "$K8S_OPERATOR" == "percona-server-mongodb-operator" ]] ; then
         # 0 =, 1 >, 2 <
-        vercomp "$OPERATOR_VERSION" "1.7.0"
+        vercomp "$OPERATOR_VERSION" "1.9.0"
         if [[ $? == 2 ]] ; then
           K3S_VER=v1.19.16-k3s1
         fi
