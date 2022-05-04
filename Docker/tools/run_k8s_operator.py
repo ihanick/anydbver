@@ -149,6 +149,11 @@ def run_cert_manager(ver):
   run_fatal(["kubectl", "apply", "-f", "https://github.com/cert-manager/cert-manager/releases/download/v{}/cert-manager.yaml".format(ver)], "Can't deploy cert-manager:"+ver)
   if not k8s_wait_for_ready("cert-manager", "app.kubernetes.io/name=cert-manager"):
     raise Exception("Cert-manager is not starting")
+  if not k8s_wait_for_ready("cert-manager", "app.kubernetes.io/name=webhook"):
+    raise Exception("Cert-manager is not starting webhook")
+  if not k8s_wait_for_ready("cert-manager", "app.kubernetes.io/name=cainjector"):
+    raise Exception("Cert-manager is not starting cainjector")
+
 
 def get_operator_ns(operator_name):
   if operator_name == "percona-server-mongodb-operator":
@@ -164,6 +169,10 @@ def run_helm(helm_path, cmd, msg):
   helm_env["HELM_CACHE_HOME"] = (helm_path / 'cache').resolve()
   helm_env["HELM_CONFIG_HOME"] = (helm_path / 'config').resolve()
   helm_env["HELM_DATA_HOME"] = (helm_path / 'data').resolve()
+  environ_txt = "export"
+  for key in ("HELM_CACHE_HOME","HELM_CONFIG_HOME","HELM_DATA_HOME"):
+      environ_txt = environ_txt + " " + key + "=" + subprocess.list2cmdline([helm_env[key] ])
+  logger.info(environ_txt)
   run_fatal(cmd, msg, ignore_msg="cannot re-use a name that is still in use", env=helm_env)
 
 def run_pmm_server(helm_path, pmm_version, pmm_password):
@@ -200,9 +209,9 @@ def run_minio_server(args):
     run_fatal(["kubectl", "apply", "-f", str((Path(args.conf_path) / "minio-certs.yaml").resolve())],
         "Can't create minio certificates")
   elif args.minio_custom_ssl:
-    run_fatal(["kubectl", "create", "secret", "generic", "tls-minio",
-      "--from-file="+str(tls_key_path.resolve()),
-      "--from-file="+str(tls_crt_path.resolve())],
+    run_fatal(["kubectl", "create", "secret", "tls", "tls-minio",
+      "--key="+str(tls_key_path.resolve()),
+      "--cert="+str(tls_crt_path.resolve())],
       "can't create minio tls secret", "already exists")
 
   run_fatal(["mkdir", "-p",
