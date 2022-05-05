@@ -154,6 +154,24 @@ def run_cert_manager(ver):
   if not k8s_wait_for_ready("cert-manager", "app.kubernetes.io/name=cainjector"):
     raise Exception("Cert-manager is not starting cainjector")
 
+def run_cert_manager_helm(helm_path, ver):
+  run_fatal(["mkdir", "-p", helm_path / "cache", helm_path / "config", helm_path / "data"], "can't create directories for helm")
+  run_helm(helm_path, ["helm", "repo", "add", "jetstack", "https://charts.jetstack.io"], "helm repo add problem")
+  run_helm(helm_path, ["helm", "repo", "update"], "helm repo update problem")
+  run_helm(helm_path, ["helm", "install", "cert-manager", "jetstack/cert-manager",
+    "--namespace", "cert-manager",
+    "--create-namespace",
+    "--version", ver,
+    "--set", "installCRDs=true" ],
+    "helm pmm install problem")
+  if not k8s_wait_for_ready("cert-manager", "app.kubernetes.io/name=cert-manager"):
+    raise Exception("Cert-manager is not starting")
+  if not k8s_wait_for_ready("cert-manager", "app.kubernetes.io/name=webhook"):
+    raise Exception("Cert-manager is not starting webhook")
+  if not k8s_wait_for_ready("cert-manager", "app.kubernetes.io/name=cainjector"):
+    raise Exception("Cert-manager is not starting cainjector")
+
+
 
 def get_operator_ns(operator_name):
   if operator_name == "percona-server-mongodb-operator":
@@ -363,6 +381,10 @@ def enable_minio(args):
 def setup_operator_helm(args):
   if not k8s_wait_for_ready('kube-system', 'k8s-app=kube-dns'):
     raise Exception("Kubernetes cluster is not available")
+
+  if args.cert_manager != "":
+    run_cert_manager_helm(args.helm_path, cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager))
+
   run_fatal(["kubectl", "create", "namespace", args.namespace],
       "Can't create a namespace for the cluster", r"from server \(AlreadyExists\)")
 
@@ -372,7 +394,10 @@ def setup_operator_helm(args):
     cluster_name="my-db"
     if not k8s_wait_for_ready(args.namespace, op_labels("pxc-operator", args.operator_version)):
       raise Exception("Kubernetes operator is not starting")
-    run_helm(args.helm_path, ["helm", "install", cluster_name, "percona/pxc-db", "--namespace", args.namespace], "Can't start PXC with helm")
+    pxc_helm_install_cmd = ["helm", "install", cluster_name, "percona/pxc-db", "--namespace", args.namespace]
+    if args.cert_manager:
+      pxc_helm_install_cmd.extend(["--set", "pxc.certManager=true"])
+    run_helm(args.helm_path, pxc_helm_install_cmd, "Can't start PXC with helm")
     if not k8s_wait_for_ready(args.namespace, "app.kubernetes.io/component=pxc,app.kubernetes.io/instance={}-pxc-db".format(cluster_name)):
       raise Exception("cluster is not starting")
 
@@ -382,6 +407,7 @@ def setup_operator(args):
 
   if args.cert_manager != "":
     run_cert_manager(cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager))
+
   if args.pmm != "":
     run_pmm_server(args.helm_path, args.pmm, args.pmm_password)
 
