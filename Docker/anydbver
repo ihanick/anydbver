@@ -242,6 +242,7 @@ deploy_node() {
       fi
 
       WORLD_DB=1
+      K8S_SQL_FILE="--sql=$(realpath sampledb/world/world.sql)"
     fi
     if [[ "$i" == "args:"* ]] ; then
       DB_ARGUMENTS="${i//args:/}"
@@ -253,6 +254,7 @@ deploy_node() {
       fi
 
       PAGILA_DB=1
+      K8S_SQL_FILE="--sql=$(realpath sampledb/pagila/pagila.sql)"
     fi
 
     if [[ "$i" == "snapshot" ]] ; then
@@ -314,7 +316,7 @@ deploy_node() {
   fi
   if [[ "$K8S_OPERATOR" != "" ]] ; then
     if [[ "$DRY_RUN" != 1 ]] ; then
-      python3 tools/run_k8s_operator.py --operator="$K8S_OPERATOR" --version="$OPERATOR_VERSION" $CERT_MANAGER $K8S_PMM $K8S_MINIO $K8S_SMART_UPDATE $K8S_NAMESPACE $MINIO_CERTS $K8S_CLUSTER_DOMAIN_RUN
+      python3 tools/run_k8s_operator.py --operator="$K8S_OPERATOR" --version="$OPERATOR_VERSION" $CERT_MANAGER $K8S_PMM $K8S_MINIO $K8S_SMART_UPDATE $K8S_NAMESPACE $MINIO_CERTS $K8S_CLUSTER_DOMAIN_RUN $K8S_SQL_FILE
       if [[ "$K8S_NGINX_INGRESS" != "" ]] ; then
         if [[ "$K8S_MINIO" != "" ]] ; then
           if [[ "$K8S_DOMAIN" != "" ]] ; then

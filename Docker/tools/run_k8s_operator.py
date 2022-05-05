@@ -407,6 +407,33 @@ def info_mongo_operator(ns):
   user_admin_mongo = ["kubectl", "-n", ns, "exec", "-it", "my-cluster-name-rs0-0", "--", "env", "LANG=C.utf8", "HOME=/tmp", "mongo", "-u", "userAdmin", "--password="+pwd, "localhost/admin"]
   print(subprocess.list2cmdline(user_admin_mongo))
 
+
+def populate_mongodb(ns, js_file):
+  pass
+
+def populate_pg_db(ns, sql_file):
+  print("kubectl -n {} get PerconaPGCluster cluster1".format(subprocess.list2cmdline([ns])))
+  for container in get_containers_list(ns,"name=cluster1"):
+    if container != "":
+      s = "kubectl -n {} exec -it {} -- env PSQL_HISTORY=/tmp/.psql_history psql -U postgres < {}".format(
+          subprocess.list2cmdline([ns]), container, subprocess.list2cmdline([sql_file]))
+      run_fatal(["sh", "-c", s], "Can't apply sql file")
+
+def populate_pxc_db(ns, sql_file):
+  pwd = extract_secret_password(ns, "my-cluster-secrets", "root")
+  root_cluster_pxc = ["kubectl", "-n", ns, "exec", "-i", "cluster1-pxc-0", "-c", "pxc", "--", "env", "LANG=C.utf8", "MYSQL_HISTFILE=/tmp/.mysql_history", "mysql", "-uroot", "-p"+pwd]
+  s = subprocess.list2cmdline(root_cluster_pxc) + " < " + subprocess.list2cmdline([sql_file])
+  run_fatal(["sh", "-c", s], "Can't apply sql file")
+
+
+def populate_db(args):
+  if args.operator_name == "percona-server-mongodb-operator":
+    populate_mongodb(args.namespace, args.js_file)
+  if args.operator_name == "percona-postgresql-operator":
+    populate_pg_db(args.namespace, args.sql_file)
+  if args.operator_name == "percona-xtradb-cluster-operator":
+    populate_pxc_db(args.namespace, args.sql_file)
+
 def operator_info(args):
   if args.operator_name == "percona-server-mongodb-operator":
     info_mongo_operator(args.namespace)
@@ -426,6 +453,8 @@ def main():
   parser.add_argument('--minio', dest="minio", action='store_true')
   parser.add_argument('--minio-certs', dest="minio_certs", type=str, default="")
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
+  parser.add_argument('--sql', dest="sql_file", type=str, default="")
+  parser.add_argument('--js', dest="js_file", type=str, default="")
   parser.add_argument('--info-only', dest="info", action='store_true')
   parser.add_argument('--smart-update', dest="smart_update", action='store_true')
   args = parser.parse_args()
@@ -442,6 +471,8 @@ def main():
   if not args.info:
     setup_operator(args)
 
+  if args.sql_file != "":
+    populate_db(args)
   operator_info(args)
 
   logger.info("Success")

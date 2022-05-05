@@ -146,7 +146,7 @@ mysql> show slave hosts;
 ```
 ./anydbver deploy k8s-pg k3d
 # support for backups, certs directory should contain a valid certificate for minio-service.default.svc.example.org
-./anydbver.py --destroy;./anydbver deploy k3d k8s-cluster-domain:example.org k8s-minio k8s-pg:1.1.0 minio-certs:certs
+./anydbver.py --destroy;./anydbver deploy k3d k8s-cluster-domain:example.org k8s-minio k8s-pg:1.1.0 minio-certs:certs pagila
 ```
 
 ```
@@ -155,7 +155,7 @@ mysql> show slave hosts;
 
 ### Deploy PXC operator
 ```
-./anydbver deploy k3d k8s-pxc:1.10.0
+./anydbver deploy k3d k8s-pxc:1.10.0 world
 ./anydbver deploy k3d k8s-cluster-domain:example.org k8s-pxc:1.10.0 # use example.org domain in k8s instead of cluster.local
 ./anydbver deploy k3d k8s-cluster-domain:example.org k8s-minio k8s-pxc:1.10.0 minio-certs:certs # load minio-service.default.svc.example.org certificates (tls.key, tls.crt) from certs subdirectory
 ```
