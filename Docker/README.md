@@ -158,6 +158,9 @@ mysql> show slave hosts;
 ./anydbver deploy k3d k8s-pxc:1.10.0 world
 ./anydbver deploy k3d k8s-cluster-domain:example.org k8s-pxc:1.10.0 # use example.org domain in k8s instead of cluster.local
 ./anydbver deploy k3d k8s-cluster-domain:example.org k8s-minio k8s-pxc:1.10.0 minio-certs:certs # load minio-service.default.svc.example.org certificates (tls.key, tls.crt) from certs subdirectory
+
+# Deploy PXC operator and cluster with percona helm charts
+./anydbver deploy k3d k8s-pxc:1.10.0 world
 ```
 
 Run two clusters in different namespaces:

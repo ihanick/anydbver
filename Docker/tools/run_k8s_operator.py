@@ -116,7 +116,7 @@ def run_pg_operator(ns, op):
     raise Exception("cluster is not starting")
 
 def op_labels(op, op_ver):
-  if op == "percona-xtradb-cluster-operator" and StrictVersion(op_ver) > StrictVersion("1.6.0"):
+  if op in ("percona-xtradb-cluster-operator", "pxc-operator") and StrictVersion(op_ver) > StrictVersion("1.6.0"):
     return "app.kubernetes.io/name="+op
   else:
     return "name="+op
@@ -360,6 +360,23 @@ def enable_minio(args):
         str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()),
         minio_storage_path)
 
+def setup_operator_helm(args):
+  if not k8s_wait_for_ready('kube-system', 'k8s-app=kube-dns'):
+    raise Exception("Kubernetes cluster is not available")
+  run_fatal(["kubectl", "create", "namespace", args.namespace],
+      "Can't create a namespace for the cluster", r"from server \(AlreadyExists\)")
+
+  if args.operator_name == "percona-xtradb-cluster-operator":
+    run_helm(args.helm_path, ["helm", "repo", "add", "percona", "https://percona.github.io/percona-helm-charts/"], "helm repo add problem")
+    run_helm(args.helm_path, ["helm", "install", "my-operator", "percona/pxc-operator", "--version", args.operator_version, "--namespace", args.namespace], "Can't start PXC operator with helm")
+    cluster_name="my-db"
+    if not k8s_wait_for_ready(args.namespace, op_labels("pxc-operator", args.operator_version)):
+      raise Exception("Kubernetes operator is not starting")
+    run_helm(args.helm_path, ["helm", "install", cluster_name, "percona/pxc-db", "--namespace", args.namespace], "Can't start PXC with helm")
+    if not k8s_wait_for_ready(args.namespace, "app.kubernetes.io/component=pxc,app.kubernetes.io/instance={}-pxc-db".format(cluster_name)):
+      raise Exception("cluster is not starting")
+
+
 def setup_operator(args):
   data_path = Path(__file__).parents[1] / 'data' / 'k8s'
 
@@ -393,9 +410,14 @@ def extract_secret_password(ns, secret, user):
   return run_get_line(["kubectl", "get", "secrets", "-n", ns, secret, "-o", r'go-template={{ .data.' + user + r'| base64decode }}'],
       "Can't get pod name")
 
-def info_pxc_operator(ns):
-  pwd = extract_secret_password(ns, "my-cluster-secrets", "root")
-  root_cluster_pxc = ["kubectl", "-n", ns, "exec", "-it", "cluster1-pxc-0", "-c", "pxc", "--", "env", "LANG=C.utf8", "MYSQL_HISTFILE=/tmp/.mysql_history", "mysql", "-uroot", "-p"+pwd]
+def info_pxc_operator(ns, helm_enabled):
+  pxc_users_secret = "my-cluster-secrets"
+  pxc_node_0 = "cluster1-pxc-0"
+  if helm_enabled:
+    pxc_users_secret="my-db-pxc-db"
+    pxc_node_0 = "my-db-pxc-db-pxc-0"
+  pwd = extract_secret_password(ns, pxc_users_secret, "root")
+  root_cluster_pxc = ["kubectl", "-n", ns, "exec", "-it", pxc_node_0, "-c", "pxc", "--", "env", "LANG=C.utf8", "MYSQL_HISTFILE=/tmp/.mysql_history", "mysql", "-uroot", "-p"+pwd]
   print(subprocess.list2cmdline(root_cluster_pxc))
 
 def info_mongo_operator(ns):
@@ -419,9 +441,15 @@ def populate_pg_db(ns, sql_file):
           subprocess.list2cmdline([ns]), container, subprocess.list2cmdline([sql_file]))
       run_fatal(["sh", "-c", s], "Can't apply sql file")
 
-def populate_pxc_db(ns, sql_file):
-  pwd = extract_secret_password(ns, "my-cluster-secrets", "root")
-  root_cluster_pxc = ["kubectl", "-n", ns, "exec", "-i", "cluster1-pxc-0", "-c", "pxc", "--", "env", "LANG=C.utf8", "MYSQL_HISTFILE=/tmp/.mysql_history", "mysql", "-uroot", "-p"+pwd]
+def populate_pxc_db(ns, sql_file, helm_enabled):
+  pxc_users_secret = "my-cluster-secrets"
+  pxc_node_0 = "cluster1-pxc-0"
+  if helm_enabled:
+    pxc_users_secret="my-db-pxc-db"
+    pxc_node_0 = "my-db-pxc-db-pxc-0"
+
+  pwd = extract_secret_password(ns, pxc_users_secret, "root")
+  root_cluster_pxc = ["kubectl", "-n", ns, "exec", "-i", pxc_node_0, "-c", "pxc", "--", "env", "LANG=C.utf8", "MYSQL_HISTFILE=/tmp/.mysql_history", "mysql", "-uroot", "-p"+pwd]
   s = subprocess.list2cmdline(root_cluster_pxc) + " < " + subprocess.list2cmdline([sql_file])
   run_fatal(["sh", "-c", s], "Can't apply sql file")
 
@@ -432,7 +460,7 @@ def populate_db(args):
   if args.operator_name == "percona-postgresql-operator":
     populate_pg_db(args.namespace, args.sql_file)
   if args.operator_name == "percona-xtradb-cluster-operator":
-    populate_pxc_db(args.namespace, args.sql_file)
+    populate_pxc_db(args.namespace, args.sql_file, args.helm)
 
 def operator_info(args):
   if args.operator_name == "percona-server-mongodb-operator":
@@ -440,7 +468,7 @@ def operator_info(args):
   if args.operator_name == "percona-postgresql-operator":
     info_pg_operator(args.namespace)
   if args.operator_name == "percona-xtradb-cluster-operator":
-    info_pxc_operator(args.namespace)
+    info_pxc_operator(args.namespace, args.helm)
 
 def main():
   parser = argparse.ArgumentParser()
@@ -457,6 +485,7 @@ def main():
   parser.add_argument('--js', dest="js_file", type=str, default="")
   parser.add_argument('--info-only', dest="info", action='store_true')
   parser.add_argument('--smart-update', dest="smart_update", action='store_true')
+  parser.add_argument('--helm', dest="helm", action='store_true')
   args = parser.parse_args()
 
   args.anydbver_path = (Path(__file__).parents[1]).resolve()
@@ -469,7 +498,10 @@ def main():
     args.namespace = get_operator_ns(args.operator_name)
 
   if not args.info:
-    setup_operator(args)
+    if args.helm:
+      setup_operator_helm(args)
+    else:
+      setup_operator(args)
 
   if args.sql_file != "":
     populate_db(args)
