@@ -8,14 +8,14 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: minio-service-tls
+  name: monitoring-service-tls
 spec:
-  commonName: minio.example.com
+  commonName: monitoring.example.com
   secretName: tls-minio
   dnsNames:
     # Ingress domain
     - minio.example.com
     # Internal domain
-    - minio-service.default.svc.cluster.local
+    - monitoring-service.default.svc.cluster.local
   issuerRef:
     name: selfsigning-issuer

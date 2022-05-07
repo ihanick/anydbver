@@ -46,8 +46,9 @@ def run_get_line(args,err_msg, ignore_msg=None, print_cmd=True):
   return output
   
 
-def k8s_wait_for_ready(ns, labels):
-  for i in range(COMMAND_TIMEOUT // 2):
+def k8s_wait_for_ready(ns, labels, timeout=COMMAND_TIMEOUT):
+  logger.info("Waiting for: kubectl wait --for=condition=ready -n {} pod -l {}".format(ns, labels))
+  for i in range(timeout // 2):
     s = datetime.datetime.now()
     if run_fatal(["kubectl", "wait", "--timeout=2s", "--for=condition=ready", "-n", ns, "pod", "-l", labels],
         "Pod ready wait problem",
@@ -155,7 +156,6 @@ def run_cert_manager(ver):
     raise Exception("Cert-manager is not starting cainjector")
 
 def run_cert_manager_helm(helm_path, ver):
-  run_fatal(["mkdir", "-p", helm_path / "cache", helm_path / "config", helm_path / "data"], "can't create directories for helm")
   run_helm(helm_path, ["helm", "repo", "add", "jetstack", "https://charts.jetstack.io"], "helm repo add problem")
   run_helm(helm_path, ["helm", "repo", "update"], "helm repo update problem")
   run_helm(helm_path, ["helm", "install", "cert-manager", "jetstack/cert-manager",
@@ -183,6 +183,7 @@ def get_operator_ns(operator_name):
   return "default"
 
 def run_helm(helm_path, cmd, msg):
+  run_fatal(["mkdir", "-p", helm_path / "cache", helm_path / "config", helm_path / "data"], "can't create directories for helm")
   helm_env = os.environ.copy()
   helm_env["HELM_CACHE_HOME"] = (helm_path / 'cache').resolve()
   helm_env["HELM_CONFIG_HOME"] = (helm_path / 'config').resolve()
@@ -193,14 +194,31 @@ def run_helm(helm_path, cmd, msg):
   logger.info(environ_txt)
   run_fatal(cmd, msg, ignore_msg="cannot re-use a name that is still in use", env=helm_env)
 
-def run_pmm_server(helm_path, pmm_version, pmm_password):
+def run_pmm_server(args, helm_path, pmm_version, pmm_password):
+  tls_key_path = Path(args.anydbver_path) / args.pmm_certs / "tls.key"
+  tls_crt_path = Path(args.anydbver_path) / args.pmm_certs / "tls.crt"
+
+  args.pmm_custom_ssl = (args.pmm_certs != "" 
+      and args.pmm_certs != "self-signed"
+      and tls_key_path.is_file()
+      and tls_crt_path.is_file())
+
+  if args.cert_manager != "" and args.pmm_certs == "self-signed":
+    run_fatal(["kubectl", "apply", "-f", str((Path(args.conf_path) / "pmm-certs.yaml").resolve())],
+        "Can't create pmm certificates")
+  elif args.pmm_custom_ssl:
+    run_fatal(["kubectl", "create", "secret", "tls", "monitoring-service-tls",
+      "--key="+str(tls_key_path.resolve()),
+      "--cert="+str(tls_crt_path.resolve())],
+      "can't create minio tls secret", "already exists")
+
   if k8s_check_ready("default", "app=monitoring,component=pmm"):
     return
-  run_fatal(["mkdir", "-p", helm_path / "cache", helm_path / "config", helm_path / "data"], "can't create directories for helm")
-  run_helm(helm_path, ["helm", "repo", "add", "percona", "https://percona-charts.storage.googleapis.com"], "helm repo add problem")
+  run_helm(helm_path, ["helm", "repo", "add", "perconalab", "https://percona-charts.storage.googleapis.com"], "helm repo add problem")
   run_helm(helm_path, ["helm", "repo", "update"], "helm repo update problem")
-  run_helm(helm_path, ["helm", "install", "monitoring", "percona/pmm-server",
+  run_helm(helm_path, ["helm", "install", "monitoring", "perconalab/pmm-server",
     "--set", "credentials.username=admin", "--set", "credentials.password="+pmm_password,
+    "--set", "service.type=ClusterIP",
     "--set", "imageTag="+pmm_version, "--set", "platform=kubernetes"],
     "helm pmm install problem")
   if not k8s_wait_for_ready("default", "app=monitoring,component=pmm"):
@@ -227,15 +245,11 @@ def run_minio_server(args):
     run_fatal(["kubectl", "apply", "-f", str((Path(args.conf_path) / "minio-certs.yaml").resolve())],
         "Can't create minio certificates")
   elif args.minio_custom_ssl:
-    run_fatal(["kubectl", "create", "secret", "tls", "tls-minio",
+    run_fatal(["kubectl", "create", "secret", "tls", "minio-service-tls",
       "--key="+str(tls_key_path.resolve()),
       "--cert="+str(tls_crt_path.resolve())],
       "can't create minio tls secret", "already exists")
 
-  run_fatal(["mkdir", "-p",
-    args.helm_path / "cache",
-    args.helm_path / "config",
-    args.helm_path / "data"], "can't create directories for helm")
   run_helm(args.helm_path, ["helm", "repo", "add", "minio", "https://helm.min.io/"], "helm repo add problem")
   run_helm(args.helm_path, ["helm", "repo", "update"], "helm repo update problem")
   if (args.cert_manager != "" and args.minio_certs == "self-signed") or args.minio_custom_ssl:
@@ -246,7 +260,7 @@ def run_minio_server(args):
       "--set", "buckets[0].policy=none", "--set", "buckets[0].purge=false",
       "--set", "environment.MINIO_REGION=us-east-1",
       "--set", "service.port=443",
-      "--set", "tls.enabled=true,tls.certSecret=tls-minio,tls.publicCrt=tls.crt,tls.privateKey=tls.key"
+      "--set", "tls.enabled=true,tls.certSecret=minio-service-tls,tls.publicCrt=tls.crt,tls.privateKey=tls.key"
       ], "helm minio+certs install problem")
   else:
     run_helm(args.helm_path, ["helm", "install", "minio-service", "minio/minio",
@@ -409,7 +423,7 @@ def setup_operator(args):
     run_cert_manager(cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager))
 
   if args.pmm != "":
-    run_pmm_server(args.helm_path, args.pmm, args.pmm_password)
+    run_pmm_server(args, args.helm_path, args.pmm, args.pmm_password)
 
   prepare_operator_repository(data_path.resolve(), args.operator_name, args.operator_version)
   if not args.smart_update:
@@ -470,14 +484,65 @@ def populate_pg_db(ns, sql_file):
 def populate_pxc_db(ns, sql_file, helm_enabled):
   pxc_users_secret = "my-cluster-secrets"
   pxc_node_0 = "cluster1-pxc-0"
+  pxc_node_2 = "cluster1-pxc-2"
+  cluster_name = "cluster1"
   if helm_enabled:
     pxc_users_secret="my-db-pxc-db"
     pxc_node_0 = "my-db-pxc-db-pxc-0"
+    pxc_node_2 = "my-db-pxc-db-pxc-2"
+
+  if not k8s_wait_for_ready(ns, "app.kubernetes.io/component=pxc,app.kubernetes.io/instance={},statefulset.kubernetes.io/pod-name={}".format(cluster_name, pxc_node_2), COMMAND_TIMEOUT*2):
+    raise Exception("cluster node2 is not starting")
+  if not k8s_wait_for_ready(ns, "app.kubernetes.io/component=pxc,app.kubernetes.io/instance={},statefulset.kubernetes.io/pod-name={}".format(cluster_name, pxc_node_0)):
+    raise Exception("cluster node0 is not available")
 
   pwd = extract_secret_password(ns, pxc_users_secret, "root")
   root_cluster_pxc = ["kubectl", "-n", ns, "exec", "-i", pxc_node_0, "-c", "pxc", "--", "env", "LANG=C.utf8", "MYSQL_HISTFILE=/tmp/.mysql_history", "mysql", "-uroot", "-p"+pwd]
   s = subprocess.list2cmdline(root_cluster_pxc) + " < " + subprocess.list2cmdline([sql_file])
   run_fatal(["sh", "-c", s], "Can't apply sql file")
+
+def setup_loki(args):
+  run_helm(args.helm_path, ["helm", "repo", "add", "grafana", "https://grafana.github.io/helm-charts"], "helm repo add problem")
+  run_helm(args.helm_path, ["helm", "install", "loki-stack", "grafana/loki-stack", "--create-namespace", "--namespace", "loki-stack",
+    "--set", "promtail.enabled=true,loki.persistence.enabled=true,loki.persistence.size=1Gi"], "Can't start loki with helm")
+
+def setup_ingress_nginx(args):
+  run_helm(args.helm_path, ["helm", "repo", "add", "nginx-stable", "https://helm.nginx.com/stable"], "helm repo add problem")
+  run_helm(args.helm_path, ["helm", "install", "nginx-ingress", "nginx-stable/nginx-ingress", "--create-namespace", "--namespace", "ingress-nginx"], "Can't start PXC operator with helm")
+  ingress_svc = []
+  if args.pmm:
+    ingress_svc.append("monitoring-service")
+  if args.minio:
+    ingress_svc.append("minio-service")
+  ingress_svc_yaml = """
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: ingress-{svc}
+      annotations:
+        nginx.org/ssl-services: "{svc}"
+    spec:
+      tls:
+      - hosts:
+        - {svc}.default.svc.{cluster_domain}
+        secretName: {svc}-tls
+      rules:
+      - host: {svc}.default.svc.{cluster_domain}
+        http:
+          paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {svc}
+                port:
+                  number: 443
+      ingressClassName: nginx"""
+  for svc in ingress_svc:
+    ingress_yaml_path = str((Path(args.data_path) / "ingress-{}.yaml".format(svc)).resolve())
+    with open(ingress_yaml_path,"w+") as f:
+      f.writelines(ingress_svc_yaml.format(cluster_domain=args.cluster_domain, svc=svc))
+    run_fatal(["kubectl", "apply", "-n", "default", "-f", ingress_yaml_path ], "Can't create ingress resource for {}".format(svc))
 
 
 def populate_db(args):
@@ -504,14 +569,17 @@ def main():
   parser.add_argument('--cluster-domain', dest="cluster_domain", type=str, default="cluster.local")
   parser.add_argument('--pmm', dest="pmm", type=str, default="")
   parser.add_argument('--pmm-password', dest="pmm_password", type=str, default="verysecretpassword1^")
+  parser.add_argument('--pmm-certs', dest="pmm_certs", type=str, default="")
   parser.add_argument('--minio', dest="minio", action='store_true')
   parser.add_argument('--minio-certs', dest="minio_certs", type=str, default="")
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
+  parser.add_argument('--ingress', dest="ingress", type=str, default="")
   parser.add_argument('--sql', dest="sql_file", type=str, default="")
   parser.add_argument('--js', dest="js_file", type=str, default="")
   parser.add_argument('--info-only', dest="info", action='store_true')
   parser.add_argument('--smart-update', dest="smart_update", action='store_true')
   parser.add_argument('--helm', dest="helm", action='store_true')
+  parser.add_argument('--loki', dest="loki", action='store_true')
   args = parser.parse_args()
 
   args.anydbver_path = (Path(__file__).parents[1]).resolve()
@@ -524,13 +592,17 @@ def main():
     args.namespace = get_operator_ns(args.operator_name)
 
   if not args.info:
+    if args.loki:
+      setup_loki(args)
     if args.helm:
       setup_operator_helm(args)
     else:
       setup_operator(args)
+    if args.ingress == "nginx":
+      setup_ingress_nginx(args)
+    if args.sql_file != "":
+      populate_db(args)
 
-  if args.sql_file != "":
-    populate_db(args)
   operator_info(args)
 
   logger.info("Success")

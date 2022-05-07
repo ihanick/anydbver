@@ -158,6 +158,7 @@ deploy_node() {
       get_version "$i"
       K8S_INGRESS_PORT="${VER}"
       K8S_NGINX_INGRESS=--k3s-arg\ "--disable=traefik@server:0"\ -p\ "${K8S_INGRESS_PORT}:443@loadbalancer"
+      K8S_NGINX_INGRESS_RUN="--ingress=nginx"
     fi
     if [[ "$i" == "k8s-pg" || "$i" == "k8s-pg:"* ]] ; then
       get_version "$i"
@@ -182,11 +183,21 @@ deploy_node() {
       get_version "$i"
       K8S_MINIO="--minio"
     fi
+    if [[ "$i" == "loki" ]] ; then
+      K8S_LOKI="--loki"
+    fi
+
     if [[ "$i" == "minio-certs:"* ]] ; then
       get_version "$i"
       MINIO_CERTS_DIR="$VER"
       MINIO_CERTS="--minio-certs=$VER"
     fi
+    if [[ "$i" == "pmm-certs:"* ]] ; then
+      get_version "$i"
+      PMM_CERTS_DIR="$VER"
+      PMM_CERTS="--pmm-certs=$VER"
+    fi
+
     if [[ "$i" == "smart-update" ]] ; then
       K8S_SMART_UPDATE="--smart-update"
     fi
@@ -320,17 +331,9 @@ deploy_node() {
   fi
   if [[ "$K8S_OPERATOR" != "" ]] ; then
     if [[ "$DRY_RUN" != 1 ]] ; then
-      python3 tools/run_k8s_operator.py --operator="$K8S_OPERATOR" --version="$OPERATOR_VERSION" $CERT_MANAGER $K8S_PMM $K8S_MINIO $K8S_SMART_UPDATE $K8S_NAMESPACE $MINIO_CERTS $K8S_CLUSTER_DOMAIN_RUN $K8S_SQL_FILE $K8S_OP_HELM
-      if [[ "$K8S_NGINX_INGRESS" != "" ]] ; then
-        if [[ "$K8S_MINIO" != "" ]] ; then
-          if [[ "$K8S_DOMAIN" != "" ]] ; then
-            bash tools/nginx_ingress.sh $K8S_INGRESS_PORT minio-service default.svc.$K8S_DOMAIN
-            bash tools/nginx_ingress.sh $K8S_INGRESS_PORT monitoring-service default.svc.$K8S_DOMAIN
-          else
-            bash tools/nginx_ingress.sh $K8S_INGRESS_PORT minio-service default.svc.cluster.local
-          fi
-        fi
-      fi
+      python3 tools/run_k8s_operator.py --operator="$K8S_OPERATOR" --version="$OPERATOR_VERSION" $CERT_MANAGER \
+	      $K8S_PMM $K8S_MINIO $K8S_SMART_UPDATE $K8S_NAMESPACE $MINIO_CERTS $PMM_CERTS \
+	      $K8S_CLUSTER_DOMAIN_RUN $K8S_SQL_FILE $K8S_OP_HELM $K8S_NGINX_INGRESS_RUN $K8S_LOKI
     fi
   fi
 
