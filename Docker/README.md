@@ -161,6 +161,9 @@ mysql> show slave hosts;
 
 # Deploy PXC operator and cluster with percona helm charts
 ./anydbver deploy k3d k8s-pxc:1.10.0 world
+
+# install Loki to see k8s logs (including PXC)
+./anydbver deploy k3d k8s-minio k8s-pxc:1.10.0 k8s-pmm:2.27.0 cert-manager k8s-cluster-domain:percona.local minio-certs:self-signed pmm-certs:self-signed nginx-ingress:9443 loki
 ```
 
 Run two clusters in different namespaces:

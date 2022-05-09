@@ -208,6 +208,35 @@ def run_helm(helm_path, cmd, msg):
   logger.info(environ_txt)
   run_fatal(cmd, msg, ignore_msg="cannot re-use a name that is still in use", env=helm_env)
 
+def gen_self_signed_cert(args, svc_fqdn, ns, svc_name, cert_name):
+  cert_yaml_path = str((Path(args.data_path) / (cert_name+".yaml")).resolve())
+  os.makedirs(args.data_path, exist_ok=True)
+  cert_yaml = """apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigning-issuer
+spec:
+  selfSigned: {{}}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {svc_name}-tls
+spec:
+  commonName: {svc_fqdn}
+  secretName: {svc_name}-tls
+  dnsNames:
+    # Ingress domain
+    - {svc_fqdn}
+    # Internal domain
+    - {svc_name}.{ns}.svc.{cluster_domain}
+  issuerRef:
+    name: selfsigning-issuer""".format(svc_fqdn=svc_fqdn, svc_name=svc_name, ns=ns, cluster_domain=args.cluster_domain)
+  with open(cert_yaml_path,"w+") as f:
+            f.writelines(cert_yaml)
+
+  run_fatal(["kubectl", "apply", "-f", cert_yaml_path], "Can't create {} certificates".format(svc_name))
+
 def run_pmm_server(args, helm_path, pmm_version, pmm_password):
   tls_key_path = Path(args.anydbver_path) / args.pmm_certs / "tls.key"
   tls_crt_path = Path(args.anydbver_path) / args.pmm_certs / "tls.crt"
@@ -218,8 +247,7 @@ def run_pmm_server(args, helm_path, pmm_version, pmm_password):
       and tls_crt_path.is_file())
 
   if args.cert_manager != "" and args.pmm_certs == "self-signed":
-    run_fatal(["kubectl", "apply", "-f", str((Path(args.conf_path) / "pmm-certs.yaml").resolve())],
-        "Can't create pmm certificates")
+    gen_self_signed_cert(args, "pmm." + args.cluster_domain, "default", "monitoring-service", "pmm-certs")
   elif args.pmm_custom_ssl:
     run_fatal(["kubectl", "create", "secret", "tls", "monitoring-service-tls",
       "--key="+str(tls_key_path.resolve()),
@@ -267,8 +295,7 @@ def run_minio_server(args):
       and tls_crt_path.is_file())
 
   if args.cert_manager != "" and args.minio_certs == "self-signed":
-    run_fatal(["kubectl", "apply", "-f", str((Path(args.conf_path) / "minio-certs.yaml").resolve())],
-        "Can't create minio certificates")
+    gen_self_signed_cert(args, "s3." + args.cluster_domain, "default", "minio-service", "minio-certs")
   elif args.minio_custom_ssl:
     run_fatal(["kubectl", "create", "secret", "tls", "minio-service-tls",
       "--key="+str(tls_key_path.resolve()),
@@ -533,7 +560,9 @@ def setup_loki(args):
 
 def setup_ingress_nginx(args):
   run_helm(args.helm_path, ["helm", "repo", "add", "nginx-stable", "https://helm.nginx.com/stable"], "helm repo add problem")
-  run_helm(args.helm_path, ["helm", "install", "nginx-ingress", "nginx-stable/nginx-ingress", "--create-namespace", "--namespace", "ingress-nginx"], "Can't start PXC operator with helm")
+  run_helm(args.helm_path, ["helm", "install", "nginx-ingress", "nginx-stable/nginx-ingress",
+    "--create-namespace", "--namespace", "ingress-nginx",
+    "--set", "controller.service.httpsPort.port={}".format(args.ingress_port)], "Can't start PXC operator with helm")
   ingress_svc = []
   if args.pmm:
     ingress_svc.append("monitoring-service")
@@ -599,6 +628,7 @@ def main():
   parser.add_argument('--minio-certs', dest="minio_certs", type=str, default="")
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
   parser.add_argument('--ingress', dest="ingress", type=str, default="")
+  parser.add_argument('--ingress-port', dest="ingress_port", type=int, default=443)
   parser.add_argument('--sql', dest="sql_file", type=str, default="")
   parser.add_argument('--js', dest="js_file", type=str, default="")
   parser.add_argument('--info-only', dest="info", action='store_true')
