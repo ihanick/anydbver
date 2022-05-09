@@ -11,6 +11,7 @@ import sys
 from distutils.version import StrictVersion
 import argparse
 import base64
+import urllib
 
 COMMAND_TIMEOUT=600
 
@@ -57,6 +58,19 @@ def k8s_wait_for_ready(ns, labels, timeout=COMMAND_TIMEOUT):
     if (datetime.datetime.now() - s).total_seconds() < 1.5:
       time.sleep(2)
   return False
+
+def wait_for_success(cmd_with_args, fail_with_msg,ignore_error_pattern, timeout=COMMAND_TIMEOUT):
+  logger.info("Waiting for: {}".format(subprocess.list2cmdline(cmd_with_args)))
+  for i in range(timeout // 2):
+    s = datetime.datetime.now()
+    if run_fatal(cmd_with_args,
+        fail_with_msg,
+        ignore_error_pattern, False) == 0:
+      return True
+    if (datetime.datetime.now() - s).total_seconds() < 1.5:
+      time.sleep(2)
+  return False
+
 
 def k8s_check_ready(ns, labels):
   if run_fatal(["kubectl", "wait", "--for=condition=ready", "-n", ns, "pod", "-l", labels],
@@ -228,7 +242,18 @@ def run_pmm_server(args, helm_path, pmm_version, pmm_password):
       "exec", "-it", "monitoring-0", "--", "bash", "-c",
       "grafana-cli --homepath /usr/share/grafana --configOverrides cfg:default.paths.data=/srv/grafana admin reset-admin-password \"$ADMIN_PASSWORD\""],
       "can't fix pmm password")
-
+  if args.loki:
+    pass_encoded = urllib.parse.quote_plus(pmm_password)
+    wait_for_success
+    if not wait_for_success(["kubectl", "-n", "default",
+      "exec", "-it", "monitoring-0", "--", "bash", "-c",
+      "curl 'http://admin:"+pass_encoded +"""@127.0.0.1:3000/api/datasources' -X POST -H 'Content-Type: application/json;charset=UTF-8' """
+      +"""--data-binary '{ "orgId": 1, "name": "Loki", "type": "loki", "typeLogoUrl": "", "access": "proxy", """
+      +""""url": "http://loki-stack.loki-stack.svc."""+args.cluster_domain+""":3100", "password": "","""
+      +""" "user": "", "database": "", "basicAuth": false, "basicAuthUser": "", "basicAuthPassword": "", "withCredentials": false,"""
+      +""" "isDefault": false, "jsonData": {}, "secureJsonFields": {}, "version": 1, "readOnly": false }'"""],
+      "can't setup loki datasource", r"Connection refused"):
+      raise Exception("Can't setup loki in PMM")
 
 def run_minio_server(args):
   tls_key_path = Path(args.anydbver_path) / args.minio_certs / "tls.key"
