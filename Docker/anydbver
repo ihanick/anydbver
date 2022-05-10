@@ -329,9 +329,12 @@ deploy_node() {
       tools/k3d cluster create -i rancher/k3s:$K3S_VER --network "$NET" -a $K8S_AGENTS $USER-cluster1 $K8S_CLUSTER_DOMAIN $K8S_NGINX_INGRESS
     fi
   fi
-  if [[ "$K8S_OPERATOR" != "" ]] ; then
+  if [[ "$K8S_OPERATOR" != "" || "$K8S_PMM" != "" || "$K8S_MINIO" != "" || "$K8S_LOKI" != "" || "$CERT_MANAGER" != "" || "$K8S_NGINX_INGRESS_RUN" != "" ]] ; then
     if [[ "$DRY_RUN" != 1 ]] ; then
-      python3 tools/run_k8s_operator.py --operator="$K8S_OPERATOR" --version="$OPERATOR_VERSION" $CERT_MANAGER \
+      if [[ "$K8S_OPERATOR" != "" ]] ; then
+        K8S_OPERATOR_CMD="--operator=$K8S_OPERATOR"
+      fi
+      python3 tools/run_k8s_operator.py $K8S_OPERATOR_CMD --version="$OPERATOR_VERSION" $CERT_MANAGER \
 	      $K8S_PMM $K8S_MINIO $K8S_SMART_UPDATE $K8S_NAMESPACE $MINIO_CERTS $PMM_CERTS \
 	      $K8S_CLUSTER_DOMAIN_RUN $K8S_SQL_FILE $K8S_OP_HELM $K8S_NGINX_INGRESS_RUN $K8S_LOKI
     fi

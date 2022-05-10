@@ -477,6 +477,12 @@ def setup_operator(args):
   if args.pmm != "":
     run_pmm_server(args, args.helm_path, args.pmm, args.pmm_password)
 
+  if args.minio:
+    run_minio_server(args)
+
+  if args.operator_name == "":
+    return
+
   prepare_operator_repository(data_path.resolve(), args.operator_name, args.operator_version)
   if not args.smart_update:
     merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), str((Path(args.conf_path) / "cr-smart-update.yaml").resolve()) )
@@ -489,9 +495,7 @@ def setup_operator(args):
   enable_pmm(args)
 
   if args.minio:
-    run_minio_server(args)
     enable_minio(args)
-
 
   if args.operator_name == "percona-postgresql-operator":
     run_pg_operator(args.namespace, args.operator_name)
@@ -617,7 +621,7 @@ def operator_info(args):
 
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument("--operator", dest="operator_name", type=str, default="percona-postgresql-operator")
+  parser.add_argument("--operator", dest="operator_name", type=str, default="")
   parser.add_argument("--version", dest="operator_version", type=str, default="1.1.0")
   parser.add_argument('--cert-manager', dest="cert_manager", type=str, default="")
   parser.add_argument('--cluster-domain', dest="cluster_domain", type=str, default="cluster.local")
