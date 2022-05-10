@@ -9,8 +9,8 @@ The replication/clusters setup is configured with sidecar/init containers.
 * Install Docker or Podman or setup kubectl with desired default namespace
 * Clone anydbver repository
 ```
-git clone --branch docker-podman-k8s https://github.com/ihanick/anydbver.git anydbver-docker
-cd ./anydbver-docker
+git clone https://github.com/ihanick/anydbver.git anydbver
+cd ./anydbver/Docker
 ```
 
 ## MySQL and Percona Server
