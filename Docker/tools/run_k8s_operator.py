@@ -197,11 +197,11 @@ def get_operator_ns(operator_name):
   return "default"
 
 def run_helm(helm_path, cmd, msg):
-  run_fatal(["mkdir", "-p", helm_path / "cache", helm_path / "config", helm_path / "data"], "can't create directories for helm")
+  run_fatal(["mkdir", "-p", str(helm_path / "cache"), str(helm_path / "config"), str(helm_path / "data")], "can't create directories for helm")
   helm_env = os.environ.copy()
-  helm_env["HELM_CACHE_HOME"] = (helm_path / 'cache').resolve()
-  helm_env["HELM_CONFIG_HOME"] = (helm_path / 'config').resolve()
-  helm_env["HELM_DATA_HOME"] = (helm_path / 'data').resolve()
+  helm_env["HELM_CACHE_HOME"] = str((helm_path / 'cache').resolve())
+  helm_env["HELM_CONFIG_HOME"] = str((helm_path / 'config').resolve())
+  helm_env["HELM_DATA_HOME"] = str((helm_path / 'data').resolve())
   environ_txt = "export"
   for key in ("HELM_CACHE_HOME","HELM_CONFIG_HOME","HELM_DATA_HOME"):
       environ_txt = environ_txt + " " + key + "=" + subprocess.list2cmdline([helm_env[key] ])
