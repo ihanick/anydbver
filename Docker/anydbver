@@ -327,6 +327,7 @@ deploy_node() {
 
       # INGRESS_PORTS="--api-port 6550 --k3s-arg "--disable=traefik@server:0" --port "80:80@loadbalancer" --port "443:443@loadbalancer" --port "3306:3306@loadbalancer" --api-port 0.0.0.0:6550 --wait"
       tools/k3d cluster create -i rancher/k3s:$K3S_VER --network "$NET" -a $K8S_AGENTS $USER-cluster1 $K8S_CLUSTER_DOMAIN $K8S_NGINX_INGRESS
+      kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
     fi
   fi
   if [[ "$K8S_OPERATOR" != "" || "$K8S_PMM" != "" || "$K8S_MINIO" != "" || "$K8S_LOKI" != "" || "$CERT_MANAGER" != "" || "$K8S_NGINX_INGRESS_RUN" != "" ]] ; then
