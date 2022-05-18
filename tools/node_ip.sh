@@ -1,5 +1,5 @@
 #!/bin/bash
-DEV=$(/sbin/ip ro ls | grep default | cut -d' ' -f 5)
+DEV=$(/sbin/ip ro ls | grep default | head -n 1 | cut -d' ' -f 5)
 if [ "x$DEV" == "x" ] ; then
   echo "127.0.0.1"
   exit 1

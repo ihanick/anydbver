@@ -330,6 +330,10 @@ NAMESPACE=''
 SHARED_DIRECTORY=0
 DRY_RUN=0
 
+if [ "x$1" = "xdeploy" ] && [ "x$2" = "x--dry-run"  ] ; then
+  DRY_RUN=1
+fi
+
 opts=$(getopt \
     --longoptions "dry-run,destroy,namespace:,provider:,os:,shared-directory" \
     --name "$(basename "$0")" \
@@ -2061,6 +2065,11 @@ if [ "x$1" = "xdeploy" ] ; then
   declare -A ALL_NODES
   ALL_NODES[$NODE]=1
   shift
+
+  if [[ "$1" == "--dry-run" ]] ; then
+    DRY_RUN=1
+    shift
+  fi
 
   if [[ "$1" == default ]] || [[ "$1" == node0 ]] ; then
     shift
