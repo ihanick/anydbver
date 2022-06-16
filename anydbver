@@ -2171,6 +2171,7 @@ if [ "x$1" = "xdeploy" ] ; then
 fi
 
 if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] || [ "x$1" = "xreplace" ] ; then
+  CMD_NAME="$1"
   ADD_CMD=0
   REPLACE_CMD=0
 
@@ -2195,6 +2196,9 @@ if [ "x$1" = "xadd" ] || [ "x$1" = "xapply" ] || [ "x$1" = "xreplace" ] ; then
   if [[ "$1" == default ]] || [[ "$1" == node* ]] ; then
     NODE=$1
     shift
+  else
+    echo "Please specify node to $CMD_NAME. '$1' should be 'default' or 'nodeN'"
+    exit 1
   fi
   declare -A ALL_NODES
   ALL_NODES[$NODE]=1
