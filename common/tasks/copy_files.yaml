@@ -1,5 +1,7 @@
 - file: path=/vagrant state=directory mode='0755'
-- synchronize: src="{{playbook_dir}}/tools/" dest="/vagrant/tools"
-- synchronize: src="{{playbook_dir}}/configs/" dest="/vagrant/configs"
-- synchronize: src="{{playbook_dir}}/secret/" dest="/vagrant/secret"
+- file: path=/vagrant/Docker state=directory mode='0755'
+- synchronize: src="{{playbook_dir}}/tools/" dest="/vagrant/tools" use_ssh_args=yes
+- synchronize: src="{{playbook_dir}}/configs/" dest="/vagrant/configs" use_ssh_args=yes
+- synchronize: src="{{playbook_dir}}/secret/" dest="/vagrant/secret" use_ssh_args=yes
+- synchronize: src="{{playbook_dir}}/Docker/tools/" dest="/vagrant/Docker/tools" use_ssh_args=yes
 - package: name="iproute{{ '' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'Rocky') else '2' }}" state=present
