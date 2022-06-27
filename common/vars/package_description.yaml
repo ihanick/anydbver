@@ -431,6 +431,8 @@ el7:
       - Percona-Server-57-debuginfo-{{ percona_server_version }}.el7.x86_64
     rocksdb_packages:
       - Percona-Server-rocksdb-57-{{ percona_server_version }}.el7.x86_64
+    tests_packages:
+      - Percona-Server-test-57-{{        percona_server_version }}.el7.x86_64
   ps80:
     repo_file: "/etc/yum.repos.d/percona-ps-80-release.repo"
     repo_enable_str: "ps-80"
@@ -445,9 +447,11 @@ el7:
       - gdb
       - "{{ percona_mysql_name }}-debuginfo{{ percona_mysql_full_ver }}"
     mysql_shell_packages:
-      - "https://www.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}/binary/redhat/7/x86_64/percona-mysql-shell-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}-1.el7.x86_64.rpm"
+      - "https://www.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}/binary/redhat/7/x86_64/percona-mysql-shell-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}-{{ 2 if percona_server_version | regex_search('^8\\.0\\.2[7-9]') else 1 }}.el7.x86_64.rpm"
     rocksdb_packages:
       - "{{ percona_mysql_name }}-rocksdb{{ percona_mysql_full_ver }}"
+    tests_packages:
+      - "{{ percona_mysql_name }}-test{{ percona_mysql_full_ver }}"
   pxc56:
     systemd_service: "mysql"
     cnf_file: "/etc/my.cnf"

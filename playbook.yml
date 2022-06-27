@@ -11,6 +11,7 @@
       }}
     percona_server_version: "{{ lookup('vars', 'extra_percona_server_version', default=lookup('env', 'PS', default='') ) }}"
     rocksdb_enabled: "{{ lookup('vars', 'extra_rocksdb_enabled', default=lookup('env', 'ROCKSDB', default='') ) }}"
+    tests_enabled: "{{ lookup('vars', 'extra_tests_enabled', default=lookup('env', 'TESTS', default='') ) }}"
     percona_xtrabackup_version: "{{ lookup('vars', 'extra_percona_xtrabackup_version', default=lookup('env','PXB',default='') ) }}"
     percona_xtradb_cluster_version: "{{ lookup('vars', 'extra_percona_xtradb_cluster_version', default=lookup('env','PXC',default='') ) }}"
     percona_xtradb_cluster_galera: "{{ lookup('vars', 'extra_percona_xtradb_cluster_galera', default=lookup('env','PXC_GALERA',default='') ) }}"
@@ -25,6 +26,7 @@
     vault_version: "{{ lookup('vars', 'extra_percona_vault_version', default=lookup('env', 'VAULT', default='') ) }}"
     percona_postgresql_version: "{{ lookup('vars', 'extra_percona_postgresql_version', default=lookup('env', 'PPGSQL', default='') ) }}"
     percona_postgresql_version2: "{{ lookup('vars', 'extra_percona_postgresql_version2', default=lookup('env', 'PPGSQL2', default='') ) }}"
+    python3_pg_version: "{{ lookup('vars', 'extra_python3_pg_version', default=lookup('env', 'PG_PYTHON3', default='') ) }}"
     pg_logical_db: "{{ lookup('vars', 'extra_pg_logical_db', default=lookup('env', 'PG_LOGICAL_DB', default='') ) }}"
     pg_stat_monitor: "{{ lookup('vars', 'extra_pg_stat_monitor', default=lookup('env', 'PG_STAT_MONITOR', default='') ) }}"
     patroni_version: "{{ lookup('vars', 'extra_percona_patroni_version', default=lookup('env', 'PATRONI', default='') ) }}"
