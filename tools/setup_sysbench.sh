@@ -5,6 +5,7 @@ PASS="$3"
 CONCURRENCY=$(grep -c ^processor /proc/cpuinfo)
 
 if [ "x$DB" == "xpg" ] ; then
+  export PGPASSWORD="$PASS"
   USR="postgres"
   psql -U $USR -h $DBHOST <<EOF
 CREATE USER sbtest WITH PASSWORD '$PASS';
