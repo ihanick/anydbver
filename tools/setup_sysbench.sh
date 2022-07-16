@@ -6,6 +6,7 @@ CONCURRENCY=$(grep -c ^processor /proc/cpuinfo)
 
 if [ "x$DB" == "xpg" ] ; then
   export PGPASSWORD="$PASS"
+  unset PGHOSTADDR
   USR="postgres"
   psql -U $USR -h $DBHOST <<EOF
 CREATE USER sbtest WITH PASSWORD '$PASS';
@@ -21,6 +22,7 @@ EOF
     /usr/share/sysbench/oltp_read_write.lua prepare
   cat > /usr/local/bin/run_sysbench.sh <<EOF
 #!/bin/bash
+unset PGHOSTADDR
 sysbench \
   --db-driver=pgsql \
   --table-size=100000 \
@@ -45,6 +47,7 @@ EOF
 
   cat > /usr/local/bin/run_sysbench.sh <<EOF
 #!/bin/bash
+unset PGHOSTADDR
 sysbench \
   --db-driver=mysql \
   --table-size=100000 \
