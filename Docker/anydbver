@@ -170,6 +170,11 @@ deploy_node() {
       K8S_OPERATOR=percona-xtradb-cluster-operator
       OPERATOR_VERSION="${VER:-1.10.0}"
     fi
+    if [[ "$i" == "k8s-ps" || "$i" == "k8s-ps:"* ]] ; then
+      get_version "$i"
+      K8S_OPERATOR=percona-server-mysql-operator
+      OPERATOR_VERSION="${VER:-0.1.0}"
+    fi
     if [[ "$i" == "k8s-mongo" || "$i" == "k8s-mongo:"* ]] ; then
       get_version "$i"
       K8S_OPERATOR=percona-server-mongodb-operator

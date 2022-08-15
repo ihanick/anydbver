@@ -2,7 +2,7 @@
 unset LC_CTYPE
 :> test-run.log
 
-OS_LIST=(el7 el8 oel7 oel8 stretch buster bionic focal)
+OS_LIST=(el7 el8 oel7 oel8 rocky8 stretch buster bionic focal)
 START_STEP=0
 
 opts=$(getopt \

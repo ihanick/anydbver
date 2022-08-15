@@ -121,6 +121,7 @@ def info_pg_operator(ns):
 
 def run_pg_operator(ns, op):
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
+  run_fatal(["sed", "-i", "-re", r's/namespace: "pgo"/namespace: "{}"/'.format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/cr.yaml"], "fix namespace in yaml")
   run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/operator.yaml"], "Can't deploy operator")
   if not k8s_wait_for_ready(ns, "name=postgres-operator"):
@@ -131,7 +132,7 @@ def run_pg_operator(ns, op):
     raise Exception("cluster is not starting")
 
 def op_labels(op, op_ver):
-  if op in ("percona-xtradb-cluster-operator", "pxc-operator") and StrictVersion(op_ver) > StrictVersion("1.6.0"):
+  if (op in ("percona-xtradb-cluster-operator", "pxc-operator") and StrictVersion(op_ver) > StrictVersion("1.6.0") ) or op == "percona-server-mysql-operator":
     return "app.kubernetes.io/name="+op
   else:
     return "name="+op
@@ -139,6 +140,8 @@ def op_labels(op, op_ver):
 def cluster_labels(op, op_ver):
   if op == "percona-xtradb-cluster-operator":
     return "app.kubernetes.io/instance=cluster1,app.kubernetes.io/component=pxc"
+  elif op == "percona-server-mysql-operator":
+    return "app.kubernetes.io/instance=cluster1,app.kubernetes.io/component=percona-server"
   elif op == "percona-server-mongodb-operator":
     return "app.kubernetes.io/instance=my-cluster-name,app.kubernetes.io/component=mongod"
 
@@ -157,7 +160,7 @@ def cert_manager_ver_compat(operator_name, operator_version, cert_manager):
     logger.info("Downgrading cert manager version to v1.5.5 supported by {} {}".format(operator_name, operator_version))
     return "1.5.5"
   else:
-    return "1.7.2"
+    return cert_manager
 
 def run_cert_manager(ver):
   run_fatal(["kubectl", "apply", "-f", "https://github.com/cert-manager/cert-manager/releases/download/v{}/cert-manager.crds.yaml".format(ver)], "Can't deploy cert-manager.crds.yaml:"+ver)
@@ -484,7 +487,7 @@ def setup_operator(args):
     return
 
   prepare_operator_repository(data_path.resolve(), args.operator_name, args.operator_version)
-  if not args.smart_update:
+  if not args.smart_update and args.operator_name not in ("percona-server-mysql-operator"):
     merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), str((Path(args.conf_path) / "cr-smart-update.yaml").resolve()) )
 
   if not k8s_wait_for_ready('kube-system', 'k8s-app=kube-dns'):
@@ -499,7 +502,7 @@ def setup_operator(args):
 
   if args.operator_name == "percona-postgresql-operator":
     run_pg_operator(args.namespace, args.operator_name)
-  elif args.operator_name in ("percona-server-mongodb-operator", "percona-xtradb-cluster-operator"):
+  elif args.operator_name in ("percona-server-mongodb-operator", "percona-xtradb-cluster-operator", "percona-server-mysql-operator"):
     run_percona_operator(args.namespace, args.operator_name, args.operator_version)
 
 def extract_secret_password(ns, secret, user):

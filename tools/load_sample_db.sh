@@ -1,5 +1,6 @@
 #!/bin/bash
 DB="$1"
+mysql -e "SET GLOBAL pxc_strict_mode=PERMISSIVE;" && true
 if [[ $DB == "world" ]] ; then
   mkdir -p /root/sampledb/world
   curl -sL https://downloads.mysql.com/docs/world-db.tar.gz |tar -C /root/sampledb/world/ --strip-components 1 -xz
