@@ -112,17 +112,18 @@ def prepare_operator_repository(data_path, operator_name, operator_version):
 def get_containers_list(ns,labels):
   return list(run_get_line(["kubectl", "get", "pods", "-n", ns, "-l", labels, "-o", r'jsonpath={range .items[*]}{.metadata.name }{"\n"}{end}'], "Can't get pod name").splitlines())
 
-def info_pg_operator(ns):
-  print("kubectl -n {} get PerconaPGCluster cluster1".format(subprocess.list2cmdline([ns])))
-  for container in get_containers_list(ns,"name=cluster1") + get_containers_list(ns,"name=cluster1-replica"):
+def info_pg_operator(ns,cluster_name):
+  print("kubectl -n {} get PerconaPGCluster {}".format(subprocess.list2cmdline([ns]), subprocess.list2cmdline([cluster_name])))
+  for container in get_containers_list(ns,"name={}".format(cluster_name)) + get_containers_list(ns,"name={}-replica".format(cluster_name)):
     if container != "":
       print("kubectl -n {} exec -it {} -- env PSQL_HISTORY=/tmp/.psql_history psql -U postgres".format(
         subprocess.list2cmdline([ns]), container))
 
-def run_pg_operator(ns, op):
+def run_pg_operator(ns, op, db_ver):
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r's/namespace: "pgo"/namespace: "{}"/'.format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/cr.yaml"], "fix namespace in yaml")
+  run_fatal(["sed", "-i", "-re", r"s/ppg[0-9.]+/ppg{}/".format(db_ver), "./deploy/cr.yaml"], "change PG major version")
   run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/operator.yaml"], "Can't deploy operator")
   if not k8s_wait_for_ready(ns, "name=postgres-operator"):
     raise Exception("Kubernetes operator is not starting")
@@ -460,16 +461,29 @@ def setup_operator_helm(args):
   if args.operator_name == "percona-xtradb-cluster-operator":
     run_helm(args.helm_path, ["helm", "repo", "add", "percona", "https://percona.github.io/percona-helm-charts/"], "helm repo add problem")
     run_helm(args.helm_path, ["helm", "install", "my-operator", "percona/pxc-operator", "--version", args.operator_version, "--namespace", args.namespace], "Can't start PXC operator with helm")
-    cluster_name="my-db"
+    args.cluster_name="my-db"
     if not k8s_wait_for_ready(args.namespace, op_labels("pxc-operator", args.operator_version)):
       raise Exception("Kubernetes operator is not starting")
     pxc_helm_install_cmd = ["helm", "install", cluster_name, "percona/pxc-db", "--namespace", args.namespace]
     if args.cert_manager:
       pxc_helm_install_cmd.extend(["--set", "pxc.certManager=true"])
     run_helm(args.helm_path, pxc_helm_install_cmd, "Can't start PXC with helm")
-    if not k8s_wait_for_ready(args.namespace, "app.kubernetes.io/component=pxc,app.kubernetes.io/instance={}-pxc-db".format(cluster_name)):
+    args.cluster_name="{}-pxc-db".format(args.cluster_name)
+    if not k8s_wait_for_ready(args.namespace, "app.kubernetes.io/component=pxc,app.kubernetes.io/instance={}".format(args.cluster_name)):
       raise Exception("cluster is not starting")
-
+  if args.operator_name == "percona-postgresql-operator":
+    run_helm(args.helm_path, ["helm", "repo", "add", "percona", "https://percona.github.io/percona-helm-charts/"], "helm repo add problem")
+    run_helm(args.helm_path, ["helm", "install", "my-operator", "percona/pg-operator",
+        "--version", args.operator_version, "--namespace", args.namespace,
+        "--create-namespace", "--timeout", "{}s".format(COMMAND_TIMEOUT)], "Can't start Percona Postgresql operator with helm")
+    args.cluster_name="my-db"
+    if not k8s_wait_for_ready(args.namespace, op_labels("postgres-operator", args.operator_version)):
+      raise Exception("Kubernetes operator is not starting")
+    pg_helm_install_cmd = ["helm", "install", args.cluster_name, "percona/pg-db", "--namespace", args.namespace, "--timeout", "{}s".format(COMMAND_TIMEOUT)]
+    run_helm(args.helm_path, pg_helm_install_cmd, "Can't start Postgresql with helm")
+    args.cluster_name="{}-pg-db".format(args.cluster_name)
+    if not k8s_wait_for_ready(args.namespace, "name={}".format(args.cluster_name)):
+      raise Exception("cluster is not starting")
 
 def setup_operator(args):
   data_path = Path(__file__).parents[1] / 'data' / 'k8s'
@@ -501,7 +515,7 @@ def setup_operator(args):
     enable_minio(args)
 
   if args.operator_name == "percona-postgresql-operator":
-    run_pg_operator(args.namespace, args.operator_name)
+    run_pg_operator(args.namespace, args.operator_name, args.db_version)
   elif args.operator_name in ("percona-server-mongodb-operator", "percona-xtradb-cluster-operator", "percona-server-mysql-operator"):
     run_percona_operator(args.namespace, args.operator_name, args.operator_version)
 
@@ -618,7 +632,7 @@ def operator_info(args):
   if args.operator_name == "percona-server-mongodb-operator":
     info_mongo_operator(args.namespace)
   if args.operator_name == "percona-postgresql-operator":
-    info_pg_operator(args.namespace)
+    info_pg_operator(args.namespace, args.cluster_name)
   if args.operator_name == "percona-xtradb-cluster-operator":
     info_pxc_operator(args.namespace, args.helm)
 
@@ -626,6 +640,7 @@ def main():
   parser = argparse.ArgumentParser()
   parser.add_argument("--operator", dest="operator_name", type=str, default="")
   parser.add_argument("--version", dest="operator_version", type=str, default="1.1.0")
+  parser.add_argument("--db-version", dest="db_version", type=str, default="")
   parser.add_argument('--cert-manager', dest="cert_manager", type=str, default="")
   parser.add_argument('--cluster-domain', dest="cluster_domain", type=str, default="cluster.local")
   parser.add_argument('--pmm', dest="pmm", type=str, default="")
