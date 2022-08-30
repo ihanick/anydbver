@@ -11,7 +11,7 @@
       git clone -b {{'v' if percona_k8s_op_version | regex_search('^[0-9]+') else ''}}{{ percona_k8s_op_version }} https://github.com/percona/{{ percona_k8s_op_name }}.git;
       cd {{ percona_k8s_op_name }};
       until kubectl wait --for=condition=ready -n kube-system pod -l k8s-app=kube-dns &>/dev/null;do sleep 2;done;
-      kubectl apply -f deploy/bundle.yaml;
+      kubectl apply --server-side=true -f deploy/bundle.yaml;
       kubectl apply -f deploy/secrets.yaml;
       kubectl apply -f deploy/backup-s3.yaml;
       until

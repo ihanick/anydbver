@@ -822,6 +822,7 @@ EOF
   cat > .version-info/pko4ps.txt <<EOF
 main
 0.1.0
+0.2.0
 EOF
   cat > .version-info/pko4pxc.txt <<EOF
 master
