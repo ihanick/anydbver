@@ -135,8 +135,10 @@ def run_pg_operator(ns, op, db_ver):
 def op_labels(op, op_ver):
   if (op in ("percona-xtradb-cluster-operator", "pxc-operator") and StrictVersion(op_ver) > StrictVersion("1.6.0") ):
     return "app.kubernetes.io/name="+op
-  elif op == "percona-server-mysql-operator":
+  elif op == "ps-operator":
     return "app.kubernetes.io/name=ps-operator"
+  elif op == "percona-server-mysql-operator":
+    return "app.kubernetes.io/name=percona-server-mysql-operator"
   else:
     return "name="+op
 
@@ -144,12 +146,12 @@ def cluster_labels(op, op_ver):
   if op == "percona-xtradb-cluster-operator":
     return "app.kubernetes.io/instance=cluster1,app.kubernetes.io/component=pxc"
   elif op == "percona-server-mysql-operator":
-    return "app.kubernetes.io/instance=cluster1,app.kubernetes.io/component=percona-server"
+    return "statefulset.kubernetes.io/pod-name=cluster1-mysql-0"
   elif op == "percona-server-mongodb-operator":
     return "app.kubernetes.io/instance=my-cluster-name,app.kubernetes.io/component=mongod"
 
 def run_percona_operator(ns, op, op_ver):
-  run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator", ignore_msg=r"is invalid: status.storedVersions\[[0-9]+\]: Invalid value")
+  run_fatal(["kubectl", "apply", "--server-side=true", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator", ignore_msg=r"is invalid: status.storedVersions\[[0-9]+\]: Invalid value")
   if not k8s_wait_for_ready(ns, op_labels(op, op_ver)):
     raise Exception("Kubernetes operator is not starting")
   run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/cr.yaml"], "Can't deploy cluster")
@@ -477,7 +479,7 @@ def setup_operator_helm(args):
     run_helm(args.helm_path, ["helm", "repo", "add", "percona", "https://percona.github.io/percona-helm-charts/"], "helm repo add problem")
     run_helm(args.helm_path, ["helm", "install", "my-operator", "percona/ps-operator", "--version", args.operator_version, "--namespace", args.namespace], "Can't start PS MySQL operator with helm")
     args.cluster_name="my-db"
-    if not k8s_wait_for_ready(args.namespace, op_labels("percona-server-mysql-operator", args.operator_version)):
+    if not k8s_wait_for_ready(args.namespace, op_labels("ps-operator", args.operator_version)):
       raise Exception("Kubernetes operator is not starting")
     ps_helm_install_cmd = ["helm", "install", args.cluster_name, "percona/ps-db", "--namespace", args.namespace]
     run_helm(args.helm_path, ps_helm_install_cmd, "Can't start PS MySQL with helm")
