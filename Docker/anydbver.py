@@ -92,21 +92,34 @@ def deploy(args, node_actions):
           run_k8s_operator_cmd.append("--ingress-port={}".format(node.ingress_port))
         k3d_create_cmd.append(cluster)
         run_fatal(k3d_create_cmd, "Can't create k3d cluster")
-        run_fatal(["sh", "-c", "kubectl get sc local-path -o yaml | sed -e 's/name: local-path/name: standard/g' -e '/(uid|creationTimestamp|resourceVersion):/d' | kubectl apply -f -"], "Can't create 'standard' storage class for local-path provisioner")
+        run_fatal(["sh", "-c", """kubectl get sc local-path -o yaml | sed -r -e 's/name: local-path/name: standard/g' -e '/(uid|creationTimestamp|resourceVersion):/d' -e 's/is-default-class: "true"/is-default-class: "false"/' | kubectl apply -f -"""], "Can't create 'standard' storage class for local-path provisioner")
         args.provider = "kubectl"
         #run_fatal(["kubectl", "apply", "-f", "https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml"], "Can't install metrics server")
         
     if args.provider == "kubectl":
       if node.helm:
         run_k8s_operator_cmd.append("--helm")
+      if node.k8s_pxc:
+        logger.info("Starting PXC in kubernetes managed by Percona operator {}".format(node.k8s_pxc))
+        run_k8s_operator_cmd.append("--operator=percona-xtradb-cluster-operator")
+        run_k8s_operator_cmd.append("--version={}".format(node.k8s_pxc))
+        if node.db_version:
+          run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
       if node.k8s_pg:
         logger.info("Starting postgresql in kubernetes managed by Percona operator {}".format(node.k8s_pg))
         run_k8s_operator_cmd.append("--operator=percona-postgresql-operator")
         run_k8s_operator_cmd.append("--version={}".format(node.k8s_pg))
         if node.db_version:
           run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
+      if node.k8s_ps:
+        logger.info("Starting Percona Server for MySQL in kubernetes managed by Percona operator {}".format(node.k8s_ps))
+        run_k8s_operator_cmd.append("--operator=percona-server-mysql-operator")
+        run_k8s_operator_cmd.append("--version={}".format(node.k8s_ps))
+        if node.db_version:
+          run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
 
-      if node.ingress_port or node.k8s_pg:
+
+      if node.ingress_port or node.k8s_pg or node.k8s_pxc or node.k8s_ps:
         run_fatal(run_k8s_operator_cmd, "Can't run the operator")
 
 def detect_provider(args):
@@ -176,6 +189,8 @@ def parse_node(args):
   parser.add_argument('--k3d', type=str, nargs='?')
   parser.add_argument('--helm', type=str, nargs='?')
   parser.add_argument('--k8s-pg', dest="k8s_pg", type=str, nargs='?')
+  parser.add_argument('--k8s-ps', dest="k8s_ps", type=str, nargs='?')
+  parser.add_argument('--k8s-pxc', dest="k8s_pxc", type=str, nargs='?')
   parser.add_argument('--db-version', dest="db_version", type=str, nargs='?')
   parser.add_argument('--k8s-cluster-domain', type=str, nargs='?')
   parser.add_argument('--nginx-ingress', '--ingress-port', dest="ingress_port", type=str, nargs='?')
