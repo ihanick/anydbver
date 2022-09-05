@@ -123,7 +123,8 @@ def run_pg_operator(ns, op, db_ver):
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r's/namespace: "pgo"/namespace: "{}"/'.format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/cr.yaml"], "fix namespace in yaml")
-  run_fatal(["sed", "-i", "-re", r"s/ppg[0-9.]+/ppg{}/".format(db_ver), "./deploy/cr.yaml"], "change PG major version")
+  if db_ver != "":
+    run_fatal(["sed", "-i", "-re", r"s/ppg[0-9.]+/ppg{}/".format(db_ver), "./deploy/cr.yaml"], "change PG major version")
   run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/operator.yaml"], "Can't deploy operator")
   if not k8s_wait_for_ready(ns, "name=postgres-operator"):
     raise Exception("Kubernetes operator is not starting")
@@ -216,6 +217,42 @@ def run_helm(helm_path, cmd, msg):
   logger.info(environ_txt)
   run_fatal(cmd, msg, ignore_msg="cannot re-use a name that is still in use", env=helm_env)
 
+def gen_wildcard_ns_self_signed_cert(args, ns):
+  svc_name = "ingress-default"
+  cert_name = "ingress-default"
+  svc_fqdn = "{ns}.svc.{cluster_domain}".format(ns=ns, cluster_domain=args.cluster_domain)
+  cert_yaml_path = str((Path(args.data_path) / (cert_name+".yaml")).resolve())
+  os.makedirs(args.data_path, exist_ok=True)
+  cert_yaml = """apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigning-issuer
+spec:
+  selfSigned: {{}}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {svc_name}-tls
+spec:
+  commonName: {svc_fqdn}
+  secretName: {svc_name}-tls
+  dnsNames:
+    # Ingress domain
+    - {svc_fqdn}
+    # Internal domain
+    - "*.{ns}.svc.{cluster_domain}"
+    - "{ns}.svc.{cluster_domain}"
+    - "*.{cluster_domain}"
+  issuerRef:
+    name: selfsigning-issuer""".format(svc_fqdn=svc_fqdn, svc_name=svc_name, ns=ns, cluster_domain=args.cluster_domain)
+  with open(cert_yaml_path,"w+") as f:
+            f.writelines(cert_yaml)
+
+  run_fatal(["kubectl", "apply", "-f", cert_yaml_path], "Can't create {} certificates".format(svc_name))
+
+
+
 def gen_self_signed_cert(args, svc_fqdn, ns, svc_name, cert_name):
   cert_yaml_path = str((Path(args.data_path) / (cert_name+".yaml")).resolve())
   os.makedirs(args.data_path, exist_ok=True)
@@ -237,7 +274,7 @@ spec:
     # Ingress domain
     - {svc_fqdn}
     # Internal domain
-    - {svc_name}.{ns}.svc.{cluster_domain}
+    - "{svc_name}.{ns}.svc.{cluster_domain}"
   issuerRef:
     name: selfsigning-issuer""".format(svc_fqdn=svc_fqdn, svc_name=svc_name, ns=ns, cluster_domain=args.cluster_domain)
   with open(cert_yaml_path,"w+") as f:
@@ -595,10 +632,16 @@ def setup_loki(args):
     "--set", "promtail.enabled=true,loki.persistence.enabled=true,loki.persistence.size=1Gi"], "Can't start loki with helm")
 
 def setup_ingress_nginx(args):
+  # generate certificate, generate set controller.defaultTLS.secret	and controller.wildcardTLS.secret
   run_helm(args.helm_path, ["helm", "repo", "add", "nginx-stable", "https://helm.nginx.com/stable"], "helm repo add problem")
-  run_helm(args.helm_path, ["helm", "install", "nginx-ingress", "nginx-stable/nginx-ingress",
+  nginx_helm_install_cmd = ["helm", "install", "nginx-ingress", "nginx-stable/nginx-ingress",
     "--create-namespace", "--namespace", "ingress-nginx",
-    "--set", "controller.service.httpsPort.port={}".format(args.ingress_port)], "Can't start PXC operator with helm")
+    "--set", "controller.service.httpsPort.port={}".format(args.ingress_port)]
+  if args.cert_manager:
+    gen_wildcard_ns_self_signed_cert(args, "default")
+    nginx_helm_install_cmd.extend(["--set", "controller.wildcardTLS.secret=default/ingress-default-tls",
+    "--set", "controller.defaultTLS.secret=default/ingress-default-tls"])
+  run_helm(args.helm_path, nginx_helm_install_cmd, "Can't nginx ingress with helm")
   ingress_svc = []
   if args.pmm:
     ingress_svc.append("monitoring-service")
