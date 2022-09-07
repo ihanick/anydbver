@@ -505,7 +505,7 @@ def setup_operator_helm(args):
     args.cluster_name="my-db"
     if not k8s_wait_for_ready(args.namespace, op_labels("pxc-operator", args.operator_version)):
       raise Exception("Kubernetes operator is not starting")
-    pxc_helm_install_cmd = ["helm", "install", cluster_name, "percona/pxc-db", "--namespace", args.namespace]
+    pxc_helm_install_cmd = ["helm", "install", args.cluster_name, "percona/pxc-db", "--version", args.operator_version, "--namespace", args.namespace]
     if args.cert_manager:
       pxc_helm_install_cmd.extend(["--set", "pxc.certManager=true"])
     run_helm(args.helm_path, pxc_helm_install_cmd, "Can't start PXC with helm")
