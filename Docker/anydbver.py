@@ -121,9 +121,20 @@ def deploy(args, node_actions):
         run_k8s_operator_cmd.append("--version={}".format(node.k8s_ps))
         if node.db_version:
           run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
+      if node.k8s_mongo:
+        logger.info("Starting Percona Server for MongoDB in kubernetes managed by Percona operator {}".format(node.k8s_mongo))
+        run_k8s_operator_cmd.append("--operator=percona-server-mongodb-operator")
+        run_k8s_operator_cmd.append("--version={}".format(node.k8s_mongo))
+        if node.db_version:
+          run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
 
+      if node.cert_manager:
+        if str(node.cert_manager) == 'True':
+          run_k8s_operator_cmd.append("--cert-manager")
+        else:
+          run_k8s_operator_cmd.append("--cert-manager={}".format(node.cert_manager))
 
-      if node.ingress_port or node.k8s_pg or node.k8s_pxc or node.k8s_ps:
+      if node.ingress_port or node.k8s_pg or node.k8s_pxc or node.k8s_ps or node.k8s_mongo:
         run_fatal(run_k8s_operator_cmd, "Can't run the operator")
 
 def detect_provider(args):
@@ -190,10 +201,12 @@ def parse_node(args):
   parser.add_argument('--leader', '--master', '--primary', type=str, nargs='?')
   parser.add_argument('--percona-xtrabackup', type=str, nargs='?')
   parser.add_argument('--percona-toolkit', type=str, nargs='?')
+  parser.add_argument('--cert-manager', dest="cert_manager", type=str, nargs='?')
   parser.add_argument('--k3d', type=str, nargs='?')
   parser.add_argument('--helm', type=str, nargs='?')
   parser.add_argument('--k8s-pg', dest="k8s_pg", type=str, nargs='?')
   parser.add_argument('--k8s-ps', dest="k8s_ps", type=str, nargs='?')
+  parser.add_argument('--k8s-mongo', dest="k8s_mongo", type=str, nargs='?')
   parser.add_argument('--k8s-pxc', dest="k8s_pxc", type=str, nargs='?')
   parser.add_argument('--k8s-pmm', dest="k8s_pmm", type=str, nargs='?')
   parser.add_argument('--db-version', dest="db_version", type=str, nargs='?')
