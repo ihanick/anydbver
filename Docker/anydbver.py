@@ -99,6 +99,10 @@ def deploy(args, node_actions):
     if args.provider == "kubectl":
       if node.helm:
         run_k8s_operator_cmd.append("--helm")
+      if node.k8s_namespace:
+        run_k8s_operator_cmd.append("--namespace={}".format(node.k8s_namespace))
+      if node.k8s_pmm:
+        run_k8s_operator_cmd.append("--pmm={}".format(node.k8s_pmm))
       if node.k8s_pxc:
         logger.info("Starting PXC in kubernetes managed by Percona operator {}".format(node.k8s_pxc))
         run_k8s_operator_cmd.append("--operator=percona-xtradb-cluster-operator")
@@ -169,7 +173,7 @@ def fix_main_commands(args):
   for cmd_idx, cmd in enumerate(args):
     if cmd in ('deploy', 'add', 'replace', 'destroy', 'delete'):
       args[cmd_idx] = '--' + cmd
-  
+
 def parse_node(args):
   node = args.pop(0)
 
@@ -191,8 +195,10 @@ def parse_node(args):
   parser.add_argument('--k8s-pg', dest="k8s_pg", type=str, nargs='?')
   parser.add_argument('--k8s-ps', dest="k8s_ps", type=str, nargs='?')
   parser.add_argument('--k8s-pxc', dest="k8s_pxc", type=str, nargs='?')
+  parser.add_argument('--k8s-pmm', dest="k8s_pmm", type=str, nargs='?')
   parser.add_argument('--db-version', dest="db_version", type=str, nargs='?')
   parser.add_argument('--k8s-cluster-domain', type=str, nargs='?')
+  parser.add_argument('--k8s-namespace', type=str, nargs='?')
   parser.add_argument('--nginx-ingress', '--ingress-port', dest="ingress_port", type=str, nargs='?')
   args = parser.parse_args(args)
   return node,args

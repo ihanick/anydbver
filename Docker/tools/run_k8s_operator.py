@@ -397,7 +397,7 @@ def enable_pmm(args):
       kind: Secret
       type: Opaque
       metadata:
-        name: my-cluster-secrets
+        name: {{users_secret}}
       data:
         clustercheck: SHNOU3VCUERyZU1JMURFUmJLSA==
         monitor: c3ZoN1hvVFB2STNJRUdSZU4xUg==
@@ -430,7 +430,7 @@ def enable_pmm(args):
   else:
     return
   with open(pmm_secret_path,"w+") as f:
-            f.writelines(pmm_secrets.format(pmm_password=base64.b64encode(bytes(args.pmm_password, 'utf-8')).decode('utf-8')))
+            f.writelines(pmm_secrets.format(pmm_password=base64.b64encode(bytes(args.pmm_password, 'utf-8')).decode('utf-8'), users_secret=args.users_secret))
   run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", pmm_secret_path ], "Can't apply cluster secret secret with pmmserver")
 
 def enable_minio(args):
@@ -561,6 +561,12 @@ def setup_operator(args):
   run_fatal(["kubectl", "create", "namespace", args.namespace],
       "Can't create a namespace for the cluster", r"from server \(AlreadyExists\)")
 
+  if args.operator_name == "percona-xtradb-cluster-operator" and args.helm != True:
+    if StrictVersion(args.operator_version) < StrictVersion("1.11.0"):
+      args.users_secret = "my-cluster-secrets"
+    else:
+      args.users_secret = args.cluster_name + "-secrets"
+
   enable_pmm(args)
 
   if args.minio:
@@ -575,8 +581,8 @@ def extract_secret_password(ns, secret, user):
   return run_get_line(["kubectl", "get", "secrets", "-n", ns, secret, "-o", r'go-template={{ .data.' + user + r'| base64decode }}'],
       "Can't get pod name")
 
-def info_pxc_operator(ns, helm_enabled):
-  pxc_users_secret = "my-cluster-secrets"
+def info_pxc_operator(ns, helm_enabled, users_secret):
+  pxc_users_secret = users_secret
   pxc_node_0 = "cluster1-pxc-0"
   if helm_enabled:
     pxc_users_secret="my-db-pxc-db"
@@ -692,7 +698,7 @@ def operator_info(args):
   if args.operator_name == "percona-postgresql-operator":
     info_pg_operator(args.namespace, args.cluster_name)
   if args.operator_name == "percona-xtradb-cluster-operator":
-    info_pxc_operator(args.namespace, args.helm)
+    info_pxc_operator(args.namespace, args.helm, args.users_secret)
 
 def main():
   parser = argparse.ArgumentParser()
