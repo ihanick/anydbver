@@ -397,7 +397,7 @@ def enable_pmm(args):
       kind: Secret
       type: Opaque
       metadata:
-        name: {{users_secret}}
+        name: {users_secret}
       data:
         clustercheck: SHNOU3VCUERyZU1JMURFUmJLSA==
         monitor: c3ZoN1hvVFB2STNJRUdSZU4xUg==
@@ -562,6 +562,8 @@ def setup_operator(args):
       "Can't create a namespace for the cluster", r"from server \(AlreadyExists\)")
 
   if args.operator_name == "percona-xtradb-cluster-operator" and args.helm != True:
+    if args.cluster_name == "":
+      args.cluster_name = "cluster1"
     if StrictVersion(args.operator_version) < StrictVersion("1.11.0"):
       args.users_secret = "my-cluster-secrets"
     else:
@@ -713,6 +715,7 @@ def main():
   parser.add_argument('--minio', dest="minio", action='store_true')
   parser.add_argument('--minio-certs', dest="minio_certs", type=str, default="")
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
+  parser.add_argument('--cluster-name', dest="cluster_name", type=str, default="")
   parser.add_argument('--ingress', dest="ingress", type=str, default="")
   parser.add_argument('--ingress-port', dest="ingress_port", type=int, default=443)
   parser.add_argument('--sql', dest="sql_file", type=str, default="")
