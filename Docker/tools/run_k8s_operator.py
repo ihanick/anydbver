@@ -119,7 +119,7 @@ def info_pg_operator(ns,cluster_name):
       print("kubectl -n {} exec -it {} -- env PSQL_HISTORY=/tmp/.psql_history psql -U postgres".format(
         subprocess.list2cmdline([ns]), container))
 
-def run_pg_operator(ns, op, db_ver):
+def run_pg_operator(ns, op, db_ver, cluster_name):
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r's/namespace: "pgo"/namespace: "{}"/'.format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/cr.yaml"], "fix namespace in yaml")
@@ -130,7 +130,7 @@ def run_pg_operator(ns, op, db_ver):
     raise Exception("Kubernetes operator is not starting")
   time.sleep(30)
   run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/cr.yaml"], "Can't deploy cluster")
-  if not k8s_wait_for_ready(ns, "name=cluster1"):
+  if not k8s_wait_for_ready(ns, "name={}".format(cluster_name)):
     raise Exception("cluster is not starting")
 
 def op_labels(op, op_ver):
@@ -143,20 +143,20 @@ def op_labels(op, op_ver):
   else:
     return "name="+op
 
-def cluster_labels(op, op_ver):
+def cluster_labels(op, op_ver, cluster_name):
   if op == "percona-xtradb-cluster-operator":
-    return "app.kubernetes.io/instance=cluster1,app.kubernetes.io/component=pxc"
+    return "app.kubernetes.io/instance={},app.kubernetes.io/component=pxc".format(cluster_name)
   elif op == "percona-server-mysql-operator":
     return "statefulset.kubernetes.io/pod-name=cluster1-mysql-0"
   elif op == "percona-server-mongodb-operator":
     return "app.kubernetes.io/instance=my-cluster-name,app.kubernetes.io/component=mongod"
 
-def run_percona_operator(ns, op, op_ver):
+def run_percona_operator(ns, op, op_ver, cluster_name):
   run_fatal(["kubectl", "apply", "--server-side=true", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator", ignore_msg=r"is invalid: status.storedVersions\[[0-9]+\]: Invalid value")
   if not k8s_wait_for_ready(ns, op_labels(op, op_ver)):
     raise Exception("Kubernetes operator is not starting")
   run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/cr.yaml"], "Can't deploy cluster")
-  if not k8s_wait_for_ready(ns, cluster_labels(op, op_ver)):
+  if not k8s_wait_for_ready(ns, cluster_labels(op, op_ver, cluster_name)):
     raise Exception("cluster is not starting")
 
 def cert_manager_ver_compat(operator_name, operator_version, cert_manager):
@@ -436,6 +436,7 @@ def enable_pmm(args):
 def enable_minio(args):
   deploy_path = Path(args.data_path) / args.operator_name / "deploy"
   minio_storage_path = str((deploy_path / "cr-minio.yaml").resolve())
+  minio_cred_path = str((deploy_path / "{}-backrest-repo-config-secret-minio.yaml".format(args.cluster_name)).resolve())
   proto = "http"
   minio_port = 9000
   if args.minio_certs != "":
@@ -463,6 +464,19 @@ def enable_minio(args):
       logger.warning("Percona Postgresql Operator MinIO backups requires TLS")
       return
 
+    minio_cred = """\
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {cluster_name}-backrest-repo-config
+type: Opaque
+data:
+  aws-s3-key: UkVQTEFDRS1XSVRILUFXUy1BQ0NFU1MtS0VZ
+  aws-s3-key-secret: UkVQTEFDRS1XSVRILUFXUy1TRUNSRVQtS0VZ
+    """.format(cluster_name=args.cluster_name)
+    with open(minio_cred_path,"w+") as f:
+      f.writelines(minio_cred)
+
     minio_storage = """
       spec:
         backup:
@@ -484,7 +498,7 @@ def enable_minio(args):
     with open(minio_storage_path,"w+") as f:
       f.writelines(minio_storage)
     run_fatal(["kubectl", "apply", "-n", args.namespace, "-f",
-      str((Path(args.conf_path) / "cluster1-backrest-repo-config-secret-minio.yaml").resolve()) ], "Can't apply s3 secrets")
+      minio_cred_path ], "Can't apply s3 secrets", print_cmd=True)
     merge_cr_yaml(args.yq,
         str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()),
         minio_storage_path)
@@ -564,10 +578,18 @@ def setup_operator(args):
   if args.operator_name == "percona-xtradb-cluster-operator" and args.helm != True:
     if args.cluster_name == "":
       args.cluster_name = "cluster1"
+    else:
+      run_fatal(["sed", "-i", "-re", r"s/: cluster1\>/: {}/".format(args.cluster_name), "./deploy/cr.yaml"], "fix cluster name in cr.yaml")
     if StrictVersion(args.operator_version) < StrictVersion("1.11.0"):
       args.users_secret = "my-cluster-secrets"
     else:
       args.users_secret = args.cluster_name + "-secrets"
+
+  if args.operator_name == "percona-postgresql-operator" and args.helm != True:
+    if args.cluster_name == "":
+      args.cluster_name = "cluster1"
+    else:
+      run_fatal(["sed", "-i", "-re", r"s/: cluster1\>/: {}/".format(args.cluster_name), "./deploy/cr.yaml"], "fix cluster name in cr.yaml")
 
   enable_pmm(args)
 
@@ -575,17 +597,17 @@ def setup_operator(args):
     enable_minio(args)
 
   if args.operator_name == "percona-postgresql-operator":
-    run_pg_operator(args.namespace, args.operator_name, args.db_version)
+    run_pg_operator(args.namespace, args.operator_name, args.db_version, args.cluster_name)
   elif args.operator_name in ("percona-server-mongodb-operator", "percona-xtradb-cluster-operator", "percona-server-mysql-operator"):
-    run_percona_operator(args.namespace, args.operator_name, args.operator_version)
+    run_percona_operator(args.namespace, args.operator_name, args.operator_version, args.cluster_name)
 
 def extract_secret_password(ns, secret, user):
   return run_get_line(["kubectl", "get", "secrets", "-n", ns, secret, "-o", r'go-template={{ .data.' + user + r'| base64decode }}'],
       "Can't get pod name")
 
-def info_pxc_operator(ns, helm_enabled, users_secret):
+def info_pxc_operator(ns, helm_enabled, users_secret, cluster_name):
   pxc_users_secret = users_secret
-  pxc_node_0 = "cluster1-pxc-0"
+  pxc_node_0 = "{}-pxc-0".format(cluster_name)
   if helm_enabled:
     pxc_users_secret="my-db-pxc-db"
     pxc_node_0 = "my-db-pxc-db-pxc-0"
@@ -700,7 +722,7 @@ def operator_info(args):
   if args.operator_name == "percona-postgresql-operator":
     info_pg_operator(args.namespace, args.cluster_name)
   if args.operator_name == "percona-xtradb-cluster-operator":
-    info_pxc_operator(args.namespace, args.helm, args.users_secret)
+    info_pxc_operator(args.namespace, args.helm, args.users_secret, args.cluster_name)
 
 def main():
   parser = argparse.ArgumentParser()

@@ -70,9 +70,9 @@ def deploy(args, node_actions):
   net = "{}{}-anydbver".format(args.namespace, args.user)
   cluster = "{}-cluster1".format(args.user)
   for node_action in node_actions:
-    n = node_actions[0];
-    print("Applying node: ", n[0])
-    node = n[1]
+    print("Applying node: ", node_action)
+    node = node_action[1]
+
     run_k8s_operator_cmd = ['python3', 'tools/run_k8s_operator.py']
     if args.provider == "docker":
       if node.k3d:
@@ -103,6 +103,8 @@ def deploy(args, node_actions):
         run_k8s_operator_cmd.append("--namespace={}".format(node.k8s_namespace))
       if node.k8s_pmm:
         run_k8s_operator_cmd.append("--pmm={}".format(node.k8s_pmm))
+      if node.cluster_name:
+        run_k8s_operator_cmd.append("--cluster-name={}".format(node.cluster_name))
       if node.k8s_pxc:
         logger.info("Starting PXC in kubernetes managed by Percona operator {}".format(node.k8s_pxc))
         run_k8s_operator_cmd.append("--operator=percona-xtradb-cluster-operator")
@@ -133,6 +135,15 @@ def deploy(args, node_actions):
           run_k8s_operator_cmd.append("--cert-manager")
         else:
           run_k8s_operator_cmd.append("--cert-manager={}".format(node.cert_manager))
+      
+      if node.k8s_minio:
+        if node.minio_certs:
+          run_k8s_operator_cmd.append("--minio-certs={}".format(node.minio_certs))
+
+        if str(node.k8s_minio) == 'True':
+          run_k8s_operator_cmd.append("--minio")
+        else:
+          run_k8s_operator_cmd.append("--minio={}".format(node.k8s_minio))
 
       if node.ingress_port or node.k8s_pg or node.k8s_pxc or node.k8s_ps or node.k8s_mongo:
         run_fatal(run_k8s_operator_cmd, "Can't run the operator")
@@ -202,6 +213,8 @@ def parse_node(args):
   parser.add_argument('--percona-xtrabackup', type=str, nargs='?')
   parser.add_argument('--percona-toolkit', type=str, nargs='?')
   parser.add_argument('--cert-manager', dest="cert_manager", type=str, nargs='?')
+  parser.add_argument('--k8s-minio', dest="k8s_minio", type=str, nargs='?')
+  parser.add_argument('--minio-certs', dest="minio_certs", type=str, nargs='?')
   parser.add_argument('--k3d', type=str, nargs='?')
   parser.add_argument('--helm', type=str, nargs='?')
   parser.add_argument('--k8s-pg', dest="k8s_pg", type=str, nargs='?')
@@ -210,6 +223,7 @@ def parse_node(args):
   parser.add_argument('--k8s-pxc', dest="k8s_pxc", type=str, nargs='?')
   parser.add_argument('--k8s-pmm', dest="k8s_pmm", type=str, nargs='?')
   parser.add_argument('--db-version', dest="db_version", type=str, nargs='?')
+  parser.add_argument('--cluster-name', dest="cluster_name", type=str, nargs='?')
   parser.add_argument('--k8s-cluster-domain', type=str, nargs='?')
   parser.add_argument('--k8s-namespace', type=str, nargs='?')
   parser.add_argument('--nginx-ingress', '--ingress-port', dest="ingress_port", type=str, nargs='?')

@@ -154,6 +154,10 @@ deploy_node() {
       get_version "$i"
       K8S_NAMESPACE="--namespace=$VER"
     fi
+    if [[ "$i" == "cluster-name:"* ]] ; then
+      get_version "$i"
+      CLUSTER_NAME="--cluster-name=$VER"
+    fi
     if [[ "$i" == "nginx-ingress:"* ]] ; then
       get_version "$i"
       K8S_INGRESS_PORT="${VER}"
@@ -341,7 +345,7 @@ deploy_node() {
         K8S_OPERATOR_CMD="--operator=$K8S_OPERATOR"
       fi
       python3 tools/run_k8s_operator.py $K8S_OPERATOR_CMD --version="$OPERATOR_VERSION" $CERT_MANAGER \
-	      $K8S_PMM $K8S_MINIO $K8S_SMART_UPDATE $K8S_NAMESPACE $MINIO_CERTS $PMM_CERTS \
+	      $K8S_PMM $K8S_MINIO $K8S_SMART_UPDATE $K8S_NAMESPACE $CLUSTER_NAME $MINIO_CERTS $PMM_CERTS \
 	      $K8S_CLUSTER_DOMAIN_RUN $K8S_SQL_FILE $K8S_OP_HELM $K8S_NGINX_INGRESS_RUN $K8S_LOKI
     fi
   fi
