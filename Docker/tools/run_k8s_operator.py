@@ -306,7 +306,8 @@ def run_pmm_server(args, helm_path, pmm_version, pmm_password):
   run_helm(helm_path, ["helm", "install", "monitoring", "perconalab/pmm-server",
     "--set", "credentials.username=admin", "--set", "credentials.password="+pmm_password,
     "--set", "service.type=ClusterIP",
-    "--set", "imageTag="+pmm_version, "--set", "platform=kubernetes"],
+    "--set", "imageTag="+pmm_version, "--set", "platform=kubernetes",
+    "--version", pmm_version],
     "helm pmm install problem")
   if not k8s_wait_for_ready("default", "app=monitoring,component=pmm"):
     raise Exception("PMM Pod is not starting")

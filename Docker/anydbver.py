@@ -149,7 +149,7 @@ def deploy(args, node_actions):
         else:
           run_k8s_operator_cmd.append("--minio={}".format(node.k8s_minio))
 
-      if node.ingress_port or node.k8s_pg or node.k8s_pxc or node.k8s_ps or node.k8s_mongo:
+      if node.ingress_port or node.k8s_pg or node.k8s_pxc or node.k8s_ps or node.k8s_mongo or node.k8s_pmm:
         run_fatal(run_k8s_operator_cmd, "Can't run the operator")
 
 def detect_provider(args):
