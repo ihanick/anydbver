@@ -102,6 +102,10 @@ def deploy(args, node_actions):
       if node.k8s_namespace:
         run_k8s_operator_cmd.append("--namespace={}".format(node.k8s_namespace))
       if node.k8s_pmm:
+        if node.k8s_pmm == "True":
+          node.k8s_pmm = "2"
+        if node.pmm_certs:
+          run_k8s_operator_cmd.append("--pmm-certs={}".format(node.pmm_certs))
         run_k8s_operator_cmd.append("--pmm={}".format(node.k8s_pmm))
       if node.cluster_name:
         run_k8s_operator_cmd.append("--cluster-name={}".format(node.cluster_name))
@@ -233,6 +237,7 @@ def parse_node(args):
   parser.add_argument('--k8s-mongo', dest="k8s_mongo", type=str, nargs='?')
   parser.add_argument('--k8s-pxc', dest="k8s_pxc", type=str, nargs='?')
   parser.add_argument('--k8s-pmm', dest="k8s_pmm", type=str, nargs='?')
+  parser.add_argument('--pmm-certs', dest="pmm_certs", type=str, nargs='?')
   parser.add_argument('--db-version', dest="db_version", type=str, nargs='?')
   parser.add_argument('--cluster-name', dest="cluster_name", type=str, nargs='?')
   parser.add_argument('--k8s-cluster-domain', type=str, nargs='?')
