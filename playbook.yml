@@ -282,7 +282,7 @@
         name: mysql
 
     - name: Kubernetes Role
-      when: percona_pg_op_version != '' or zalando_pg_op_version != '' or percona_k8s_op_ps_version != ''  or percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or k3s_url != '' or k3s_version != '' or kube_config != '' or k8s_minio != '' or vites_version != '' or cert_manager != '' or kubeadm != '' or kubeadm_url != ''
+      when: percona_pg_op_version != '' or zalando_pg_op_version != '' or percona_k8s_op_ps_version != ''  or percona_k8s_op_pxc_version != '' or percona_k8s_op_psmdb_version != '' or k3s_url != '' or k3s_version != '' or kube_config != '' or k8s_minio != '' or k8s_pmm != '' or vites_version != '' or cert_manager != '' or kubeadm != '' or kubeadm_url != ''
       include_role:
         name: kubernetes
 

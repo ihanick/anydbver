@@ -25,7 +25,7 @@
     creates: /usr/bin/kubeadm
 
 - name: helm tasks
-  when: (k3s_url == '' and k3s_version != '') or kube_config != '' or k8s_minio != '' or kubeadm != ''
+  when: (k3s_url == '' and k3s_version != '') or kube_config != '' or k8s_minio != '' or k8s_pmm != '' or kubeadm != ''
   include_tasks: helm_install.yaml
 
 - name: Install kubectl
