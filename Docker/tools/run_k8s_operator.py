@@ -149,7 +149,7 @@ def cluster_labels(op, op_ver, cluster_name):
   elif op == "percona-server-mysql-operator":
     return "statefulset.kubernetes.io/pod-name=cluster1-mysql-0"
   elif op == "percona-server-mongodb-operator":
-    return "app.kubernetes.io/instance=my-cluster-name,app.kubernetes.io/component=mongod"
+    return "app.kubernetes.io/instance={},app.kubernetes.io/component=mongod".format(cluster_name)
 
 def run_percona_operator(ns, op, op_ver, cluster_name):
   run_fatal(["kubectl", "apply", "--server-side=true", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator", ignore_msg=r"is invalid: status.storedVersions\[[0-9]+\]: Invalid value")
@@ -380,13 +380,22 @@ def enable_pmm(args):
   pmm_secret_path = str((deploy_path / "cr-pmm-secret.yaml").resolve()) 
   pmm_enable_path = str((deploy_path / "cr-pmm-enable.yaml").resolve()) 
 
+  pmm_enable_yaml = ""
 
-  pmm_enable_yaml = """
-    spec:
-      pmm:
-        enabled: true
-        serverUser: admin
-        serverHost: monitoring-service.default.svc.{cluster_domain}""".format(cluster_domain=args.cluster_domain)
+  if args.operator_name == "percona-server-mongodb-operator" and StrictVersion(args.operator_version) >= StrictVersion("1.13.0"):
+    pmm_enable_yaml = """\
+spec:
+  pmm:
+    enabled: true
+    serverHost: monitoring-service.default.svc.{cluster_domain}""".format(cluster_domain=args.cluster_domain)
+  else:
+    pmm_enable_yaml = """\
+spec:
+  pmm:
+    enabled: true
+    serverUser: admin
+    serverHost: monitoring-service.default.svc.{cluster_domain}""".format(cluster_domain=args.cluster_domain)
+
   with open(pmm_enable_path,"w+") as f:
             f.writelines(pmm_enable_yaml)
   merge_cr_yaml(args.yq, str((deploy_path / "cr.yaml").resolve()), pmm_enable_path )
@@ -414,7 +423,7 @@ def enable_pmm(args):
       kind: Secret
       type: Opaque
       metadata:
-        name: my-cluster-name-secrets
+        name: {users_secret}
       data:
         MONGODB_BACKUP_PASSWORD: eERlUDJZS0VOWW4xU2tSQQ==
         MONGODB_BACKUP_USER: YmFja3Vw
@@ -591,6 +600,13 @@ def setup_operator(args):
     else:
       run_fatal(["sed", "-i", "-re", r"s/: cluster1\>/: {}/".format(args.cluster_name), "./deploy/cr.yaml"], "fix cluster name in cr.yaml")
 
+  if args.operator_name == "percona-server-mongodb-operator" and args.helm != True:
+    if args.cluster_name == "":
+      args.cluster_name = "my-cluster-name"
+    else:
+      run_fatal(["sed", "-i", "-re", r"s/: my-cluster-name\>/: {}/".format(args.cluster_name), "./deploy/cr.yaml"], "fix cluster name in cr.yaml")
+    args.users_secret = args.cluster_name + "-secrets"
+
   enable_pmm(args)
 
   if args.minio:
@@ -615,13 +631,13 @@ def info_pxc_operator(ns, helm_enabled, users_secret, cluster_name):
   root_cluster_pxc = ["kubectl", "-n", ns, "exec", "-it", pxc_node_0, "-c", "pxc", "--", "env", "LANG=C.utf8", "MYSQL_HISTFILE=/tmp/.mysql_history", "mysql", "-uroot", "-p"+pwd]
   print(subprocess.list2cmdline(root_cluster_pxc))
 
-def info_mongo_operator(ns):
-  pwd =  extract_secret_password(ns, "my-cluster-name-secrets", "MONGODB_CLUSTER_ADMIN_PASSWORD")
-  cluster_admin_mongo = ["kubectl", "-n", ns, "exec", "-it", "my-cluster-name-rs0-0", "--", "env", "LANG=C.utf8", "HOME=/tmp", "mongo", "-u", "clusterAdmin", "--password="+pwd, "localhost/admin"]
+def info_mongo_operator(ns, cluster_name):
+  pwd =  extract_secret_password(ns, cluster_name + "-secrets", "MONGODB_CLUSTER_ADMIN_PASSWORD")
+  cluster_admin_mongo = ["kubectl", "-n", ns, "exec", "-it", cluster_name + "-rs0-0", "--", "env", "LANG=C.utf8", "HOME=/tmp", "mongo", "-u", "clusterAdmin", "--password="+pwd, "localhost/admin"]
   print(subprocess.list2cmdline(cluster_admin_mongo))
 
-  pwd =  extract_secret_password(ns, "my-cluster-name-secrets", "MONGODB_USER_ADMIN_PASSWORD")
-  user_admin_mongo = ["kubectl", "-n", ns, "exec", "-it", "my-cluster-name-rs0-0", "--", "env", "LANG=C.utf8", "HOME=/tmp", "mongo", "-u", "userAdmin", "--password="+pwd, "localhost/admin"]
+  pwd =  extract_secret_password(ns, cluster_name + "-secrets", "MONGODB_USER_ADMIN_PASSWORD")
+  user_admin_mongo = ["kubectl", "-n", ns, "exec", "-it", cluster_name + "-rs0-0", "--", "env", "LANG=C.utf8", "HOME=/tmp", "mongo", "-u", "userAdmin", "--password="+pwd, "localhost/admin"]
   print(subprocess.list2cmdline(user_admin_mongo))
 
 
@@ -718,7 +734,7 @@ def populate_db(args):
 
 def operator_info(args):
   if args.operator_name == "percona-server-mongodb-operator":
-    info_mongo_operator(args.namespace)
+    info_mongo_operator(args.namespace, args.cluster_name)
   if args.operator_name == "percona-postgresql-operator":
     info_pg_operator(args.namespace, args.cluster_name)
   if args.operator_name == "percona-xtradb-cluster-operator":
