@@ -196,6 +196,17 @@ def fix_main_commands(args):
     if cmd in ('deploy', 'add', 'replace', 'destroy', 'delete'):
       args[cmd_idx] = '--' + cmd
 
+def fix_missing_node_commands(args):
+  is_deploy = False
+  for cmd_idx, cmd in enumerate(args):
+    if cmd == '--deploy' or cmd == 'deploy':
+      is_deploy = True
+      continue
+    if is_deploy and (not cmd.startswith('--') ):
+      if not cmd.startswith('node'):
+        args.insert(cmd_idx, 'node0')
+      break
+
 def parse_node(args):
   node = args.pop(0)
 
@@ -247,7 +258,10 @@ def main():
       if(arg in nodes):currentarg[0]=arg
       return currentarg[0]
 
-  nodelines = [list(args) for cmd,args in itertools.groupby(sys.argv,groupargs)]
+  raw_args = sys.argv
+  fix_missing_node_commands(raw_args)
+
+  nodelines = [list(args) for cmd,args in itertools.groupby(raw_args,groupargs)]
 
   main_args = nodelines.pop(0)
   main_args.pop(0)
