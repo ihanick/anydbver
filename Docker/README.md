@@ -171,6 +171,11 @@ Run two clusters in different namespaces:
 ./anydbver deploy node0 k3d k8s-pxc:1.10.0 k8s-pmm:2.26.0 node0 k8s-namespace:pxc1 k8s-pxc:1.10.0 k8s-pmm:2.26.0
 ```
 
+Run cluster with specific name using percona helm charts and older K8s version, load sql file after startup:
+```
+./anydbver.py deploy k3d:v1.22.8-k3s1 helm k8s-pxc:1.11.1 cluster-name:c1 sql:sampledb/world/world.sql
+```
+
 ### Deploy Mongo operator
 ```
 ./anydbver deploy k3d k8s-mongo:1.11.0 k8s-pmm:2.26.0

@@ -524,16 +524,30 @@ def setup_operator_helm(args):
       "Can't create a namespace for the cluster", r"from server \(AlreadyExists\)")
 
   if args.operator_name == "percona-xtradb-cluster-operator":
+    if args.operator_version == "1.11.0":
+      logger.warning("Helm operator installation for PXC has a bug, use 1.11.1 https://github.com/percona/percona-helm-charts/commit/2babe0b74b3e47c34db8d334110537c5bd6eeb24")
+
     run_helm(args.helm_path, ["helm", "repo", "add", "percona", "https://percona.github.io/percona-helm-charts/"], "helm repo add problem")
     run_helm(args.helm_path, ["helm", "install", "my-operator", "percona/pxc-operator", "--version", args.operator_version, "--namespace", args.namespace], "Can't start PXC operator with helm")
-    args.cluster_name="my-db"
+    if not args.cluster_name:
+      args.cluster_name="my-db"
     if not k8s_wait_for_ready(args.namespace, op_labels("pxc-operator", args.operator_version)):
       raise Exception("Kubernetes operator is not starting")
+    
+    if args.operator_version == "1.11.0":
+      run_fatal(["kubectl", "patch", "deployment", "my-operator-pxc-operator", "--namespace", args.namespace,
+        "--type=json", "--patch", '[{"op": "replace", "path": "/spec/template/spec/containers/0/name", "value": "percona-xtradb-cluster-operator"}]'],
+          "Can't create a namespace for the cluster")
+
+    if not k8s_wait_for_ready(args.namespace, op_labels("pxc-operator", args.operator_version)):
+      raise Exception("Kubernetes operator is not starting")
+
     pxc_helm_install_cmd = ["helm", "install", args.cluster_name, "percona/pxc-db", "--version", args.operator_version, "--namespace", args.namespace]
     if args.cert_manager:
       pxc_helm_install_cmd.extend(["--set", "pxc.certManager=true"])
     run_helm(args.helm_path, pxc_helm_install_cmd, "Can't start PXC with helm")
     args.cluster_name="{}-pxc-db".format(args.cluster_name)
+    args.users_secret= args.cluster_name
     if not k8s_wait_for_ready(args.namespace, "app.kubernetes.io/component=pxc,app.kubernetes.io/instance={}".format(args.cluster_name)):
       raise Exception("cluster is not starting")
   if args.operator_name == "percona-server-mysql-operator":
@@ -626,8 +640,8 @@ def info_pxc_operator(ns, helm_enabled, users_secret, cluster_name):
   pxc_users_secret = users_secret
   pxc_node_0 = "{}-pxc-0".format(cluster_name)
   if helm_enabled:
-    pxc_users_secret="my-db-pxc-db"
-    pxc_node_0 = "my-db-pxc-db-pxc-0"
+    pxc_users_secret=cluster_name
+    pxc_node_0 = cluster_name + "-pxc-0"
   pwd = extract_secret_password(ns, pxc_users_secret, "root")
   root_cluster_pxc = ["kubectl", "-n", ns, "exec", "-it", pxc_node_0, "-c", "pxc", "--", "env", "LANG=C.utf8", "MYSQL_HISTFILE=/tmp/.mysql_history", "mysql", "-uroot", "-p"+pwd]
   print(subprocess.list2cmdline(root_cluster_pxc))
@@ -653,15 +667,14 @@ def populate_pg_db(ns, sql_file):
           subprocess.list2cmdline([ns]), container, subprocess.list2cmdline([sql_file]))
       run_fatal(["sh", "-c", s], "Can't apply sql file")
 
-def populate_pxc_db(ns, sql_file, helm_enabled):
-  pxc_users_secret = "my-cluster-secrets"
-  pxc_node_0 = "cluster1-pxc-0"
-  pxc_node_2 = "cluster1-pxc-2"
-  cluster_name = "cluster1"
+def populate_pxc_db(ns, sql_file, helm_enabled, cluster_name):
+  pxc_users_secret = cluster_name + "-secrets"
+  pxc_node_0 = cluster_name + "-pxc-0"
+  pxc_node_2 = cluster_name + "-pxc-2"
   if helm_enabled:
-    pxc_users_secret="my-db-pxc-db"
-    pxc_node_0 = "my-db-pxc-db-pxc-0"
-    pxc_node_2 = "my-db-pxc-db-pxc-2"
+    pxc_users_secret = cluster_name
+    pxc_node_0 = cluster_name + "-pxc-0"
+    pxc_node_2 = cluster_name + "-pxc-2"
 
   if not k8s_wait_for_ready(ns, "app.kubernetes.io/component=pxc,app.kubernetes.io/instance={},statefulset.kubernetes.io/pod-name={}".format(cluster_name, pxc_node_2), COMMAND_TIMEOUT*2):
     raise Exception("cluster node2 is not starting")
@@ -731,7 +744,7 @@ def populate_db(args):
   if args.operator_name == "percona-postgresql-operator":
     populate_pg_db(args.namespace, args.sql_file)
   if args.operator_name == "percona-xtradb-cluster-operator":
-    populate_pxc_db(args.namespace, args.sql_file, args.helm)
+    populate_pxc_db(args.namespace, args.sql_file, args.helm, args.cluster_name)
 
 def operator_info(args):
   if args.operator_name == "percona-server-mongodb-operator":

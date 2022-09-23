@@ -139,7 +139,10 @@ def deploy(args, node_actions):
           run_k8s_operator_cmd.append("--cert-manager")
         else:
           run_k8s_operator_cmd.append("--cert-manager={}".format(node.cert_manager))
-      
+
+      if node.sql_file:
+        run_k8s_operator_cmd.append("--sql={}".format(node.sql_file))
+
       if node.k8s_minio:
         if node.minio_certs:
           run_k8s_operator_cmd.append("--minio-certs={}".format(node.minio_certs))
@@ -242,6 +245,7 @@ def parse_node(args):
   parser.add_argument('--cluster-name', dest="cluster_name", type=str, nargs='?')
   parser.add_argument('--k8s-cluster-domain', type=str, nargs='?')
   parser.add_argument('--k8s-namespace', type=str, nargs='?')
+  parser.add_argument('--sql', dest="sql_file", type=str, nargs='?')
   parser.add_argument('--nginx-ingress', '--ingress-port', dest="ingress_port", type=str, nargs='?')
   args = parser.parse_args(args)
   return node,args
