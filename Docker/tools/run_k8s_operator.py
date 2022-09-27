@@ -756,6 +756,8 @@ def operator_info(args):
 
 def main():
   parser = argparse.ArgumentParser()
+  parser.add_argument("--data-path", dest="data_path", type=str, default="")
+  parser.add_argument("--helm-path", dest="helm_path", type=str, default="")
   parser.add_argument("--operator", dest="operator_name", type=str, default="")
   parser.add_argument("--version", dest="operator_version", type=str, default="1.1.0")
   parser.add_argument("--db-version", dest="db_version", type=str, default="")
@@ -779,8 +781,10 @@ def main():
   args = parser.parse_args()
 
   args.anydbver_path = (Path(__file__).parents[1]).resolve()
-  args.helm_path = (Path(__file__).parents[1] / 'data' / 'helm').resolve()
-  args.data_path = (Path(args.anydbver_path) / 'data' / 'k8s').resolve()
+  if not args.helm_path:
+    args.helm_path = (Path(__file__).parents[1] / 'data' / 'helm').resolve()
+  if not args.data_path:
+    args.data_path = (Path(args.anydbver_path) / 'data' / 'k8s').resolve()
   args.conf_path = (Path(__file__).resolve().parents[2] / 'configs' / 'k8s').resolve()
   args.yq = str((Path(__file__).parents[0] / 'yq').resolve())
 
