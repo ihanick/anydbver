@@ -33,10 +33,10 @@ def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
     raise Exception((err_msg+" '{}'").format(subprocess.list2cmdline(process.args)))
   return ret_code
 
-def run_get_line(args,err_msg, ignore_msg=None, print_cmd=True):
+def run_get_line(args,err_msg, ignore_msg=None, print_cmd=True, env=None):
   if print_cmd:
     logger.info(subprocess.list2cmdline(args))
-  process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+  process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True, env=env)
   ret_code = process.wait(timeout=COMMAND_TIMEOUT)
   output = process.communicate()[0].decode('utf-8')
   if ignore_msg and re.search(ignore_msg, output):
@@ -70,7 +70,6 @@ def wait_for_success(cmd_with_args, fail_with_msg,ignore_error_pattern, timeout=
     if (datetime.datetime.now() - s).total_seconds() < 1.5:
       time.sleep(2)
   return False
-
 
 def k8s_check_ready(ns, labels):
   if run_fatal(["kubectl", "wait", "--for=condition=ready", "-n", ns, "pod", "-l", labels],
@@ -186,7 +185,7 @@ def run_cert_manager_helm(helm_path, ver):
     "--create-namespace",
     "--version", ver,
     "--set", "installCRDs=true" ],
-    "helm pmm install problem")
+    "helm cert-manager install problem")
   if not k8s_wait_for_ready("cert-manager", "app.kubernetes.io/name=cert-manager"):
     raise Exception("Cert-manager is not starting")
   if not k8s_wait_for_ready("cert-manager", "app.kubernetes.io/name=webhook"):
@@ -303,11 +302,27 @@ def run_pmm_server(args, helm_path, pmm_version, pmm_password):
     return
   run_helm(helm_path, ["helm", "repo", "add", "perconalab", "https://percona-charts.storage.googleapis.com"], "helm repo add problem")
   run_helm(helm_path, ["helm", "repo", "update"], "helm repo update problem")
-  run_helm(helm_path, ["helm", "install", "monitoring", "perconalab/pmm-server",
+
+  helm_pmm_install_cmd = ["helm", "install", "monitoring", "perconalab/pmm-server",
     "--set", "credentials.username=admin", "--set", "credentials.password="+pmm_password,
     "--set", "service.type=ClusterIP",
-    "--set", "imageTag="+pmm_version, "--set", "platform=kubernetes",
-    "--version", pmm_version],
+    "--set", "imageTag="+pmm_version, "--set", "platform=kubernetes"]
+  helm_env = os.environ.copy()
+  helm_env["HELM_CACHE_HOME"] = str((helm_path / 'cache').resolve())
+  helm_env["HELM_CONFIG_HOME"] = str((helm_path / 'config').resolve())
+  helm_env["HELM_DATA_HOME"] = str((helm_path / 'data').resolve())
+
+
+  # get latest chart minor version:
+  # helm search repo perconalab/pmm-server --versions -o yaml | yq '[.[] | sort_keys(.version) | select( .version == "2.29.*")][0].version
+  helm_chart_version = run_get_line(["bash", "-c", "helm search repo {repo} --versions -o yaml | {yq} '[.[] | sort_keys(.version) | select( .version == \"{ver}.*\")][0].version'".format(yq=args.yq,repo="perconalab/pmm-server",ver=pmm_version[:pmm_version.rfind(".")])],
+        "Can't get latest chart version", env=helm_env).rstrip()
+
+  if helm_chart_version != "" and helm_chart_version != "null":
+    helm_pmm_install_cmd.append("--version")
+    helm_pmm_install_cmd.append(helm_chart_version)
+
+  run_helm(helm_path, helm_pmm_install_cmd,
     "helm pmm install problem")
   if not k8s_wait_for_ready("default", "app=monitoring,component=pmm"):
     raise Exception("PMM Pod is not starting")
@@ -418,6 +433,18 @@ spec:
         root: QUR2TzJPR3BLT3h4ZzBRaTN1
         xtrabackup: SFhtcDFVeExLUTE4eDh5a21adw==
       """
+  elif args.operator_name == "percona-postgresql-operator":
+    pmm_secrets = """\
+apiVersion: v1
+data:
+  password: {pmm_password}
+  username: {pmm_user}
+kind: Secret
+metadata:
+  name: {cluster_name}-pmm-secret
+  namespace: pgo
+type: Opaque
+""".format(pmm_password=base64.b64encode(bytes(args.pmm_password, 'utf-8')).decode('utf-8'), pmm_user=base64.b64encode(bytes('admin', 'utf-8')).decode('utf-8'), cluster_name=args.cluster_name)
   elif args.operator_name == "percona-server-mongodb-operator":
     pmm_secrets = """
       apiVersion: v1
@@ -576,7 +603,7 @@ def setup_operator_helm(args):
       raise Exception("cluster is not starting")
 
 def setup_operator(args):
-  data_path = Path(__file__).parents[1] / 'data' / 'k8s'
+  data_path = args.data_path
 
   if args.cert_manager != "":
     run_cert_manager(cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager))
@@ -610,6 +637,7 @@ def setup_operator(args):
       args.users_secret = args.cluster_name + "-secrets"
 
   if args.operator_name == "percona-postgresql-operator" and args.helm != True:
+    args.users_secret = args.cluster_name + "-users"
     if args.cluster_name == "":
       args.cluster_name = "cluster1"
     else:
@@ -783,8 +811,12 @@ def main():
   args.anydbver_path = (Path(__file__).parents[1]).resolve()
   if not args.helm_path:
     args.helm_path = (Path(__file__).parents[1] / 'data' / 'helm').resolve()
+  else:
+    args.helm_path = Path(args.helm_path).resolve()
   if not args.data_path:
     args.data_path = (Path(args.anydbver_path) / 'data' / 'k8s').resolve()
+  else:
+    args.data_path = (Path(args.data_path)).resolve()
   args.conf_path = (Path(__file__).resolve().parents[2] / 'configs' / 'k8s').resolve()
   args.yq = str((Path(__file__).parents[0] / 'yq').resolve())
 
