@@ -11,6 +11,6 @@
       - "--strip-components=1"
       - "linux-amd64/helm"
     creates: /usr/bin/helm
-- name: Helm Setup tasks
-  when: install_only == ''
-  include_tasks: helm_setup.yaml
+#- name: Helm Setup tasks
+#  when: install_only == ''
+#  include_tasks: helm_setup.yaml

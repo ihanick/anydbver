@@ -1300,6 +1300,13 @@ deploy_node() {
         DEP_ENV="$DEP_ENV PPGSQL=$VER"
       fi
     fi
+    if [[ $i == "k8s-namespace:"* ]] ; then
+      if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
+        VER=$(get_version "$i")
+        DEP_ENV="$DEP_ENV K8S_NAMESPACE=$VER"
+      fi
+    fi
+
     if [[ $i == "k8s-mongo" ]] || [[ $i == "k8s-mongo:"* ]] ; then
       if [[ $i == *':'* ]] || [[ $i == *'='* ]] ; then
         VER=$(get_version "$i")
@@ -1691,7 +1698,7 @@ deploy_node() {
       echo "$DEP_ENV ansible-playbook -i ansible_hosts --limit $USER.$NODE playbook.yml"
       ;;
     lxd)
-      echo "$DEP_ENV ansible-playbook -i ${NAMESPACE}ansible_hosts --limit $USER.$NODE playbook.yml"
+      echo "$DEP_ENV ansible-playbook -i ${NAMESPACE}ansible_hosts --limit $USER.$NODE $ANSIBLE_VERBOSE playbook.yml"
       ;;
     existing)
       echo "$DEP_ENV ansible-playbook -i ${NAMESPACE}ansible_hosts --limit $USER.$NODE playbook.yml"

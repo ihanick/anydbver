@@ -60,5 +60,20 @@
     creates: /etc/bash_completion.d/kubectl
 
 - name: Setup Operator tasks
-  when: install_only == ''
+  when: install_only == '' and ( zalando_pg_op_version != '' or vites_version != '' )
+
   include_tasks: setup_operators.yaml
+
+- name: Run operator
+  when: percona_k8s_op_pxc_version != "" or percona_k8s_op_ps_version != "" or percona_k8s_op_psmdb_version != "" or percona_pg_op_version != '' or k8s_pmm != '' or k8s_minio != ''
+  shell:
+    cmd: >-
+      python3 /vagrant/Docker/tools/run_k8s_operator.py \
+        --data-path=/root --helm-path=/root \
+        --operator={{ percona_k8s_op_name }} --version={{ percona_k8s_op_version }} \
+        {{'' if k8s_namespace == '' else '--namespace='+k8s_namespace}} \
+        {{'' if k8s_pmm == '' else '--pmm='+k8s_pmm}} \
+        {{'' if k8s_minio == '' else '--minio'}} \
+        {{'' if cert_manager == '' else '--cert-manager=1.7.2'}} \
+        {{'--minio-certs=self-signed' if k8s_minio != '' and cert_manager != '' else ''}} \
+        {{'--pmm-certs=self-signed' if k8s_pmm != '' and cert_manager != '' else ''}}
