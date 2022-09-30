@@ -596,7 +596,7 @@ def setup_operator_helm(args):
     args.cluster_name="my-db"
     if not k8s_wait_for_ready(args.namespace, op_labels("postgres-operator", args.operator_version)):
       raise Exception("Kubernetes operator is not starting")
-    pg_helm_install_cmd = ["helm", "install", args.cluster_name, "percona/pg-db", "--namespace", args.namespace, "--timeout", "{}s".format(COMMAND_TIMEOUT)]
+    pg_helm_install_cmd = ["helm", "install", args.cluster_name, "percona/pg-db", "--namespace", args.namespace, "--timeout", "{}s".format(COMMAND_TIMEOUT), "--version", args.operator_version]
     run_helm(args.helm_path, pg_helm_install_cmd, "Can't start Postgresql with helm")
     args.cluster_name="{}-pg-db".format(args.cluster_name)
     if not k8s_wait_for_ready(args.namespace, "name={}".format(args.cluster_name)):
