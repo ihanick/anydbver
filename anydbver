@@ -1226,6 +1226,10 @@ deploy_node() {
       fi
       DEP_ENV="$DEP_ENV MYSQL_JAVA=$VER"
     fi
+    if [[ $i == "mysql.net" ]] ; then
+      VER="8.0.30"
+      DEP_ENV="$DEP_ENV MYSQL_DOTNET=$VER"
+    fi
     if [[ $i == "percona-toolkit" ]] || [[ $i == "percona-toolkit:"* ]] ; then
       search_for_latest_version percona-toolkit "$i"
       DEP_ENV="$DEP_ENV PT=$VER"

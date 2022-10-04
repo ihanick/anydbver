@@ -133,6 +133,12 @@
     disable_gpg_check: yes
   with_items: "{{os[dist].mysql_connector_java.install_packages}}"
 
+- name: Install MySQL connector .Net
+  when: mysql_dot_net != ''
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_dotnet.sh "{{mysql_dot_net}}"
+
+
 - name: MySQL Setup tasks
   when: install_only == ''
   include_tasks: setup.yaml
