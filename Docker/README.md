@@ -180,3 +180,10 @@ Run cluster with specific name using percona helm charts and older K8s version, 
 ```
 ./anydbver deploy k3d k8s-mongo:1.11.0 k8s-pmm:2.26.0
 ```
+
+### PMM
+```
+./anydbver.py destroy;./anydbver.py deploy k3d pmm:2.28.0
+./anydbver.py destroy;./anydbver.py deploy k3d pmm:2.31.0,helm=percona-helm-charts,certs=self-signed,namespace=monitoring cert-manager:1.9.1
+./anydbver.py destroy;./anydbver.py deploy k3d pmm:2.31.0,helm=percona/percona-helm-charts:0.3.9,certs=self-signed,namespace=monitoring,password=verysecretpassword1^ cert-manager:1.9.1
+```

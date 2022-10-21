@@ -53,7 +53,7 @@ def k8s_wait_for_ready(ns, labels, timeout=COMMAND_TIMEOUT):
     s = datetime.datetime.now()
     if run_fatal(["kubectl", "wait", "--timeout=2s", "--for=condition=ready", "-n", ns, "pod", "-l", labels],
         "Pod ready wait problem",
-        r"error: timed out waiting for the condition on|error: no matching resources found", False) == 0:
+        r"timed out waiting for the condition on|no matching resources found", False) == 0:
       return True
     if (datetime.datetime.now() - s).total_seconds() < 1.5:
       time.sleep(2)
@@ -81,7 +81,7 @@ def k8s_check_ready(ns, labels):
 def branch_name(ver):
   if ver == 'latest':
     return 'main'
-  if ver == 'main' or ver[0] == 'v' or ('.' not in ver):
+  if ver == 'main' or ver[0] == 'v' or ('.' not in ver) or (not ver[0].isdigit()):
     return ver
   return 'v' + ver
 
@@ -124,10 +124,20 @@ def run_pg_operator(ns, op, db_ver, cluster_name):
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/cr.yaml"], "fix namespace in yaml")
   if db_ver != "":
     run_fatal(["sed", "-i", "-re", r"s/ppg[0-9.]+/ppg{}/".format(db_ver), "./deploy/cr.yaml"], "change PG major version")
-  run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/operator.yaml"], "Can't deploy operator")
-  if not k8s_wait_for_ready(ns, "name=postgres-operator"):
-    raise Exception("Kubernetes operator is not starting")
-  time.sleep(30)
+
+  if file_contains('./deploy/cr.yaml','pg.percona.com/v2'):
+    op_env = os.environ.copy()
+    op_env["PGO_NAMESPACE"] = ns
+    op_env["PGO_TARGET_NAMESPACE"] = ns
+    run_fatal(["kubectl", "create", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator", env=op_env)
+    if not k8s_wait_for_ready(ns, "pg.percona.com/control-plane=postgres-operator"):
+      raise Exception("Kubernetes operator is not starting")
+  else:
+    run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/operator.yaml"], "Can't deploy operator")
+    if not k8s_wait_for_ready(ns, "name=postgres-operator"):
+      raise Exception("Kubernetes operator is not starting")
+    time.sleep(30)
+
   run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/cr.yaml"], "Can't deploy cluster")
   if not k8s_wait_for_ready(ns, "name={}".format(cluster_name)):
     raise Exception("cluster is not starting")
@@ -139,6 +149,8 @@ def op_labels(op, op_ver):
     return "app.kubernetes.io/name=ps-operator"
   elif op == "percona-server-mysql-operator":
     return "app.kubernetes.io/name=percona-server-mysql-operator"
+  elif op == "psmdb-operator":
+    return "app.kubernetes.io/name=psmdb-operator"
   else:
     return "name="+op
 
@@ -149,6 +161,12 @@ def cluster_labels(op, op_ver, cluster_name):
     return "statefulset.kubernetes.io/pod-name=cluster1-mysql-0"
   elif op == "percona-server-mongodb-operator":
     return "app.kubernetes.io/instance={},app.kubernetes.io/component=mongod".format(cluster_name)
+
+def file_contains(file, s):
+  with open(file) as f:
+    if s in f.read():
+      return True
+  return False
 
 def run_percona_operator(ns, op, op_ver, cluster_name):
   run_fatal(["kubectl", "apply", "--server-side=true", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator", ignore_msg=r"is invalid: status.storedVersions\[[0-9]+\]: Invalid value")
@@ -279,34 +297,51 @@ spec:
   with open(cert_yaml_path,"w+") as f:
             f.writelines(cert_yaml)
 
-  run_fatal(["kubectl", "apply", "-f", cert_yaml_path], "Can't create {} certificates".format(svc_name))
+  run_fatal(["kubectl", "--namespace", ns, "apply", "-f", cert_yaml_path], "Can't create {} certificates".format(svc_name))
 
-def run_pmm_server(args, helm_path, pmm_version, pmm_password):
-  tls_key_path = Path(args.anydbver_path) / args.pmm_certs / "tls.key"
-  tls_crt_path = Path(args.anydbver_path) / args.pmm_certs / "tls.crt"
+def run_pmm_server(args, helm_path, pmm):
+  tls_key_path = ""
+  tls_crt_path = ""
 
-  args.pmm_custom_ssl = (args.pmm_certs != "" 
-      and args.pmm_certs != "self-signed"
+  if "certificates" in pmm:
+    tls_key_path = Path(args.anydbver_path) / pmm["certificates"] / "tls.key"
+    tls_crt_path = Path(args.anydbver_path) / pmm["certificates"] / "tls.crt"
+
+  if "namespace" in pmm:
+    run_fatal(["kubectl", "create", "namespace", pmm["namespace"] ],
+        "Can't create a namespace for the cluster", r"from server \(AlreadyExists\)")
+  else:
+    pmm["namespace"] = "default";
+
+  args.pmm_custom_ssl = ("certificates" in pmm 
+      and pmm["certificates"] != "self-signed"
       and tls_key_path.is_file()
       and tls_crt_path.is_file())
 
-  if args.cert_manager != "" and args.pmm_certs == "self-signed":
-    gen_self_signed_cert(args, "pmm." + args.cluster_domain, "default", "monitoring-service", "pmm-certs")
+  if args.cert_manager != "" and pmm["certificates"] == "self-signed":
+    gen_self_signed_cert(args, "pmm." + args.cluster_domain, pmm["namespace"], "monitoring-service", "pmm-certs")
   elif args.pmm_custom_ssl:
     run_fatal(["kubectl", "create", "secret", "tls", "monitoring-service-tls",
       "--key="+str(tls_key_path.resolve()),
       "--cert="+str(tls_crt_path.resolve())],
       "can't create minio tls secret", "already exists")
 
-  if k8s_check_ready("default", "app=monitoring,component=pmm"):
+  if k8s_check_ready(pmm["namespace"], "app=monitoring,component=pmm"):
     return
-  run_helm(helm_path, ["helm", "repo", "add", "perconalab", "https://percona-charts.storage.googleapis.com"], "helm repo add problem")
+  run_helm(helm_path, ["helm", "repo", "add", pmm["helm_repo_name"], pmm["helm_repo_url"] ], "helm repo add problem")
   run_helm(helm_path, ["helm", "repo", "update"], "helm repo update problem")
 
-  helm_pmm_install_cmd = ["helm", "install", "monitoring", "perconalab/pmm-server",
-    "--set", "credentials.username=admin", "--set", "credentials.password="+pmm_password,
-    "--set", "service.type=ClusterIP",
-    "--set", "imageTag="+pmm_version, "--set", "platform=kubernetes"]
+  if pmm["helm_repo_name"] == "percona":
+    helm_pmm_install_cmd = ["helm", "install", "monitoring", "percona/pmm",
+      "--set", "secret.pmm_password="+pmm["password"],
+      "--set", "service.type=ClusterIP",
+      "--set", "image.tag="+pmm["version"] ]
+  else:
+    helm_pmm_install_cmd = ["helm", "install", "monitoring", "perconalab/pmm-server",
+      "--set", "credentials.username=admin", "--set", "credentials.password="+pmm["password"],
+      "--set", "service.type=ClusterIP",
+      "--set", "imageTag="+pmm["version"], "--set", "platform=kubernetes"]
+
   helm_env = os.environ.copy()
   helm_env["HELM_CACHE_HOME"] = str((helm_path / 'cache').resolve())
   helm_env["HELM_CONFIG_HOME"] = str((helm_path / 'config').resolve())
@@ -315,24 +350,38 @@ def run_pmm_server(args, helm_path, pmm_version, pmm_password):
 
   # get latest chart minor version:
   # helm search repo perconalab/pmm-server --versions -o yaml | yq '[.[] | sort_keys(.version) | select( .version == "2.29.*")][0].version
-  helm_chart_version = run_get_line(["bash", "-c", "helm search repo {repo} --versions -o yaml | {yq} '[.[] | sort_keys(.version) | select( .version == \"{ver}.*\")][0].version'".format(yq=args.yq,repo="perconalab/pmm-server",ver=pmm_version[:pmm_version.rfind(".")])],
+  if "helm_chart_version" not in pmm:
+    if pmm["helm_repo_name"] == "percona":
+      pmm["helm_chart_version"] = run_get_line(["bash", "-c", r"""helm search repo {repo} --versions -o yaml | {yq} '[.[] | sort_keys(.app_version) | select( .app_version == "{ver}")][0].version'""".format(yq=args.yq,repo="percona/pmm",ver=pmm["version"] )],
+        "Can't get latest chart version", env=helm_env).rstrip()
+    elif StrictVersion(pmm["version"]) == StrictVersion("2.27.0"):
+      pmm["helm_chart_version"] = "2.26.1"
+    else:
+      pmm["helm_chart_version"] = run_get_line(["bash", "-c", "helm search repo {repo} --versions -o yaml | {yq} '[.[] | sort_keys(.version) | select( .version == \"{ver}.*\")][0].version'".format(yq=args.yq,repo="perconalab/pmm-server",ver=pmm["version"][:pmm["version"].rfind(".")])],
         "Can't get latest chart version", env=helm_env).rstrip()
 
-  if helm_chart_version != "" and helm_chart_version != "null":
-    helm_pmm_install_cmd.append("--version")
-    helm_pmm_install_cmd.append(helm_chart_version)
+  helm_pmm_install_cmd.append("--version")
+  helm_pmm_install_cmd.append(pmm["helm_chart_version"])
+
+  if "namespace" in pmm:
+    helm_pmm_install_cmd.append("--namespace")
+    helm_pmm_install_cmd.append(pmm["namespace"])
+  else:
+    helm_pmm_install_cmd.append("--namespace")
+    helm_pmm_install_cmd.append("default")
 
   run_helm(helm_path, helm_pmm_install_cmd,
     "helm pmm install problem")
-  if not k8s_wait_for_ready("default", "app=monitoring,component=pmm"):
+  if not k8s_wait_for_ready(pmm["namespace"], pmm["labels"]):
     raise Exception("PMM Pod is not starting")
-  time.sleep(10)
-  run_fatal(["kubectl", "-n", "default",
-      "exec", "-it", "monitoring-0", "--", "bash", "-c",
-      "grafana-cli --homepath /usr/share/grafana --configOverrides cfg:default.paths.data=/srv/grafana admin reset-admin-password \"$ADMIN_PASSWORD\""],
-      "can't fix pmm password")
+  if pmm["helm_repo_name"] != "percona":
+    time.sleep(10)
+    run_fatal(["kubectl", "-n", pmm["namespace"],
+        "exec", "-it", "monitoring-0", "--", "bash", "-c",
+        "grafana-cli --homepath /usr/share/grafana --configOverrides cfg:default.paths.data=/srv/grafana admin reset-admin-password \"$ADMIN_PASSWORD\""],
+        "can't fix pmm password")
   if args.loki:
-    pass_encoded = urllib.parse.quote_plus(pmm_password)
+    pass_encoded = urllib.parse.quote_plus(args.pmm["password"])
     wait_for_success
     if not wait_for_success(["kubectl", "-n", "default",
       "exec", "-it", "monitoring-0", "--", "bash", "-c",
@@ -403,14 +452,14 @@ def enable_pmm(args):
 spec:
   pmm:
     enabled: true
-    serverHost: monitoring-service.default.svc.{cluster_domain}""".format(cluster_domain=args.cluster_domain)
+    serverHost: monitoring-service.{pmm_namespace}.svc.{cluster_domain}""".format(pmm_namespace=args.pmm["namespace"], cluster_domain=args.cluster_domain)
   else:
     pmm_enable_yaml = """\
 spec:
   pmm:
     enabled: true
     serverUser: admin
-    serverHost: monitoring-service.default.svc.{cluster_domain}""".format(cluster_domain=args.cluster_domain)
+    serverHost: monitoring-service.{pmm_namespace}.svc.{cluster_domain}""".format(pmm_namespace=args.pmm["namespace"], cluster_domain=args.cluster_domain)
 
   with open(pmm_enable_path,"w+") as f:
             f.writelines(pmm_enable_yaml)
@@ -444,7 +493,7 @@ metadata:
   name: {cluster_name}-pmm-secret
   namespace: pgo
 type: Opaque
-""".format(pmm_password=base64.b64encode(bytes(args.pmm_password, 'utf-8')).decode('utf-8'), pmm_user=base64.b64encode(bytes('admin', 'utf-8')).decode('utf-8'), cluster_name=args.cluster_name)
+""".format(pmm_password=base64.b64encode(bytes(args.pmm["password"], 'utf-8')).decode('utf-8'), pmm_user=base64.b64encode(bytes('admin', 'utf-8')).decode('utf-8'), cluster_name=args.cluster_name)
   elif args.operator_name == "percona-server-mongodb-operator":
     pmm_secrets = """
       apiVersion: v1
@@ -467,7 +516,7 @@ type: Opaque
   else:
     return
   with open(pmm_secret_path,"w+") as f:
-            f.writelines(pmm_secrets.format(pmm_password=base64.b64encode(bytes(args.pmm_password, 'utf-8')).decode('utf-8'), users_secret=args.users_secret))
+            f.writelines(pmm_secrets.format(pmm_password=base64.b64encode(bytes(args.pmm["password"], 'utf-8')).decode('utf-8'), users_secret=args.users_secret))
   run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", pmm_secret_path ], "Can't apply cluster secret secret with pmmserver")
 
 def enable_minio(args):
@@ -496,7 +545,28 @@ def enable_minio(args):
       f.writelines(minio_storage)
     run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", "./deploy/backup-s3.yaml"], "Can't apply s3 secrets")
     merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), minio_storage_path )
-  if args.operator_name == "percona-postgresql-operator":
+  if args.operator_name == "percona-server-mongodb-operator":
+    minio_storage = """\
+spec:
+  backup:
+    enabled: true
+    storages:
+      minio:
+        type: s3
+        s3:
+          bucket: operator-testing
+          region: us-east-1
+          credentialsSecret: my-cluster-name-backup-s3
+          endpointUrl: {proto}://minio-service.{minio_namespace}.svc.{cluster_domain}:{minio_port}
+          prefix: ""
+    pitr:
+      enabled: true
+""".format(proto=proto, minio_namespace="default", cluster_domain=args.cluster_domain, minio_port=minio_port)
+    with open(minio_storage_path,"w+") as f:
+      f.writelines(minio_storage)
+    run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", "./deploy/backup-s3.yaml"], "Can't apply s3 secrets")
+    merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), minio_storage_path )
+  if args.operator_name == "percona-postgresql-operator" and not file_contains('./deploy/cr.yaml','pg.percona.com/v2'):
     if args.minio_certs == "":
       logger.warning("Percona Postgresql Operator MinIO backups requires TLS")
       return
@@ -601,6 +671,70 @@ def setup_operator_helm(args):
     args.cluster_name="{}-pg-db".format(args.cluster_name)
     if not k8s_wait_for_ready(args.namespace, "name={}".format(args.cluster_name)):
       raise Exception("cluster is not starting")
+  if args.operator_name == "percona-server-mongodb-operator":
+    run_helm(args.helm_path, ["helm", "repo", "add", "percona", "https://percona.github.io/percona-helm-charts/"], "helm repo add problem")
+    run_helm(args.helm_path, ["helm", "install", "my-operator", "percona/psmdb-operator",
+        "--version", args.operator_version, "--namespace", args.namespace,
+        "--create-namespace", "--timeout", "{}s".format(COMMAND_TIMEOUT)], "Can't start Percona Postgresql operator with helm")
+    args.cluster_name="my-db"
+    if not k8s_wait_for_ready(args.namespace, op_labels("psmdb-operator", args.operator_version)):
+      raise Exception("Kubernetes operator is not starting")
+    pg_helm_install_cmd = ["helm", "install", args.cluster_name, "percona/psmdb-db", "--namespace", args.namespace, "--timeout", "{}s".format(COMMAND_TIMEOUT), "--version", args.operator_version]
+    run_helm(args.helm_path, pg_helm_install_cmd, "Can't start Postgresql with helm")
+    args.cluster_name="{}-psmdb-db".format(args.cluster_name)
+    if not k8s_wait_for_ready(args.namespace, "app.kubernetes.io/instance={}".format(args.cluster_name)):
+      raise Exception("cluster is not starting")
+
+def parse_settings(key, sett_cmd):
+  # 2.31.0,helm=percona-helm-charts:0.3.9,certs=self-signed,namespace=monitoring,password=verysecretpassword1^
+  sett = {}
+  sett_arr = sett_cmd.split(',')
+  sett["version"] = sett_arr.pop(0)
+  for s in sett_arr:
+    s_pair = s.split('=',1)
+    if len(s_pair) == 2:
+      sett[s_pair[0]] = s_pair[1]
+    else:
+      sett[s_pair[0]] = "True"
+
+  if key == "pmm" and "helm" not in sett:
+    sett["helm"] = "True"
+
+  if "helm" in sett:
+    if sett["helm"] == "True":
+      if key == "pmm":
+        if StrictVersion(sett["version"]) >= StrictVersion("2.28.0"):
+          sett["helm"] = "percona-helm-charts"
+        else:
+          sett["helm"] = "perconalab"
+    helm_pair = sett["helm"].split(':')
+    if len(helm_pair) > 1:
+      sett["helm_chart_version"] = helm_pair[-1]
+      sett["helm"] = helm_pair[0]
+
+
+  if sett["helm"] == "percona-helm-charts" or sett["helm"] == "percona/percona-helm-charts":
+    sett["helm_repo_url"] = "https://percona.github.io/percona-helm-charts/"
+    sett["helm_repo_name"] = "percona"
+    if key == "pmm":
+      sett["helm_chart_name"] = "percona/pmm"
+      sett["labels"] = "app.kubernetes.io/component=pmm-server"
+  elif sett["helm"] == "perconalab":
+    if key == "pmm":
+      sett["helm_repo_url"] = "https://percona-charts.storage.googleapis.com/"
+      sett["helm_repo_name"] = "perconalab"
+      sett["labels"] = "app=monitoring,component=pmm"
+  else:
+    sett["helm_repo_url"] = sett["helm"]
+
+  if "certs" in sett:
+    sett["certificates"] = "self-signed"
+
+  if "password" not in sett:
+      sett["password"] = "verysecretpassword1^"
+
+  return sett
+
 
 def setup_operator(args):
   data_path = args.data_path
@@ -609,7 +743,8 @@ def setup_operator(args):
     run_cert_manager(cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager))
 
   if args.pmm != "":
-    run_pmm_server(args, args.helm_path, args.pmm, args.pmm_password)
+    args.pmm = parse_settings("pmm", args.pmm)
+    run_pmm_server(args, args.helm_path, args.pmm)
 
   if args.minio:
     run_minio_server(args)
@@ -618,7 +753,8 @@ def setup_operator(args):
     return
 
   prepare_operator_repository(data_path.resolve(), args.operator_name, args.operator_version)
-  if not args.smart_update and args.operator_name not in ("percona-server-mysql-operator"):
+  if not args.smart_update and args.operator_name not in ("percona-server-mysql-operator") \
+      and not file_contains(str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()),'pg.percona.com/v2'):
     merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), str((Path(args.conf_path) / "cr-smart-update.yaml").resolve()) )
 
   if not k8s_wait_for_ready('kube-system', 'k8s-app=kube-dns'):
@@ -792,8 +928,6 @@ def main():
   parser.add_argument('--cert-manager', dest="cert_manager", type=str, default="")
   parser.add_argument('--cluster-domain', dest="cluster_domain", type=str, default="cluster.local")
   parser.add_argument('--pmm', dest="pmm", type=str, default="")
-  parser.add_argument('--pmm-password', dest="pmm_password", type=str, default="verysecretpassword1^")
-  parser.add_argument('--pmm-certs', dest="pmm_certs", type=str, default="")
   parser.add_argument('--minio', dest="minio", action='store_true')
   parser.add_argument('--minio-certs', dest="minio_certs", type=str, default="")
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
