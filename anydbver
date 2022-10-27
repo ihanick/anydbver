@@ -389,10 +389,10 @@ setup_existing_hosts() {
     IP=${w//*:/}
 
     if [ "x$NODE" = "x${USER}.node0" ] ; then
-      echo "${USER}.default ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ${NAMESPACE}ansible_hosts
+      echo "${USER}.default ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand=none'" >> ${NAMESPACE}ansible_hosts
     fi
 
-    echo "$NODE ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> ${NAMESPACE}ansible_hosts
+    echo "$NODE ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand=none'" >> ${NAMESPACE}ansible_hosts
 
 
     cat >> ${NAMESPACE}ssh_config <<EOF
@@ -402,6 +402,7 @@ Host ${NODE/$USER./}
    StrictHostKeyChecking no
    UserKnownHostsFile /dev/null
    IdentityFile ~/.ssh/id_rsa
+   ProxyCommand none
 EOF
 
   done
@@ -1981,7 +1982,7 @@ pre_deploy_hook() {
 
 post_deploy_hook() {
   i="$i"
-  NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
+  NODE=$(echo "$i" |sed -re 's/^.*--limit .+\.([^.]+)\s+playbook\.yml.*$/\1/')
 
   # after reploy node actions
   if echo "$i" | grep -q CLUSTER= && echo "$i" | grep -q PXC=8. ; then
@@ -2006,7 +2007,7 @@ post_deploy_hook() {
 
 post_deploy_hook_after_all_nodes() {
   i="$i"
-  NODE=$(echo "$i" |sed -re 's/^.*--limit [^.]+\.([^ ]+) playbook\.yml.*$/\1/')
+  NODE=$(echo "$i" |sed -re 's/^.*--limit .+\.([^.]+)\s+playbook\.yml.*$/\1/')
 
   # after all nodes deploy
   if [[ $i != *PKO4PXC=* && $i != *PKO4PS* && $i == *CLUSTER=* && $i == *PXC=* ]] || [[ $i == *CLUSTER=* && $i == *GALERA=* ]] ; then

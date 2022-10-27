@@ -410,10 +410,10 @@ for i in ${USER}.default $(seq 1 $(($NUM_NODES-1))|sed -e s/^/${USER}.node/); do
   while [ "x$IP" = 'x127.0.0.1' ] ; do
     IP=$(lxc exec $c -- /bin/bash /usr/bin/node_ip.sh)
   done
-  echo "$i ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no'" >> ${NAMESPACE}ansible_hosts
+  echo "$i ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none'" >> ${NAMESPACE}ansible_hosts
 
   if [ "x$i" = "x${USER}.default" ] ; then
-    echo "${USER}.node0 ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no'" >> ${NAMESPACE}ansible_hosts
+    echo "${USER}.node0 ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=$IP ansible_python_interpreter=$PYTHON_INT ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none'" >> ${NAMESPACE}ansible_hosts
   fi
 
   if [[ "${USER}.default" == "$i" ]] ; then
@@ -436,6 +436,7 @@ Host ${i/$USER./} ${HOSTNAMES[$i]} $SHORT_NAME
    HostName $IP
    StrictHostKeyChecking no
    UserKnownHostsFile /dev/null
+   ProxyCommand none
    IdentityFile $PWD/secret/id_rsa
 EOF
 
