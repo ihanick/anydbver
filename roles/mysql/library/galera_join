@@ -1,0 +1,69 @@
+#!/bin/bash
+myip=$(/vagrant/tools/node_ip.sh)
+changed="false"
+ok="false"
+
+source $1
+
+is_galera_ready() {
+  donor_escaped=${donor_ip//./\\.}
+  if test $( mysql -Nse 'SHOW STATUS LIKE "wsrep_%"' 2>/dev/null|egrep -c "${donor_escaped}:|Primary|Synced") -eq 3 ; then
+    return 0
+  fi
+  return 1
+}
+
+if is_galera_ready ; then
+  changed="false"
+  ok="true"
+  msg="Already joined"
+else
+  ssl_cert_archive="/vagrant/secret/${cluster_name}-ssl.tar.gz"
+  msg="Joininig to $cluster_name via $donor_ip"
+  SSH="ssh -i /vagrant/secret/id_rsa -o StrictHostKeyChecking=no -o PasswordAuthentication=no"
+
+  if test ! -f $ssl_cert_archive -o -z $ssl_cert_archive  ; then
+    if $SSH root@$donor_ip true &>/dev/null ; then
+      $SSH root@$donor_ip tar cz \
+        /var/lib/mysql/ca.pem \
+        /var/lib/mysql/ca-key.pem \
+        /var/lib/mysql/client-cert.pem \
+        /var/lib/mysql/client-key.pem \
+        /var/lib/mysql/server-cert.pem \
+        /var/lib/mysql/server-key.pem > "$ssl_cert_archive" 2>/dev/null
+    fi
+  fi
+
+  systemctl stop "$systemd_unit"
+  rm -rf /var/lib/mysql/grastate.dat
+  tar -C / --overwrite -xaf "$ssl_cert_archive"
+
+
+  cat >> "${cnf_file}" << EOF
+[mysqld]
+wsrep_cluster_name=${cluster_name}
+wsrep_node_name=${myip}
+wsrep_cluster_address="gcomm://${donor_ip}"
+EOF
+
+  mysqld --user=mysql &>/dev/null &
+  until mysqladmin --silent --connect-timeout=30 --wait=4 ping &>/dev/null ; do sleep 5 ; done
+  mysqladmin shutdown &>/dev/null
+        
+  systemctl start "$systemd_unit"
+  until mysqladmin --silent --connect-timeout=30 --wait=4 ping &>/dev/null ; do sleep 5 ; done
+
+  if is_galera_ready ; then
+    changed="true"
+    ok="true"
+    msg="Joined to $cluster_name"
+  else
+    changed="true"
+    ok="true"
+    msg="Failed to join to $cluster_name via $donor_ip"
+  fi
+fi
+
+
+cat $1 > /tmp/joined.msg.txt
+printf '{"changed": %s, "ok": %s, "msg": "%s"}' "$changed" "$ok" "$msg"

@@ -324,6 +324,9 @@ if [ "x$1" = "xmount" ] ; then
 fi
 
 
+if [ "x$LXD_PROFILE" == "x" ] ; then
+  [ -f .anydbver ] && source .anydbver
+fi
 
 if [ "x$LXD_PROFILE" != "x" ] ; then
   LXD_PROFILE="--profile $LXD_PROFILE"

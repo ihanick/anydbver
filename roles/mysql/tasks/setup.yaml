@@ -117,11 +117,21 @@
 - name: Setup and start replication
   when: >
     master_ip != '' and
-    (percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != '') and
+    (percona_server_version != '' or ( percona_xtradb_cluster_version != '' and replication_type != 'galera' ) or mysql_version != '') and
     ('garbd' not in db_features.split(','))
   shell:
     cmd: /bin/bash /vagrant/tools/setup_mysql_replication.sh "{{ 'gtid' if replication_type == '' else replication_type }}" "{{ master_ip }}" root "{{ db_password }}" "{{soft}}" "{{ os[dist][soft].cnf_file }}" "{{os[dist][soft].systemd_service}}" "{{'cluster1' if cluster_name == '' else cluster_name}}" "{{channel}}"
     creates: "/root/replication.configured{{channel}}"
+
+- name: Join to Galera cluster
+  when: >
+    master_ip != '' and percona_xtradb_cluster_version != '' and replication_type == 'galera'
+  galera_join:
+    cluster_name: "{{'cluster1' if cluster_name == '' else cluster_name}}"
+    donor_ip: "{{ master_ip }}"
+    systemd_unit: "{{os[dist][soft].systemd_service}}"
+    cnf_file: "{{ os[dist][soft].cnf_file }}"
+    state: joined
 
 - name: MySQL LDAP
   when: ldap_server_ip != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
