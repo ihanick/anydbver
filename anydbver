@@ -421,6 +421,8 @@ if [ "x$1" = "xconfigure" ] ; then
           ;;
         lxd)
           ;;
+        docker)
+          ;;
         existing)
           setup_existing_hosts
           ;;
@@ -458,6 +460,9 @@ if [ "x$1" = "xssh" ] ; then
       exec ./podmanctl ssh "$NODE" "$@"
       ;;
     lxd)
+      exec ./lxdctl $NAMESPACE_CMD ssh "$NODE" "$@"
+      ;;
+    docker)
       exec ./lxdctl $NAMESPACE_CMD ssh "$NODE" "$@"
       ;;
     existing)
@@ -524,6 +529,9 @@ if [ "x$1" = "xdestroy" ] || [[ "$DESTROY" == 1 ]] ; then
       ;;
     lxd)
       exec ./lxdctl $NAMESPACE_CMD --destroy $NODE
+      ;;
+    docker)
+      exec ./docker_container.py --nodes=3 --destroy
       ;;
     existing)
       echo "Please destroy $ANSIBLE_WORKERS manually"
@@ -1705,6 +1713,9 @@ deploy_node() {
     lxd)
       echo "$DEP_ENV ansible-playbook -i ${NAMESPACE}ansible_hosts --limit $USER.$NODE $ANSIBLE_VERBOSE playbook.yml"
       ;;
+    docker)
+      echo "$DEP_ENV ansible-playbook -i ${NAMESPACE}ansible_hosts --limit $USER.$NODE $ANSIBLE_VERBOSE playbook.yml"
+      ;;
     existing)
       echo "$DEP_ENV ansible-playbook -i ${NAMESPACE}ansible_hosts --limit $USER.$NODE playbook.yml"
       ;;
@@ -1737,6 +1748,9 @@ find_node_ip() {
       sed -ne '/'$NODE'/ {s/^.*ansible_host=//;s/ .*$//;p}' ansible_hosts
       ;;
     lxd)
+      ./lxdctl $NAMESPACE_CMD ip $NODE
+      ;;
+    docker)
       ./lxdctl $NAMESPACE_CMD ip $NODE
       ;;
     existing)
@@ -2039,6 +2053,9 @@ start_all_nodes() {
       fi
       ;;
     existing)
+      ;;
+    docker)
+      ./docker_container.py --deploy --destroy  $NAMESPACE_CMD --nodes ${#ALL_NODES[@]}
       ;;
     *)
       echo "Please select VM/Container provider with $0 configure provider:PROVIDERNAME"
