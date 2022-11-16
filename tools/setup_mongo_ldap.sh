@@ -53,6 +53,11 @@ systemctl start saslauthd
 
 # testsaslauthd -u dba -p $DB_PASS -f /var/run/saslauthd/mux
 
+grep -iq replsetname /etc/mongod.conf
+HAS_REPL=$?
+if [[ $HAS_REPL == 0 ]]; then
+  sed -i -e 's/replSetName:/#replSetName:/i' -e 's/replication:/#replication:/i' /etc/mongod.conf
+fi
 systemctl restart mongod
 
 mongo <<EOF
@@ -65,3 +70,9 @@ mongo -u $DB_USER -p$DB_LDAP_USR_PASS --authenticationDatabase '$external' --aut
 use percona
 db.col1.find()
 EOF
+
+if [[ $HAS_REPL == 0 ]]; then
+  sed -i -e 's/#replSetName:/replSetName:/i' -e 's/#replication:/replication:/i' /etc/mongod.conf
+  systemctl restart mongod
+fi
+
