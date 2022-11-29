@@ -7,6 +7,8 @@ import argparse
 import itertools
 import subprocess
 from pathlib import Path
+import time
+import datetime
 
 COMMAND_TIMEOUT=600
 FORMAT = '%(asctime)s %(levelname)s %(message)s'
@@ -65,16 +67,81 @@ def destroy(args):
     str((Path(os.getcwd()) / "data").resolve())+":/data",
     "busybox", "sh", "-c", "rm -rf -- /data/*"], "Can't clean data directory")
 
+def parse_settings(key, sett_cmd):
+  # 2.31.0,helm=percona-helm-charts:0.3.9,certs=self-signed,namespace=monitoring,password=verysecretpassword1^
+  sett = {}
+  sett_arr = sett_cmd.split(',')
+  sett["version"] = sett_arr.pop(0)
+  for s in sett_arr:
+    s_pair = s.split('=',1)
+    if len(s_pair) == 2:
+      sett[s_pair[0]] = s_pair[1]
+    else:
+      sett[s_pair[0]] = "True"
+  return sett
+
+
+def docker_mysql_wait_for_ready(node, net, timeout=COMMAND_TIMEOUT):
+  logger.info("Waiting for mysql ready on: {}".format(node))
+  for i in range(timeout // 2):
+    s = datetime.datetime.now()
+    if run_fatal(["docker", "run", "--rm", "--network", net, "percona/percona-server:8.0", "mysql", "-uroot", "-psecret", "-h", node, "-e", "SELECT 1"],
+        "Pod ready wait problem",
+        r"Unknown MySQL server host|Can't connect to MySQL server on", False) == 0:
+      return True
+    if (datetime.datetime.now() - s).total_seconds() < 1.5:
+      time.sleep(2)
+  return False
+
+
 def deploy(args, node_actions):
   logger.info("Deploy")
   net = "{}{}-anydbver".format(args.namespace, args.user)
   cluster = "{}-cluster1".format(args.user)
+
+  if args.provider == "docker":
+    run_fatal([args.provider, "network", "create", net], "Failed to create a docker network")
   for node_action in node_actions:
     print("Applying node: ", node_action)
+    node_name = node_action[0]
     node = node_action[1]
 
     run_k8s_operator_cmd = ['python3', 'tools/run_k8s_operator.py']
     if args.provider == "docker":
+      if node.percona_xtradb_cluster:
+        sett = parse_settings('percona_xtradb_cluster', node.percona_xtradb_cluster)
+        img = 'percona/percona-xtradb-cluster:' + sett['version']
+        node_dir = str((Path(os.getcwd()) / "data" / "node0").resolve())
+        my_cnf = str((Path(node_dir) / "mysqld.cnf").resolve())
+        if not Path(my_cnf).is_file():
+          run_fatal(["mkdir", "-p", node_dir], "can't a create directory for node")
+          with open(my_cnf,"w+") as f:
+                    f.writelines("""\
+[mysqld]
+pxc-encrypt-cluster-traffic=OFF""")
+
+
+
+        container_name = "{}-{}".format(args.user, node_name)
+        pxc_run_cmd = [args.provider, "run", "-d",
+                       "-e", "CLUSTER_NAME=cluster1",
+                       "-e", "MYSQL_ROOT_PASSWORD=secret",
+                       "-v", my_cnf + ":/etc/my.cnf.d/mysqld.cnf:ro",
+                       "--network", net,
+                       "--name", container_name]
+
+        if 'join' in sett:
+          pxc_run_cmd.append('-e')
+          pxc_run_cmd.append('CLUSTER_JOIN={}-'.format(args.user) + sett['join'])
+
+        pxc_run_cmd.append(img)
+        run_fatal(pxc_run_cmd, "failed to start pxc node")
+        docker_mysql_wait_for_ready(container_name, net)
+
+         #docker run -d -e MYSQL_ROOT_PASSWORD=secret -e CLUSTER_NAME=cluster1 -v $PWD/data/node0/mysqld.cnf:/etc/my.cnf.d/mysqld.cnf:ro --name ihanick-node0 --network ihanick-anydbver percona/percona-xtradb-cluster:8.0
+         #docker run -d -e MYSQL_ROOT_PASSWORD=secret -e CLUSTER_NAME=cluster1 -e CLUSTER_JOIN=172.24.0.7 -v $PWD/data/node0/mysqld.cnf:/etc/my.cnf.d/mysqld.cnf:ro --name ihanick-node1 --network ihanick-anydbver percona/percona-xtradb-cluster:8.0
+         #docker run -d -e MYSQL_ROOT_PASSWORD=secret -e CLUSTER_NAME=cluster1 -e CLUSTER_JOIN=172.24.0.7 -v $PWD/data/node0/mysqld.cnf:/etc/my.cnf.d/mysqld.cnf:ro --name ihanick-node2 --network ihanick-anydbver percona/percona-xtradb-cluster:8.0
+
       if node.k3d:
         if not Path("tools/k3d").is_file():
           run_fatal(["bash", "-c", "curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | PATH=$PATH:/home/ihanick/anydbver/Docker/tools K3D_INSTALL_DIR=$PWD/tools USE_SUDO=false bash"], "Can't download k3d")
@@ -226,6 +293,7 @@ def parse_node(args):
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--percona-server', '--ps', type=str, nargs='?')
+  parser.add_argument('--percona-xtradb-cluster', '--pxc', type=str, nargs='?')
   parser.add_argument('--percona-postgresql', '--percona-postgres', '--ppg', type=str, nargs='?')
   parser.add_argument('--leader', '--master', '--primary', type=str, nargs='?')
   parser.add_argument('--percona-xtrabackup', type=str, nargs='?')

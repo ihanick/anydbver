@@ -60,6 +60,12 @@ INSERT INTO t() VALUES(),(),();
 $ ./anydbver deploy node0 mysql:5.5 sampledb:test node0 mariadb:10.5 args:'--mysql56_temporal_format=OFF'
 ```
 
+
+## Percona XtraDB Cluster
+```
+./anydbver.py deploy node0 pxc:8.0 node1 pxc:8.0,join=node0 node2 pxc:8.0,join=node0
+```
+
 ## Postgresql
 
 * Pagila sample database and physical replication secondary created by offline filesystem copy
