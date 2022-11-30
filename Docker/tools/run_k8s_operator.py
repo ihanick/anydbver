@@ -143,7 +143,9 @@ def run_pg_operator(ns, op, db_ver, cluster_name):
     raise Exception("cluster is not starting")
 
 def op_labels(op, op_ver):
-  if (op in ("percona-xtradb-cluster-operator", "pxc-operator") and StrictVersion(op_ver) > StrictVersion("1.6.0") ):
+  if (op in ("percona-xtradb-cluster-operator", "pxc-operator")
+      and (not re.match('^[0-9\.]*$', op_ver)
+           or StrictVersion(op_ver) > StrictVersion("1.6.0") ) ):
     return "app.kubernetes.io/name="+op
   elif op == "ps-operator":
     return "app.kubernetes.io/name=ps-operator"
@@ -767,7 +769,7 @@ def setup_operator(args):
       args.cluster_name = "cluster1"
     else:
       run_fatal(["sed", "-i", "-re", r"s/: cluster1\>/: {}/".format(args.cluster_name), "./deploy/cr.yaml"], "fix cluster name in cr.yaml")
-    if StrictVersion(args.operator_version) < StrictVersion("1.11.0"):
+    if re.match('^[0-9\.]*$', args.operator_version) and StrictVersion(args.operator_version) < StrictVersion("1.11.0"):
       args.users_secret = "my-cluster-secrets"
     else:
       args.users_secret = args.cluster_name + "-secrets"
