@@ -30,7 +30,7 @@ def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
     raise Exception((err_msg+" '{}'").format(subprocess.list2cmdline(process.args)))
   return ret_code
 
-def ssh_config_append_node(ns, node, ip):
+def ssh_config_append_node(ns, node, ip, user):
   ns = ""
   if ns != "":
     ns = ns + "-"
@@ -42,19 +42,19 @@ Host {node} {fullnode}
    UserKnownHostsFile /dev/null
    ProxyCommand none
    IdentityFile secret/id_rsa
-""".format(node=node,ip=ip, fullnode="{}.{}".format(USER,node))
+""".format(node=node,ip=ip, fullnode="{}.{}".format(user, node))
   with open("{}ssh_config".format(ns), "a") as ssh_config:
-        ssh_config.write(ssh_node)
+    ssh_config.write(ssh_node)
 
-def ansible_hosts_append_node(ns, node, ip):
+def ansible_hosts_append_node(ns, node, ip, user):
   ns = ""
   if ns != "":
     ns = ns + "-"
   ansible_host = """\
-{node} ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host={ip} ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none'
-""".format(node="{}.{}".format(USER,node), ip=ip)
+      {node} ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host={ip} ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none'
+""".format(node="{}.{}".format(user,node), ip=ip)
   with open("{}ansible_hosts".format(ns), "a") as ansible_hosts:
-        ansible_hosts.write(ansible_host)
+    ansible_hosts.write(ansible_host)
 
 def run_get_line(args,err_msg, ignore_msg=None, print_cmd=True, env=None):
   if print_cmd:
@@ -68,7 +68,7 @@ def run_get_line(args,err_msg, ignore_msg=None, print_cmd=True, env=None):
     logger.error(output)
     raise Exception((err_msg+" '{}'").format(subprocess.list2cmdline(process.args)))
   return output
- 
+
 
 
 def get_node_ip(namespace, name):
@@ -78,24 +78,26 @@ def get_node_ip(namespace, name):
 
   return list(run_get_line(["docker", "inspect", "-f", "{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}", container_name], "Can't get node ip").splitlines())[0]
 
-def start_container(os, namespace, name):
+def start_container(args, name):
   container_name = name
-  if namespace != "":
-    container_name = namespace + "-" + name
+  if args.namespace != "":
+    container_name = args.namespace + "-" + name
 
+  net = "{}{}-anydbver".format(args.namespace, args.user)
+  run_fatal(["docker", "network", "create", net], "Can't create a docker network", "already exists")
   run_fatal(["docker", "run", "--name", container_name,
-    "-d", "--cgroupns=host", "--tmpfs", "/tmp", 
-    "--tmpfs", "/run", "-v", "/sys/fs/cgroup:/sys/fs/cgroup", "rockylinux:8-sshd-systemd"],
-    "Can't start docker container")
-  ssh_config_append_node(namespace, name, get_node_ip(namespace, name))
-  ansible_hosts_append_node(namespace, name, get_node_ip(namespace, name))
+             "-d", "--cgroupns=host", "--tmpfs", "/tmp", "--network", net,
+             "--tmpfs", "/run", "-v", "/sys/fs/cgroup:/sys/fs/cgroup", "rockylinux:8-sshd-systemd"],
+            "Can't start docker container")
+  ssh_config_append_node(args.namespace, name, get_node_ip(args.namespace, name), args.user)
+  ansible_hosts_append_node(args.namespace, name, get_node_ip(args.namespace, name), args.user)
 
 def delete_container(namespace, name):
   container_name = name
   if namespace != "":
     container_name = namespace + "-" + name
   run_fatal(["docker", "rm", "-f", container_name],
-      "Can't delete docker container")
+            "Can't delete docker container")
 
 
 def get_all_nodes(args):
@@ -106,7 +108,7 @@ def get_all_nodes(args):
 
 def deploy(args):
   for name in get_all_nodes(args):
-    start_container(os, args.namespace,name)
+    start_container(args, name)
 
 def destroy(args):
   for name in get_all_nodes(args):
@@ -114,8 +116,6 @@ def destroy(args):
 
 
 def main():
-  os = "rocky8"
-
   parser = argparse.ArgumentParser()
   parser.add_argument('--deploy', dest="deploy", action='store_true')
   parser.add_argument('--destroy', dest="destroy", action='store_true')
@@ -123,11 +123,14 @@ def main():
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
   args = parser.parse_args()
 
+  args.user = os.getlogin()
+  args.os = "rocky8"
+
   if args.destroy:
     destroy(args)
   if args.deploy:
     deploy(args)
- 
+
 
 
 if __name__ == '__main__':
