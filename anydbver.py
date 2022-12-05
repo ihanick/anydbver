@@ -7,7 +7,7 @@ import argparse
 import itertools
 import subprocess
 from pathlib import Path
-import requests
+import urllib.request
 
 COMMAND_TIMEOUT=600
 FORMAT = '%(asctime)s %(levelname)s %(message)s'
@@ -157,13 +157,15 @@ def deploy(args, node_actions):
         run_fatal(run_k8s_operator_cmd, "Can't run the operator")
 
 def append_versions_from_url(vers, url, r):
-  f = requests.get(url)
-  m = re.findall(r, f.text)
-  for i in m:
-    vers.append(i[1])
+  with urllib.request.urlopen(url) as response:
+    m = re.findall(r, response.read().decode('utf-8'))
+    for i in m:
+      vers.append(i[1])
 
 def update_versions():
   versions = []
+  if not os.path.exists(".version-info"):
+    os.makedirs(".version-info")
   append_versions_from_url(versions,
     "https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/",
     r'Percona-Server-MongoDB(-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm')
@@ -227,7 +229,7 @@ def run_mysql_cli(args):
 
 def fix_main_commands(args):
   for cmd_idx, cmd in enumerate(args):
-    if cmd in ('deploy', 'add', 'replace', 'destroy', 'delete', 'update'):
+    if cmd in ('deploy', 'add', 'replace', 'destroy', 'delete', 'update', 'ssh'):
       args[cmd_idx] = '--' + cmd
 
 def fix_missing_node_commands(args):
@@ -322,7 +324,20 @@ def apply_node_command(node, env, cmd):
 def create_nodes(nodes_cnt):
   os.system("rm -f ssh_config ansible_hosts; ./docker_container.py --nodes={} --destroy --deploy".format(nodes_cnt))
 
+
+def ssh_login(namespace, node):
+  if node == "node0":
+    node = "default"
+  os.system("ssh -F {}ssh_config -o LogLevel=error -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa -t root@{}".format(namespace, node))
+
 def main():
+  if len(sys.argv) > 1 and sys.argv[1] in ("ssh", "--ssh"):
+    host = "default"
+    if len(sys.argv) > 2:
+      host = sys.argv[2]
+    ssh_login("", host)
+    sys.exit(0)
+
   parser = argparse.ArgumentParser()
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
   parser.add_argument('--provider', dest="provider", type=str, default="")
@@ -331,6 +346,7 @@ def main():
   parser.add_argument('--mysql', dest="mysql_cli", type=str, default="")
   parser.add_argument('--deploy', dest="deploy", action='store_true')
   parser.add_argument('--update', dest="update", action='store_true')
+  parser.add_argument('--ssh', dest="ssh", type=str, default="")
 
   nodes=[]
   for x in range(0,100):
