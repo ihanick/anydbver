@@ -387,12 +387,18 @@ def main():
     if node == "node0":
       node = "default"
     env = apply_node_actions(node, n[1])
-    cmds.append(
-        (node,
-          env,
-          ["ansible-playbook", "-i", "ansible_hosts", "--limit", "{}.{}".format(args.user, node), "playbook.yml"])
-        )
+    if sys.platform == "linux" or sys.platform == "linux2":
+      cmds.append(
+          (node,
+            env,
+            ["ansible-playbook", "-i", "ansible_hosts", "--limit", "{}.{}".format(args.user, node), "playbook.yml"])
+          )
+    else:
+      envstr = ""
+      for v in env:
+        envstr = envstr + " " + v + "=" + env[v]
 
+      os.system("""echo "cd /anydbver; {env} ansible-playbook -i ansible_hosts --limit {user}.{node} playbook.yml"|docker run --network {user}-anydbver --rm -i -e USER={user} rockylinux:8-anydbver-ansible bash""".format(env=envstr, user=args.user, node=node) )
   print(args)
   print(node_actions)
   print(cmds)
