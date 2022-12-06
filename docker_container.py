@@ -48,11 +48,14 @@ Host {node} {fullnode}
 
 def ansible_hosts_append_node(ns, node, ip, user):
   ns = ""
+  ssh_options = ""
   if ns != "":
     ns = ns + "-"
+  if sys.platform == "linux" or sys.platform == "linux2":
+    ssh_options = "-o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no"
   ansible_host = """\
-      {node} ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host={ip} ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none'
-""".format(node="{}.{}".format(user,node), ip=ip)
+      {node} ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host={ip} ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no {ssh_options} -o ProxyCommand=none'
+""".format(node="{}.{}".format(user,node), ip=ip,ssh_options=ssh_options)
   with open("{}ansible_hosts".format(ns), "a") as ansible_hosts:
     ansible_hosts.write(ansible_host)
 
