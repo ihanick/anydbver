@@ -397,8 +397,20 @@ def main():
       envstr = ""
       for v in env:
         envstr = envstr + " " + v + "=" + env[v]
-
-      os.system("""echo "cd /anydbver; {env} ansible-playbook -i ansible_hosts --limit {user}.{node} playbook.yml"|docker run --network {user}-anydbver --rm -i -e USER={user} rockylinux:8-anydbver-ansible bash""".format(env=envstr, user=args.user, node=node) )
+      ssh_config = open('ssh_config').read()
+      ansible_hosts = open('ansible_hosts').read()
+      open('playbook_run.sh', "w").write(
+"""
+cat > /anydbver/ssh_config <<EOF1
+{ssh_config}
+EOF1
+cat > /anydbver/ansible_hosts <<EOF2
+{ansible_hosts}
+EOF2
+cd /anydbver; {env} ansible-playbook -i ansible_hosts --limit {user}.{node} playbook.yml
+""".format(ssh_config=ssh_config, ansible_hosts=ansible_hosts, env=envstr, user=args.user, node=node) )
+      playbook_cmd = """cat playbook_run.sh | docker run --network {user}-anydbver --rm -i -e USER={user} rockylinux:8-anydbver-ansible bash""".format(user=args.user, node=node)
+      os.system(playbook_cmd )
   print(args)
   print(node_actions)
   print(cmds)
