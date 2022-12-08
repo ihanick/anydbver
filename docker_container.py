@@ -88,7 +88,7 @@ def start_container(args, name):
 
   net = "{}{}-anydbver".format(args.namespace, args.user)
   run_fatal(["docker", "network", "create", net], "Can't create a docker network", "already exists")
-  run_fatal(["docker", "run", "--name", container_name,
+  run_fatal(["docker", "run", "--platform", "linux/amd64", "--name", container_name,
              "-d", "--cgroupns=host", "--tmpfs", "/tmp", "--network", net,
              "--tmpfs", "/run", "-v", "/sys/fs/cgroup:/sys/fs/cgroup", "rockylinux:8-sshd-systemd"],
             "Can't start docker container")
