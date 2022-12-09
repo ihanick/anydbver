@@ -733,3 +733,21 @@ el8:
       - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-{{postgresql_version}}PGDG.rhel8.x86_64"
       - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-server-{{postgresql_version}}PGDG.rhel8.x86_64"
       - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-contrib-{{postgresql_version}}PGDG.rhel8.x86_64"
+el9:
+  ps80:
+    repo_file: "/etc/yum.repos.d/percona-ps-80-release.repo"
+    repo_enable_str: "ps-80"
+    systemd_service: "mysqld"
+    cnf_file: "/etc/my.cnf"
+    install_packages:
+      - "percona-server-shared-{{ percona_server_version }}.el9.x86_64"
+      - "percona-server-client-{{ percona_server_version }}.el9.x86_64"
+      - "percona-server-server-{{ percona_server_version }}.el9.x86_64"
+    install_debug_packages:
+      - gdb
+      - "{{ percona_mysql_name }}-debuginfo{{ percona_mysql_full_ver }}"
+    rocksdb_packages:
+      - percona-server-rocksdb-{{ percona_server_version }}.el9
+    mysql_shell_packages:
+      - "https://www.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}/binary/redhat/7/x86_64/percona-mysql-shell-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}-1.el9.x86_64.rpm"
+

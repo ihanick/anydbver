@@ -17,7 +17,11 @@ logger.setLevel(logging.INFO)
 
 def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
   if print_cmd:
-    logger.info(subprocess.list2cmdline(args))
+    envstr = ""
+    for v in env:
+      envstr = envstr + " " + v + "=" + env[v]
+    logger.info(envstr + " " + subprocess.list2cmdline(args))
+  env.update(os.environ.copy())
   process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True, env=env)
   output = ''
   while process.poll() is None:
@@ -160,29 +164,45 @@ def append_versions_from_url(vers, url, r):
   with urllib.request.urlopen(url) as response:
     m = re.findall(r, response.read().decode('utf-8'))
     for i in m:
-      vers.append(i[1])
+      vers.append(i)
+
+def generate_versions_file(filename, src_info):
+  versions = []
+  for prg in src_info:
+    append_versions_from_url(versions, prg["url"], prg["pattern"])
+  # keep only unique versions
+  versions = list(dict.fromkeys(versions))
+  with open( str((Path(os.getcwd()) / ".version-info" / filename).resolve()), "w") as f:
+    f.write("\n".join(versions) + "\n")
+    
 
 def update_versions():
   versions = []
   if not os.path.exists(".version-info"):
     os.makedirs(".version-info")
-  append_versions_from_url(versions,
-    "https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/",
-    r'Percona-Server-MongoDB(-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm')
-  append_versions_from_url(versions,
-    "https://repo.percona.com/psmdb-40/yum/release/8/RPMS/x86_64/",
-    r'percona-server-mongodb(-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm')
-  append_versions_from_url(versions,
-    "https://repo.percona.com/psmdb-42/yum/release/8/RPMS/x86_64/",
-    r'percona-server-mongodb(-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm')
-  append_versions_from_url(versions,
-    "https://repo.percona.com/psmdb-44/yum/release/8/RPMS/x86_64/",
-    r'percona-server-mongodb(-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm')
-  append_versions_from_url(versions,
-    "https://repo.percona.com/psmdb-50/yum/release/8/RPMS/x86_64/",
-    r'percona-server-mongodb(-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm')
-  with open(".version-info/psmdb.el8.txt", "w") as f:
-    f.write("\n".join(versions))
+  generate_versions_file("psmdb.el8.txt",
+    [
+      {"url": "https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/",
+      "pattern": r'Percona-Server-MongoDB(?:-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm'},
+      {"url": "https://repo.percona.com/psmdb-40/yum/release/8/RPMS/x86_64/",
+      "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm'},
+      {"url": "https://repo.percona.com/psmdb-42/yum/release/8/RPMS/x86_64/",
+      "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm'},
+      {"url": "https://repo.percona.com/psmdb-44/yum/release/8/RPMS/x86_64/",
+      "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm'},
+      {"url": "https://repo.percona.com/psmdb-50/yum/release/8/RPMS/x86_64/",
+      "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm'}
+    ])
+
+  generate_versions_file("percona-server.el8.txt",
+    [
+      {"url": "https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/",
+      "pattern": r'Percona-Server-server-\d\d-(\d[^"]*).el8.x86_64.rpm'},
+      {"url": "https://repo.percona.com/ps-80/yum/release/8/RPMS/x86_64/",
+      "pattern": r'percona-server-server-(\d[^"]*)[.]el8.x86_64.rpm'}
+    ])
+
+
 
 def detect_provider(args):
   if args.provider in ("kubectl", "kubernetes", "k8s"):
@@ -255,6 +275,16 @@ def find_version(args):
           break
       args.percona_server_mongodb = version
       #print('looking psmdb version {} in .version-info/psmdb.el8.txt, found: {}'.format(args.percona_server_mongodb, version))
+  for p in ('ps',):
+    if args.percona_server:
+      vers = list(open(".version-info/percona-server.el8.txt"))
+      version = vers[-1]
+      for line in reversed(vers):
+        ver = line.rstrip()
+        if ver.startswith(args.percona_server):
+          version = ver
+          break
+      args.percona_server = version
 
 def parse_node(args):
   node = args.pop(0)
@@ -313,16 +343,20 @@ def apply_node_actions(node, actions):
     env["DB_OPTS"] = "mongo/enable_wt.conf"
     if actions.replica_set is not None:
       env["REPLICA_SET"] = actions.replica_set
+  if actions.percona_server is not None:
+    env["PS"] = actions.percona_server
+    env["DB_OPTS"] = "mysql/async-repl-gtid.cnf"
+    if actions.replica_set is not None:
+      env["REPLICA_SET"] = actions.replica_set
   if actions.leader is not None:
     env["DB_IP"] = resolve_hostname(actions.leader)
   return env
 
 def apply_node_command(node, env, cmd):
-  env.update(os.environ.copy())
   run_fatal(cmd, "failed to deploy node {}".format(node), env=env)
 
-def create_nodes(nodes_cnt):
-  os.system("rm -f ssh_config ansible_hosts; ./docker_container.py --nodes={} --destroy --deploy".format(nodes_cnt))
+def create_nodes(nodes_cnt, osver):
+  os.system("rm -f ssh_config ansible_hosts; ./docker_container.py --nodes={} --os={} --destroy --deploy".format(nodes_cnt, osver))
 
 
 def ssh_login(namespace, node):
@@ -347,6 +381,7 @@ def main():
   parser.add_argument('--deploy', dest="deploy", action='store_true')
   parser.add_argument('--update', dest="update", action='store_true')
   parser.add_argument('--ssh', dest="ssh", type=str, default="")
+  parser.add_argument('--os', dest="os", type=str, default="rocky8")
 
   nodes=[]
   for x in range(0,100):
@@ -379,7 +414,7 @@ def main():
     node_names[ node ] = 1
 
   nodes_cnt = len(node_names)
-  create_nodes(nodes_cnt)
+  create_nodes(nodes_cnt, args.os)
 
   cmds = []
   for n in node_actions:

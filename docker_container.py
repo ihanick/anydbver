@@ -86,11 +86,16 @@ def start_container(args, name):
   if args.namespace != "":
     container_name = args.namespace + "-" + name
 
+
+  docker_img = "rockylinux:8-sshd-systemd"
+  if args.os is not None and args.os == "rocky9":
+    docker_img = "rockylinux:9-sshd-systemd"
+
   net = "{}{}-anydbver".format(args.namespace, args.user)
   run_fatal(["docker", "network", "create", net], "Can't create a docker network", "already exists")
   run_fatal(["docker", "run", "--platform", "linux/amd64", "--name", container_name,
              "-d", "--cgroupns=host", "--tmpfs", "/tmp", "--network", net,
-             "--tmpfs", "/run", "-v", "/sys/fs/cgroup:/sys/fs/cgroup", "rockylinux:8-sshd-systemd"],
+             "--tmpfs", "/run", "-v", "/sys/fs/cgroup:/sys/fs/cgroup", docker_img],
             "Can't start docker container")
   ssh_config_append_node(args.namespace, name, get_node_ip(args.namespace, name), args.user)
   ansible_hosts_append_node(args.namespace, name, get_node_ip(args.namespace, name), args.user)
@@ -123,11 +128,11 @@ def main():
   parser.add_argument('--deploy', dest="deploy", action='store_true')
   parser.add_argument('--destroy', dest="destroy", action='store_true')
   parser.add_argument('--nodes', dest="nodes", type=int, default=1)
+  parser.add_argument('--os', dest="os", type=str, default="rocky8")
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
   args = parser.parse_args()
 
   args.user = os.getlogin()
-  args.os = "rocky8"
 
   if args.destroy:
     destroy(args)
