@@ -15,7 +15,7 @@ logging.basicConfig(format=FORMAT)
 logger = logging.getLogger('AnyDbVer')
 logger.setLevel(logging.INFO)
 
-def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
+def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env={}):
   if print_cmd:
     envstr = ""
     for v in env:
