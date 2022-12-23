@@ -81,15 +81,32 @@ def get_node_ip(namespace, name):
 
   return list(run_get_line(["docker", "inspect", "-f", "{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}", container_name], "Can't get node ip").splitlines())[0]
 
+def get_docker_os_image(os_name):
+  if os_name is None:
+    return "rockylinux:8-sshd-systemd"
+  if os_name == "":
+    return "rockylinux:8-sshd-systemd"
+  if os_name in ("el9", "rocky9", "rockylinux9", "centos9"):
+    return "rockylinux:9-sshd-systemd"
+  return "rockylinux:8-sshd-systemd"
+
+def get_node_os(os_str, name):
+  if name == "default":
+    name = "node0"
+  # os_str="rocky8,node0=rocky8,node1=rocky9"
+  os_search = re.search(',{node_name}=(.*?),'.format(node_name=name), os_str)
+
+  if os_search:
+    #logger.info("Found OS for {name}: {os}".format(name=name, os=os_search.group(1)))
+    return os_search.group(1)
+  return ""
+
 def start_container(args, name):
   container_name = name
   if args.namespace != "":
     container_name = args.namespace + "-" + name
 
-
-  docker_img = "rockylinux:8-sshd-systemd"
-  if args.os is not None and args.os == "rocky9":
-    docker_img = "rockylinux:9-sshd-systemd"
+  docker_img = get_docker_os_image(get_node_os(args.os, name))
 
   net = "{}{}-anydbver".format(args.namespace, args.user)
   run_fatal(["docker", "network", "create", net], "Can't create a docker network", "already exists")

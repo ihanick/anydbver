@@ -201,6 +201,13 @@ def update_versions():
       {"url": "https://repo.percona.com/ps-80/yum/release/8/RPMS/x86_64/",
       "pattern": r'percona-server-server-(\d[^"]*)[.]el8.x86_64.rpm'}
     ])
+  generate_versions_file("percona-server.el9.txt",
+    [
+      {"url": "https://repo.percona.com/percona/yum/release/9/RPMS/x86_64/",
+      "pattern": r'Percona-Server-server-\d\d-(\d[^"]*).el9.x86_64.rpm'},
+      {"url": "https://repo.percona.com/ps-80/yum/release/9/RPMS/x86_64/",
+      "pattern": r'percona-server-server-(\d[^"]*)[.]el9.x86_64.rpm'}
+    ])
 
 
 
@@ -264,9 +271,15 @@ def fix_missing_node_commands(args):
       break
 
 def find_version(args):
+  osver = "el8"
+  if args.os is not None:
+    if args.os == "rocky8":
+      osver = "el8"
+    elif args.os == "rocky9":
+      osver = "el9"
   for p in ('psmdb',):
     if args.percona_server_mongodb:
-      vers = list(open(".version-info/psmdb.el8.txt"))
+      vers = list(open(".version-info/psmdb.{os}.txt".format(os=osver)))
       version = vers[-1]
       for line in reversed(vers):
         ver = line.rstrip()
@@ -277,7 +290,7 @@ def find_version(args):
       #print('looking psmdb version {} in .version-info/psmdb.el8.txt, found: {}'.format(args.percona_server_mongodb, version))
   for p in ('ps',):
     if args.percona_server:
-      vers = list(open(".version-info/percona-server.el8.txt"))
+      vers = list(open(".version-info/percona-server.{os}.txt".format(os=osver)))
       version = vers[-1]
       for line in reversed(vers):
         ver = line.rstrip()
@@ -285,6 +298,17 @@ def find_version(args):
           version = ver
           break
       args.percona_server = version
+
+  if args.percona_xtrabackup:
+    vers = list(open(".version-info/xtrabackup.{os}.txt".format(os=osver)))
+    version = vers[-1]
+    for line in reversed(vers):
+      ver = line.rstrip()
+      if ver.startswith(args.percona_xtrabackup):
+        version = ver
+        break
+    args.percona_xtrabackup = version
+
 
 def parse_node(args):
   node = args.pop(0)
@@ -311,6 +335,7 @@ def parse_node(args):
   parser.add_argument('--minio-certs', dest="minio_certs", type=str, nargs='?')
   parser.add_argument('--k3d', type=str, nargs='?')
   parser.add_argument('--helm', type=str, nargs='?')
+  parser.add_argument('--os', type=str, default="rocky8")
   parser.add_argument('--k8s-pg', dest="k8s_pg", type=str, nargs='?')
   parser.add_argument('--k8s-ps', dest="k8s_ps", type=str, nargs='?')
   parser.add_argument('--k8s-mongo', dest="k8s_mongo", type=str, nargs='?')
@@ -348,6 +373,8 @@ def apply_node_actions(node, actions):
     env["DB_OPTS"] = "mysql/async-repl-gtid.cnf"
     if actions.replica_set is not None:
       env["REPLICA_SET"] = actions.replica_set
+  if actions.percona_xtrabackup is not None:
+    env["PXB"] = actions.percona_xtrabackup
   if actions.leader is not None:
     env["DB_IP"] = resolve_hostname(actions.leader)
   return env
@@ -356,7 +383,9 @@ def apply_node_command(node, env, cmd):
   run_fatal(cmd, "failed to deploy node {}".format(node), env=env)
 
 def create_nodes(nodes_cnt, osver):
-  os.system("rm -f ssh_config ansible_hosts; ./docker_container.py --nodes={} --os={} --destroy --deploy".format(nodes_cnt, osver))
+  create_nodes_cmd = "rm -f ssh_config ansible_hosts; ./docker_container.py --nodes={} --os={} --destroy --deploy".format(nodes_cnt, osver)
+  logger.info(create_nodes_cmd)
+  os.system(create_nodes_cmd)
 
 
 def ssh_login(namespace, node):
@@ -408,13 +437,15 @@ def main():
 
   node_actions = []
   node_names = {}
+  nodes_os = args.os + ","
   for nodeline in nodelines:
     node_actions.append(parse_node(nodeline))
     node = node_actions[-1][0]
     node_names[ node ] = 1
+    nodes_os = nodes_os + node + "=" + (node_actions[-1][1]).os + ","
 
   nodes_cnt = len(node_names)
-  create_nodes(nodes_cnt, args.os)
+  create_nodes(nodes_cnt, nodes_os)
 
   cmds = []
   for n in node_actions:
