@@ -2,7 +2,8 @@
 # tasks file for mysql
 - name: Enable EPEL
   when: >
-    (orchestrator_version != '' or mysql_ndb_data_version != '' or mysql_ndb_sql_version != '' or mysql_ndb_management_version != '') and
+    (orchestrator_version != '' or percona_orchestrator_version != ''
+     or mysql_ndb_data_version != '' or mysql_ndb_sql_version != '' or mysql_ndb_management_version != '') and
     (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux')
   package:
     name: epel-release

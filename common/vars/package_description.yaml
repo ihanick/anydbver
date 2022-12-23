@@ -564,6 +564,13 @@ el7:
       - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-{{orchestrator_version}}.x86_64.rpm"
       - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-client-{{orchestrator_version}}.x86_64.rpm"
       - which
+  percona_orchestrator:
+    systemd_service: "orchestrator"
+    install_packages:
+      - "percona-orchestrator-{{ percona_orchestrator_version }}.{{dist}}.x86_64"
+      - "percona-orchestrator-cli-{{ percona_orchestrator_version }}.{{dist}}.x86_64"
+      - "percona-orchestrator-client-{{ percona_orchestrator_version }}.{{dist}}.x86_64"
+      - "which"
   pmm_client:
     install_packages:
       - "pmm{{'2' if pmm_client_version.startswith('2') else ''}}-client-{{pmm_client_version}}.el7.x86_64"
