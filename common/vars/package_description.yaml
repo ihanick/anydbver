@@ -389,6 +389,14 @@ focal:
       - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator_{{orchestrator_version}}_amd64.deb"
       - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-client_{{orchestrator_version}}_amd64.deb"
 
+  percona_orchestrator:
+    systemd_service: "orchestrator"
+    install_packages:
+      - "percona-orchestrator-{{ percona_orchestrator_version }}.{{dist}}.x86_64"
+      - "percona-orchestrator-cli-{{ percona_orchestrator_version }}.{{dist}}.x86_64"
+      - "percona-orchestrator-client-{{ percona_orchestrator_version }}.{{dist}}.x86_64"
+      - "which"
+
   mariadb_server:
     systemd_service: "mariadb"
     cnf_file: '/etc/mysql/mariadb.conf.d/zz_mysqld.cnf'
@@ -708,6 +716,14 @@ el8:
       - "percona-toolkit-{{ percona_toolkit_version }}.{{dist}}.x86_64"
       - which
 
+  percona_orchestrator:
+    systemd_service: "orchestrator"
+    install_packages:
+      - "percona-orchestrator-{{ percona_orchestrator_version }}.{{dist}}.x86_64"
+      - "percona-orchestrator-cli-{{ percona_orchestrator_version }}.{{dist}}.x86_64"
+      - "percona-orchestrator-client-{{ percona_orchestrator_version }}.{{dist}}.x86_64"
+      - "which"
+
   orchestrator:
     install_packages:
       - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-cli-{{orchestrator_version}}.x86_64.rpm"
@@ -750,4 +766,13 @@ el9:
       - percona-server-rocksdb-{{ percona_server_version }}.el9
     mysql_shell_packages:
       - "https://www.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}/binary/redhat/7/x86_64/percona-mysql-shell-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}-1.el9.x86_64.rpm"
+
+  percona_orchestrator:
+    systemd_service: "orchestrator"
+    install_packages:
+      - "percona-orchestrator-{{ percona_orchestrator_version }}.{{dist}}.x86_64"
+      - "percona-orchestrator-cli-{{ percona_orchestrator_version }}.{{dist}}.x86_64"
+      - "percona-orchestrator-client-{{ percona_orchestrator_version }}.{{dist}}.x86_64"
+      - "which"
+
 

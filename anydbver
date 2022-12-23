@@ -218,6 +218,7 @@ if [ "x$1" = "xdeploy" ] && ([ "x$2" = "xmysql" -o "x$2" = "xpercona-server" -o 
     echo "$0 deploy ps:5.7 hostname:leader.percona.local node1 ps:5.7 hostname:follower.percona.local leader:default"
     echo "$0 deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row"
     echo "$0 deploy hn:ps0 ps:5.7 node1 hn:ps1 ps:5.7 master:default node2 hn:ps2 ps:5.7 master:node1 node3 hn:orc orchestrator master:default"
+    echo "$0 deploy hn:ps0 ps:5.7 node1 hn:ps1 ps:5.7 master:default node2 hn:ps2 ps:5.7 master:node1 node3 hn:orc percona-orchestrator master:default"
     echo "$0 deploy samba node1 ps samba-dc:default"
     echo "$0 deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default"
     echo -e $0' deploy \\\n pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default \\\n node3 pxc:5.7 cluster:cluster2 node4 pxc:5.7 cluster:cluster2 galera-master:node3 node5 pxc:5.7 cluster:cluster2 galera-master:node3'
@@ -946,6 +947,19 @@ EOF
 8.0.23-1
 EOF
 
+
+ cat > .version-info/percona-orchestrator.el7.txt <<EOF
+3.2.6-6
+EOF
+cp .version-info/percona-orchestrator.el7.txt .version-info/percona-orchestrator.el8.txt
+cp .version-info/percona-orchestrator.el7.txt .version-info/percona-orchestrator.el9.txt
+
+for osver in 7 8 9 ; do
+ curl -sL https://repo.percona.com/pdps-8.0/yum/release/$osver/RPMS/x86_64/ \
+    | perl -ne  '/percona-orchestrator-(\d[^"]*).el'$osver'.x86_64.rpm/ and print "$1\n"' | sort -n -t . -k1,1 -k2,2 -k3,3 > .version-info/percona-orchestrator.el$osver.txt
+done
+
+
  cat > .version-info/orchestrator.el7.txt <<EOF
 3.0.3-1
 3.0.5-1
@@ -1246,6 +1260,10 @@ deploy_node() {
     if [[ $i == "orchestrator" ]] || [[ $i == "orchestrator:"* ]] ; then
       search_for_latest_version orchestrator "$i"
       DEP_ENV="$DEP_ENV ORCHESTRATOR=$VER"
+    fi
+    if [[ $i == "percona-orchestrator" ]] || [[ $i == "percona-orchestrator:"* ]] ; then
+      search_for_latest_version percona-orchestrator "$i"
+      DEP_ENV="$DEP_ENV PERCONA_ORCHESTRATOR=$VER"
     fi
     if [[ $i == "percona-xtradb-cluster" ]] || [[ $i == "percona-xtradb-cluster:"* ]] || [[ $i == "pxc" ]] || [[ $i == "pxc:"* ]] ; then
       search_for_latest_version percona-xtradb-cluster "$i"

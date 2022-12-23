@@ -54,6 +54,7 @@
     mysql_ndb_data_version != '' or
     mysql_ndb_sql_version != '' or
     mysql_ndb_management_version != '' or
+    percona_orchestrator_version != '' or
     orchestrator_version != '' or
     proxysql_version != '' or
     ldap_server != '' or

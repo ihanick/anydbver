@@ -209,6 +209,17 @@ def update_versions():
       "pattern": r'percona-server-server-(\d[^"]*)[.]el9.x86_64.rpm'}
     ])
 
+  generate_versions_file("percona-orchestrator.el8.txt",
+    [
+      {"url": "https://repo.percona.com/pdps-8.0/yum/release/8/RPMS/x86_64/",
+      "pattern": r'percona-orchestrator-(\d[^"]*).el8.x86_64.rpm'}
+    ])
+  generate_versions_file("percona-orchestrator.el9.txt",
+    [
+      {"url": "https://repo.percona.com/pdps-8.0/yum/release/9/RPMS/x86_64/",
+      "pattern": r'percona-orchestrator-(\d[^"]*).el9.x86_64.rpm'}
+    ])
+
 
 
 def detect_provider(args):
@@ -308,6 +319,15 @@ def find_version(args):
         version = ver
         break
     args.percona_xtrabackup = version
+  if args.percona_orchestrator:
+    vers = list(open(".version-info/percona-orchestrator.{os}.txt".format(os=osver)))
+    version = vers[-1]
+    for line in reversed(vers):
+      ver = line.rstrip()
+      if ver.startswith(args.percona_orchestrator):
+        version = ver
+        break
+    args.percona_orchestrator = version
 
 
 def parse_node(args):
@@ -329,6 +349,7 @@ def parse_node(args):
   parser.add_argument('--percona-postgresql', '--percona-postgres', '--ppg', type=str, nargs='?')
   parser.add_argument('--leader', '--master', '--primary', type=str, nargs='?')
   parser.add_argument('--percona-xtrabackup', type=str, nargs='?')
+  parser.add_argument('--percona-orchestrator', type=str, nargs='?')
   parser.add_argument('--percona-toolkit', type=str, nargs='?')
   parser.add_argument('--cert-manager', dest="cert_manager", type=str, nargs='?')
   parser.add_argument('--k8s-minio', dest="k8s_minio", type=str, nargs='?')
@@ -373,8 +394,16 @@ def apply_node_actions(node, actions):
     env["DB_OPTS"] = "mysql/async-repl-gtid.cnf"
     if actions.replica_set is not None:
       env["REPLICA_SET"] = actions.replica_set
+    env["DB_USER"] = "root"
+    env["DB_PASS"]= "verysecretpassword1^"
   if actions.percona_xtrabackup is not None:
     env["PXB"] = actions.percona_xtrabackup
+    env["DB_USER"] = "root"
+    env["DB_PASS"]= "verysecretpassword1^"
+  if actions.percona_orchestrator is not None:
+    env["PERCONA_ORCHESTRATOR"] = actions.percona_orchestrator
+    env["DB_USER"] = "root"
+    env["DB_PASS"]= "verysecretpassword1^"
   if actions.leader is not None:
     env["DB_IP"] = resolve_hostname(actions.leader)
   return env

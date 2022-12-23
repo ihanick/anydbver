@@ -54,6 +54,7 @@ Deploy:
 ./anydbver deploy ps:5.7 hostname:leader.percona.local node1 ps:5.7 hostname:follower.percona.local leader:default
 ./anydbver deploy ps:8.0 utf8 node1 ps:5.7 master:default node2 ps:5.6 master:node1 row
 ./anydbver deploy hn:ps0 ps:5.7 node1 hn:ps1 ps:5.7 master:default node2 hn:ps2 ps:5.7 master:node1 node3 hn:orc orchestrator master:default
+./anydbver deploy ps:5.7 node1 ps:5.7 master:node0 node2 ps:5.7 master:node1 node3 percona-orchestrator master:node0
 ./anydbver deploy samba node1 ps samba-dc:default
 ./anydbver deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default
 ./anydbver deploy \

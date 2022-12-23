@@ -1,6 +1,9 @@
 - name: install percona server
   hosts: all
   become: yes
+  ## docker run -d -p 8080:8123 clue/polipo proxyAddress=0.0.0.0
+  #environment:
+  #  http_proxy: "http://172.17.0.1:8080"
   vars:
     sync_is_required: "{{ lookup('vars', 'extra_sync_is_required', default=lookup('env', 'SYNC', default='') ) }}"
     dist: >-
@@ -98,6 +101,7 @@
     mysql_ndb_sql_nodes: "{{ lookup('vars', 'extra_mysql_ndb_sql_nodes', default=lookup('env','NDB_SQL_NODES',default='') ) }}"
 
     orchestrator_version: "{{ lookup('vars', 'extra_orchestrator_version', default=lookup('env','ORCHESTRATOR',default='') ) }}"
+    percona_orchestrator_version: "{{ lookup('vars', 'extra_percona_orchestrator_version', default=lookup('env','PERCONA_ORCHESTRATOR',default='') ) }}"
     debug_packages: "{{ lookup('vars', 'extra_debug_packages', default=lookup('env','DEBUG_PACKAGES',default='') ) }}"
     sysbench_version: "{{ lookup('vars', 'extra_sysbench_version', default=lookup('env','SYSBENCH',default='') ) }}"
     sysbench_pg: "{{ lookup('vars', 'extra_sysbench_pg', default=lookup('env','SYSBENCH_PG',default='') ) }}"
@@ -150,6 +154,7 @@
       percona_toolkit_version != '' or
       pmm_client_version != '' or
       sysbench_version != '' or
+      percona_orchestrator_version != '' or
       percona_proxysql_version != ''
       else ''
       }}
@@ -171,6 +176,7 @@
       'mysql_ndb' if mysql_ndb_data_version != '' or mysql_ndb_sql_version != '' or mysql_ndb_management_version != ''  else
       'mysql_router' if mysql_router_version != '' else
       'orchestrator' if orchestrator_version != '' else
+      'percona_orchestrator' if percona_orchestrator_version != '' else
       'ldap_server' if ldap_server != '' else
       'kerberos_server' if kerberos_server != '' else
       'postgresql' if postgresql_version != '' else
@@ -280,6 +286,7 @@
         proxysql_version != '' or
         percona_proxysql_version != '' or
         mysql_dot_net != '' or
+        percona_orchestrator_version != '' or
         orchestrator_version != ''
       include_role:
         name: mysql
