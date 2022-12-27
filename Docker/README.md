@@ -159,6 +159,9 @@ mysql> show slave hosts;
 ./anydbver deploy k3d k8s-minio cert-manager minio-certs:self-signed k8s-pg:1.2.0
 ```
 
+### Standby Postgresql clusteter managed by Kubernetes operator:
+```./anydbver.py deploy node0 k3d k8s-minio minio-certs:self-signed cert-manager:1.7.2 k8s-pg:1.3.0,name=cl1 node0 k8s-pg:1.3.0,name=cl1,namespace=pgo2,standby k8s-minio minio-certs:self-signed cert-manager:1.7.2```
+
 ### Deploy PXC operator
 ```
 ./anydbver deploy k3d k8s-pxc:1.10.0 world

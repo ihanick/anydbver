@@ -185,7 +185,13 @@ pxc-encrypt-cluster-traffic=OFF""")
       if node.k8s_pg:
         logger.info("Starting postgresql in kubernetes managed by Percona operator {}".format(node.k8s_pg))
         run_k8s_operator_cmd.append("--operator=percona-postgresql-operator")
-        run_k8s_operator_cmd.append("--version={}".format(node.k8s_pg))
+        if "," in node.k8s_pg:
+          s = node.k8s_pg.split(',', 1)
+          logger.info("version: {} params: {}".format(s[0],s[1]))
+          run_k8s_operator_cmd.append("--version={}".format(s[0]))
+          run_k8s_operator_cmd.append("--operator-options={}".format(s[1]))
+        else:
+          run_k8s_operator_cmd.append("--version={}".format(node.k8s_pg))
         if node.db_version:
           run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
       if node.k8s_ps:
@@ -326,13 +332,15 @@ def main():
   parser.add_argument('--mysql', dest="mysql_cli", type=str, default="")
   parser.add_argument('--deploy', dest="deploy", action='store_true')
 
-  nodes=[]
-  for x in range(0,100):
-    nodes.append('node%x'%x)
+  node_usage_index = 1
 
   def groupargs(arg,currentarg=[None]):
-      if(arg in nodes):currentarg[0]=arg
-      return currentarg[0]
+    nonlocal node_usage_index
+    if re.match("^node[0-9]+",arg):
+      currentarg[0]= "{}-{}".format(arg, node_usage_index)
+      node_usage_index = node_usage_index + 1
+    print("groupargs:", arg, currentarg)
+    return currentarg[0]
 
   raw_args = sys.argv
   fix_missing_node_commands(raw_args)
