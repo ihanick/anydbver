@@ -780,6 +780,9 @@ def setup_operator(args):
       args.cluster_name = "cluster1"
     else:
       run_fatal(["sed", "-i", "-re", r"s/: cluster1\>/: {}/".format(args.cluster_name), "./deploy/cr.yaml"], "fix cluster name in cr.yaml")
+    if args.standby:
+      run_fatal(["sed", "-i", "-re", r"s/standby: false/standby: true/".format(args.cluster_name), "./deploy/cr.yaml"], "fix cluster name in cr.yaml")
+
 
   if args.operator_name == "percona-server-mongodb-operator" and args.helm != True:
     if args.cluster_name == "":
@@ -926,6 +929,7 @@ def main():
   parser.add_argument("--helm-path", dest="helm_path", type=str, default="")
   parser.add_argument("--operator", dest="operator_name", type=str, default="")
   parser.add_argument("--version", dest="operator_version", type=str, default="1.1.0")
+  parser.add_argument("--operator-options", dest="operator_options", type=str, default="")
   parser.add_argument("--db-version", dest="db_version", type=str, default="")
   parser.add_argument('--cert-manager', dest="cert_manager", type=str, default="")
   parser.add_argument('--cluster-domain', dest="cluster_domain", type=str, default="cluster.local")
@@ -943,6 +947,16 @@ def main():
   parser.add_argument('--helm', dest="helm", action='store_true')
   parser.add_argument('--loki', dest="loki", action='store_true')
   args = parser.parse_args()
+
+  args.standby = False
+  for option in args.operator_options.split(","):
+    n = option.split("=",1)[0]
+    if n in ("name", "cluster-name"):
+      args.cluster_name = option.split("=",1)[1]
+    elif n in ("namespace", "ns"):
+      args.namespace = option.split("=",1)[1]
+    elif n == "standby":
+      args.standby = True
 
   args.anydbver_path = (Path(__file__).parents[1]).resolve()
   if not args.helm_path:
