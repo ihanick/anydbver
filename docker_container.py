@@ -88,16 +88,19 @@ def get_docker_os_image(os_name):
     return "rockylinux:8-sshd-systemd"
   if os_name in ("el9", "rocky9", "rockylinux9", "centos9"):
     return "rockylinux:9-sshd-systemd"
+  if os_name in ("el7", "centos7"):
+    return "centos:7-sshd-systemd"
   return "rockylinux:8-sshd-systemd"
 
 def get_node_os(os_str, name):
   if name == "default":
     name = "node0"
   # os_str="rocky8,node0=rocky8,node1=rocky9"
-  os_search = re.search(',{node_name}=(.*?),'.format(node_name=name), os_str)
+  os_search = re.search(',{node_name}=(.*?)(?:,|$)'.format(node_name=name), os_str)
 
+  logger.info("Trying to find os: {} for {}".format(os_str, name))
   if os_search:
-    #logger.info("Found OS for {name}: {os}".format(name=name, os=os_search.group(1)))
+    logger.info("Found OS for {name}: {os}".format(name=name, os=os_search.group(1)))
     return os_search.group(1)
   return ""
 

@@ -435,6 +435,7 @@ ANYDBVER_BRIDGE=yes vagrant up
 ### Pre-requirements
 * git
 * ansible (not just ansible-core)
+* Redhat 7 systemd containers require `systemd.unified_cgroup_hierarchy=0` kernel boot parameter in grub
 ### Setup
 ```
 git clone https://github.com/ihanick/anydbver.git
