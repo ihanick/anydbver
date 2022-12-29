@@ -430,3 +430,19 @@ You can setup Vagrant virtual machine it and all inner containers to your local 
 ```
 ANYDBVER_BRIDGE=yes vagrant up
 ```
+
+## Docker provider, still using ansible
+### Pre-requirements
+* git
+* ansible (not just ansible-core)
+### Setup
+```
+git clone https://github.com/ihanick/anydbver.git
+cd anydbver
+cd ansible-ssh-docker/
+./build.sh
+cd ..
+./anydbver.py update
+./anydbver configure provider:docker
+./anydbver.py deploy ps:5.7 node1 ps:5.7 master:node0 node2 ps:5.7 master:node1 node3 percona-orchestrator master:node0
+```
