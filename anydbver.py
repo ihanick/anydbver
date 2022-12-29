@@ -297,7 +297,7 @@ def find_version(args):
         if ver.startswith(args.percona_server_mongodb):
           version = ver
           break
-      args.percona_server_mongodb = version
+      args.percona_server_mongodb = version.rstrip()
       #print('looking psmdb version {} in .version-info/psmdb.el8.txt, found: {}'.format(args.percona_server_mongodb, version))
   for p in ('ps',):
     if args.percona_server:
@@ -308,7 +308,7 @@ def find_version(args):
         if ver.startswith(args.percona_server):
           version = ver
           break
-      args.percona_server = version
+      args.percona_server = version.rstrip()
 
   if args.percona_xtrabackup:
     vers = list(open(".version-info/xtrabackup.{os}.txt".format(os=osver)))
@@ -318,7 +318,7 @@ def find_version(args):
       if ver.startswith(args.percona_xtrabackup):
         version = ver
         break
-    args.percona_xtrabackup = version
+    args.percona_xtrabackup = version.rstrip()
   if args.percona_orchestrator:
     vers = list(open(".version-info/percona-orchestrator.{os}.txt".format(os=osver)))
     version = vers[-1]
@@ -327,7 +327,7 @@ def find_version(args):
       if ver.startswith(args.percona_orchestrator):
         version = ver
         break
-    args.percona_orchestrator = version
+    args.percona_orchestrator = version.rstrip()
 
 
 def parse_node(args):
