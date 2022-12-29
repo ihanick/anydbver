@@ -1,5 +1,5 @@
 FROM         centos/systemd
- RUN yum -y install openssh-server rsync python3 iproute procps-ng; yum clean all; systemctl enable sshd
+ RUN yum -y install openssh-server rsync python3 iproute procps-ng openssh-clients; yum clean all; systemctl enable sshd
  EXPOSE 22
  RUN mkdir /root/.ssh
  COPY node_ip.sh /usr/bin/node_ip.sh

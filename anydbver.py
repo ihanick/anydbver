@@ -319,6 +319,24 @@ def find_version(args):
         version = ver
         break
     args.percona_xtrabackup = version.rstrip()
+  if args.percona_xtradb_cluster:
+    vers = list(open(".version-info/percona-xtradb-cluster.{os}.txt".format(os=osver)))
+    version = vers[-1]
+    for line in reversed(vers):
+      ver = line.rstrip()
+      if ver.startswith(args.percona_xtradb_cluster):
+        version = ver
+        break
+    args.percona_xtradb_cluster = version.rstrip()
+  if args.proxysql:
+    vers = list(open(".version-info/proxysql.{os}.txt".format(os=osver)))
+    version = vers[-1]
+    for line in reversed(vers):
+      ver = line.rstrip()
+      if ver.startswith(args.proxysql):
+        version = ver
+        break
+    args.proxysql = version.rstrip()
   if args.percona_orchestrator:
     vers = list(open(".version-info/percona-orchestrator.{os}.txt".format(os=osver)))
     version = vers[-1]
@@ -342,6 +360,10 @@ def parse_node(args):
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--percona-server', '--ps', type=str, nargs='?')
+  parser.add_argument('--percona-xtradb-cluster', '--pxc', type=str, nargs='?')
+  parser.add_argument('--proxysql', type=str, nargs='?')
+  parser.add_argument('--galera-leader', '--galera-master', '--galera-join', type=str, nargs='?')
+  parser.add_argument('--cluster-name', '--cluster', type=str, default='cluster1', nargs='?')
   parser.add_argument('--ldap', type=str, nargs='?')
   parser.add_argument('--percona-server-mongodb', '--psmdb', type=str, nargs='?')
   parser.add_argument('--ldap-master', type=str, nargs='?')
@@ -363,7 +385,6 @@ def parse_node(args):
   parser.add_argument('--k8s-pxc', dest="k8s_pxc", type=str, nargs='?')
   parser.add_argument('--pmm', dest="pmm", type=str, nargs='?')
   parser.add_argument('--db-version', dest="db_version", type=str, nargs='?')
-  parser.add_argument('--cluster-name', dest="cluster_name", type=str, nargs='?')
   parser.add_argument('--k8s-cluster-domain', type=str, nargs='?')
   parser.add_argument('--k8s-namespace', type=str, nargs='?')
   parser.add_argument('--sql', dest="sql_file", type=str, nargs='?')
@@ -392,8 +413,27 @@ def apply_node_actions(node, actions):
   if actions.percona_server is not None:
     env["PS"] = actions.percona_server
     env["DB_OPTS"] = "mysql/async-repl-gtid.cnf"
-    if actions.replica_set is not None:
-      env["REPLICA_SET"] = actions.replica_set
+    env["DB_USER"] = "root"
+    env["DB_PASS"]= "verysecretpassword1^"
+  if actions.percona_xtradb_cluster is not None:
+    env["PXC"] = actions.percona_xtradb_cluster
+    if actions.percona_xtradb_cluster.startswith("5.6"):
+      env["DB_OPTS"] = "mysql/pxc5657.cnf"
+    elif actions.percona_xtradb_cluster.startswith("5.7"):
+      env["DB_OPTS"] = "mysql/pxc5657.cnf"
+    elif actions.percona_xtradb_cluster.startswith("8.0"):
+      env["DB_OPTS"] = "mysql/pxc8-repl-gtid.cnf"
+
+    env["DB_USER"] = "root"
+    env["DB_PASS"]= "verysecretpassword1^"
+  if actions.cluster_name:
+    env["CLUSTER"] = actions.cluster_name
+  if actions.galera_leader:
+    env["DB_IP"] = resolve_hostname(actions.galera_leader)
+    env["REPLICATION_TYPE"] = "galera"
+
+  if actions.proxysql is not None:
+    env["PROXYSQL"] = actions.proxysql
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.percona_xtrabackup is not None:
