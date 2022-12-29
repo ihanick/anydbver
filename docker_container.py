@@ -46,7 +46,7 @@ Host {node} {fullnode}
   with open("{}ssh_config".format(ns), "a") as ssh_config:
     ssh_config.write(ssh_node)
 
-def ansible_hosts_append_node(ns, node, ip, user):
+def ansible_hosts_append_node(ns, node, ip, user, python_path):
   ns = ""
   ssh_options = ""
   if ns != "":
@@ -54,8 +54,8 @@ def ansible_hosts_append_node(ns, node, ip, user):
   if sys.platform == "linux" or sys.platform == "linux2":
     ssh_options = "-o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no"
   ansible_host = """\
-      {node} ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host={ip} ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no {ssh_options} -o ProxyCommand=none'
-""".format(node="{}.{}".format(user,node), ip=ip,ssh_options=ssh_options)
+      {node} ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host={ip} ansible_python_interpreter={python_path} ansible_ssh_common_args='-o StrictHostKeyChecking=no {ssh_options} -o ProxyCommand=none'
+""".format(node="{}.{}".format(user,node), ip=ip,ssh_options=ssh_options, python_path=python_path)
   with open("{}ansible_hosts".format(ns), "a") as ansible_hosts:
     ansible_hosts.write(ansible_host)
 
@@ -83,14 +83,14 @@ def get_node_ip(namespace, name):
 
 def get_docker_os_image(os_name):
   if os_name is None:
-    return "rockylinux:8-sshd-systemd"
+    return ("rockylinux:8-sshd-systemd", "/usr/bin/python3")
   if os_name == "":
-    return "rockylinux:8-sshd-systemd"
+    return ("rockylinux:8-sshd-systemd", "/usr/bin/python3")
   if os_name in ("el9", "rocky9", "rockylinux9", "centos9"):
-    return "rockylinux:9-sshd-systemd"
+    return ("rockylinux:9-sshd-systemd", "/usr/bin/python3")
   if os_name in ("el7", "centos7"):
-    return "centos:7-sshd-systemd"
-  return "rockylinux:8-sshd-systemd"
+    return ("centos:7-sshd-systemd", "/usr/bin/python")
+  return ("rockylinux:8-sshd-systemd", "/usr/bin/python3")
 
 def get_node_os(os_str, name):
   if name == "default":
@@ -109,7 +109,7 @@ def start_container(args, name):
   if args.namespace != "":
     container_name = args.namespace + "-" + name
 
-  docker_img = get_docker_os_image(get_node_os(args.os, name))
+  (docker_img, python_path) = get_docker_os_image(get_node_os(args.os, name))
 
   net = "{}{}-anydbver".format(args.namespace, args.user)
   run_fatal(["docker", "network", "create", net], "Can't create a docker network", "already exists")
@@ -118,7 +118,7 @@ def start_container(args, name):
              "--tmpfs", "/run", "-v", "/sys/fs/cgroup:/sys/fs/cgroup", docker_img],
             "Can't start docker container")
   ssh_config_append_node(args.namespace, name, get_node_ip(args.namespace, name), args.user)
-  ansible_hosts_append_node(args.namespace, name, get_node_ip(args.namespace, name), args.user)
+  ansible_hosts_append_node(args.namespace, name, get_node_ip(args.namespace, name), args.user, python_path)
 
 def delete_container(namespace, name):
   container_name = name
