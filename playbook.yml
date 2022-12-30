@@ -4,6 +4,7 @@
   ## docker run -d -p 8080:8123 clue/polipo proxyAddress=0.0.0.0
   #environment:
   #  http_proxy: "http://172.17.0.1:8080"
+  #  https_proxy: "http://172.17.0.1:8080"
   vars:
     sync_is_required: "{{ lookup('vars', 'extra_sync_is_required', default=lookup('env', 'SYNC', default='') ) }}"
     dist: >-

@@ -162,9 +162,9 @@ if [[ "x$TYPE" == "xgroup" ]] ; then
     MYIP=$(/vagrant/tools/node_ip.sh)
     if ! mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
         -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null|grep -q "$CLUSTER_NAME" ; then
-        mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" -e "dba.createCluster('$CLUSTER_NAME', {localAddress: '$MASTER_IP:33061'})"
+        mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" -e "dba.createCluster('$CLUSTER_NAME', {})"
     fi
 
     mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
-        -e "var c=dba.getCluster();c.addInstance('$MASTER_USER:$MASTER_PASSWORD_URIENC@$MYIP:3306', {localAddress: '$MYIP:33061', recoveryMethod: 'clone', label: '$MYIP'})"
+        -e "var c=dba.getCluster();c.addInstance('$MASTER_USER:$MASTER_PASSWORD_URIENC@$MYIP:3306', {recoveryMethod: 'clone', label: '$MYIP'})"
 fi

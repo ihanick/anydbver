@@ -337,6 +337,33 @@ def find_version(args):
         version = ver
         break
     args.proxysql = version.rstrip()
+  if args.mysql_server:
+    vers = list(open(".version-info/mysql.{os}.txt".format(os=osver)))
+    version = vers[-1]
+    for line in reversed(vers):
+      ver = line.rstrip()
+      if ver.startswith(args.mysql_server):
+        version = ver
+        break
+    args.mysql_server = version.rstrip()
+  if args.mysql_router:
+    vers = list(open(".version-info/mysql.{os}.txt".format(os=osver)))
+    version = vers[-1]
+    for line in reversed(vers):
+      ver = line.rstrip()
+      if ver.startswith(args.mysql_router):
+        version = ver
+        break
+    args.mysql_router = version.rstrip()
+  if args.percona_proxysql:
+    vers = list(open(".version-info/percona-proxysql.{os}.txt".format(os=osver)))
+    version = vers[-1]
+    for line in reversed(vers):
+      ver = line.rstrip()
+      if ver.startswith(args.percona_proxysql):
+        version = ver
+        break
+    args.percona_proxysql = version.rstrip()
   if args.percona_orchestrator:
     vers = list(open(".version-info/percona-orchestrator.{os}.txt".format(os=osver)))
     version = vers[-1]
@@ -359,10 +386,17 @@ def parse_node(args):
     args[cmd_idx] = cmd
 
   parser = argparse.ArgumentParser()
+  parser.add_argument('--mysql-server', '--mysql', '--mysql-community-server', type=str, nargs='?')
+  parser.add_argument('--mysql-router', type=str, nargs='?')
   parser.add_argument('--percona-server', '--ps', type=str, nargs='?')
   parser.add_argument('--percona-xtradb-cluster', '--pxc', type=str, nargs='?')
   parser.add_argument('--proxysql', type=str, nargs='?')
+  parser.add_argument('--percona-proxysql', type=str, nargs='?')
+  parser.add_argument('--haproxy', type=str, nargs='?')
+  parser.add_argument('--haproxy-galera', type=str, nargs='?')
+  parser.add_argument('--clustercheck', type=str, nargs='?')
   parser.add_argument('--galera-leader', '--galera-master', '--galera-join', type=str, nargs='?')
+  parser.add_argument('--group-replication', '--innodb-cluster', type=str, nargs='?')
   parser.add_argument('--cluster-name', '--cluster', type=str, default='cluster1', nargs='?')
   parser.add_argument('--ldap', type=str, nargs='?')
   parser.add_argument('--percona-server-mongodb', '--psmdb', type=str, nargs='?')
@@ -378,7 +412,7 @@ def parse_node(args):
   parser.add_argument('--minio-certs', dest="minio_certs", type=str, nargs='?')
   parser.add_argument('--k3d', type=str, nargs='?')
   parser.add_argument('--helm', type=str, nargs='?')
-  parser.add_argument('--os', type=str, default="rocky8")
+  parser.add_argument('--os', type=str, default="")
   parser.add_argument('--k8s-pg', dest="k8s_pg", type=str, nargs='?')
   parser.add_argument('--k8s-ps', dest="k8s_ps", type=str, nargs='?')
   parser.add_argument('--k8s-mongo', dest="k8s_mongo", type=str, nargs='?')
@@ -400,6 +434,7 @@ def resolve_hostname(host):
 
 def apply_node_actions(node, actions):
   env = {"DB_USER":"dba", "DB_PASS":"secret", "START":"1"}
+  db_features = []
   print('Node: ', node, 'Actions: ',actions)
   if actions.ldap is not None :
     env["LDAP_SERVER"] = "1"
@@ -413,6 +448,15 @@ def apply_node_actions(node, actions):
   if actions.percona_server is not None:
     env["PS"] = actions.percona_server
     env["DB_OPTS"] = "mysql/async-repl-gtid.cnf"
+    env["DB_USER"] = "root"
+    env["DB_PASS"]= "verysecretpassword1^"
+  if actions.mysql_server is not None:
+    env["MYSQL"] = actions.mysql_server
+    env["DB_OPTS"] = "mysql/async-repl-gtid.cnf"
+    env["DB_USER"] = "root"
+    env["DB_PASS"]= "verysecretpassword1^"
+  if actions.mysql_router is not None:
+    env["MYSQL_ROUTER"] = actions.mysql_router
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.percona_xtradb_cluster is not None:
@@ -431,11 +475,27 @@ def apply_node_actions(node, actions):
   if actions.galera_leader:
     env["DB_IP"] = resolve_hostname(actions.galera_leader)
     env["REPLICATION_TYPE"] = "galera"
-
+  if actions.group_replication:
+    env["DB_OPTS"] = "mysql/gr.cnf"
+    env["REPLICATION_TYPE"] = "group"
   if actions.proxysql is not None:
     env["PROXYSQL"] = actions.proxysql
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
+  if actions.percona_proxysql is not None:
+    env["PERCONA_PROXYSQL"] = actions.percona_proxysql
+    env["DB_USER"] = "root"
+    env["DB_PASS"]= "verysecretpassword1^"
+  if actions.haproxy is not None:
+    env["HAPROXY"] = "1"
+    env["DB_USER"] = "root"
+    env["DB_PASS"]= "verysecretpassword1^"
+  if actions.haproxy_galera is not None: 
+    env["HAPROXY_GALERA"] = ','.join([resolve_hostname(node) for node in actions.haproxy_galera.split(',') ])
+    env["DB_USER"] = "root"
+    env["DB_PASS"]= "verysecretpassword1^"
+  if actions.clustercheck is not None:
+    db_features.append("clustercheck")
   if actions.percona_xtrabackup is not None:
     env["PXB"] = actions.percona_xtrabackup
     env["DB_USER"] = "root"
@@ -446,6 +506,8 @@ def apply_node_actions(node, actions):
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.leader is not None:
     env["DB_IP"] = resolve_hostname(actions.leader)
+  if len(db_features) > 0:
+    env["DB_FEATURES"] = ",".join(db_features)
   return env
 
 def apply_node_command(node, env, cmd):
@@ -511,6 +573,8 @@ def main():
     node_actions.append(parse_node(nodeline))
     node = node_actions[-1][0]
     node_names[ node ] = 1
+    if (node_actions[-1][1]).os == "":
+      (node_actions[-1][1]).os = args.os
     nodes_os = nodes_os + node + "=" + (node_actions[-1][1]).os + ","
 
   nodes_cnt = len(node_names)

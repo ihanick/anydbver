@@ -1,62 +1,62 @@
 k3s:
   latest_version: '1.22.13'
-  latest_url: "https://github.com/k3s-io/k3s/releases/download/v1.22.13%2Bk3s1/k3s"
+  latest_url: "http://github.com/k3s-io/k3s/releases/download/v1.22.13%2Bk3s1/k3s"
 
 stretch:
   repo_pkg: "/root/percona-release_latest.stretch_all.deb"
-  repo_url: "https://repo.percona.com/apt/percona-release_latest.stretch_all.deb"
+  repo_url: "http://repo.percona.com/apt/percona-release_latest.stretch_all.deb"
   ps56:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "ps-56"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/conf.d/zz_mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient18.1_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient18.1_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
   ps57:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "ps-57"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/percona-server.conf.d/mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient20_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient20_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
   ps80:
     repo_file: "/etc/apt/sources.list.d/percona-ps-80-release.list"
     repo_enable_str: "ps-80"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/mysql.conf.d/mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common_{{percona_server_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client_{{percona_server_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_server_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server_{{percona_server_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common_{{percona_server_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client_{{percona_server_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_server_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server_{{percona_server_version}}.{{dist}}_amd64.deb"
   pxc56:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "pxc-56"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/my.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient18.1_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-galera-3.x_{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)-([0-9]+)$', '3.\\1-\\2') }}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-galera-3_{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)-([0-9]+)$', '3.\\1-\\2') }}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient18.1_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-galera-3.x_{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)-([0-9]+)$', '3.\\1-\\2') }}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-galera-3_{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)-([0-9]+)$', '3.\\1-\\2') }}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
   pxc57:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "pxc-57"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/percona-xtradb-cluster.conf.d/wsrep.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient20_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient20_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
   pxc80:
     repo_file: "/etc/apt/sources.list.d/percona-pxc-80-release.list"
     repo_enable_str: "pxc-80"
@@ -65,89 +65,89 @@ stretch:
     install_packages:
       # 8.0.21-12-1
       # '^([0-9]+[.][0-9]+[.][0-9]+)-.+$'
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
   mysql:
     systemd_service: "mysql"
     cnf_file: '/etc/mysql/mysql.conf.d/mysqld.cnf'
     install_packages:
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-common_{{mysql_version}}debian9_amd64.deb"
-      - "{{ 'https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-plugins_'+mysql_version+'debian9_amd64.deb' if mysql_version.startswith('8.0') else '' }}"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/libmysqlclient{{'21' if mysql_version.startswith('8.0') else '20' if mysql_version.startswith('5.7') else '19' }}_{{mysql_version}}debian9_amd64.deb"
-      - "{{ 'https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-core_'+mysql_version+'debian9_amd64.deb' if mysql_version.startswith('8.0') else '' }}"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client_{{mysql_version}}debian9_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-client_{{mysql_version}}debian9_amd64.deb"
-      - "{{ 'https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server-core_'+mysql_version+'debian9_amd64.deb' if mysql_version.startswith('8.0') else '' }}"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server_{{mysql_version}}debian9_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-server_{{mysql_version}}debian9_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-common_{{mysql_version}}debian9_amd64.deb"
+      - "{{ 'http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-plugins_'+mysql_version+'debian9_amd64.deb' if mysql_version.startswith('8.0') else '' }}"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/libmysqlclient{{'21' if mysql_version.startswith('8.0') else '20' if mysql_version.startswith('5.7') else '19' }}_{{mysql_version}}debian9_amd64.deb"
+      - "{{ 'http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-core_'+mysql_version+'debian9_amd64.deb' if mysql_version.startswith('8.0') else '' }}"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client_{{mysql_version}}debian9_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-client_{{mysql_version}}debian9_amd64.deb"
+      - "{{ 'http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server-core_'+mysql_version+'debian9_amd64.deb' if mysql_version.startswith('8.0') else '' }}"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server_{{mysql_version}}debian9_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-server_{{mysql_version}}debian9_amd64.deb"
   proxysql:
     install_packages:
-      - "https://github.com/sysown/proxysql/releases/download/v{{proxysql_version}}/proxysql_{{proxysql_version}}-ubuntu18_amd64.deb"
+      - "http://github.com/sysown/proxysql/releases/download/v{{proxysql_version}}/proxysql_{{proxysql_version}}-ubuntu18_amd64.deb"
 
   orchestrator:
     systemd_service: "orchestrator"
     install_packages:
-      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-cli_{{orchestrator_version}}_amd64.deb"
-      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator_{{orchestrator_version}}_amd64.deb"
-      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-client_{{orchestrator_version}}_amd64.deb"
+      - "http://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-cli_{{orchestrator_version}}_amd64.deb"
+      - "http://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator_{{orchestrator_version}}_amd64.deb"
+      - "http://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-client_{{orchestrator_version}}_amd64.deb"
 
 buster:
   repo_pkg: "/root/percona-release_latest.buster_all.deb"
-  repo_url: "https://repo.percona.com/apt/percona-release_latest.buster_all.deb"
+  repo_url: "http://repo.percona.com/apt/percona-release_latest.buster_all.deb"
   ps56:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "ps-56"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/conf.d/zz_mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient18.1_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient18.1_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
   ps57:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "ps-57"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/percona-server.conf.d/mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient20_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient20_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
   ps80:
     repo_file: "/etc/apt/sources.list.d/percona-ps-80-release.list"
     repo_enable_str: "ps-80"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/mysql.conf.d/mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common_{{percona_server_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client_{{percona_server_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_server_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server_{{percona_server_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common_{{percona_server_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client_{{percona_server_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_server_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server_{{percona_server_version}}.{{dist}}_amd64.deb"
   pxc56:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "pxc-56"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/percona-xtradb-cluster.conf.d/mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient18.1_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-galera-3.x_{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)-([0-9]+)$', '3.\\1-\\2') }}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-galera-3_{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)-([0-9]+)$', '3.\\1-\\2') }}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient18.1_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-galera-3.x_{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)-([0-9]+)$', '3.\\1-\\2') }}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-galera-3_{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)-([0-9]+)$', '3.\\1-\\2') }}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
   pxc57:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "pxc-57"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/percona-xtradb-cluster.conf.d/wsrep.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient20_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient20_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9.]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
   pxc80:
     repo_file: "/etc/apt/sources.list.d/percona-pxc-80-release.list"
     repo_enable_str: "pxc-80"
@@ -156,137 +156,137 @@ buster:
     install_packages:
       # 8.0.21-12-1
       # '^([0-9]+[.][0-9]+[.][0-9]+)-.+$'
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('^([0-9]+[.][0-9]+[.][0-9]+)-.+$', '\\1') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
   mysql:
     systemd_service: "mysql"
     cnf_file: '/etc/mysql/mysql.conf.d/mysqld.cnf'
     install_packages:
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-common_{{mysql_version}}debian10_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-plugins_{{mysql_version}}debian10_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/libmysqlclient21_{{mysql_version}}debian10_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-core_{{mysql_version}}debian10_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client_{{mysql_version}}debian10_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-client_{{mysql_version}}debian10_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server-core_{{mysql_version}}debian10_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server_{{mysql_version}}debian10_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-server_{{mysql_version}}debian10_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-common_{{mysql_version}}debian10_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-plugins_{{mysql_version}}debian10_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/libmysqlclient21_{{mysql_version}}debian10_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-core_{{mysql_version}}debian10_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client_{{mysql_version}}debian10_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-client_{{mysql_version}}debian10_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server-core_{{mysql_version}}debian10_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server_{{mysql_version}}debian10_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-server_{{mysql_version}}debian10_amd64.deb"
   proxysql:
     install_packages:
-      - "https://github.com/sysown/proxysql/releases/download/v{{proxysql_version}}/proxysql_{{proxysql_version}}-ubuntu18_amd64.deb"
+      - "http://github.com/sysown/proxysql/releases/download/v{{proxysql_version}}/proxysql_{{proxysql_version}}-ubuntu18_amd64.deb"
 
   orchestrator:
     systemd_service: "orchestrator"
     install_packages:
-      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-cli_{{orchestrator_version}}_amd64.deb"
-      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator_{{orchestrator_version}}_amd64.deb"
-      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-client_{{orchestrator_version}}_amd64.deb"
+      - "http://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-cli_{{orchestrator_version}}_amd64.deb"
+      - "http://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator_{{orchestrator_version}}_amd64.deb"
+      - "http://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-client_{{orchestrator_version}}_amd64.deb"
 
 xenial:
   mariadb_server:
     systemd_service: "mariadb"
     cnf_file: '/etc/mysql/mariadb.conf.d/zz_mysqld.cnf'
     install_packages:
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mysql-common_{{mariadb_version}}+maria~xenial_all.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-common_{{mariadb_version}}+maria~xenial_all.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/libmariadb3_{{mariadb_version}}+maria~xenial_amd64.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-client-core-10.4_{{mariadb_version}}+maria~xenial_amd64.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-client-10.4_{{mariadb_version}}+maria~xenial_amd64.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-server-core-10.4_{{mariadb_version}}+maria~xenial_amd64.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/g/galera-4/galera-4_26.4.8-xenial_amd64.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-server-10.4_{{mariadb_version}}+maria~xenial_amd64.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-server_{{mariadb_version}}+maria~xenial_all.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mysql-common_{{mariadb_version}}+maria~xenial_all.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-common_{{mariadb_version}}+maria~xenial_all.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/libmariadb3_{{mariadb_version}}+maria~xenial_amd64.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-client-core-10.4_{{mariadb_version}}+maria~xenial_amd64.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-client-10.4_{{mariadb_version}}+maria~xenial_amd64.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-server-core-10.4_{{mariadb_version}}+maria~xenial_amd64.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/g/galera-4/galera-4_26.4.8-xenial_amd64.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-server-10.4_{{mariadb_version}}+maria~xenial_amd64.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.4/mariadb-server_{{mariadb_version}}+maria~xenial_all.deb"
 
 bionic:
   repo_pkg: "/root/percona-release_latest.bionic_all.deb"
-  repo_url: "https://repo.percona.com/apt/percona-release_latest.bionic_all.deb"
+  repo_url: "http://repo.percona.com/apt/percona-release_latest.bionic_all.deb"
   ps56:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "ps-56"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/conf.d/zz_mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient18.1_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient18.1_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.6/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server-5.6_{{percona_server_version}}.{{ dist }}_amd64.deb"
   ps57:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "ps-57"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/percona-server.conf.d/mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient20_{{percona_server_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient20_{{percona_server_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server-5.7_{{percona_server_version}}.{{ dist }}_amd64.deb"
   ps80:
     repo_file: "/etc/apt/sources.list.d/percona-ps-80-release.list"
     repo_enable_str: "ps-80"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/mysql.conf.d/mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common_{{percona_server_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client_{{percona_server_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_server_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server_{{percona_server_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-common_{{percona_server_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-client_{{percona_server_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_server_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-server-server_{{percona_server_version}}.{{dist}}_amd64.deb"
   pxc56:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "pxc-56"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/my.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient18.1_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-galera-3.x_{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)-([0-9]+)$', '3.\\1-\\2') }}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-galera-3_{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)-([0-9]+)$', '3.\\1-\\2') }}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient18.1_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-galera-3.x_{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)-([0-9]+)$', '3.\\1-\\2') }}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-galera-3_{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)-([0-9]+)$', '3.\\1-\\2') }}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-56/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server-5.6_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
   pxc57:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
     repo_enable_str: "pxc-57"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/percona-xtradb-cluster.conf.d/wsrep.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient20_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient20_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
   pxc80:
     repo_file: "/etc/apt/sources.list.d/percona-pxc-80-release.list"
     repo_enable_str: "pxc-80"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/mysql.conf.d/mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9-]+)$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9-]+)$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9-]+)$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9-]+)$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9-]+)$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9-]+)$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9-]+)$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-([0-9-]+)$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server_{{percona_xtradb_cluster_version}}.{{dist}}_amd64.deb"
   proxysql:
     install_packages:
-      - "https://github.com/sysown/proxysql/releases/download/v{{proxysql_version}}/proxysql_{{proxysql_version}}-ubuntu18_amd64.deb"
+      - "http://github.com/sysown/proxysql/releases/download/v{{proxysql_version}}/proxysql_{{proxysql_version}}-ubuntu18_amd64.deb"
 
   orchestrator:
     systemd_service: "orchestrator"
     install_packages:
-      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-cli_{{orchestrator_version}}_amd64.deb"
-      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator_{{orchestrator_version}}_amd64.deb"
-      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-client_{{orchestrator_version}}_amd64.deb"
+      - "http://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-cli_{{orchestrator_version}}_amd64.deb"
+      - "http://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator_{{orchestrator_version}}_amd64.deb"
+      - "http://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-client_{{orchestrator_version}}_amd64.deb"
   mysql:
     systemd_service: "mysql"
     cnf_file: '/etc/mysql/mysql.conf.d/mysqld.cnf'
     install_packages:
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-common_{{mysql_version}}ubuntu18.04_amd64.deb"
-      - "{{ 'https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-plugins_'+mysql_version+'ubuntu18.04_amd64.deb' if mysql_version.startswith('8.0') else '' }}"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/libmysqlclient{{'21' if mysql_version.startswith('8.0') else '20' if mysql_version.startswith('5.7') else '19' }}_{{mysql_version}}ubuntu18.04_amd64.deb"
-      - "{{ 'https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-core_'+mysql_version+'ubuntu18.04_amd64.deb' if mysql_version.startswith('8.0') else '' }}"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client_{{mysql_version}}ubuntu18.04_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-client_{{mysql_version}}ubuntu18.04_amd64.deb"
-      - "{{ 'https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server-core_'+mysql_version+'ubuntu18.04_amd64.deb' if mysql_version.startswith('8.0') else '' }}"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server_{{mysql_version}}ubuntu18.04_amd64.deb"
-      - "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-server_{{mysql_version}}ubuntu18.04_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-common_{{mysql_version}}ubuntu18.04_amd64.deb"
+      - "{{ 'http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-plugins_'+mysql_version+'ubuntu18.04_amd64.deb' if mysql_version.startswith('8.0') else '' }}"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/libmysqlclient{{'21' if mysql_version.startswith('8.0') else '20' if mysql_version.startswith('5.7') else '19' }}_{{mysql_version}}ubuntu18.04_amd64.deb"
+      - "{{ 'http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-core_'+mysql_version+'ubuntu18.04_amd64.deb' if mysql_version.startswith('8.0') else '' }}"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client_{{mysql_version}}ubuntu18.04_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-client_{{mysql_version}}ubuntu18.04_amd64.deb"
+      - "{{ 'http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server-core_'+mysql_version+'ubuntu18.04_amd64.deb' if mysql_version.startswith('8.0') else '' }}"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server_{{mysql_version}}ubuntu18.04_amd64.deb"
+      - "http://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-server_{{mysql_version}}ubuntu18.04_amd64.deb"
 
   ldap_server:
     systemd_service: slapd
@@ -296,7 +296,7 @@ bionic:
 
 focal:
   repo_pkg: "/root/percona-release_latest.focal_all.deb"
-  repo_url: "https://repo.percona.com/apt/percona-release_latest.focal_all.deb"
+  repo_url: "http://repo.percona.com/apt/percona-release_latest.focal_all.deb"
 
   ps57:
     repo_file: "/etc/apt/sources.list.d/percona-ps-57-release.list"
@@ -304,10 +304,10 @@ focal:
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/percona-server.conf.d/mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-common-5.7_{{percona_server_version}}.focal_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-client-5.7_{{percona_server_version}}.focal_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/libperconaserverclient20_{{percona_server_version}}.focal_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-server-5.7_{{percona_server_version}}.focal_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-common-5.7_{{percona_server_version}}.focal_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-client-5.7_{{percona_server_version}}.focal_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/libperconaserverclient20_{{percona_server_version}}.focal_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-server-5.7_{{percona_server_version}}.focal_amd64.deb"
 
   ps80:
     repo_file: "/etc/apt/sources.list.d/percona-ps-80-release.list"
@@ -315,10 +315,10 @@ focal:
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/mysql.conf.d/mysqld.cnf"
     install_packages:
-      - "https://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-common_{{percona_server_version}}.focal_amd64.deb"
-      - "https://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-client_{{percona_server_version}}.focal_amd64.deb"
-      - "https://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/libperconaserverclient21_{{percona_server_version}}.focal_amd64.deb"
-      - "https://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-server_{{percona_server_version}}.focal_amd64.deb"
+      - "http://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-common_{{percona_server_version}}.focal_amd64.deb"
+      - "http://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-client_{{percona_server_version}}.focal_amd64.deb"
+      - "http://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/libperconaserverclient21_{{percona_server_version}}.focal_amd64.deb"
+      - "http://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-{{ percona_server_version | regex_replace('-[0-9]+$', '') }}/binary/debian/focal/x86_64/percona-server-server_{{percona_server_version}}.focal_amd64.deb"
 
   pxc57:
     repo_file: "/etc/apt/sources.list.d/percona-original-release.list"
@@ -326,20 +326,20 @@ focal:
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/percona-xtradb-cluster.conf.d/wsrep.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient20_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient20_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server-5.7_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
   pxc80:
     repo_file: "/etc/apt/sources.list.d/percona-pxc-80-release.list"
     repo_enable_str: "pxc-80"
     systemd_service: "mysql"
     cnf_file: "/etc/mysql/mysql.conf.d/mysqld.cnf"
     install_packages:
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
-      - "https://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-common_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-client_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/libperconaserverclient21_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
+      - "http://www.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-{{ percona_xtradb_cluster_version | regex_replace('-[0-9]+-[0-9]+$', '') }}/binary/debian/{{dist}}/x86_64/percona-xtradb-cluster-server_{{percona_xtradb_cluster_version}}.{{ dist }}_amd64.deb"
 
   percona_toolkit:
     install_packages:
@@ -361,12 +361,12 @@ focal:
       - "http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/mysql-community-server_{{mysql_version}}ubuntu20.04_amd64.deb"
       - "http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/mysql-server_{{mysql_version}}ubuntu20.04_amd64.deb"
     mysql_shell_packages:
-      - "https://dev.mysql.com/get/Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el7.x86_64.rpm"
+      - "http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el7.x86_64.rpm"
 
   postgresql:
     systemd_service: "postgresql@{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-main"
     cnf_file: "/var/lib/pgsql/{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}/data/postgresql.conf"
-    repo_url: https://yum.postgresql.org/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+    repo_url: http://yum.postgresql.org/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
     install_packages:
       - "libpq5={{ postgresql_version }}"
       - "postgresql-client-common={{postgresql_version2}}"
@@ -380,14 +380,14 @@ focal:
   proxysql:
     systemd_service: "proxysql"
     install_packages:
-      - "https://repo.proxysql.com/ProxySQL/proxysql-{{'2.1.x' if proxysql_version.startswith('2.1.') else '2.0.x' if proxysql_version.startswith('2.0.') else ''}}/focal/proxysql_{{proxysql_version}}-ubuntu20_amd64.deb"
+      - "http://repo.proxysql.com/ProxySQL/proxysql-{{'2.1.x' if proxysql_version.startswith('2.1.') else '2.0.x' if proxysql_version.startswith('2.0.') else ''}}/focal/proxysql_{{proxysql_version}}-ubuntu20_amd64.deb"
 
   orchestrator:
     systemd_service: "orchestrator"
     install_packages:
-      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-cli_{{orchestrator_version}}_amd64.deb"
-      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator_{{orchestrator_version}}_amd64.deb"
-      - "https://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-client_{{orchestrator_version}}_amd64.deb"
+      - "http://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-cli_{{orchestrator_version}}_amd64.deb"
+      - "http://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator_{{orchestrator_version}}_amd64.deb"
+      - "http://github.com/openark/orchestrator/releases/download/v{{orchestrator_version}}/orchestrator-client_{{orchestrator_version}}_amd64.deb"
 
   percona_orchestrator:
     systemd_service: "orchestrator"
@@ -401,21 +401,21 @@ focal:
     systemd_service: "mariadb"
     cnf_file: '/etc/mysql/mariadb.conf.d/zz_mysqld.cnf'
     install_packages:
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mysql-common_{{mariadb_version}}+maria~focal_all.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-common_{{mariadb_version}}+maria~focal_all.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/libmariadb3_{{mariadb_version}}+maria~focal_amd64.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-client-core-10.5_{{mariadb_version}}+maria~focal_amd64.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-server-core-10.5_{{mariadb_version}}+maria~focal_amd64.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-client-10.5_{{mariadb_version}}+maria~focal_amd64.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-server-10.5_{{mariadb_version}}+maria~focal_amd64.deb"
-      - "https://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-server_{{mariadb_version}}+maria~focal_all.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mysql-common_{{mariadb_version}}+maria~focal_all.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-common_{{mariadb_version}}+maria~focal_all.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/libmariadb3_{{mariadb_version}}+maria~focal_amd64.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-client-core-10.5_{{mariadb_version}}+maria~focal_amd64.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-server-core-10.5_{{mariadb_version}}+maria~focal_amd64.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-client-10.5_{{mariadb_version}}+maria~focal_amd64.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-server-10.5_{{mariadb_version}}+maria~focal_amd64.deb"
+      - "http://downloads.mariadb.com/MariaDB/mariadb-{{mariadb_version}}/repo/ubuntu/pool/main/m/mariadb-10.5/mariadb-server_{{mariadb_version}}+maria~focal_all.deb"
 
   pmm_client:
     install_packages:
-      - "https://downloads.percona.com/downloads/pmm2/{{pmm_client_version | regex_replace('-[0-9]+$', '')}}/binary/debian/focal/x86_64/pmm{{'2' if pmm_client_version.startswith('2') else ''}}-client_{{pmm_client_version}}.{{dist}}_amd64.deb"
+      - "http://downloads.percona.com/downloads/pmm2/{{pmm_client_version | regex_replace('-[0-9]+$', '')}}/binary/debian/focal/x86_64/pmm{{'2' if pmm_client_version.startswith('2') else ''}}-client_{{pmm_client_version}}.{{dist}}_amd64.deb"
 
 el7:
-  repo_url: "https://repo.percona.com/yum/percona-release-latest.noarch.rpm"
+  repo_url: "http://repo.percona.com/yum/percona-release-latest.noarch.rpm"
   ps56:
     systemd_service: "mysqld"
     cnf_file: "/etc/my.cnf"
@@ -455,7 +455,7 @@ el7:
       - gdb
       - "{{ percona_mysql_name }}-debuginfo{{ percona_mysql_full_ver }}"
     mysql_shell_packages:
-      - "https://www.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}/binary/redhat/7/x86_64/percona-mysql-shell-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}-{{ 2 if percona_server_version | regex_search('^8\\.0\\.2[7-9]') else 1 }}.el7.x86_64.rpm"
+      - "http://www.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}/binary/redhat/7/x86_64/percona-mysql-shell-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}-{{ 2 if percona_server_version | regex_search('^8\\.0\\.2[7-9]') else 1 }}.el7.x86_64.rpm"
     rocksdb_packages:
       - "{{ percona_mysql_name }}-rocksdb{{ percona_mysql_full_ver }}"
     tests_packages:
@@ -513,7 +513,7 @@ el7:
     systemd_service: "mariadb"
     cnf_file: '/etc/my.cnf.d/zz_mysqld.cnf'
   mysql:
-    repo_url: https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm
+    repo_url: http://repo.mysql.com/mysql80-community-release-el7-7.noarch.rpm
     systemd_service: "mysqld"
     cnf_file: '/etc/my.cnf'
     install_packages:
@@ -522,9 +522,9 @@ el7:
       - "mysql-community-client-{{mysql_version}}.el7.x86_64"
       - "mysql-community-server-{{mysql_version}}.el7.x86_64"
     mysql_shell_packages:
-      - "https://dev.mysql.com/get/Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el7.x86_64.rpm"
+      - "http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el7.x86_64.rpm"
   mysql_ndb:
-    repo_url: https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm
+    repo_url: http://dev.mysql.com/get/mysql80-community-release-el7-7.noarch.rpm
     systemd_service: "{{ 'mysqld' if mysql_ndb_sql_version != '' else 'ndbmtd' if mysql_ndb_data_version != '' else 'ndb_mgmd' }}"
     cnf_file: '/etc/my.cnf'
     install_packages:
@@ -538,9 +538,9 @@ el7:
     management_packages:
       - "mysql-cluster-community-management-server-{{mysql_ndb_version}}.el7.x86_64"
     mysql_shell_packages:
-      - "https://dev.mysql.com/get/Downloads/MySQL-Shell/mysql-shell-{{mysql_ndb_version}}.el7.x86_64.rpm"
+      - "http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell-{{mysql_ndb_version}}.el7.x86_64.rpm"
   mysql_router:
-    repo_url: https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm
+    repo_url: http://dev.mysql.com/get/mysql80-community-release-el7-7.noarch.rpm
     systemd_service: "mysqlrouter"
     cnf_file: '/etc/my.cnf'
     install_packages:
@@ -548,10 +548,13 @@ el7:
       - "mysql-community-libs-{{mysql_router_version}}.el7.x86_64"
       - "mysql-community-client-{{mysql_router_version}}.el7.x86_64"
       - "mysql-router-community-{{mysql_router_version}}.el7.x86_64"
+    mysql_shell_packages:
+      - "http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell-{{mysql_ndb_version}}.el7.x86_64.rpm"
+
   proxysql:
     systemd_service: "proxysql"
     install_packages:
-      - "https://github.com/sysown/proxysql/releases/download/v{{ proxysql_version | regex_replace('-[0-9]+$', '') }}/proxysql-{{proxysql_version}}-centos7.x86_64.rpm"
+      - "http://github.com/sysown/proxysql/releases/download/v{{ proxysql_version | regex_replace('-[0-9]+$', '') }}/proxysql-{{proxysql_version}}-centos7.x86_64.rpm"
   percona_proxysql:
     systemd_service: "proxysql"
     install_packages:
@@ -560,9 +563,9 @@ el7:
   orchestrator:
     systemd_service: "orchestrator"
     install_packages:
-      - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-cli-{{orchestrator_version}}.x86_64.rpm"
-      - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-{{orchestrator_version}}.x86_64.rpm"
-      - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-client-{{orchestrator_version}}.x86_64.rpm"
+      - "http://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-cli-{{orchestrator_version}}.x86_64.rpm"
+      - "http://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-{{orchestrator_version}}.x86_64.rpm"
+      - "http://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-client-{{orchestrator_version}}.x86_64.rpm"
       - which
   percona_orchestrator:
     systemd_service: "orchestrator"
@@ -588,12 +591,12 @@ el7:
     install_packages:
       - java-1.8.0-openjdk.x86_64
       - java-1.8.0-openjdk-devel
-      - https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-{{mysql_connector_java_version}}.el7.noarch.rpm
+      - http://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-{{mysql_connector_java_version}}.el7.noarch.rpm
 
   pgpool:
     systemd_service: pgpool
     install_packages:
-      - "https://www.pgpool.net/yum/rpms/{{ pgpool_version | regex_replace('^([0-9]+\\.[0-9]+)\\..*$','\\1') }}/redhat/rhel-7-x86_64/pgpool-II-pg{{ percona_postgresql_version | regex_replace('\\..*$','') if percona_postgresql_version != '' else postgresql_version | regex_replace('\\..*$','') }}-{{pgpool_version}}pgdg.rhel7.x86_64.rpm"
+      - "http://www.pgpool.net/yum/rpms/{{ pgpool_version | regex_replace('^([0-9]+\\.[0-9]+)\\..*$','\\1') }}/redhat/rhel-7-x86_64/pgpool-II-pg{{ percona_postgresql_version | regex_replace('\\..*$','') if percona_postgresql_version != '' else postgresql_version | regex_replace('\\..*$','') }}-{{pgpool_version}}pgdg.rhel7.x86_64.rpm"
 
   ldap_server:
     systemd_service: slapd
@@ -614,7 +617,7 @@ el7:
   postgresql:
     systemd_service: "postgresql-{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}"
     cnf_file: "/var/lib/pgsql/{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}/data/postgresql.conf"
-    repo_url: https://yum.postgresql.org/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+    repo_url: http://yum.postgresql.org/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
     install_packages:
       - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-libs-{{postgresql_version}}PGDG.rhel7.x86_64"
       - "postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-{{postgresql_version}}PGDG.rhel7.x86_64"
@@ -632,7 +635,7 @@ el8:
     install_packages:
       - java-1.8.0-openjdk.x86_64
       - java-1.8.0-openjdk-devel
-      - https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-{{mysql_connector_java_version}}.el8.noarch.rpm
+      - http://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-{{mysql_connector_java_version}}.el8.noarch.rpm
   percona_proxysql:
     systemd_service: "proxysql"
     install_packages:
@@ -662,7 +665,7 @@ el8:
     rocksdb_packages:
       - percona-server-rocksdb-{{ percona_server_version }}.el8
     mysql_shell_packages:
-      - "https://www.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}/binary/redhat/7/x86_64/percona-mysql-shell-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}-1.el8.x86_64.rpm"
+      - "http://www.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}/binary/redhat/7/x86_64/percona-mysql-shell-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}-1.el8.x86_64.rpm"
   pxc57:
     systemd_service: "mysqld"
     cnf_file: "/etc/percona-xtradb-cluster.conf.d/zz_mysqld.cnf"
@@ -703,14 +706,24 @@ el8:
     cnf_file: '/etc/my.cnf.d/zz_mysqld.cnf'
 
   mysql:
-    repo_url: https://dev.mysql.com/get/mysql80-community-release-el8-1.noarch.rpm
+    repo_url: http://repo.mysql.com/mysql80-community-release-el8-4.noarch.rpm
     systemd_service: "mysqld"
     cnf_file: '/etc/my.cnf'
     install_packages:
-      - https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-common-{{mysql_version}}.el8.x86_64.rpm
-      - https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-libs-{{mysql_version}}.el8.x86_64.rpm
-      - https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-client-{{mysql_version}}.el8.x86_64.rpm
-      - https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-community-server-{{mysql_version}}.el8.x86_64.rpm
+      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-common-{{mysql_version}}.el8.x86_64.rpm
+      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-libs-{{mysql_version}}.el8.x86_64.rpm
+      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-client-{{mysql_version}}.el8.x86_64.rpm
+      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-server-{{mysql_version}}.el8.x86_64.rpm
+    mysql_shell_packages:
+      - "http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el8.x86_64.rpm"
+  mysql_router:
+    repo_url: http://repo.mysql.com/mysql80-community-release-el8-4.noarch.rpm
+    systemd_service: "mysqlrouter"
+    cnf_file: '/etc/my.cnf'
+    install_packages:
+      - "mysql-router-community-{{mysql_router_version}}.el8.x86_64"
+    mysql_shell_packages:
+      - "http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el8.x86_64.rpm"
 
   sysbench:
     install_packages:
@@ -733,8 +746,8 @@ el8:
 
   orchestrator:
     install_packages:
-      - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-cli-{{orchestrator_version}}.x86_64.rpm"
-      - "https://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-{{orchestrator_version}}.x86_64.rpm"
+      - "http://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-cli-{{orchestrator_version}}.x86_64.rpm"
+      - "http://github.com/openark/orchestrator/releases/download/v{{ orchestrator_version | regex_replace('-[0-9]+$', '') }}/orchestrator-{{orchestrator_version}}.x86_64.rpm"
 
   ppg11:
     systemd_service: 'postgresql-11'
@@ -749,7 +762,7 @@ el8:
   postgresql:
     systemd_service: "postgresql-{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}"
     cnf_file: "/var/lib/pgsql/{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}/data/postgresql.conf"
-    repo_url: https://yum.postgresql.org/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+    repo_url: http://yum.postgresql.org/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
     install_packages:
       - glibc-langpack-en
       - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-libs-{{postgresql_version}}PGDG.rhel8.x86_64"
@@ -772,7 +785,27 @@ el9:
     rocksdb_packages:
       - percona-server-rocksdb-{{ percona_server_version }}.el9
     mysql_shell_packages:
-      - "https://www.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}/binary/redhat/7/x86_64/percona-mysql-shell-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}-1.el9.x86_64.rpm"
+      - "http://www.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}/binary/redhat/7/x86_64/percona-mysql-shell-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}-1.el9.x86_64.rpm"
+
+  mysql:
+    repo_url: http://repo.mysql.com/mysql80-community-release-el9-1.noarch.rpm
+    systemd_service: "mysqld"
+    cnf_file: '/etc/my.cnf'
+    install_packages:
+      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-common-{{mysql_version}}.el9.x86_64.rpm
+      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-libs-{{mysql_version}}.el9.x86_64.rpm
+      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-client-{{mysql_version}}.el9.x86_64.rpm
+      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-server-{{mysql_version}}.el9.x86_64.rpm
+    mysql_shell_packages:
+      - "http://cdn.mysql.com//Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el9.x86_64.rpm"
+  mysql_router:
+    repo_url: http://repo.mysql.com/mysql80-community-release-el9-1.noarch.rpm
+    systemd_service: "mysqlrouter"
+    cnf_file: '/etc/my.cnf'
+    install_packages:
+      - "mysql-router-community-{{mysql_router_version}}.el9.x86_64"
+    mysql_shell_packages:
+      - "http://cdn.mysql.com//Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el9.x86_64.rpm"
 
   percona_orchestrator:
     systemd_service: "orchestrator"
