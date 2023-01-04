@@ -405,6 +405,7 @@ def parse_node(args):
   parser.add_argument('--percona-postgresql', '--percona-postgres', '--ppg', type=str, nargs='?')
   parser.add_argument('--leader', '--master', '--primary', type=str, nargs='?')
   parser.add_argument('--percona-xtrabackup', type=str, nargs='?')
+  parser.add_argument('--s3sql', type=str, nargs='?')
   parser.add_argument('--percona-orchestrator', type=str, nargs='?')
   parser.add_argument('--percona-toolkit', type=str, nargs='?')
   parser.add_argument('--cert-manager', dest="cert_manager", type=str, nargs='?')
@@ -478,6 +479,8 @@ def apply_node_actions(node, actions):
   if actions.group_replication:
     env["DB_OPTS"] = "mysql/gr.cnf"
     env["REPLICATION_TYPE"] = "group"
+  if actions.s3sql:
+    env["S3SQL"] = actions.s3sql
   if actions.proxysql is not None:
     env["PROXYSQL"] = actions.proxysql
     env["DB_USER"] = "root"
@@ -525,12 +528,19 @@ def ssh_login(namespace, node):
   os.system("ssh -F {}ssh_config -o LogLevel=error -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa -t root@{}".format(namespace, node))
 
 def main():
-  if len(sys.argv) > 1 and sys.argv[1] in ("ssh", "--ssh"):
-    host = "default"
-    if len(sys.argv) > 2:
-      host = sys.argv[2]
-    ssh_login("", host)
-    sys.exit(0)
+  if len(sys.argv) > 1:
+    if sys.argv[1] in ("ssh", "--ssh"):
+      host = "default"
+      if len(sys.argv) > 2:
+        host = sys.argv[2]
+      ssh_login("", host)
+      sys.exit(0)
+    elif sys.argv[1] in ("mysql", "--mysql"):
+      host = "default"
+      if len(sys.argv) > 2:
+        host = sys.argv[2]
+      mysql_cli("", host)
+      sys.exit(0)
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--namespace', dest="namespace", type=str, default="")

@@ -1438,6 +1438,12 @@ deploy_node() {
         DEP_ENV="$DEP_ENV DB_IP=default "
       fi
     fi
+
+    if [[ $i == "s3sql:"* ]] ; then
+      S3SQL=$(echo "$i" | cut -d: -f2-100)
+      DEP_ENV="$DEP_ENV S3SQL=$S3SQL "
+    fi
+
     if [[ $i == "etcd-ip:"* ]] ; then
         ETCD_NODE=$(get_version "$i")
         DEP_ENV="$DEP_ENV ETCD_IP=$ETCD_NODE "

@@ -37,6 +37,7 @@ Deploy:
 ./anydbver deploy hn:vault.percona.local vault node1 ps:8.0 vault-server:vault.percona.local
 ./anydbver deploy ps:5.7 percona-toolkit
 ./anydbver deploy ps:8.0.22 hn:ps0 node1 ps:8.0.22 hn:ps1 node2 ps:8.0.22 hn:ps2 master:ps0 node2 ps:8.0.22 master:ps1 channel:ps1ch
+./anydbver deploy node0 ps s3sql:"http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql" node1 ps master:node0
 ./anydbver deploy mysql
 ./anydbver deploy \
   hn:mysql_rs0_gr0 mysql:8.0.18 group-replication \
@@ -402,6 +403,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `rbr`, alias `row`, `row-based-replication`
 * `replica-set`
 * `rocksdb`, Install MyRocks (RocksDB) MySQL storage engine
+* `s3sql`, specify sql file (currently works only for MySQL-based servers) in format `PROTO://USER:PASS@host_or_ip/bucket/path_to_dump.sql`, for example `http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql`
 * `samba-ad`, short `samba`, install Samba with Active Directory support
 * `samba-dc`, required parameter - samba server name
 * `shardsrv`, mark MongoDB server as shard data node

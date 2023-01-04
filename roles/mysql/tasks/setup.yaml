@@ -248,3 +248,10 @@
       --user="{{db_user}}"
       --password="{{db_password}}"
 
+
+- name: Load database from S3
+  when: s3sql != ''
+  load_sql_from_s3:
+    s3_sql: "{{ s3sql }}"
+    client: mysql
+

@@ -1,0 +1,40 @@
+#!/bin/bash
+changed="false"
+ok="false"
+
+source $1
+
+MC="/usr/local/bin/mc"
+if [[ -f "/vagrant/tools/mc" ]] ; then
+  MC="/vagrant/tools/mc"
+elif ! [[ -f "$MC" ]] ; then
+  curl --compressed https://dl.min.io/client/mc/release/linux-amd64/mc -o "$MC"
+  chmod +x "$MC"
+fi
+
+
+#s3_sql="http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql"
+#client=mysql
+
+export MC_HOST_bkp=$(echo $s3_sql | cut -d/ -f1-3)
+s3_file=$(echo $s3_sql | cut -d/ -f4-100)
+
+if [[ "$client" == "mysql" ]] ; then
+  until mysql --defaults-file=/root/.my.cnf --silent --connect-timeout=30 --wait -e "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
+fi
+
+"$MC" ls bkp/"$s3_file" 2>&1 > /tmp/mc-ls.log
+
+if "$MC" cat bkp/"$s3_file" 2> /tmp/mc-cat.log | $client ; then
+  changed="true"
+  ok="true"
+  msg="loaded sql from S3 $s3_file"
+else
+  changed="false"
+  ok="false"
+  msg="Failed to load sql from S3 $s3_file $(cat /tmp/mc.log)"
+fi
+
+
+
+printf '{"changed": %s, "ok": %s, "msg": "%s"}' "$changed" "$ok" "$msg"

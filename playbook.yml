@@ -21,6 +21,7 @@
     percona_xtradb_cluster_version: "{{ lookup('vars', 'extra_percona_xtradb_cluster_version', default=lookup('env','PXC',default='') ) }}"
     percona_xtradb_cluster_galera: "{{ lookup('vars', 'extra_percona_xtradb_cluster_galera', default=lookup('env','PXC_GALERA',default='') ) }}"
     psmdb_version: "{{ lookup('vars', 'extra_psmdb_version', default=lookup('env','PSMDB',default='') ) }}"
+    s3sql: "{{ lookup('vars', 'extra_s3sql', default=lookup('env','S3SQL',default='') ) }}"
     mongo_org_version: "{{ lookup('vars', 'extra_mongo_org_version', default=lookup('env','MONGO_ORG',default='') ) }}"
     pbm_version: "{{ lookup('vars', 'extra_pbm_version', default=lookup('env','PBM',default='') ) }}"
     pbm_agent: "{{ lookup('vars', 'extra_pbm_agent', default=lookup('env','PBM_AGENT',default='') ) }}"
