@@ -25,7 +25,7 @@ fi
 
 "$MC" ls bkp/"$s3_file" 2>&1 > /tmp/mc-ls.log
 
-if "$MC" cat bkp/"$s3_file" 2> /tmp/mc-cat.log | $client ; then
+if "$MC" cat bkp/"$s3_file" 2> /tmp/mc-cat.log | $client 2> /tmp/db-client.log ; then
   changed="true"
   ok="true"
   msg="loaded sql from S3 $s3_file"

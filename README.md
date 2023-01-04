@@ -403,7 +403,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `rbr`, alias `row`, `row-based-replication`
 * `replica-set`
 * `rocksdb`, Install MyRocks (RocksDB) MySQL storage engine
-* `s3sql`, specify sql file (currently works only for MySQL-based servers) in format `PROTO://USER:PASS@host_or_ip/bucket/path_to_dump.sql`, for example `http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql`
+* `s3sql`, specify sql file (currently works only for MySQL/Postgresql-based servers) in format `PROTO://USER:PASS@host_or_ip/bucket/path_to_dump.sql`, for example `http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql`
 * `samba-ad`, short `samba`, install Samba with Active Directory support
 * `samba-dc`, required parameter - samba server name
 * `shardsrv`, mark MongoDB server as shard data node

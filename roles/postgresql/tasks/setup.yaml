@@ -43,6 +43,7 @@
           echo 'host    all             all             ::1/128              md5' >> {{pg_conf_dir}}/pg_hba.conf;
           sed -i -r -e 's/^(host.*ident)/#\1/' {{pg_conf_dir}}/pg_hba.conf;
           echo $(/bin/bash /vagrant/tools/node_ip.sh):5432:*:postgres:{{db_password}} > ~/.pgpass ;
+          echo 127.0.0.1:5432:*:postgres:{{db_password}} >> ~/.pgpass ;
           chmod 0600 ~/.pgpass
         creates: "/root/.pgpass"
 
@@ -255,5 +256,9 @@
       command:
         cmd: sudo -u postgres pgbackrest stanza-create --stanza=pg0app --log-level-console=info
 
-
+- name: Load database from S3
+  when: s3sql != ''
+  load_sql_from_s3:
+    s3_sql: "{{ s3sql }}"
+    client: psql -U postgres -h 127.0.0.1
 
