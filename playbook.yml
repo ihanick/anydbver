@@ -1,5 +1,6 @@
 - name: install percona server
   hosts: all
+  strategy: free
   become: yes
   ## docker run -d -p 8080:8123 clue/polipo proxyAddress=0.0.0.0
   #environment:

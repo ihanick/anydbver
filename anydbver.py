@@ -78,6 +78,7 @@ def deploy(args, node_actions):
     print("Applying node: ", node_action)
     node = node_action[1]
 
+
     run_k8s_operator_cmd = ['python3', 'tools/run_k8s_operator.py']
     if args.provider == "docker":
       if node.k3d:
@@ -159,6 +160,8 @@ def deploy(args, node_actions):
 
       if node.ingress_port or node.k8s_pg or node.k8s_pxc or node.k8s_ps or node.k8s_mongo or node.pmm:
         run_fatal(run_k8s_operator_cmd, "Can't run the operator")
+
+  run_fatal(["ansible-playbook", "-i", "ansible_hosts_run", "playbook.yml"], "Error running playbook")
 
 def append_versions_from_url(vers, url, r):
   with urllib.request.urlopen(url) as response:
@@ -434,84 +437,127 @@ def resolve_hostname(host):
   return run_get_line(["bash", "./anydbver", "ip", host ], "Can't get node ip").rstrip()
 
 def apply_node_actions(node, actions):
+  extra_vars = {'extra_db_user': 'dba', 'extra_db_password': 'secret', 'extra_start_db': '1'}
   env = {"DB_USER":"dba", "DB_PASS":"secret", "START":"1"}
   db_features = []
   print('Node: ', node, 'Actions: ',actions)
   if actions.ldap is not None :
+    extra_vars["extra_ldap_server"] = "1"
     env["LDAP_SERVER"] = "1"
   if actions.ldap_master is not None:
-    env["LDAP_IP"] = resolve_hostname(actions.ldap_master)
+    extra_vars["extra_ldap_server_ip"] = resolve_hostname(actions.ldap_master)
+    env["LDAP_IP"] = extra_vars["extra_ldap_server_ip"]
   if actions.percona_server_mongodb is not None:
+    extra_vars["extra_psmdb_version"] = actions.percona_server_mongodb
+    extra_vars["extra_db_opts_file"] = "mongo/enable_wt.conf"
     env["PSMDB"] = actions.percona_server_mongodb
     env["DB_OPTS"] = "mongo/enable_wt.conf"
     if actions.replica_set is not None:
+      extra_vars["extra_mongo_replicaset"] = actions.replica_set
       env["REPLICA_SET"] = actions.replica_set
   if actions.percona_server is not None:
+    extra_vars["extra_percona_server_version"] = actions.percona_server
+    extra_vars["extra_db_opts_file"] = "mysql/async-repl-gtid.cnf"
+    extra_vars["extra_db_user"] = "root"
+    extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["PS"] = actions.percona_server
     env["DB_OPTS"] = "mysql/async-repl-gtid.cnf"
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.mysql_server is not None:
+    extra_vars["extra_mysql_version"] = actions.mysql_server
+    extra_vars["extra_db_opts_file"] = "mysql/async-repl-gtid.cnf"
+    extra_vars["extra_db_user"] = "root"
+    extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["MYSQL"] = actions.mysql_server
     env["DB_OPTS"] = "mysql/async-repl-gtid.cnf"
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.mysql_router is not None:
+    extra_vars["extra_mysql_router_version"] = actions.mysql_router
+    extra_vars["extra_db_user"] = "root"
+    extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["MYSQL_ROUTER"] = actions.mysql_router
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.percona_xtradb_cluster is not None:
+    extra_vars["extra_percona_xtradb_cluster_version"] = actions.percona_xtradb_cluster
+    extra_vars["extra_db_user"] = "root"
+    extra_vars["extra_db_password"] = "verysecretpassword1^"
+
     env["PXC"] = actions.percona_xtradb_cluster
     if actions.percona_xtradb_cluster.startswith("5.6"):
+      extra_vars["extra_db_opts_file"] = "mysql/pxc5657.cnf"
       env["DB_OPTS"] = "mysql/pxc5657.cnf"
     elif actions.percona_xtradb_cluster.startswith("5.7"):
+      extra_vars["extra_db_opts_file"] = "mysql/pxc5657.cnf"
       env["DB_OPTS"] = "mysql/pxc5657.cnf"
     elif actions.percona_xtradb_cluster.startswith("8.0"):
+      extra_vars["extra_db_opts_file"] = "mysql/pxc8-repl-gtid.cnf"
       env["DB_OPTS"] = "mysql/pxc8-repl-gtid.cnf"
 
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.cluster_name:
+    extra_vars["extra_cluster_name"] = actions.cluster_name
     env["CLUSTER"] = actions.cluster_name
   if actions.galera_leader:
-    env["DB_IP"] = resolve_hostname(actions.galera_leader)
+    extra_vars["extra_master_ip"] = resolve_hostname(actions.galera_leader)
+    extra_vars["extra_replication_type"] = "galera"
+    env["DB_IP"] = extra_vars["extra_master_ip"]
     env["REPLICATION_TYPE"] = "galera"
   if actions.group_replication:
+    extra_vars["extra_db_opts_file"] = "mysql/gr.cnf"
+    extra_vars["extra_replication_type"] = "group"
     env["DB_OPTS"] = "mysql/gr.cnf"
     env["REPLICATION_TYPE"] = "group"
   if actions.s3sql:
+    extra_vars["extra_s3sql"] = actions.s3sql
     env["S3SQL"] = actions.s3sql
   if actions.proxysql is not None:
+    extra_vars["extra_proxysql_version"] = actions.proxysql
+    extra_vars["extra_db_user"] = "root"
+    extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["PROXYSQL"] = actions.proxysql
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.percona_proxysql is not None:
+    extra_vars["extra_percona_proxysql_version"] = actions.percona_proxysql
+    extra_vars["extra_db_user"] = "root"
+    extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["PERCONA_PROXYSQL"] = actions.percona_proxysql
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
-  if actions.haproxy is not None:
-    env["HAPROXY"] = "1"
-    env["DB_USER"] = "root"
-    env["DB_PASS"]= "verysecretpassword1^"
   if actions.haproxy_galera is not None: 
-    env["HAPROXY_GALERA"] = ','.join([resolve_hostname(node) for node in actions.haproxy_galera.split(',') ])
+    extra_vars["extra_haproxy_galera"] = ','.join([resolve_hostname(node) for node in actions.haproxy_galera.split(',') ])
+    extra_vars["extra_db_user"] = "root"
+    extra_vars["extra_db_password"] = "verysecretpassword1^"
+    env["HAPROXY_GALERA"] = extra_vars["extra_haproxy_galera"]
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.clustercheck is not None:
     db_features.append("clustercheck")
   if actions.percona_xtrabackup is not None:
+    extra_vars["percona_xtrabackup_version"] = actions.percona_xtrabackup
+    extra_vars["extra_db_user"] = "root"
+    extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["PXB"] = actions.percona_xtrabackup
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.percona_orchestrator is not None:
+    extra_vars["extra_percona_orchestrator_version"] = actions.percona_orchestrator
+    extra_vars["extra_db_user"] = "root"
+    extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["PERCONA_ORCHESTRATOR"] = actions.percona_orchestrator
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.leader is not None:
-    env["DB_IP"] = resolve_hostname(actions.leader)
+    extra_vars["extra_master_ip"] = resolve_hostname(actions.leader)
+    env["DB_IP"] = extra_vars["extra_master_ip"]
   if len(db_features) > 0:
-    env["DB_FEATURES"] = ",".join(db_features)
-  return env
+    extra_vars["extra_db_features"] = ",".join(db_features)
+    env["DB_FEATURES"] = extra_vars["extra_db_features"]
+  return env, extra_vars
 
 def apply_node_command(node, env, cmd):
   run_fatal(cmd, "failed to deploy node {}".format(node), env=env)
@@ -591,40 +637,29 @@ def main():
   create_nodes(nodes_cnt, nodes_os)
 
   cmds = []
+
+  ansible_hosts_run = open("ansible_hosts_run", "w")
+
   for n in node_actions:
     node = n[0]
     if node == "node0":
       node = "default"
-    env = apply_node_actions(node, n[1])
-    if sys.platform == "linux" or sys.platform == "linux2":
-      cmds.append(
-          (node,
-            env,
-            ["ansible-playbook", "-i", "ansible_hosts", "--limit", "{}.{}".format(args.user, node), "playbook.yml"])
-          )
-    else:
-      envstr = ""
-      for v in env:
-        envstr = envstr + " " + v + "=" + env[v]
-      ssh_config = open('ssh_config').read()
-      ansible_hosts = open('ansible_hosts').read()
-      open('playbook_run.sh', "w").write(
-"""
-cat > /anydbver/ssh_config <<EOF1
-{ssh_config}
-EOF1
-cat > /anydbver/ansible_hosts <<EOF2
-{ansible_hosts}
-EOF2
-cd /anydbver; {env} ansible-playbook -i ansible_hosts --limit {user}.{node} playbook.yml
-""".format(ssh_config=ssh_config, ansible_hosts=ansible_hosts, env=envstr, user=args.user, node=node) )
-      playbook_cmd = """cat playbook_run.sh | docker run --network {user}-anydbver --rm -i -e USER={user} rockylinux:8-anydbver-ansible bash""".format(user=args.user, node=node)
-      os.system(playbook_cmd )
+    (env, extra_vars) = apply_node_actions(node, n[1])
+
+    extrastr = ""
+    for v in extra_vars:
+      extrastr = extrastr + " " + v + "='" + extra_vars[v] + "'"
+
+    ansible_hosts_run.write(
+    "{user}.{node} ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host={ip} ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none' {extra_vars}\n".format(
+        user=args.user,node=node,extra_vars=extrastr, ip=resolve_hostname(node))
+    )
+    print(extrastr)
+
   print(args)
   print(node_actions)
-  print(cmds)
 
-
+  ansible_hosts_run.close()
   for cmd in cmds:
     apply_node_command(cmd[0], cmd[1], cmd[2])
 
