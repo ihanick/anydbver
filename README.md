@@ -417,6 +417,9 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `vites`, install Vites.io MySQL operator
 * `wal-g`, installs WAL-g
 
+## Tools
+* `tools/create_backup_server.sh` start a docker container with minio and upload sample databases into it
+
 ## Port forwarding
 
 If you want forward port from lxc container to Vagrant VM run
