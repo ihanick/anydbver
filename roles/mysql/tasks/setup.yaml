@@ -56,8 +56,9 @@
 
 - name: Boostrap MySQL Router
   when: mysql_router_version != '' and master_ip != ''
-  command:
-    cmd: mysqlrouter --bootstrap "{{ db_user }}:{{ db_password | urlencode() }}@{{ master_ip }}:3306" --directory /etc/mysqlrouter --user mysqlrouter
+  shell:
+    cmd: >-
+      until mysql -h "{{ master_ip }}" -u "{{ db_user }}" -p"{{ db_password }}" --connect-timeout=30 --wait -e "select 'ONLINE' from mysql_innodb_cluster_metadata.v2_this_instance;" 2>/dev/null |grep -q ONLINE ; do sleep 5 ; done && until mysql -h "{{ master_ip }}" -u "{{ db_user }}" -p"{{ db_password }}" --connect-timeout=30 --wait -e "select * from performance_schema.replication_group_members;" 2>/dev/null |grep -q ONLINE ; do sleep 5 ; done ;mysqlrouter --bootstrap "{{ db_user }}:{{ db_password | urlencode() }}@{{ master_ip }}:3306" --directory /etc/mysqlrouter --user mysqlrouter
 
 - name: Setup Vault keyring plugin for Percona Server
   when: percona_server_version != '' and vault_url != ''

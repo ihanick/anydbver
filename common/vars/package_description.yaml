@@ -360,8 +360,6 @@ focal:
       - "http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/mysql-community-server-core_{{mysql_version}}ubuntu20.04_amd64.deb"
       - "http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/mysql-community-server_{{mysql_version}}ubuntu20.04_amd64.deb"
       - "http://repo.mysql.com/apt/ubuntu/pool/mysql-8.0/m/mysql-community/mysql-server_{{mysql_version}}ubuntu20.04_amd64.deb"
-    mysql_shell_packages:
-      - "http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el7.x86_64.rpm"
 
   postgresql:
     systemd_service: "postgresql@{{'9.5' if postgresql_version.startswith('9.5') else '9.6' if postgresql_version.startswith('9.6') else postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-main"
@@ -522,7 +520,8 @@ el7:
       - "mysql-community-client-{{mysql_version}}.el7.x86_64"
       - "mysql-community-server-{{mysql_version}}.el7.x86_64"
     mysql_shell_packages:
-      - "http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el7.x86_64.rpm"
+      - "{{ 'http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell-' + mysql_version + '.el7.x86_64.rpm' if mysql_version.startswith('8.0.31') else 'https://cdn.mysql.com/archives/mysql-shell/mysql-shell-' + mysql_version + '.el7.x86_64.rpm' }}"
+
   mysql_ndb:
     repo_url: http://dev.mysql.com/get/mysql80-community-release-el7-7.noarch.rpm
     systemd_service: "{{ 'mysqld' if mysql_ndb_sql_version != '' else 'ndbmtd' if mysql_ndb_data_version != '' else 'ndb_mgmd' }}"
@@ -540,7 +539,7 @@ el7:
     mysql_shell_packages:
       - "http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell-{{mysql_ndb_version}}.el7.x86_64.rpm"
   mysql_router:
-    repo_url: http://dev.mysql.com/get/mysql80-community-release-el7-7.noarch.rpm
+    repo_url: http://repo.mysql.com/mysql80-community-release-el7-7.noarch.rpm
     systemd_service: "mysqlrouter"
     cnf_file: '/etc/my.cnf'
     install_packages:
@@ -549,7 +548,7 @@ el7:
       - "mysql-community-client-{{mysql_router_version}}.el7.x86_64"
       - "mysql-router-community-{{mysql_router_version}}.el7.x86_64"
     mysql_shell_packages:
-      - "http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell-{{mysql_ndb_version}}.el7.x86_64.rpm"
+      - "{{ 'http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell-' + mysql_version + '.el7.x86_64.rpm' if mysql_version.startswith('8.0.31') else 'https://cdn.mysql.com/archives/mysql-shell/mysql-shell-' + mysql_version + '.el7.x86_64.rpm' }}"
 
   proxysql:
     systemd_service: "proxysql"
