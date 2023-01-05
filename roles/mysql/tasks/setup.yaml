@@ -114,6 +114,15 @@
       shell:
         cmd: /bin/bash -e /vagrant/tools/load_sample_db.sh sakila
 
+- name: Create group replication cluster on a first node
+  when: replication_type == 'group' and master_ip == ''
+  setup_group_replication:
+    state: init
+    cluster_name: "{{cluster_name}}"
+    user: "{{db_user}}"
+    password: "{{db_password}}"
+
+
 - name: Setup and start replication
   when: >
     master_ip != '' and

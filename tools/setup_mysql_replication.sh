@@ -157,14 +157,49 @@ rawurlencode() {
 
 # Group Replication aka InnoDB Cluster
 if [[ "x$TYPE" == "xgroup" ]] ; then
-    rawurlencode "$MASTER_PASSWORD"
-    MASTER_PASSWORD_URIENC="$REPLY"
-    MYIP=$(/vagrant/tools/node_ip.sh)
-    if ! mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
-        -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null|grep -q "$CLUSTER_NAME" ; then
-        mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" -e "dba.createCluster('$CLUSTER_NAME', {})"
-    fi
+  until mysql --host="$MASTER_IP" --silent --connect-timeout=30 --wait -e "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
+  until mysql --silent --connect-timeout=30 --wait -e "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
 
+
+#  mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;'
+#  mysql -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;'
+
+  rawurlencode "$MASTER_PASSWORD"
+  MASTER_PASSWORD_URIENC="$REPLY"
+  MYIP=$(/vagrant/tools/node_ip.sh)
+  while ! mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
+      -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null|grep -q "$CLUSTER_NAME" ; do
+    sleep 5
+  done
+
+  SSH="ssh -i /vagrant/secret/id_rsa -o StrictHostKeyChecking=no -o PasswordAuthentication=no"
+
+  # allow only one active cluster.addInstance() call
+  while true ; do
+    while $SSH root@$MASTER_IP ls /root/add-group-member | grep -q add-group-member ; do
+      sleep 1
+    done
+    if $SSH root@$MASTER_IP 'flock -w 5 -x -E 1 /root/.my.cnf -c "touch /root/add-group-member"' ; then
+      break
+    fi
+  done
+
+  mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
+      -e "var c=dba.getCluster();c.addInstance('$MASTER_USER:$MASTER_PASSWORD_URIENC@$MYIP:3306', {recoveryMethod: 'clone', label: '$MYIP'})" || true
+
+  sleep 10
+  until mysql --silent --connect-timeout=30 --wait -e "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
+  until mysql --connect-timeout=30 --wait \
+    -e "SELECT STATE FROM performance_schema.clone_status;" 2> /dev/null | grep -q Completed
+  do sleep 6 ; done
+
+  if mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
+      -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null|grep -q "Use cluster.rescan"
+  then
     mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
-        -e "var c=dba.getCluster();c.addInstance('$MASTER_USER:$MASTER_PASSWORD_URIENC@$MYIP:3306', {recoveryMethod: 'clone', label: '$MYIP'})"
+      -e "var cluster=dba.getCluster();cluster.rescan({interactive: false, addInstances: 'auto'})" || true
+  fi
+
+  $SSH root@$MASTER_IP rm -f /root/add-group-member
+  
 fi

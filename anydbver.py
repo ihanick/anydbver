@@ -650,9 +650,14 @@ def main():
     for v in extra_vars:
       extrastr = extrastr + " " + v + "='" + extra_vars[v] + "'"
 
+    python_path="/usr/bin/python3"
+
+    if n[1].os in ("centos7", "el7"):
+        python_path="/usr/bin/python"
+
     ansible_hosts_run.write(
-    "{user}.{node} ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host={ip} ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none' {extra_vars}\n".format(
-        user=args.user,node=node,extra_vars=extrastr, ip=resolve_hostname(node))
+    "{user}.{node} ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host={ip} ansible_python_interpreter={python_path} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none' {extra_vars}\n".format(
+        user=args.user,node=node, python_path=python_path,extra_vars=extrastr, ip=resolve_hostname(node))
     )
     print(extrastr)
 
