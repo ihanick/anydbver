@@ -211,6 +211,7 @@ git clone https://github.com/ihanick/anydbver.git
 cd anydbver
 ./anydbver configure provider:lxd
 ./anydbver update
+ansible-galaxy collection install theredgreek.sqlite
 ```
 
 ## Kubernetes, PMM

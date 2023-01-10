@@ -7,3 +7,15 @@ mydumper:
     install_packages: "https://github.com/maxbube/mydumper/releases/download/v{{mydumper_version|regex_replace('-[0-9]+$') if mydumper_version != '0.10.7-2' else mydumper_version}}/mydumper-{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version}}.{{dist}}.x86_64.rpm"
   focal:
     install_packages: "https://github.com/maxbube/mydumper/releases/download/v{{mydumper_version|regex_replace('-[0-9]+$') if mydumper_version != '0.10.7-2' else mydumper_version}}/mydumper_{{'0.' if mydumper_version.startswith('10.') else ''}}{{mydumper_version}}.{{dist}}_amd64.deb"
+
+package_info: >
+  {{ lookup("theredgreek.sqlite.sqlite", path=playbook_dir+"/anydbver_version.db",
+    select="select * from percona_server_version where version like '"+ percona_server_version +"%' and os='"+ dist +"' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1")
+  if percona_server_version != ""
+  else lookup("theredgreek.sqlite.sqlite", path=playbook_dir+"/anydbver_version.db",
+    select="select * from percona_xtradb_cluster_version where version like '"+ percona_xtradb_cluster_version +"%' and os='"+ dist +"' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1")
+  if percona_xtradb_cluster_version != ""
+  else lookup("theredgreek.sqlite.sqlite", path=playbook_dir+"/anydbver_version.db",
+    select="select * from mysql_server_version where version like '"+ mysql_version +"%' and os='"+ dist +"' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1")
+  if mysql_version != ""
+  else "" }}

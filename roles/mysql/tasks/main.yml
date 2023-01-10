@@ -25,8 +25,8 @@
 - name: enable Percona MySQL 8.0 repo
   when: percona_server_version.startswith('8.0') or percona_xtradb_cluster_version.startswith('8.0')
   command:
-    cmd: /usr/bin/percona-release enable "{{ os[dist][soft].repo_enable_str }}"
-    creates: "{{ os[dist][soft].repo_file }}"
+    cmd: /usr/bin/percona-release enable "{{package_info['repo_enable_str'] if package_info else os[dist][soft].repo_enable_str }}"
+    creates: "{{ package_info['repo_file'] if package_info else os[dist][soft].repo_file }}"
   register: percona_release_enabled
   
 - name: MySQL repo
@@ -36,7 +36,7 @@
       when: >
         (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
       yum:
-        name: "{{os[dist][soft].repo_url}}"
+        name: "{{package_info['repo_url']}}"
         disable_gpg_check: yes
         state: present
     - name: Switch mysql ndb cluster 8.0 repo
@@ -80,14 +80,33 @@
   include_tasks: common/tasks/repo_cache.yaml
 
 - name: Install db packages
+  when: percona_server_version == '' and percona_xtradb_cluster_version == '' and mysql_version == ''
   include_tasks: common/tasks/install_db_packages.yml
+
+- name: Install db packages (sqlite metadata)
+  when: percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != ''
+  block:
+  - name: enable Percona Distribution for Percona Server MySQL 8.0 repo
+    when: ( percona_server_version.startswith('8.0') or percona_xtradb_cluster_version.startswith('8.0') )
+    command:
+      cmd: /usr/bin/percona-release enable "pdps-8.0"
+      creates: "/etc/yum.repos.d/percona-pdps-8.0-release.repo"
+  - name: install db packages
+    when: >
+      ( percona_server_version != "" or percona_xtradb_cluster_version != "" or mysql_version != "") and
+      (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+    yum:
+      name: "{{ package_info['packages'].split('|') + ( [] if debug_packages == '' else package_info['debug_packages'].split('|')) + ( [] if replication_type != 'group' or soft == 'proxysql' else package_info['mysql_shell_packages'].split('|') ) + ( [] if not ('development' in db_features.split(',') and 'development_packages' in os[dist][soft]) else os[dist][soft].development_packages) + ( [] if not ( mysql_ndb_data_version != '' ) else os[dist][soft].data_packages ) + ( [] if not ( mysql_ndb_sql_version != '' ) else os[dist][soft].sql_packages ) + ( [] if not ( mysql_ndb_management_version != '' ) else os[dist][soft].management_packages ) + ( [] if not ( tests_enabled|bool and 'tests_packages' in os[dist][soft] ) else os[dist][soft].tests_packages) + ( [] if not ( tests_enabled|bool and 'tests_packages' in os[dist][soft] ) else package_info['tests_packages'].split('|')) + ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in package_info ) else package_info['rocksdb_packages'].split('|'))  }}"
+      state: present
+      disable_gpg_check: 'yes'
+
 
 - name: Install Garbd
   when: ('garbd' in db_features.split(',')) and (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   package:
     name: "{{ item }}"
     state: present
-  with_items: "{{ os[dist][soft].garbd_packages }}"
+  with_items: "{{ package_info['garbd_packages'] if package_info else os[dist][soft].garbd_packages }}"
 
 - name: Setup and start Garbd
   when: master_ip != '' and ('garbd' in db_features.split(','))

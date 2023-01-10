@@ -49,7 +49,7 @@ fi
 
 echo 'export LXD_PROFILE=vagrant' >> /home/vagrant/.bashrc
 echo 'export K3S_FLANNEL_BACKEND=host-gw' >> /home/vagrant/.bashrc
-sudo -u vagrant bash -c 'export HOME=/home/vagrant;cd /home/vagrant/anydbver;./anydbver update'
+sudo -u vagrant bash -c 'export HOME=/home/vagrant;cd /home/vagrant/anydbver;./anydbver update; ansible-galaxy collection install theredgreek.sqlite'
 cat > /etc/sysctl.d/50-k3s.conf <<EOF
 vm.overcommit_memory = 1
 vm.overcommit_ratio = 10000

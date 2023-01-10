@@ -8,6 +8,7 @@ import itertools
 import subprocess
 from pathlib import Path
 import urllib.request
+import sqlite3
 
 COMMAND_TIMEOUT=600
 FORMAT = '%(asctime)s %(levelname)s %(message)s'
@@ -179,6 +180,211 @@ def generate_versions_file(filename, src_info):
     f.write("\n".join(versions) + "\n")
     
 
+def save_mysql_server_versions_to_sqlite(osver):
+  db_file = 'anydbver_version.db'
+  conn = None
+  try:
+    conn = sqlite3.connect(db_file)
+  except Error as e:
+    print(e)
+    return
+  cur = conn.cursor()
+  vers = list(open(".version-info/mysql.{os}.txt".format(os=osver)))
+  sql = """\
+INSERT OR REPLACE INTO mysql_server_version(
+  version, os, repo_url, repo_file, repo_enable_str,
+  systemd_service, cnf_file, packages,
+  debug_packages,
+  tests_packages, mysql_shell_packages
+)
+VALUES (?,?,?,?,?,?,?,?,?,?,?)
+"""
+  for line in vers:
+    ver = line.rstrip()
+    project = ()
+    if osver.startswith('el'):
+      pkgs = ["mysql-community-common", "mysql-community-libs", "mysql-community-client", "mysql-community-server"]
+      dbg_pkg = ['gdb']
+      if ver.startswith('8.0'):
+        dbg_pkg.append('https://cdn.mysql.com//Downloads/MySQL-8.0/mysql-community-debuginfo-{ver}.{osver}.x86_64.rpm'.format(ver=ver,osver=osver))
+      if ver.startswith('5.7'):
+        dbg_pkg.append('https://cdn.mysql.com//Downloads/MySQL-5.7/mysql-community-debuginfo-{ver}.{osver}.x86_64.rpm'.format(ver=ver,osver=osver))
+      if ver.startswith('5.6'):
+        dbg_pkg.append('https://cdn.mysql.com//Downloads/MySQL-5.6/mysql-community-debuginfo-{ver}.{osver}.x86_64.rpm'.format(ver=ver,osver=osver))
+      if osver == 'el7':
+        repo_url = 'http://repo.mysql.com/mysql80-community-release-el7-7.noarch.rpm'
+      elif osver == 'el8':
+        repo_url = 'http://repo.mysql.com/mysql80-community-release-el8-4.noarch.rpm'
+      elif osver == 'el9':
+        repo_url = 'http://repo.mysql.com/mysql80-community-release-el9-1.noarch.rpm'
+
+      mysql_shell_pkg = 'https://cdn.mysql.com/archives/mysql-shell/mysql-shell'
+      if ver.startswith('8.0.31'):
+        mysql_shell_pkg = 'http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell'
+      mysql_shell_pkg = '{url}-{ver}.{osver}.x86_64.rpm'.format(url=mysql_shell_pkg,ver=ver,osver=osver)
+      project = (
+        ver, osver, repo_url,
+        '',
+        '', 'mysqld', '/etc/my.cnf',
+        '|'.join(["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]),
+        '|'.join(dbg_pkg),
+        'mysql-community-test-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        mysql_shell_pkg
+      )
+
+    if len(project) > 1:
+      cur.execute(sql, project)
+  conn.commit()
+    
+def save_percona_xtradb_cluster_versions_to_sqlite(osver):
+  db_file = 'anydbver_version.db'
+  conn = None
+  try:
+    conn = sqlite3.connect(db_file)
+  except Error as e:
+    print(e)
+    return
+  cur = conn.cursor()
+  vers = list(open(".version-info/percona-xtradb-cluster.{os}.txt".format(os=osver)))
+  sql = """\
+INSERT OR REPLACE INTO percona_xtradb_cluster_version(
+  version, os, repo_url, repo_file, repo_enable_str,
+  systemd_service, cnf_file, packages,
+  debug_packages,
+  tests_packages, garbd_packages
+)
+VALUES (?,?,?,?,?,?,?,?,?,?,?)
+"""
+  for line in vers:
+    ver = line.rstrip()
+    project = ()
+    if ver.startswith('8.0') and osver.startswith('el'):
+      pkgs = ['percona-xtradb-cluster-shared','percona-xtradb-cluster-client','percona-xtradb-cluster-server']
+      if osver != 'el9':
+        pkgs.insert(0,'percona-xtradb-cluster-shared-compat')
+      pkgs = ["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]
+      pkgs.insert(0,'openssl')
+      project = (
+        ver, osver,
+        'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
+        '/etc/yum.repos.d/percona-pxc-80-release.repo',
+        'pxc-80', 'mysqld', '/etc/my.cnf',
+        '|'.join(pkgs),
+        'gdb|percona-xtradb-cluster-debuginfo-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'percona-xtradb-cluster-test-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'percona-xtradb-cluster-garbd-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver)
+      )
+    elif ver.startswith('5.7') and osver.startswith('el'):
+      pkgs = ['Percona-XtraDB-Cluster-shared-compat-57','Percona-XtraDB-Cluster-shared-57','Percona-XtraDB-Cluster-client-57','Percona-XtraDB-Cluster-server-57']
+      project = (
+        ver, osver,
+        'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
+        '/etc/yum.repos.d/percona-original-release.repo',
+        'pxc-57', 'mysqld', '/etc/percona-xtradb-cluster.conf.d/zz_mysqld.cnf',
+        '|'.join(["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]),
+        'gdb|Percona-XtraDB-Cluster-57-debuginfo-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'Percona-XtraDB-Cluster-test-57-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'Percona-XtraDB-Cluster-garbd-57-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver)
+      )
+    elif ver.startswith('5.6') and osver.startswith('el'):
+      pkgs = ['Percona-XtraDB-Cluster-shared-56','Percona-XtraDB-Cluster-client-56','Percona-XtraDB-Cluster-server-56']
+      pkgs = ["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]
+      pkgs.insert(0,'which')
+
+      project = (
+        ver, osver,
+        'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
+        '/etc/yum.repos.d/percona-original-release.repo',
+        'pxc-56', 'mysql', '/etc/my.cnf',
+        '|'.join(pkgs),
+        'gdb|Percona-XtraDB-Cluster-56-debuginfo-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'Percona-XtraDB-Cluster-test-56-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'Percona-XtraDB-Cluster-garbd-56-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver)
+      )
+    if len(project) > 1:
+      cur.execute(sql, project)
+  conn.commit()
+
+def save_percona_server_versions_to_sqlite(osver):
+  db_file = 'anydbver_version.db'
+  conn = None
+  try:
+    conn = sqlite3.connect(db_file)
+  except Error as e:
+    print(e)
+    return
+  cur = conn.cursor()
+  vers = list(open(".version-info/percona-server.{os}.txt".format(os=osver)))
+  sql = """\
+INSERT OR REPLACE INTO percona_server_version(
+  version, os, repo_url, repo_file, repo_enable_str,
+  systemd_service, cnf_file, packages,
+  debug_packages, rocksdb_packages,
+  tests_packages, mysql_shell_packages
+)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+"""
+  for line in vers:
+    ver = line.rstrip()
+    project = ()
+    if ver.startswith('8.0') and osver.startswith('el'):
+      pkgs = ['percona-server-shared','percona-server-client','percona-server-server']
+      if osver != 'el9':
+        pkgs.insert(0,'percona-server-shared-compat')
+      project = (
+        ver, osver,
+        'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
+        '/etc/yum.repos.d/percona-ps-80-release.repo',
+        'ps-80', 'mysqld', '/etc/my.cnf',
+        '|'.join(["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]),
+        'gdb|percona-server-debuginfo-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'percona-server-rocksdb-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'percona-server-test-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'percona-mysql-shell-{ver}-1.{osver}.x86_64'.format(ver=ver.split('-',1)[0],osver=osver)
+      )
+    elif ver.startswith('5.7') and osver.startswith('el'):
+      pkgs = ['Percona-Server-shared-compat-57','Percona-Server-shared-57','Percona-Server-client-57','Percona-Server-server-57']
+      project = (
+        ver, osver,
+        'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
+        '/etc/yum.repos.d/percona-original-release.repo',
+        'ps-57', 'mysqld', '/etc/percona-server.conf.d/mysqld.cnf',
+        '|'.join(["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]),
+        'gdb|Percona-Server-57-debuginfo-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'Percona-Server-rocksdb-57-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'Percona-Server-test-57-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        ''
+      )
+    elif ver.startswith('5.6') and osver.startswith('el'):
+      pkgs = ['Percona-Server-shared-56','Percona-Server-client-56','Percona-Server-server-56']
+      project = (
+        ver, osver,
+        'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
+        '/etc/yum.repos.d/percona-original-release.repo',
+        'ps-56', 'mysqld', '/etc/my.cnf',
+        '|'.join(["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]),
+        'gdb|Percona-Server-56-debuginfo-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'Percona-Server-rocksdb-56-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'Percona-Server-test-56-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        ''
+      )
+    elif ver.startswith('5.5') and osver.startswith('el'):
+      pkgs = ['Percona-Server-shared-55','Percona-Server-client-55','Percona-Server-server-55']
+      project = (
+        ver, osver,
+        'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
+        '/etc/yum.repos.d/percona-original-release.repo',
+        'ps-55', 'mysql', '/etc/my.cnf',
+        '|'.join(["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]),
+        'gdb|Percona-Server-55-debuginfo-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'Percona-Server-rocksdb-55-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        'Percona-Server-test-55-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
+        ''
+      )
+    if len(project) > 1:
+      cur.execute(sql, project)
+  conn.commit()
+
 def update_versions():
   versions = []
   if not os.path.exists(".version-info"):
@@ -212,6 +418,31 @@ def update_versions():
       "pattern": r'percona-server-server-(\d[^"]*)[.]el9.x86_64.rpm'}
     ])
 
+  generate_versions_file("percona-xtradb-cluster.el7.txt",
+    [
+      {"url": "https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/",
+      "pattern": r'Percona-XtraDB-Cluster-server-\d\d-(\d[^"]*).el7.x86_64.rpm'},
+      {"url": "https://repo.percona.com/pxc-80/yum/release/7/RPMS/x86_64/",
+      "pattern": r'percona-xtradb-cluster-server-(\d[^"]*)[.]el7.x86_64.rpm'}
+    ])
+
+  generate_versions_file("percona-xtradb-cluster.el8.txt",
+    [
+      {"url": "https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/",
+      "pattern": r'Percona-XtraDB-Cluster-server-\d\d-(\d[^"]*).el8.x86_64.rpm'},
+      {"url": "https://repo.percona.com/pxc-80/yum/release/8/RPMS/x86_64/",
+      "pattern": r'percona-xtradb-cluster-server-(\d[^"]*)[.]el8.x86_64.rpm'}
+    ])
+
+  generate_versions_file("percona-xtradb-cluster.el9.txt",
+    [
+      {"url": "https://repo.percona.com/percona/yum/release/9/RPMS/x86_64/",
+      "pattern": r'Percona-XtraDB-Cluster-server-\d\d-(\d[^"]*).el9.x86_64.rpm'},
+      {"url": "https://repo.percona.com/pxc-80/yum/release/9/RPMS/x86_64/",
+      "pattern": r'percona-xtradb-cluster-server-(\d[^"]*)[.]el9.x86_64.rpm'}
+    ])
+
+
   generate_versions_file("percona-orchestrator.el8.txt",
     [
       {"url": "https://repo.percona.com/pdps-8.0/yum/release/8/RPMS/x86_64/",
@@ -223,6 +454,34 @@ def update_versions():
       "pattern": r'percona-orchestrator-(\d[^"]*).el9.x86_64.rpm'}
     ])
 
+  generate_versions_file("mysql.el7.txt",
+    [
+      {"url": "https://repo.mysql.com/yum/mysql-5.6-community/el/7/x86_64/",
+      "pattern": r'mysql-community-server-(\d[^"]*).el7.x86_64.rpm'},
+      {"url": "https://repo.mysql.com/yum/mysql-5.7-community/el/7/x86_64/",
+      "pattern": r'mysql-community-server-(\d[^"]*).el7.x86_64.rpm'},
+      {"url": "https://repo.mysql.com/yum/mysql-8.0-community/el/7/x86_64/",
+      "pattern": r'mysql-community-server-(\d[^"]*).el7.x86_64.rpm'},
+    ])
+
+  generate_versions_file("mysql.el8.txt",
+    [
+      {"url": "https://repo.mysql.com/yum/mysql-8.0-community/el/8/x86_64/",
+      "pattern": r'mysql-community-server-(\d[^"]*).el8.x86_64.rpm'},
+    ])
+
+  generate_versions_file("mysql.el9.txt",
+    [
+      {"url": "https://repo.mysql.com/yum/mysql-8.0-community/el/9/x86_64/",
+      "pattern": r'mysql-community-server-(\d[^"]*).el9.x86_64.rpm'},
+    ])
+
+
+
+  for osver in ("el7","el8","el9"):
+    save_percona_server_versions_to_sqlite(osver)
+    save_percona_xtradb_cluster_versions_to_sqlite(osver)
+    save_mysql_server_versions_to_sqlite(osver)
 
 
 def detect_provider(args):
@@ -302,17 +561,8 @@ def find_version(args):
           break
       args.percona_server_mongodb = version.rstrip()
       #print('looking psmdb version {} in .version-info/psmdb.el8.txt, found: {}'.format(args.percona_server_mongodb, version))
-  for p in ('ps',):
-    if args.percona_server:
-      vers = list(open(".version-info/percona-server.{os}.txt".format(os=osver)))
-      version = vers[-1]
-      for line in reversed(vers):
-        ver = line.rstrip()
-        if ver.startswith(args.percona_server):
-          version = ver
-          break
-      args.percona_server = version.rstrip()
-
+  if args.percona_server == 'True':
+    args.percona_server = '8.0'
   if args.percona_xtrabackup:
     vers = list(open(".version-info/xtrabackup.{os}.txt".format(os=osver)))
     version = vers[-1]
@@ -322,15 +572,8 @@ def find_version(args):
         version = ver
         break
     args.percona_xtrabackup = version.rstrip()
-  if args.percona_xtradb_cluster:
-    vers = list(open(".version-info/percona-xtradb-cluster.{os}.txt".format(os=osver)))
-    version = vers[-1]
-    for line in reversed(vers):
-      ver = line.rstrip()
-      if ver.startswith(args.percona_xtradb_cluster):
-        version = ver
-        break
-    args.percona_xtradb_cluster = version.rstrip()
+  if args.percona_xtradb_cluster == 'True':
+    args.percona_xtradb_cluster = '8.0'
   if args.proxysql:
     vers = list(open(".version-info/proxysql.{os}.txt".format(os=osver)))
     version = vers[-1]
@@ -340,15 +583,8 @@ def find_version(args):
         version = ver
         break
     args.proxysql = version.rstrip()
-  if args.mysql_server:
-    vers = list(open(".version-info/mysql.{os}.txt".format(os=osver)))
-    version = vers[-1]
-    for line in reversed(vers):
-      ver = line.rstrip()
-      if ver.startswith(args.mysql_server):
-        version = ver
-        break
-    args.mysql_server = version.rstrip()
+  if args.mysql_server == 'True':
+    args.mysql_server = '8.0'
   if args.mysql_router:
     vers = list(open(".version-info/mysql.{os}.txt".format(os=osver)))
     version = vers[-1]
@@ -408,6 +644,8 @@ def parse_node(args):
   parser.add_argument('--percona-postgresql', '--percona-postgres', '--ppg', type=str, nargs='?')
   parser.add_argument('--leader', '--master', '--primary', type=str, nargs='?')
   parser.add_argument('--percona-xtrabackup', type=str, nargs='?')
+  parser.add_argument('--debug-packages', '--debug', type=str, nargs='?')
+  parser.add_argument('--rocksdb', type=str, nargs='?')
   parser.add_argument('--s3sql', type=str, nargs='?')
   parser.add_argument('--percona-orchestrator', type=str, nargs='?')
   parser.add_argument('--percona-toolkit', type=str, nargs='?')
@@ -537,8 +775,14 @@ def apply_node_actions(node, actions):
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.clustercheck is not None:
     db_features.append("clustercheck")
+  if actions.debug_packages is not None:
+    extra_vars["extra_debug_packages"] = "1"
+    env["DEBUG_PACKAGES"] = "1"
+  if actions.rocksdb is not None:
+    extra_vars["extra_rocksdb_enabled"] = "1"
+    env["ROCKSDB"] = "1"
   if actions.percona_xtrabackup is not None:
-    extra_vars["percona_xtrabackup_version"] = actions.percona_xtrabackup
+    extra_vars["extra_percona_xtrabackup_version"] = actions.percona_xtrabackup
     extra_vars["extra_db_user"] = "root"
     extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["PXB"] = actions.percona_xtrabackup

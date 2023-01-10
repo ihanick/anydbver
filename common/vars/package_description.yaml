@@ -414,50 +414,6 @@ focal:
 
 el7:
   repo_url: "http://repo.percona.com/yum/percona-release-latest.noarch.rpm"
-  ps56:
-    systemd_service: "mysqld"
-    cnf_file: "/etc/my.cnf"
-    install_packages:
-      - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
-      - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
-      - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
-    install_debug_packages:
-      - gdb
-      - "{{ percona_mysql_name }}-debuginfo{{ percona_mysql_full_ver }}"
-  ps57:
-    systemd_service: "mysqld"
-    cnf_file: "/etc/percona-server.conf.d/mysqld.cnf"
-    install_packages:
-      - Percona-Server-shared-compat-57-{{ percona_server_version }}.el7.x86_64
-      - Percona-Server-shared-57-{{        percona_server_version }}.el7.x86_64
-      - Percona-Server-client-57-{{        percona_server_version }}.el7.x86_64
-      - Percona-Server-server-57-{{        percona_server_version }}.el7.x86_64
-    install_debug_packages:
-      - gdb
-      - Percona-Server-57-debuginfo-{{ percona_server_version }}.el7.x86_64
-    rocksdb_packages:
-      - Percona-Server-rocksdb-57-{{ percona_server_version }}.el7.x86_64
-    tests_packages:
-      - Percona-Server-test-57-{{        percona_server_version }}.el7.x86_64
-  ps80:
-    repo_file: "/etc/yum.repos.d/percona-ps-80-release.repo"
-    repo_enable_str: "ps-80"
-    systemd_service: "mysqld"
-    cnf_file: "/etc/my.cnf"
-    install_packages:
-      - "{{ percona_mysql_name }}-shared-compat{{ percona_mysql_full_ver }}"            
-      - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
-      - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
-      - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
-    install_debug_packages:
-      - gdb
-      - "{{ percona_mysql_name }}-debuginfo{{ percona_mysql_full_ver }}"
-    mysql_shell_packages:
-      - "http://www.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}/binary/redhat/7/x86_64/percona-mysql-shell-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}-{{ 2 if percona_server_version | regex_search('^8\\.0\\.2[7-9]') else 1 }}.el7.x86_64.rpm"
-    rocksdb_packages:
-      - "{{ percona_mysql_name }}-rocksdb{{ percona_mysql_full_ver }}"
-    tests_packages:
-      - "{{ percona_mysql_name }}-test{{ percona_mysql_full_ver }}"
   pxc56:
     systemd_service: "mysql"
     cnf_file: "/etc/my.cnf"
@@ -470,33 +426,6 @@ el7:
       - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
     garbd_packages:
       - "Percona-XtraDB-Cluster-garbd-{{ percona_xtradb_cluster_version | regex_replace('^.*\\.([0-9]+)\\.([0-9]+)$', '3-3.\\1-\\2') }}.el7.x86_64"
-  pxc57:
-    systemd_service: "mysqld"
-    cnf_file: "/etc/percona-xtradb-cluster.conf.d/zz_mysqld.cnf"
-    install_packages:
-      - "{{ percona_mysql_name }}-shared-compat{{ percona_mysql_full_ver }}"            
-      - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
-      - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
-      - "percona-xtrabackup-24{{ '-'+percona_xtrabackup_version if percona_xtrabackup_version !='' else '' }}"
-      - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
-    garbd_packages:
-      - "{{ percona_mysql_name }}-garbd{{ percona_mysql_full_ver }}"
-  pxc80:
-    repo_file: "/etc/yum.repos.d/percona-pxc-80-release.repo"
-    repo_enable_str: "pxc-80"
-    systemd_service: "mysqld"
-    cnf_file: "/etc/my.cnf"
-    install_packages:
-      - openssl
-      - "{{ percona_mysql_name }}-shared-compat{{ percona_mysql_full_ver }}"            
-      - "{{ percona_mysql_name }}-shared{{ percona_mysql_full_ver }}"
-      - "{{ percona_mysql_name }}-client{{ percona_mysql_full_ver }}"
-      - "{{ percona_mysql_name }}-server{{ percona_mysql_full_ver }}"
-    install_debug_packages:
-      - gdb
-      - "{{ percona_mysql_name }}-debuginfo{{ percona_mysql_full_ver }}"
-    garbd_packages:
-      - "{{ percona_mysql_name }}-garbd{{ percona_mysql_full_ver }}"
   ppg11:
     systemd_service: 'postgresql-11'
     cnf_file: '/var/lib/pgsql/11/data/postgresql.conf'
@@ -510,18 +439,6 @@ el7:
   mariadb_server:
     systemd_service: "mariadb"
     cnf_file: '/etc/my.cnf.d/zz_mysqld.cnf'
-  mysql:
-    repo_url: http://repo.mysql.com/mysql80-community-release-el7-7.noarch.rpm
-    systemd_service: "mysqld"
-    cnf_file: '/etc/my.cnf'
-    install_packages:
-      - "mysql-community-common-{{mysql_version}}.el7.x86_64"
-      - "mysql-community-libs-{{mysql_version}}.el7.x86_64"
-      - "mysql-community-client-{{mysql_version}}.el7.x86_64"
-      - "mysql-community-server-{{mysql_version}}.el7.x86_64"
-    mysql_shell_packages:
-      - "{{ 'http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell-' + mysql_version + '.el7.x86_64.rpm' if mysql_version.startswith('8.0.31') else 'https://cdn.mysql.com/archives/mysql-shell/mysql-shell-' + mysql_version + '.el7.x86_64.rpm' }}"
-
   mysql_ndb:
     repo_url: http://dev.mysql.com/get/mysql80-community-release-el7-7.noarch.rpm
     systemd_service: "{{ 'mysqld' if mysql_ndb_sql_version != '' else 'ndbmtd' if mysql_ndb_data_version != '' else 'ndb_mgmd' }}"
@@ -640,57 +557,6 @@ el8:
     install_packages:
       - which
       - "proxysql{{'2' if percona_proxysql_version.startswith('2.') else ''}}-{{percona_proxysql_version}}.el8.x86_64"
-  ps57:
-    systemd_service: "mysqld"
-    cnf_file: "/etc/percona-server.conf.d/mysqld.cnf"
-    install_packages:
-      - Percona-Server-shared-compat-57-{{ percona_server_version }}.el8.x86_64
-      - Percona-Server-shared-57-{{        percona_server_version }}.el8.x86_64
-      - Percona-Server-client-57-{{        percona_server_version }}.el8.x86_64
-      - Percona-Server-server-57-{{        percona_server_version }}.el8.x86_64
-  ps80:
-    repo_file: "/etc/yum.repos.d/percona-ps-80-release.repo"
-    repo_enable_str: "ps-80"
-    systemd_service: "mysqld"
-    cnf_file: "/etc/my.cnf"
-    install_packages:
-      - "percona-server-shared-compat-{{ percona_server_version }}.el8.x86_64"
-      - "percona-server-shared-{{ percona_server_version }}.el8.x86_64"
-      - "percona-server-client-{{ percona_server_version }}.el8.x86_64"
-      - "percona-server-server-{{ percona_server_version }}.el8.x86_64"
-    install_debug_packages:
-      - gdb
-      - "{{ percona_mysql_name }}-debuginfo{{ percona_mysql_full_ver }}"
-    rocksdb_packages:
-      - percona-server-rocksdb-{{ percona_server_version }}.el8
-    mysql_shell_packages:
-      - "http://www.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}/binary/redhat/7/x86_64/percona-mysql-shell-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}-1.el8.x86_64.rpm"
-  pxc57:
-    systemd_service: "mysqld"
-    cnf_file: "/etc/percona-xtradb-cluster.conf.d/zz_mysqld.cnf"
-    install_packages:
-      - "{{ percona_mysql_name }}-shared{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
-      - "{{ percona_mysql_name }}-client{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
-      - "percona-xtrabackup-24{{ '-'+percona_xtrabackup_version if percona_xtrabackup_version !='' else '' }}"
-      - "{{ percona_mysql_name }}-server{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
-    garbd_packages:
-      - "{{ percona_mysql_name }}-garbd{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
-  pxc80:
-    repo_file: "/etc/yum.repos.d/percona-pxc-80-release.repo"
-    repo_enable_str: "pxc-80"
-    systemd_service: "mysqld"
-    cnf_file: "/etc/my.cnf"
-    install_packages:
-      - openssl
-      - "{{ percona_mysql_name }}-shared-compat{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
-      - "{{ percona_mysql_name }}-shared{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
-      - "{{ percona_mysql_name }}-client{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
-      - "{{ percona_mysql_name }}-server{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
-    install_debug_packages:
-      - gdb
-      - "{{ percona_mysql_name }}-debuginfo{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
-    garbd_packages:
-      - "{{ percona_mysql_name }}-garbd{{ percona_xtradb_cluster_major_ver }}-{{ percona_xtradb_cluster_version }}.el8.x86_64"
 
   ldap_server:
     systemd_service: slapd
@@ -703,18 +569,6 @@ el8:
   mariadb_server:
     systemd_service: "mariadb"
     cnf_file: '/etc/my.cnf.d/zz_mysqld.cnf'
-
-  mysql:
-    repo_url: http://repo.mysql.com/mysql80-community-release-el8-4.noarch.rpm
-    systemd_service: "mysqld"
-    cnf_file: '/etc/my.cnf'
-    install_packages:
-      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-common-{{mysql_version}}.el8.x86_64.rpm
-      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-libs-{{mysql_version}}.el8.x86_64.rpm
-      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-client-{{mysql_version}}.el8.x86_64.rpm
-      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-server-{{mysql_version}}.el8.x86_64.rpm
-    mysql_shell_packages:
-      - "http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el8.x86_64.rpm"
   mysql_router:
     repo_url: http://repo.mysql.com/mysql80-community-release-el8-4.noarch.rpm
     systemd_service: "mysqlrouter"
@@ -769,34 +623,6 @@ el8:
       - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-server-{{postgresql_version}}PGDG.rhel8.x86_64"
       - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-contrib-{{postgresql_version}}PGDG.rhel8.x86_64"
 el9:
-  ps80:
-    repo_file: "/etc/yum.repos.d/percona-ps-80-release.repo"
-    repo_enable_str: "ps-80"
-    systemd_service: "mysqld"
-    cnf_file: "/etc/my.cnf"
-    install_packages:
-      - "percona-server-shared-{{ percona_server_version }}.el9.x86_64"
-      - "percona-server-client-{{ percona_server_version }}.el9.x86_64"
-      - "percona-server-server-{{ percona_server_version }}.el9.x86_64"
-    install_debug_packages:
-      - gdb
-      - "{{ percona_mysql_name }}-debuginfo{{ percona_mysql_full_ver }}"
-    rocksdb_packages:
-      - percona-server-rocksdb-{{ percona_server_version }}.el9
-    mysql_shell_packages:
-      - "http://www.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}/binary/redhat/7/x86_64/percona-mysql-shell-{{percona_server_version|regex_replace('^([0-9]+\\.[0-9]+\\.[0-9]+)-.*$', '\\1')}}-1.el9.x86_64.rpm"
-
-  mysql:
-    repo_url: http://repo.mysql.com/mysql80-community-release-el9-1.noarch.rpm
-    systemd_service: "mysqld"
-    cnf_file: '/etc/my.cnf'
-    install_packages:
-      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-common-{{mysql_version}}.el9.x86_64.rpm
-      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-libs-{{mysql_version}}.el9.x86_64.rpm
-      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-client-{{mysql_version}}.el9.x86_64.rpm
-      - http://cdn.mysql.com/Downloads/MySQL-8.0/mysql-community-server-{{mysql_version}}.el9.x86_64.rpm
-    mysql_shell_packages:
-      - "http://cdn.mysql.com//Downloads/MySQL-Shell/mysql-shell-{{mysql_version}}.el9.x86_64.rpm"
   mysql_router:
     repo_url: http://repo.mysql.com/mysql80-community-release-el9-1.noarch.rpm
     systemd_service: "mysqlrouter"
