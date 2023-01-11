@@ -17,13 +17,14 @@ logger = logging.getLogger('AnyDbVer')
 logger.setLevel(logging.INFO)
 
 def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env={}):
+  env_vars = env.copy()
   if print_cmd:
     envstr = ""
-    for v in env:
-      envstr = envstr + " " + v + "=" + env[v]
+    for v in env_vars:
+      envstr = envstr + " " + v + "=" + env_vars[v]
     logger.info(envstr + " " + subprocess.list2cmdline(args))
-  env.update(os.environ.copy())
-  process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True, env=env)
+  env_vars.update(os.environ.copy())
+  process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True, env=env_vars)
   output = ''
   while process.poll() is None:
     text = process.stdout.readline().decode('utf-8')
@@ -76,7 +77,7 @@ def deploy(args, node_actions):
   net = "{}{}-anydbver".format(args.namespace, args.user)
   cluster = "{}-cluster1".format(args.user)
   for node_action in node_actions:
-    print("Applying node: ", node_action)
+    #print("Applying node: ", node_action)
     node = node_action[1]
 
 
@@ -570,7 +571,7 @@ def detect_provider(args):
           r"Server: Docker",
           run_get_line(["docker", "version"],
             "Can't find docker",
-            r"Cannot connect to the Docker")):
+            r"Cannot connect to the Docker", print_cmd = False)):
         logger.info("Found docker server")
         args.provider="docker"
       else:
@@ -732,13 +733,13 @@ def parse_node(args):
   return node,args
 
 def resolve_hostname(host):
-  return run_get_line(["bash", "./anydbver", "ip", host ], "Can't get node ip").rstrip()
+  return run_get_line(["bash", "./anydbver.sh", "ip", host ], "Can't get node ip").rstrip()
 
 def apply_node_actions(node, actions):
   extra_vars = {'extra_db_user': 'dba', 'extra_db_password': 'secret', 'extra_start_db': '1'}
   env = {"DB_USER":"dba", "DB_PASS":"secret", "START":"1"}
   db_features = []
-  print('Node: ', node, 'Actions: ',actions)
+  #print('Node: ', node, 'Actions: ',actions)
   if actions.ldap is not None :
     extra_vars["extra_ldap_server"] = "1"
     env["LDAP_SERVER"] = "1"
@@ -879,6 +880,12 @@ def ssh_login(namespace, node):
 
 def main():
   if len(sys.argv) > 1:
+    if sys.argv[1] in ("ip", "--ip"):
+      host = "default"
+      if len(sys.argv) > 2:
+        host = sys.argv[2]
+      os.system("./anydbver.sh ip {host}".format(host=host))
+      sys.exit(0)
     if sys.argv[1] in ("ssh", "--ssh"):
       host = "default"
       if len(sys.argv) > 2:
@@ -937,8 +944,14 @@ def main():
       (node_actions[-1][1]).os = args.os
     nodes_os = nodes_os + node + "=" + (node_actions[-1][1]).os + ","
 
+  detect_provider(args)
+
+  if args.destroy or args.deploy:
+    destroy(args)
+
   nodes_cnt = len(node_names)
-  create_nodes(nodes_cnt, nodes_os)
+  if args.deploy:
+    create_nodes(nodes_cnt, nodes_os)
 
   cmds = []
 
@@ -963,16 +976,11 @@ def main():
     "{user}.{node} ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host={ip} ansible_python_interpreter={python_path} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none' {extra_vars}\n".format(
         user=args.user,node=node, python_path=python_path,extra_vars=extrastr, ip=resolve_hostname(node))
     )
-    print(extrastr)
-
-  print(args)
-  print(node_actions)
+    logger.info('Node ' + node + ': ' + extrastr.replace('extra_',''))
 
   ansible_hosts_run.close()
   for cmd in cmds:
     apply_node_command(cmd[0], cmd[1], cmd[2])
-
-  detect_provider(args)
 
   if args.provider == "":
     logger.fatal("No working providers found")
@@ -980,9 +988,6 @@ def main():
 
   if args.mysql_cli != "":
     run_mysql_cli(args)
-
-  if args.destroy:
-    destroy(args)
 
   if args.deploy:
     deploy(args, node_actions)

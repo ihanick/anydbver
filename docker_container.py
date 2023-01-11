@@ -10,8 +10,6 @@ from pathlib import Path
 
 COMMAND_TIMEOUT=600
 
-USER="ihanick"
-
 FORMAT = '%(asctime)s %(levelname)s %(message)s'
 logging.basicConfig(format=FORMAT)
 logger = logging.getLogger('run k8s operator')
@@ -105,7 +103,8 @@ def get_node_os(os_str, name):
   return ""
 
 def start_container(args, name):
-  container_name = name
+  container_name = "{user}-{nodename}".format(user=args.user, nodename=name)
+  name_user = container_name
   if args.namespace != "":
     container_name = args.namespace + "-" + name
 
@@ -117,9 +116,10 @@ def start_container(args, name):
              "-d", "--cgroupns=host", "--tmpfs", "/tmp", "--network", net,
              "--tmpfs", "/run", "-v", "/sys/fs/cgroup:/sys/fs/cgroup", docker_img],
             "Can't start docker container")
-  os.system("while ssh root@{node} true ; do sleep 1;done".format(node=get_node_ip(args.namespace, name)))
-  ssh_config_append_node(args.namespace, name, get_node_ip(args.namespace, name), args.user)
-  ansible_hosts_append_node(args.namespace, name, get_node_ip(args.namespace, name), args.user, python_path)
+  node_ip = get_node_ip(args.namespace, name_user)
+  os.system("while ssh root@{node} true ; do sleep 1;done".format(node=node_ip))
+  ssh_config_append_node(args.namespace, name, node_ip, args.user)
+  ansible_hosts_append_node(args.namespace, name, node_ip, args.user, python_path)
 
 def delete_container(namespace, name):
   container_name = name
