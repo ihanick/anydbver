@@ -3,6 +3,7 @@
 pkg_prefix: "{{ psmdb_name+psmdb_major_ver if psmdb_version != '' else 'mongodb-org' }}"
 pkg_version: "{{ psmdb_version if psmdb_version != '' else mongo_org_version }}"
 pkg_major: "{{ pkg_version | regex_search('^[0-9]+[.][0-9]+') }}"
+pkg_major_no_dot: "{{ pkg_major | replace('.','') }}"
 pkg:
   el7:
     install_packages:
@@ -48,3 +49,9 @@ pkg:
       - "{{ psmdb_name }}{{ psmdb_major_ver }}={{ psmdb_version }}.{{ dist }}"
 mongos_log: "{{ '/var/log/mongo/mongos.log' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') else '/var/log/mongodb/mongos.log' }}"
 mongos_keyfile: "{{ mongos_cfg | regex_replace('^([^/]*)/.*$', '\\1') }}-keyfile"
+
+package_info: >
+  {{ lookup("theredgreek.sqlite.sqlite", path=playbook_dir+"/anydbver_version.db",
+    select="select * from percona_server_mongodb_version where version like '"+ psmdb_version +"%' and os='"+ dist +"' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1")
+  if psmdb_version != ""
+  else "" }}

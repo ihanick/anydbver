@@ -61,14 +61,17 @@
   shell:
     cmd: >-
       systemctl start mongod;
-      until mongo --eval 'print("waited for connection")' &>/dev/null ; do sleep 2 ; done;
-      mongo admin --eval 'db.createUser({user:"dba", pwd: "{{ db_password }}", roles: ["root"]})';
+      MONGO=/usr/bin/mongo;
+      test -f $MONGO || MONGO=/usr/bin/mongosh;
+      until $MONGO --eval 'print("waited for connection")' &>/dev/null ; do sleep 2 ; done;
+      $MONGO admin --eval 'db.createUser({user:"dba", pwd: "{{ db_password }}", roles: ["root"]})';
       {{ 'true && ' if psmdb_version != '' else 'false &&' }} percona-server-mongodb-enable-auth.sh -q;
-      mongo admin --eval 'db.changeUserPassword("dba", "{{ db_password }}")';
+      $MONGO admin --eval 'db.changeUserPassword("dba", "{{ db_password }}")';
       /usr/local/bin/yq merge -i /etc/mongod.conf "/vagrant/configs/mongo/authorization.conf"
       systemctl stop mongod;
       sed -i -e 's/127.0.0.1/0.0.0.0/g' /etc/mongod.conf;
-      echo 'db = connect("mongodb://dba:{{ db_password }}@127.0.0.1:27017/admin")' > /root/.mongorc.js
+      echo 'db = connect("mongodb://dba:{{ db_password }}@127.0.0.1:27017/admin")' > /root/.mongorc.js;
+      echo 'db = connect("mongodb://dba:{{ db_password }}@127.0.0.1:27017/admin")' > /root/.mongoshrc.js
     creates: /root/.mongorc.js
 
 - name: configure MongoDB replica options

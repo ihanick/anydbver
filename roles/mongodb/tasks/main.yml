@@ -1,25 +1,10 @@
 ---
 # tasks file for mongodb
-- name: enable Percona Server for MongoDB 4.0
-  when: psmdb_version.startswith('4.0')
+- name: enable repo Percona Server for MongoDB
+  when: psmdb_version != ''
   command:
-    cmd: /usr/bin/percona-release enable psmdb-40
-    creates: /etc/yum.repos.d/percona-psmdb-40-release.repo
-- name: enable Percona Server for MongoDB 4.2
-  when: psmdb_version.startswith('4.2')
-  command:
-    cmd: /usr/bin/percona-release enable psmdb-42
-    creates: /etc/yum.repos.d/percona-psmdb-42-release.repo
-- name: enable Percona Server for MongoDB 4.4
-  when: psmdb_version.startswith('4.4')
-  command:
-    cmd: /usr/bin/percona-release enable psmdb-44
-    creates: /etc/yum.repos.d/percona-psmdb-44-release.repo
-- name: enable Percona Server for MongoDB 5.0
-  when: psmdb_version.startswith('5.0')
-  command:
-    cmd: /usr/bin/percona-release enable psmdb-50
-    creates: /etc/yum.repos.d/percona-psmdb-50-release.repo
+    cmd: /usr/bin/percona-release enable "{{package_info['repo_enable_str']}}"
+    creates: "/etc/yum.repos.d/percona-psmdb-{{pkg_major_no_dot}}-release.repo"
 
 - name: Enable MongoDB Community repository
   when: mongo_org_version != ''
@@ -45,11 +30,11 @@
     update_cache: yes
 
 - name: install Percona Server for MongoDB
-  when: psmdb_version.startswith('3.0') or psmdb_version.startswith('3.6') or psmdb_version.startswith('4.0') or psmdb_version.startswith('4.2') or psmdb_version.startswith('4.4') or psmdb_version.startswith('5.0')
+  when: psmdb_version != '' and not ( psmdb_version.startswith('3.2') or psmdb_version.startswith('3.4') )
   package:
     name: "{{ item }}"
     state: present
-  with_items: "{{pkg[dist].install_packages}}"
+  with_items: "{{package_info['packages'].split('|')}}"
 
 - name: install Percona Server for MongoDB 3.2 or 3.4
   when: psmdb_version.startswith('3.2') or psmdb_version.startswith('3.4')
