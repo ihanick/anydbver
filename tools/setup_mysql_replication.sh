@@ -175,7 +175,7 @@ if [[ "x$TYPE" == "xgroup" ]] ; then
   SSH="ssh -i /vagrant/secret/id_rsa -o StrictHostKeyChecking=no -o PasswordAuthentication=no"
 
   # allow only one active cluster.addInstance() call
-  until echo 'set -o noclobber;{ > /root/add_group_member ; } &> /dev/null'| $SSH root@$MASTER_IP bash ; do
+  until echo 'set -o noclobber;{ > /root/add-group-member ; } &> /dev/null'| $SSH root@$MASTER_IP bash ; do
     sleep 1
   done
 
