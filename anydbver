@@ -754,6 +754,7 @@ def apply_node_actions(node, actions):
     if actions.replica_set is not None:
       extra_vars["extra_mongo_replicaset"] = actions.replica_set
       env["REPLICA_SET"] = actions.replica_set
+      os.system("test -f secret/{rs}-keyfile || openssl rand -base64 756 > secret/{rs}-keyfile".format(rs=actions.replica_set))
   if actions.percona_server is not None:
     extra_vars["extra_percona_server_version"] = actions.percona_server
     extra_vars["extra_db_opts_file"] = "mysql/async-repl-gtid.cnf"
