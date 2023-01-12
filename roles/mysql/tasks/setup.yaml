@@ -128,7 +128,7 @@
     (percona_server_version != '' or ( percona_xtradb_cluster_version != '' and replication_type != 'galera' ) or mysql_version != '') and
     ('garbd' not in db_features.split(','))
   shell:
-    cmd: /bin/bash /vagrant/tools/setup_mysql_replication.sh "{{ 'gtid' if replication_type == '' else replication_type }}" "{{ master_ip }}" root "{{ db_password }}" "{{soft}}" "{{ package_info['cnf_file '] }}" "{{package_info['systemd_service']}}" "{{'cluster1' if cluster_name == '' else cluster_name}}" "{{channel}}"
+    cmd: /bin/bash /vagrant/tools/setup_mysql_replication.sh "{{ 'gtid' if replication_type == '' else replication_type }}" "{{ master_ip }}" root "{{ db_password }}" "{{soft}}" "{{ package_info['cnf_file'] }}" "{{package_info['systemd_service']}}" "{{'cluster1' if cluster_name == '' else cluster_name}}" "{{channel}}"
     creates: "/root/replication.configured{{channel}}"
 
 - name: Join to Galera cluster
