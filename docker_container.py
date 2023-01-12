@@ -153,7 +153,10 @@ def main():
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
   args = parser.parse_args()
 
-  args.user = os.getlogin()
+  if "USER" in os.environ:
+    args.user = os.environ["USER"]
+  else:
+    args.user = os.getlogin()
 
   if args.destroy:
     destroy(args)
