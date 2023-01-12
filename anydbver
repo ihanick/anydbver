@@ -927,7 +927,11 @@ def main():
   main_args.pop(0)
   fix_main_commands(main_args)
   args = parser.parse_args(main_args)
-  args.user = os.getlogin()
+
+  if "USER" in os.environ:
+    args.user = os.environ["USER"]
+  else:
+    args.user = os.getlogin()
 
   if args.update:
     update_versions()
