@@ -175,13 +175,8 @@ if [[ "x$TYPE" == "xgroup" ]] ; then
   SSH="ssh -i /vagrant/secret/id_rsa -o StrictHostKeyChecking=no -o PasswordAuthentication=no"
 
   # allow only one active cluster.addInstance() call
-  while true ; do
-    while $SSH root@$MASTER_IP ls /root/add-group-member | grep -q add-group-member ; do
-      sleep 1
-    done
-    if $SSH root@$MASTER_IP 'flock -w 5 -x -E 1 /root/.my.cnf -c "touch /root/add-group-member"' ; then
-      break
-    fi
+  until echo 'set -o noclobber;{ > /root/add_group_member ; } &> /dev/null'| $SSH root@$MASTER_IP bash ; do
+    sleep 1
   done
 
   mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
