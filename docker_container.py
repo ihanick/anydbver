@@ -117,9 +117,9 @@ def start_container(args, name):
              "--tmpfs", "/run", "-v", "/sys/fs/cgroup:/sys/fs/cgroup", docker_img],
             "Can't start docker container")
   node_ip = get_node_ip(args.namespace, name_user)
-  os.system("while ssh root@{node} true ; do sleep 1;done".format(node=node_ip))
   ssh_config_append_node(args.namespace, name, node_ip, args.user)
   ansible_hosts_append_node(args.namespace, name, node_ip, args.user, python_path)
+  os.system("until ssh -F ssh_config root@{node} true ; do sleep 1;done".format(node=name))
 
 def delete_container(namespace, name):
   container_name = name

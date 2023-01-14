@@ -179,6 +179,76 @@ def generate_versions_file(filename, src_info):
   versions = list(dict.fromkeys(versions))
   with open( str((Path(os.getcwd()) / ".version-info" / filename).resolve()), "w") as f:
     f.write("\n".join(versions) + "\n")
+
+def save_percona_postgresql_versions_to_sqlite(osver):
+  if osver == 'el9':
+    return
+
+  db_file = 'anydbver_version.db'
+  conn = None
+  try:
+    conn = sqlite3.connect(db_file)
+  except Error as e:
+    print(e)
+    return
+  cur = conn.cursor()
+  vers = list(open(".version-info/ppg.{os}.txt".format(os=osver)))
+  vers2 = {}
+  if osver == "el8":
+    vers2_list = list(open(".version-info/ppg2.{os}.txt".format(os=osver)))
+    for ver2 in vers2_list:
+      (ver1, ver2) = ver2.split(' ')
+      vers2[ver1] = ver2.rstrip()
+
+  sql = """\
+    INSERT OR REPLACE INTO percona_postgresql_version(
+      version,
+      os,
+      repo_url,
+      repo_file,
+      repo_enable_str,
+      systemd_service,
+      packages,
+      debug_packages
+    )
+    VALUES (?,?,?,?,?,?,?,?)
+    """
+  for line in vers:
+    ver = line.rstrip()
+    ver2 = ''
+    maj_ver = ver.split('.',1)[0]
+    if ver in vers2:
+      ver2 = vers2[ver]
+    project = ()
+    if osver.startswith('el'):
+      pkgs = ["percona-postgresql{maj}-libs".format(maj=maj_ver),
+      "percona-postgresql{maj}".format(maj=maj_ver),
+      "percona-postgresql{maj}-server".format(maj=maj_ver),
+      "percona-postgresql{maj}-contrib".format(maj=maj_ver)]
+      pkgs = ["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]
+      if osver == "el8":
+        pkgs.insert(1,"percona-postgresql-common-{ver2}.{osver}.noarch.rpm".format(ver2=ver2, osver=osver))
+
+      ver_no_dot = maj_ver
+      if ver.startswith('11.5'):
+        ver_no_dot = '11.5'
+
+      project = (
+        ver,
+        osver,
+        'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
+        '/etc/yum.repos.d/percona-ppg-{ver_no_dot}-release.repo'.format(ver_no_dot=ver_no_dot),
+        'ppg-{ver_no_dot}'.format(ver_no_dot=ver_no_dot),
+        'postgresql-{maj}'.format(maj=maj_ver),
+        '|'.join(pkgs),
+        'gdb|percona-postgresql{maj}-server-debuginfo-{ver}.{osver}.x86_64'.format(maj=maj_ver, ver=ver,osver=osver)
+      )
+
+    if len(project) > 1:
+      cur.execute(sql, project)
+  conn.commit()
+
+
     
 def save_percona_server_mongodb_versions_to_sqlite(osver):
   if osver == 'el9':
@@ -552,6 +622,7 @@ def update_versions():
     save_percona_xtradb_cluster_versions_to_sqlite(osver)
     save_mysql_server_versions_to_sqlite(osver)
     save_percona_server_mongodb_versions_to_sqlite(osver)
+    save_percona_postgresql_versions_to_sqlite(osver)
 
 def detect_provider(args):
   if args.provider in ("kubectl", "kubernetes", "k8s"):
@@ -646,6 +717,8 @@ def find_version(args):
     args.proxysql = version.rstrip()
   if args.mysql_server == 'True':
     args.mysql_server = '8.0'
+  if args.percona_postgresql == 'True':
+    args.percona_postgresql = '15'
   if args.mysql_router:
     vers = list(open(".version-info/mysql.{os}.txt".format(os=osver)))
     version = vers[-1]
@@ -772,6 +845,13 @@ def apply_node_actions(node, actions):
     env["MYSQL"] = actions.mysql_server
     env["DB_OPTS"] = "mysql/async-repl-gtid.cnf"
     env["DB_USER"] = "root"
+    env["DB_PASS"]= "verysecretpassword1^"
+  if actions.percona_postgresql is not None:
+    extra_vars["extra_percona_postgresql_version"] = actions.percona_postgresql
+    extra_vars["extra_db_user"] = "postgres"
+    extra_vars["extra_db_password"] = "verysecretpassword1^"
+    env["PPGSQL"] = actions.percona_postgresql
+    env["DB_USER"] = "postgres"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.mysql_router is not None:
     extra_vars["extra_mysql_router_version"] = actions.mysql_router
