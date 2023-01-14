@@ -10,6 +10,9 @@ LOGICAL_DB=$8
 
 SERVER_ID=$(ip addr ls|grep 'inet '|grep -v '127.0.0.1'|awk '{print $2}'|cut -d/ -f 1|awk -F '\\.' '{print ($1 * 2^24) + ($2 * 2^16) + ($3 * 2^8) + $4}')
 
+until PGPASSWORD="$MASTER_PASSWORD" PGHOST=$MASTER_IP PGDATABASE=$MASTER_DB PGUSER=$MASTER_USER psql -c "SELECT 1"  ; do
+  sleep 1
+done
 
 if [[ "x$TYPE" == "xstreaming_physical_slots" ]] ; then
     SLOT="slot_$SERVER_ID";

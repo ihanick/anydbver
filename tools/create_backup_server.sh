@@ -19,7 +19,7 @@ docker run -dt -p 9000:9000 -p 9090:9090 \
   -v $PWD/data/minio:/mnt/data \
   --name "minio_local" minio/minio server --console-address ":9090"
 
-while ! $MC alias set bkp http://172.17.0.1:9000 "$MINIO_USER" "$MINIO_PASS" ; do
+until $MC alias set bkp http://172.17.0.1:9000 $MINIO_USER $MINIO_PASS ; do
   sleep 1
 done
 

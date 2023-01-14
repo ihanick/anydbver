@@ -112,9 +112,12 @@ def start_container(args, name):
 
   net = "{}{}-anydbver".format(args.namespace, args.user)
   run_fatal(["docker", "network", "create", net], "Can't create a docker network", "already exists")
-  run_fatal(["docker", "run", "--platform", "linux/amd64", "--name", container_name,
-             "-d", "--cgroupns=host", "--tmpfs", "/tmp", "--network", net,
-             "--tmpfs", "/run", "-v", "/sys/fs/cgroup:/sys/fs/cgroup", docker_img],
+  run_fatal([
+    "docker", "run",
+    "--platform", "linux/amd64", "--name", container_name,
+    "-d", "--cgroupns=host", "--tmpfs", "/tmp", "--network", net,
+    "--tmpfs", "/run", "-v", "/sys/fs/cgroup:/sys/fs/cgroup",
+    "--hostname", name, docker_img],
             "Can't start docker container")
   node_ip = get_node_ip(args.namespace, name_user)
   ssh_config_append_node(args.namespace, name, node_ip, args.user)

@@ -68,9 +68,11 @@ def destroy(args):
     if c != "":
       run_fatal([args.provider, "rm", "-f", c], "Can't remove container")
   run_fatal([args.provider, "network", "rm", net], "Can't remove network", r"No such network:")
-  run_fatal([args.provider, "run", "-i", "--rm", "-v",
-    str((Path(os.getcwd()) / "data").resolve())+":/data",
-    "busybox", "sh", "-c", "rm -rf -- /data/*"], "Can't clean data directory")
+  clean_data_needed = False
+  if clean_data_needed:
+    run_fatal([args.provider, "run", "-i", "--rm", "-v",
+      str((Path(os.getcwd()) / "data").resolve())+":/data",
+      "busybox", "sh", "-c", "rm -rf -- /data/*"], "Can't clean data directory")
 
 def deploy(args, node_actions):
   logger.info("Deploy")
@@ -776,6 +778,7 @@ def parse_node(args):
   parser.add_argument('--ldap-master', type=str, nargs='?')
   parser.add_argument('--replica-set', type=str, nargs='?')
   parser.add_argument('--percona-postgresql', '--percona-postgres', '--ppg', type=str, nargs='?')
+  parser.add_argument('--wal', '--postgres-wal', type=str, nargs='?')
   parser.add_argument('--leader', '--master', '--primary', type=str, nargs='?')
   parser.add_argument('--percona-xtrabackup', type=str, nargs='?')
   parser.add_argument('--debug-packages', '--debug', type=str, nargs='?')
@@ -853,6 +856,8 @@ def apply_node_actions(node, actions):
     env["PPGSQL"] = actions.percona_postgresql
     env["DB_USER"] = "postgres"
     env["DB_PASS"]= "verysecretpassword1^"
+    if actions.wal == "logical":
+      extra_vars["extra_db_opts_file"] = "postgresql/logical.conf"
   if actions.mysql_router is not None:
     extra_vars["extra_mysql_router_version"] = actions.mysql_router
     extra_vars["extra_db_user"] = "root"
