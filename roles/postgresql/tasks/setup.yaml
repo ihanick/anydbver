@@ -23,9 +23,8 @@
       shell:
         cmd: sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD '{{ db_password }}'"
     - name: Stop postgresql database if running
-      when: db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)
       command:
-        cmd: systemctl stop "{{ pkg[dist].systemd if ('systemd' in pkg[dist]) and percona_postgresql_version !='' else os[dist][soft].systemd_service if soft else db_systemd_service }}"
+        cmd: systemctl stop "{{package_info['systemd_service']}}"
 
     - name: Create Postgres Database
       when: (percona_postgresql_version != '' or postgresql_version != '' ) and db_password != ""
@@ -52,7 +51,7 @@
       command:
         cmd: >-
           /bin/bash /vagrant/tools/apply_mysql_conf.sh
-          "{{ os[dist][soft].cnf_file }}"
+          ""
           "/vagrant/configs/{{ db_opts_file }}"
           "{{cluster_name}}"
           "{{db_user}}"
@@ -67,9 +66,9 @@
         creates: /etc/sysconfig/pgsql/krb5.keytab
 
     - name: Start database with systemd (logical replication)
-      when: start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  ) and replication_type == 'logical'
+      when: replication_type == 'logical'
       command:
-        cmd: systemctl start "{{pg_systemd_svc}}"
+        cmd: systemctl start "{{package_info['systemd_service']}}"
 
     - name: Setup and start Postgresql replication
       when: master_ip != '' and ( percona_postgresql_version != '' or postgresql_version != '')
@@ -89,9 +88,8 @@
         creates: /root/replication.configured
 
 - name: Start database with systemd
-  when: start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
   command:
-    cmd: systemctl start "{{pg_systemd_svc}}"
+    cmd: systemctl start "{{package_info['systemd_service']}}"
 
 - name: Create LDAP user in postgres
   when: (postgresql_version != '' or percona_postgresql_version != '') and ldap_server_ip != '' and db_user != ''

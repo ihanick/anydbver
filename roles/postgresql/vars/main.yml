@@ -31,8 +31,8 @@ pg_conf_dir: "{{ '/var/lib/pgsql/'+maj+'/data' if ansible_distribution == 'CentO
 pg_data_dir: "{{ '/var/lib/pgsql/'+maj+'/data' if ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux' else '/var/lib/postgresql/'+maj+'/main'}}"
 pg_systemd_svc: "{{ pkg[dist].systemd if ('systemd' in pkg[dist]) and percona_postgresql_version !='' else os[dist][soft].systemd_service if soft else db_systemd_service }}"
 
-package_info_sql: "select * from percona_postgresql_version where version like '{{percona_postgresql_version}}%' and os='{{dist}}' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1"
+package_info_sql: "select * from {{'percona_' if percona_postgresql_version != '' else ''}}postgresql_version where version like '{{percona_postgresql_version if percona_postgresql_version != '' else postgresql_version}}%' and os='{{dist}}' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1"
 package_info: >
   {{ lookup("theredgreek.sqlite.sqlite", path=playbook_dir+"/anydbver_version.db", select=package_info_sql)
-  if percona_postgresql_version != ""
+  if percona_postgresql_version != "" or postgresql_version != ""
   else "" }}

@@ -7,6 +7,7 @@ import argparse
 import itertools
 import subprocess
 from pathlib import Path
+import platform
 
 COMMAND_TIMEOUT=600
 
@@ -112,9 +113,12 @@ def start_container(args, name):
 
   net = "{}{}-anydbver".format(args.namespace, args.user)
   run_fatal(["docker", "network", "create", net], "Can't create a docker network", "already exists")
+  ptfm = "linux/amd64"
+  if platform.machine() == "aarch64":
+    ptfm = "linux/arm64"
   run_fatal([
     "docker", "run",
-    "--platform", "linux/amd64", "--name", container_name,
+    "--platform", ptfm, "--name", container_name,
     "-d", "--cgroupns=host", "--tmpfs", "/tmp", "--network", net,
     "--tmpfs", "/run", "-v", "/sys/fs/cgroup:/sys/fs/cgroup",
     "--hostname", name, docker_img],
