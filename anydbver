@@ -889,7 +889,13 @@ def parse_node(args):
   return node,args
 
 def resolve_hostname(host):
-  return run_get_line(["bash", "./anydbver.sh", "ip", host ], "Can't get node ip").rstrip()
+  if host == "node0":
+    host = "default"
+  for line in list(open("ansible_hosts")):
+    result = re.search(r"[.]{host} .*ansible_host=([^ ]+)".format(host=host), line)
+    if result:
+      return result.groups()[0]
+  raise Exception("Can't get node {host} ip".format(host=host))
 
 def apply_node_actions(node, actions):
   extra_vars = {'extra_db_user': 'dba', 'extra_db_password': 'secret', 'extra_start_db': '1'}
@@ -1060,7 +1066,7 @@ def main():
       host = "default"
       if len(sys.argv) > 2:
         host = sys.argv[2]
-      os.system("./anydbver.sh ip {host}".format(host=host))
+      print(resolve_hostname(host))
       sys.exit(0)
     if sys.argv[1] in ("ssh", "--ssh"):
       host = "default"

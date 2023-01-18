@@ -126,7 +126,7 @@ def start_container(args, name):
   node_ip = get_node_ip(args.namespace, name_user)
   ssh_config_append_node(args.namespace, name, node_ip, args.user)
   ansible_hosts_append_node(args.namespace, name, node_ip, args.user, python_path)
-  os.system("until ssh -F ssh_config root@{node} true ; do sleep 1;done".format(node=name))
+  os.system("until ssh -F ssh_config root@{node} true ; do sleep 1;done; echo 'Connected to {node} via ssh'".format(node=name))
 
 def delete_container(namespace, name):
   container_name = name
