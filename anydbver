@@ -74,6 +74,50 @@ def destroy(args):
       str((Path(os.getcwd()) / "data").resolve())+":/data",
       "busybox", "sh", "-c", "rm -rf -- /data/*"], "Can't clean data directory")
 
+def exec_shell_from_sqlite(sql, params, err_msg):
+  db_file = 'anydbver_version.db'
+  try:
+    conn = sqlite3.connect(db_file)
+    conn.row_factory = sqlite3.Row
+  except Error as e:
+    print(e)
+    return
+  cur = conn.cursor()
+  cur.execute(sql, params)
+  rows = cur.fetchall()
+  for row in rows:
+    logger.info(row["cmd"])
+    run_fatal(["/bin/sh", "-c", row["cmd"] ], err_msg)
+
+def get_test_ids(name):
+  sql = "SELECT test_id FROM tests WHERE test_name = ?"
+  params = (name,)
+  if name == "all":
+    sql = "SELECT test_id FROM tests"
+    params = ()
+  db_file = 'anydbver_version.db'
+  res = []
+  try:
+    conn = sqlite3.connect(db_file)
+    conn.row_factory = sqlite3.Row
+  except Error as e:
+    logger.error(e)
+    return []
+  cur = conn.cursor()
+  cur.execute(sql, params)
+  rows = cur.fetchall()
+  for row in rows:
+    res.append(row["test_id"])
+  return res
+
+
+def test(name):
+  logger.info("Testing {}".format(name))
+  for t_id in get_test_ids(name):
+    exec_shell_from_sqlite("SELECT cmd FROM tests WHERE test_id = ?", (t_id,), "Can't prepare a test {}".format(name))
+    exec_shell_from_sqlite("SELECT cmd FROM test_cases WHERE test_id = ?", (t_id,), "Can't run a test {}".format(name))
+  conn = None
+
 def deploy(args, node_actions):
   logger.info("Deploy")
   net = "{}{}-anydbver".format(args.namespace, args.user)
@@ -750,7 +794,7 @@ def run_mysql_cli(args):
 
 def fix_main_commands(args):
   for cmd_idx, cmd in enumerate(args):
-    if cmd in ('deploy', 'add', 'replace', 'destroy', 'delete', 'update', 'ssh'):
+    if cmd in ('deploy', 'add', 'replace', 'destroy', 'delete', 'update', 'ssh', 'test'):
       args[cmd_idx] = '--' + cmd
 
 def fix_missing_node_commands(args):
@@ -858,6 +902,7 @@ def parse_node(args):
   parser.add_argument('--replica-set', type=str, nargs='?')
   parser.add_argument('--percona-postgresql', '--percona-postgres', '--ppg', type=str, nargs='?')
   parser.add_argument('--postgresql', '--postgres', '--pg', type=str, nargs='?')
+  parser.add_argument('--pgbackrest', type=str, nargs='?')
   parser.add_argument('--wal', '--postgres-wal', type=str, nargs='?')
   parser.add_argument('--leader', '--master', '--primary', type=str, nargs='?')
   parser.add_argument('--percona-xtrabackup', type=str, nargs='?')
@@ -935,6 +980,8 @@ def apply_node_actions(node, actions):
     env["DB_OPTS"] = "mysql/async-repl-gtid.cnf"
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
+  if actions.pgbackrest:
+    extra_vars["extra_pgbackrest_version"] = "1"
   if actions.percona_postgresql is not None:
     extra_vars["extra_percona_postgresql_version"] = actions.percona_postgresql
     extra_vars["extra_db_user"] = "postgres"
@@ -1088,6 +1135,7 @@ def main():
   parser.add_argument('--destroy', dest="destroy", action='store_true')
   parser.add_argument('--mysql', dest="mysql_cli", type=str, default="")
   parser.add_argument('--deploy', dest="deploy", action='store_true')
+  parser.add_argument('--test', dest="test", type=str, default="")
   parser.add_argument('--update', dest="update", action='store_true')
   parser.add_argument('--ssh', dest="ssh", type=str, default="")
   parser.add_argument('--os', dest="os", type=str, default="rocky8")
@@ -1177,6 +1225,9 @@ def main():
 
   if args.deploy:
     deploy(args, node_actions)
+
+  if args.test:
+    test(args.test)
 
 if __name__ == '__main__':
   main()

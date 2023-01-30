@@ -33,6 +33,12 @@
 - name: Enable local repo.* caching
   include_tasks: common/tasks/repo_cache.yaml
 
+- name: Install ca certificates on EL
+  when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  yum:
+    name: ca-certificates
+    state: latest
+    disable_gpg_check: yes
 
 - name: Postgresql repo
   when: postgresql_version != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
