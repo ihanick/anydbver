@@ -258,6 +258,7 @@ def save_postgresql_versions_to_sqlite(osver):
     INSERT OR REPLACE INTO postgresql_version(
       version,
       os,
+      arch,
       repo_url,
       repo_file,
       repo_enable_str,
@@ -265,7 +266,7 @@ def save_postgresql_versions_to_sqlite(osver):
       packages,
       debug_packages
     )
-    VALUES (?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?)
     """
   for line in vers:
     ver = line.rstrip()
@@ -291,6 +292,7 @@ def save_postgresql_versions_to_sqlite(osver):
       project = (
         ver,
         osver,
+        'x86_64',
         repo_url,
         '/etc/yum.repos.d/percona-ppg-{ver_no_dot}-release.repo'.format(ver_no_dot=ver_no_dot),
         'ppg-{ver_no_dot}'.format(ver_no_dot=ver_no_dot),
@@ -328,6 +330,7 @@ def save_percona_postgresql_versions_to_sqlite(osver):
     INSERT OR REPLACE INTO percona_postgresql_version(
       version,
       os,
+      arch,
       repo_url,
       repo_file,
       repo_enable_str,
@@ -335,7 +338,7 @@ def save_percona_postgresql_versions_to_sqlite(osver):
       packages,
       debug_packages
     )
-    VALUES (?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?)
     """
   for line in vers:
     ver = line.rstrip()
@@ -360,6 +363,7 @@ def save_percona_postgresql_versions_to_sqlite(osver):
       project = (
         ver,
         osver,
+        'x86_64',
         'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
         '/etc/yum.repos.d/percona-ppg-{ver_no_dot}-release.repo'.format(ver_no_dot=ver_no_dot),
         'ppg-{ver_no_dot}'.format(ver_no_dot=ver_no_dot),
@@ -389,11 +393,11 @@ def save_percona_server_mongodb_versions_to_sqlite(osver):
   vers = list(open(".version-info/psmdb.{os}.txt".format(os=osver)))
   sql = """\
     INSERT OR REPLACE INTO percona_server_mongodb_version(
-      version, os, repo_url, repo_file, repo_enable_str,
+      version, os, arch, repo_url, repo_file, repo_enable_str,
       systemd_service, conf_file, packages,
       debug_packages
     )
-    VALUES (?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?)
     """
   for line in vers:
     ver = line.rstrip()
@@ -411,7 +415,7 @@ def save_percona_server_mongodb_versions_to_sqlite(osver):
 
       ver_no_dot = ''.join(ver.split('.',2)[0:2])
       project = (
-        ver, osver,
+        ver, osver, 'x86_64',
         'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
         '/etc/yum.repos.d/percona-psmdb-{ver_no_dot}-release.repo'.format(ver_no_dot=ver_no_dot),
         'psmdb-{ver_no_dot}'.format(ver_no_dot=ver_no_dot), 'mongod', '/etc/mongod.conf',
@@ -436,12 +440,12 @@ def save_mysql_server_versions_to_sqlite(osver):
   vers = list(open(".version-info/mysql.{os}.txt".format(os=osver)))
   sql = """\
     INSERT OR REPLACE INTO mysql_server_version(
-      version, os, repo_url, repo_file, repo_enable_str,
+      version, os, arch, repo_url, repo_file, repo_enable_str,
       systemd_service, cnf_file, packages,
       debug_packages,
       tests_packages, mysql_shell_packages
     )
-    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
     """
   for line in vers:
     ver = line.rstrip()
@@ -467,7 +471,7 @@ def save_mysql_server_versions_to_sqlite(osver):
         mysql_shell_pkg = 'http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell'
       mysql_shell_pkg = '{url}-{ver}.{osver}.x86_64.rpm'.format(url=mysql_shell_pkg,ver=ver,osver=osver)
       project = (
-        ver, osver, repo_url,
+        ver, osver, 'x86_64', repo_url,
         '',
         '', 'mysqld', '/etc/my.cnf',
         '|'.join(["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]),
@@ -492,12 +496,12 @@ def save_percona_xtradb_cluster_versions_to_sqlite(osver):
   vers = list(open(".version-info/percona-xtradb-cluster.{os}.txt".format(os=osver)))
   sql = """\
     INSERT OR REPLACE INTO percona_xtradb_cluster_version(
-      version, os, repo_url, repo_file, repo_enable_str,
+      version, os, arch, repo_url, repo_file, repo_enable_str,
       systemd_service, cnf_file, packages,
       debug_packages,
       tests_packages, garbd_packages
     )
-    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
     """
   for line in vers:
     ver = line.rstrip()
@@ -509,7 +513,7 @@ def save_percona_xtradb_cluster_versions_to_sqlite(osver):
       pkgs = ["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]
       pkgs.insert(0,'openssl')
       project = (
-        ver, osver,
+        ver, osver, 'x86_64',
         'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
         '/etc/yum.repos.d/percona-pxc-80-release.repo',
         'pxc-80', 'mysqld', '/etc/my.cnf',
@@ -521,7 +525,7 @@ def save_percona_xtradb_cluster_versions_to_sqlite(osver):
     elif ver.startswith('5.7') and osver.startswith('el'):
       pkgs = ['Percona-XtraDB-Cluster-shared-compat-57','Percona-XtraDB-Cluster-shared-57','Percona-XtraDB-Cluster-client-57','Percona-XtraDB-Cluster-server-57']
       project = (
-        ver, osver,
+        ver, osver, 'x86_64',
         'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
         '/etc/yum.repos.d/percona-original-release.repo',
         'pxc-57', 'mysqld', '/etc/percona-xtradb-cluster.conf.d/zz_mysqld.cnf',
@@ -536,7 +540,7 @@ def save_percona_xtradb_cluster_versions_to_sqlite(osver):
       pkgs.insert(0,'which')
 
       project = (
-        ver, osver,
+        ver, osver, 'x86_64',
         'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
         '/etc/yum.repos.d/percona-original-release.repo',
         'pxc-56', 'mysql', '/etc/my.cnf',
@@ -561,12 +565,12 @@ def save_percona_server_versions_to_sqlite(osver):
   vers = list(open(".version-info/percona-server.{os}.txt".format(os=osver)))
   sql = """\
     INSERT OR REPLACE INTO percona_server_version(
-      version, os, repo_url, repo_file, repo_enable_str,
+      version, os, arch, repo_url, repo_file, repo_enable_str,
       systemd_service, cnf_file, packages,
       debug_packages, rocksdb_packages,
       tests_packages, mysql_shell_packages
     )
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
     """
   for line in vers:
     ver = line.rstrip()
@@ -576,7 +580,7 @@ def save_percona_server_versions_to_sqlite(osver):
       if osver != 'el9':
         pkgs.insert(0,'percona-server-shared-compat')
       project = (
-        ver, osver,
+        ver, osver,'x86_64',
         'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
         '/etc/yum.repos.d/percona-ps-80-release.repo',
         'ps-80', 'mysqld', '/etc/my.cnf',
@@ -589,7 +593,7 @@ def save_percona_server_versions_to_sqlite(osver):
     elif ver.startswith('5.7') and osver.startswith('el'):
       pkgs = ['Percona-Server-shared-compat-57','Percona-Server-shared-57','Percona-Server-client-57','Percona-Server-server-57']
       project = (
-        ver, osver,
+        ver, osver, 'x86_64',
         'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
         '/etc/yum.repos.d/percona-original-release.repo',
         'ps-57', 'mysqld', '/etc/percona-server.conf.d/mysqld.cnf',
@@ -602,7 +606,7 @@ def save_percona_server_versions_to_sqlite(osver):
     elif ver.startswith('5.6') and osver.startswith('el'):
       pkgs = ['Percona-Server-shared-56','Percona-Server-client-56','Percona-Server-server-56']
       project = (
-        ver, osver,
+        ver, osver, 'x86_64',
         'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
         '/etc/yum.repos.d/percona-original-release.repo',
         'ps-56', 'mysqld', '/etc/my.cnf',
@@ -615,7 +619,7 @@ def save_percona_server_versions_to_sqlite(osver):
     elif ver.startswith('5.5') and osver.startswith('el'):
       pkgs = ['Percona-Server-shared-55','Percona-Server-client-55','Percona-Server-server-55']
       project = (
-        ver, osver,
+        ver, osver, 'x86_64',
         'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
         '/etc/yum.repos.d/percona-original-release.repo',
         'ps-55', 'mysql', '/etc/my.cnf',
