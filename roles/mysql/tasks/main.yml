@@ -60,7 +60,7 @@
     - name: Install apt repository
       when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') 
       apt:
-        deb: https://dev.mysql.com/get/mysql-apt-config_0.8.16-1_all.deb
+        deb: "{{package_info['repo_url']}}"
 
 
 - name: Disable Redhat MySQL module
@@ -99,6 +99,14 @@
       name: "{{ package_info['packages'].split('|') + ( [] if debug_packages == '' else package_info['debug_packages'].split('|')) + ( [] if replication_type != 'group' or soft == 'proxysql' else package_info['mysql_shell_packages'].split('|') ) + ( [] if not ('development' in db_features.split(',') and 'development_packages' in os[dist][soft]) else os[dist][soft].development_packages) + ( [] if not ( mysql_ndb_data_version != '' ) else os[dist][soft].data_packages ) + ( [] if not ( mysql_ndb_sql_version != '' ) else os[dist][soft].sql_packages ) + ( [] if not ( mysql_ndb_management_version != '' ) else os[dist][soft].management_packages ) + ( [] if not ( tests_enabled|bool and 'tests_packages' in os[dist][soft] ) else os[dist][soft].tests_packages) + ( [] if not ( tests_enabled|bool and 'tests_packages' in os[dist][soft] ) else package_info['tests_packages'].split('|')) + ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in package_info ) else package_info['rocksdb_packages'].split('|'))  }}"
       state: present
       disable_gpg_check: 'yes'
+  - name: install db packages (deb)
+    when: >
+      ( percona_server_version != "" or percona_xtradb_cluster_version != "" or mysql_version != "") and
+      (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') 
+    apt:
+      deb: "{{item}}"
+      update_cache: true
+    with_items: "{{ package_info['packages'].split('|') + ( [] if debug_packages == '' else package_info['debug_packages'].split('|')) + ( [] if replication_type != 'group' or soft == 'proxysql' else package_info['mysql_shell_packages'].split('|') ) + ( [] if not ('development' in db_features.split(',') and 'development_packages' in os[dist][soft]) else os[dist][soft].development_packages) + ( [] if not ( mysql_ndb_data_version != '' ) else os[dist][soft].data_packages ) + ( [] if not ( mysql_ndb_sql_version != '' ) else os[dist][soft].sql_packages ) + ( [] if not ( mysql_ndb_management_version != '' ) else os[dist][soft].management_packages ) + ( [] if not ( tests_enabled|bool and 'tests_packages' in os[dist][soft] ) else os[dist][soft].tests_packages) + ( [] if not ( tests_enabled|bool and 'tests_packages' in os[dist][soft] ) else package_info['tests_packages'].split('|')) + ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in package_info ) else package_info['rocksdb_packages'].split('|'))  }}"
 
 
 - name: Install Garbd

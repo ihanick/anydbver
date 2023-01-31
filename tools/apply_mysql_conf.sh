@@ -6,7 +6,7 @@ USER="$4"
 PASSWORD="$5"
 DATADIR="$6"
 SERVER_IP=$(/bin/bash /vagrant/tools/node_ip.sh)
-SERVER_ID=$(/bin/bash /vagrant/tools/node_ip.sh|awk -F '\\.' '{print ($1 * 2^24) + ($2 * 2^16) + ($3 * 2^8) + $4}')
+SERVER_ID=$(/bin/bash /vagrant/tools/node_ip.sh|gawk -F '\\.' '{print ($1 * 2^24) + ($2 * 2^16) + ($3 * 2^8) + $4}')
 sed -e "s/server_id=.*\$/server_id=$SERVER_ID/" \
     -e "s/report_host=.*\$/report_host=$SERVER_IP/" \
     -e "s/wsrep_node_name=.*\$/wsrep_node_name=$SERVER_IP/" \

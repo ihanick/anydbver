@@ -89,6 +89,8 @@ def get_docker_os_image(os_name):
     return ("rockylinux:9-sshd-systemd", "/usr/bin/python3")
   if os_name in ("el7", "centos7"):
     return ("centos:7-sshd-systemd", "/usr/bin/python")
+  if os_name in ("jammy", "20.04", "ubuntu-20.04", "ubuntu20.04"):
+    return ("ubuntu:jammy-sshd-systemd", "/usr/bin/python3")
   return ("rockylinux:8-sshd-systemd", "/usr/bin/python3")
 
 def get_node_os(os_str, name):
@@ -120,7 +122,7 @@ def start_container(args, name):
     "docker", "run",
     "--platform", ptfm, "--name", container_name,
     "-d", "--cgroupns=host", "--tmpfs", "/tmp", "--network", net,
-    "--tmpfs", "/run", "-v", "/sys/fs/cgroup:/sys/fs/cgroup",
+    "--tmpfs", "/run", "--tmpfs", "/run/lock", "-v", "/sys/fs/cgroup:/sys/fs/cgroup",
     "--hostname", name, docker_img],
             "Can't start docker container")
   node_ip = get_node_ip(args.namespace, name_user)

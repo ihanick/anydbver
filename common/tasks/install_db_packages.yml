@@ -30,7 +30,7 @@
   when: >
     (
     ldap_server != '' or
-    postgresql_version != ''
+    postgresql_version != '' or mysql_version != ''
     ) and
     (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
   apt:
