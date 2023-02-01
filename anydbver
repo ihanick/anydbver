@@ -60,7 +60,10 @@ def get_servers_list(provider, net):
 
 def destroy(args):
   logger.info("Removing nodes")
-  net = "{}{}-anydbver".format(args.namespace, args.user)
+  ns_prefix = args.namespace
+  if ns_prefix != "":
+    ns_prefix = ns_prefix + "-"
+  net = "{}{}-anydbver".format(ns_prefix, args.user)
   cluster = "{}-cluster1".format(args.user)
   if args.provider == "docker" and Path("tools/k3d").is_file():
     run_fatal(["tools/k3d", "cluster", "delete", cluster], "Can't remove k3d cluster")
@@ -73,6 +76,12 @@ def destroy(args):
     run_fatal([args.provider, "run", "-i", "--rm", "-v",
       str((Path(os.getcwd()) / "data").resolve())+":/data",
       "busybox", "sh", "-c", "rm -rf -- /data/*"], "Can't clean data directory")
+  try:
+    os.unlink("{ns}ssh_config".format(ns=ns_prefix))
+    os.unlink("{ns}ansible_hosts".format(ns=ns_prefix))
+    os.unlink("{ns}ansible_hosts_run".format(ns=ns_prefix))
+  except:
+    pass
 
 def exec_shell_from_sqlite(sql, params, err_msg):
   db_file = 'anydbver_version.db'
@@ -120,7 +129,10 @@ def test(name):
 
 def deploy(args, node_actions):
   logger.info("Deploy")
-  net = "{}{}-anydbver".format(args.namespace, args.user)
+  ns_prefix = args.namespace
+  if ns_prefix != "":
+    ns_prefix = ns_prefix + "-"
+  net = "{}{}-anydbver".format(ns_prefix, args.user)
   cluster = "{}-cluster1".format(args.user)
   for node_action in node_actions:
     #print("Applying node: ", node_action)
@@ -209,7 +221,7 @@ def deploy(args, node_actions):
       if node.ingress_port or node.k8s_pg or node.k8s_pxc or node.k8s_ps or node.k8s_mongo or node.pmm:
         run_fatal(run_k8s_operator_cmd, "Can't run the operator")
 
-  run_fatal(["ansible-playbook", "-i", "ansible_hosts_run", "playbook.yml"], "Error running playbook")
+  run_fatal(["ansible-playbook", "-i", "{}ansible_hosts_run".format(ns_prefix), "playbook.yml"], "Error running playbook")
 
 def append_versions_from_url(vers, url, r):
   with urllib.request.urlopen(url) as response:
@@ -937,16 +949,18 @@ def parse_node(args):
 
   return node,args
 
-def resolve_hostname(host):
+def resolve_hostname(ns, host):
+  if ns != "":
+    ns = ns + "-"
   if host == "node0":
     host = "default"
-  for line in list(open("ansible_hosts")):
+  for line in list(open("{}ansible_hosts".format(ns))):
     result = re.search(r"[.]{host} .*ansible_host=([^ ]+)".format(host=host), line)
     if result:
       return result.groups()[0]
   raise Exception("Can't get node {host} ip".format(host=host))
 
-def apply_node_actions(node, actions):
+def apply_node_actions(ns, node, actions):
   extra_vars = {'extra_db_user': 'dba', 'extra_db_password': 'secret', 'extra_start_db': '1'}
   env = {"DB_USER":"dba", "DB_PASS":"secret", "START":"1"}
   db_features = []
@@ -955,7 +969,7 @@ def apply_node_actions(node, actions):
     extra_vars["extra_ldap_server"] = "1"
     env["LDAP_SERVER"] = "1"
   if actions.ldap_master is not None:
-    extra_vars["extra_ldap_server_ip"] = resolve_hostname(actions.ldap_master)
+    extra_vars["extra_ldap_server_ip"] = resolve_hostname(ns, actions.ldap_master)
     env["LDAP_IP"] = extra_vars["extra_ldap_server_ip"]
   if actions.percona_server_mongodb is not None:
     extra_vars["extra_psmdb_version"] = actions.percona_server_mongodb
@@ -1033,7 +1047,7 @@ def apply_node_actions(node, actions):
     extra_vars["extra_cluster_name"] = actions.cluster_name
     env["CLUSTER"] = actions.cluster_name
   if actions.galera_leader:
-    extra_vars["extra_master_ip"] = resolve_hostname(actions.galera_leader)
+    extra_vars["extra_master_ip"] = resolve_hostname(ns, actions.galera_leader)
     extra_vars["extra_replication_type"] = "galera"
     env["DB_IP"] = extra_vars["extra_master_ip"]
     env["REPLICATION_TYPE"] = "galera"
@@ -1060,7 +1074,7 @@ def apply_node_actions(node, actions):
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.haproxy_galera is not None: 
-    extra_vars["extra_haproxy_galera"] = ','.join([resolve_hostname(node) for node in actions.haproxy_galera.split(',') ])
+    extra_vars["extra_haproxy_galera"] = ','.join([resolve_hostname(ns, node) for node in actions.haproxy_galera.split(',') ])
     extra_vars["extra_db_user"] = "root"
     extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["HAPROXY_GALERA"] = extra_vars["extra_haproxy_galera"]
@@ -1089,7 +1103,7 @@ def apply_node_actions(node, actions):
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.leader is not None:
-    extra_vars["extra_master_ip"] = resolve_hostname(actions.leader)
+    extra_vars["extra_master_ip"] = resolve_hostname(ns, actions.leader)
     env["DB_IP"] = extra_vars["extra_master_ip"]
   if len(db_features) > 0:
     extra_vars["extra_db_features"] = ",".join(db_features)
@@ -1099,25 +1113,98 @@ def apply_node_actions(node, actions):
 def apply_node_command(node, env, cmd):
   run_fatal(cmd, "failed to deploy node {}".format(node), env=env)
 
-def create_nodes(nodes_cnt, osver):
+def create_nodes(nodes_cnt, osver, ns):
   create_nodes_cmd = "rm -f ssh_config ansible_hosts; ./docker_container.py --nodes={} --os={} --destroy --deploy".format(nodes_cnt, osver)
+  if ns != "":
+    create_nodes_cmd = "rm -f {ns}-ssh_config {ns}-ansible_hosts; ./docker_container.py --namespace={ns} --nodes={nodes} --os={os} --destroy --deploy".format(ns=ns, nodes=nodes_cnt, os=osver)
+
   logger.info(create_nodes_cmd)
   os.system(create_nodes_cmd)
 
 
 def ssh_login(namespace, node):
+  ns = namespace
+  if ns != "":
+    ns = ns + "-"
   if node == "node0":
     node = "default"
   #os.system("exec ssh -F {}ssh_config -o LogLevel=error -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa -t root@{}".format(namespace, node))
-  os.execl("/usr/bin/env", "/usr/bin/env", 'ssh','-F', "{}ssh_config".format(namespace), '-o', 'LogLevel=error', '-t', "root@{}".format(node))
+  os.execl("/usr/bin/env", "/usr/bin/env", 'ssh','-F', "{}ssh_config".format(ns), '-o', 'LogLevel=error', '-t', "root@{}".format(node))
+
+
+def handle_non_deployment_commands():
+  for cmd_idx, cmd in enumerate(sys.argv):
+    if cmd in ('destroy', 'update', 'test'):
+      sys.argv[cmd_idx] = '--' + cmd
+
+  for cmd_idx, cmd in enumerate(sys.argv):
+    if cmd in ('delete', 'ssh', 'mysql', 'psql', 'ip'):
+      sys.argv[cmd_idx] = '--' + cmd
+      if cmd_idx+1 >= len(sys.argv) or sys.argv[cmd_idx+1].startswith("--"):
+        sys.argv.insert(cmd_idx+1, "default")
+
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--namespace', dest="namespace", type=str, default="")
+  parser.add_argument('--provider', dest="provider", type=str, default="")
+  parser.add_argument('--dry-run', dest="dry_run", action='store_true')
+  parser.add_argument('--destroy', dest="destroy", action='store_true')
+  parser.add_argument('--delete', dest="delete", action='store_true')
+  parser.add_argument('--mysql', dest="mysql_cli", type=str, nargs='?')
+  parser.add_argument('--test', dest="test", type=str, nargs='?')
+  parser.add_argument('--update', dest="update", action='store_true')
+  parser.add_argument('--ssh', dest="ssh", type=str, nargs='?')
+  parser.add_argument('--ip', dest="ip", type=str, nargs='?')
+  args = parser.parse_args()
+
+  if "USER" in os.environ:
+    args.user = os.environ["USER"]
+  else:
+    args.user = os.getlogin()
+
+  detect_provider(args)
+
+  if args.ip:
+    host = "default"
+    if args.ip == "":
+      host = args.ip
+    print(resolve_hostname(args.namespace, host))
+    sys.exit(0)
+  if args.ssh:
+    host = "default"
+    if args.ssh == "":
+      host = args.ssh
+    ssh_login(args.namespace, host)
+    sys.exit(0)
+  elif sys.argv[1] in ("mysql", "--mysql"):
+    host = "default"
+    if args.mysql == "":
+      host = args.mysql
+    mysql_cli(args.namespace, host)
+    sys.exit(0)
+  elif args.destroy:
+    destroy(args)
+  elif args.test:
+    test(args.test)
+
+  sys.exit(0)
+
 
 def main():
+  deployment = False
+  for arg in sys.argv:
+    if arg in ("--deploy","deploy", "--replace", "replace", "--add", "add"):
+      deployment = True
+      break
+
+  if not deployment:
+    handle_non_deployment_commands()
+
   if len(sys.argv) > 1:
     if sys.argv[1] in ("ip", "--ip"):
       host = "default"
       if len(sys.argv) > 2:
         host = sys.argv[2]
-      print(resolve_hostname(host))
+      print(resolve_hostname(ns, host))
       sys.exit(0)
     if sys.argv[1] in ("ssh", "--ssh"):
       host = "default"
@@ -1171,6 +1258,9 @@ def main():
     update_versions()
     sys.exit(0)
 
+  ns_prefix = args.namespace
+  if ns_prefix != "":
+    ns_prefix = ns_prefix + "-"
   node_actions = []
   node_names = {}
   nodes_os = args.os + ","
@@ -1189,17 +1279,17 @@ def main():
 
   nodes_cnt = len(node_names)
   if args.deploy:
-    create_nodes(nodes_cnt, nodes_os)
+    create_nodes(nodes_cnt, nodes_os, args.namespace)
 
   cmds = []
 
-  ansible_hosts_run = open("ansible_hosts_run", "w")
+  ansible_hosts_run = open("{}ansible_hosts_run".format(ns_prefix), "w")
 
   for n in node_actions:
     node = n[0]
     if node == "node0":
       node = "default"
-    (env, extra_vars) = apply_node_actions(node, n[1])
+    (env, extra_vars) = apply_node_actions(args.namespace, node, n[1])
 
     extrastr = ""
     for v in extra_vars:
@@ -1212,7 +1302,7 @@ def main():
 
     ansible_hosts_run.write(
     "{user}.{node} ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host={ip} ansible_python_interpreter={python_path} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none' {extra_vars}\n".format(
-        user=args.user,node=node, python_path=python_path,extra_vars=extrastr, ip=resolve_hostname(node))
+        user=args.user,node=node, python_path=python_path,extra_vars=extrastr, ip=resolve_hostname(args.namespace, node))
     )
     logger.info('Node ' + node + ': ' + extrastr.replace('extra_',''))
 
@@ -1229,9 +1319,6 @@ def main():
 
   if args.deploy:
     deploy(args, node_actions)
-
-  if args.test:
-    test(args.test)
 
 if __name__ == '__main__':
   main()

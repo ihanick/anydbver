@@ -30,7 +30,6 @@ def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
   return ret_code
 
 def ssh_config_append_node(ns, node, ip, user):
-  ns = ""
   if ns != "":
     ns = ns + "-"
   ssh_node = """
@@ -46,7 +45,6 @@ Host {node} {fullnode}
     ssh_config.write(ssh_node)
 
 def ansible_hosts_append_node(ns, node, ip, user, python_path):
-  ns = ""
   ssh_options = ""
   if ns != "":
     ns = ns + "-"
@@ -106,14 +104,15 @@ def get_node_os(os_str, name):
   return ""
 
 def start_container(args, name):
-  container_name = "{user}-{nodename}".format(user=args.user, nodename=name)
-  name_user = container_name
+  name_user = "{user}-{nodename}".format(user=args.user, nodename=name)
+  ns_prefix = ""
   if args.namespace != "":
-    container_name = args.namespace + "-" + name
+    ns_prefix = args.namespace + "-"
+  container_name = "{ns_prefix}{user}-{nodename}".format(ns_prefix=ns_prefix, user=args.user, nodename=name)
 
   (docker_img, python_path) = get_docker_os_image(get_node_os(args.os, name))
 
-  net = "{}{}-anydbver".format(args.namespace, args.user)
+  net = "{ns_prefix}{usr}-anydbver".format(ns_prefix=ns_prefix, usr=args.user)
   run_fatal(["docker", "network", "create", net], "Can't create a docker network", "already exists")
   ptfm = "linux/amd64"
   if platform.machine() == "aarch64":
@@ -128,7 +127,7 @@ def start_container(args, name):
   node_ip = get_node_ip(args.namespace, name_user)
   ssh_config_append_node(args.namespace, name, node_ip, args.user)
   ansible_hosts_append_node(args.namespace, name, node_ip, args.user, python_path)
-  os.system("until ssh -F ssh_config root@{node} true ; do sleep 1;done; echo 'Connected to {node} via ssh'".format(node=name))
+  os.system("until ssh -F {ns_prefix}ssh_config root@{node} true ; do sleep 1;done; echo 'Connected to {node} via ssh'".format(ns_prefix=ns_prefix, node=name))
 
 def delete_container(namespace, name):
   container_name = name
