@@ -1,4 +1,4 @@
-FROM         centos/7
+FROM centos:centos7
  ENV container docker
  RUN yum -y install openssh-server rsync python3 iproute procps-ng openssh-clients; yum clean all; systemctl enable sshd
  STOPSIGNAL SIGRTMIN+3

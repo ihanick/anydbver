@@ -122,7 +122,7 @@ def start_container(args, name):
     "--platform", ptfm, "--name", container_name,
     "-d", "--cgroupns=host", "--tmpfs", "/tmp", "--network", net,
     "--tmpfs", "/run", "--tmpfs", "/run/lock", "-v", "/sys/fs/cgroup:/sys/fs/cgroup",
-    "--hostname", name, docker_img],
+    "--hostname", name, "{}-{}".format(docker_img, args.user)],
             "Can't start docker container")
   node_ip = get_node_ip(args.namespace, name_user)
   ssh_config_append_node(args.namespace, name, node_ip, args.user)
