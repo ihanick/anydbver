@@ -74,7 +74,7 @@ def destroy_lxd(args):
     ns_prefix = ns_prefix + "-"
 
   container_name_prefix = "{ns_prefix}{user}-".format(ns_prefix=ns_prefix, user=args.user)
-  container_name_prefix.replace(".","-")
+  container_name_prefix = container_name_prefix.replace(".","-")
   names = []
   result = subprocess.run(['lxc', 'list', '--format=csv'], stdout=subprocess.PIPE)
   for l in result.stdout.decode('utf-8').splitlines():
