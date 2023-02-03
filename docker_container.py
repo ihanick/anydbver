@@ -140,8 +140,7 @@ def start_container(args, name):
       "lxc", "launch",
       "--profile", args.user, "{}-{}".format(docker_img.replace(":","/"),args.user), container_name ],
               "Can't start lxd container")
-
-  os.system("until lxc exec {node} true ; do sleep 1;done; echo 'Connected to {node} via lxc'".format(node=container_name))
+    os.system("until lxc exec {node} true ; do sleep 1;done; echo 'Connected to {node} via lxc'".format(node=container_name))
   node_ip = ""
   while node_ip == "":
     node_ip = get_node_ip(args.provider, args.namespace, name_user)
