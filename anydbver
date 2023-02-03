@@ -832,6 +832,38 @@ def update_versions():
       "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
      ])
 
+  generate_versions_file("pg.el7.txt",
+    [
+      {"url": "https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-7-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+      {"url": "https://download.postgresql.org/pub/repos/yum/11/redhat/rhel-7-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+       {"url": "https://download.postgresql.org/pub/repos/yum/12/redhat/rhel-7-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+       {"url": "https://download.postgresql.org/pub/repos/yum/13/redhat/rhel-7-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+       {"url": "https://download.postgresql.org/pub/repos/yum/14/redhat/rhel-7-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+       {"url": "https://download.postgresql.org/pub/repos/yum/15/redhat/rhel-7-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+     ])
+     
+  generate_versions_file("pg.el8.txt",
+    [
+      {"url": "https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-8-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+      {"url": "https://download.postgresql.org/pub/repos/yum/11/redhat/rhel-8-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+       {"url": "https://download.postgresql.org/pub/repos/yum/12/redhat/rhel-8-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+       {"url": "https://download.postgresql.org/pub/repos/yum/13/redhat/rhel-8-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+       {"url": "https://download.postgresql.org/pub/repos/yum/14/redhat/rhel-8-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+       {"url": "https://download.postgresql.org/pub/repos/yum/15/redhat/rhel-8-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+     ])
+ 
 
   for osver in ("el7","el8","el9"):
     save_percona_server_versions_to_sqlite(osver)
@@ -938,6 +970,8 @@ def find_version(args):
     args.mysql_server = '8.0'
   if args.percona_postgresql == 'True':
     args.percona_postgresql = '15'
+  if args.postgresql == 'True':
+    args.postgresql = '15'
   if args.mysql_router:
     vers = list(open(".version-info/mysql.{os}.txt".format(os=osver)))
     version = vers[-1]
