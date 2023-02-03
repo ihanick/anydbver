@@ -80,6 +80,7 @@ def get_node_ip(provider, namespace, name):
   if provider == "docker":
     return list(run_get_line(["docker", "inspect", "-f", "{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}", container_name], "Can't get node ip").splitlines())[0]
   elif provider == "lxd":
+    container_name = container_name.replace(".","-")
     result = subprocess.run(['lxc', 'info', container_name], stdout=subprocess.PIPE)
     for l in result.stdout.decode('utf-8').splitlines():
       if "inet:" in l and "127.0.0.1" not in l:
@@ -136,6 +137,7 @@ def start_container(args, name):
       "--hostname", name, "{}-{}".format(docker_img, args.user)],
               "Can't start docker container")
   elif args.provider=="lxd":
+    container_name = container_name.replace(".","-")
     run_fatal([
       "lxc", "launch",
       "--profile", args.user, "{}-{}".format(docker_img.replace(":","/"),args.user), container_name ],
