@@ -9,7 +9,6 @@ import subprocess
 from pathlib import Path
 import urllib.request
 import sqlite3
-from distutils.version import StrictVersion
 
 COMMAND_TIMEOUT=600
 FORMAT = '%(asctime)s %(levelname)s %(message)s'
@@ -256,7 +255,22 @@ def append_versions_from_url(vers, url, r):
     return
 
 def strip_version(v):
-  return v.replace('-','a')
+  (v,p) = ''.join(c for c in v if c.isdigit() or c == '.' or c == '-').split('-')
+  if p is None or p == '':
+    p = "0"
+  vernum = 0
+  patchnum = 0
+  for n in v.split('.'):
+    if n == "":
+      continue
+    vernum = vernum * 1000 + int(n)
+
+  for n in p.split('.'):
+    if n == "":
+      continue
+    patchnum = patchnum * 1000 + int(n)
+
+  return float(vernum) + 1 / float(patchnum)
 
 def generate_versions_file(filename, src_info):
   versions = []
@@ -264,7 +278,7 @@ def generate_versions_file(filename, src_info):
     append_versions_from_url(versions, prg["url"], prg["pattern"])
   # keep only unique versions
   versions = list(dict.fromkeys(versions))
-  versions.sort(key=lambda x: StrictVersion(strip_version(x)))
+  versions.sort(key=lambda x: strip_version(x))
   with open( str((Path(os.getcwd()) / ".version-info" / filename).resolve()), "w") as f:
     f.write("\n".join(versions) + "\n")
 
@@ -323,8 +337,8 @@ def save_postgresql_versions_to_sqlite(osver):
       "postgresql{maj}-server".format(maj=maj_ver),
       "postgresql{maj}-contrib".format(maj=maj_ver)]
       pkgs = ["{}-{}PGDG.{}.x86_64".format(pkg,ver,osname) for pkg in pkgs ]
-      if osver == "el8" and ver2 != '':
-        pkgs.insert(1,"postgresql-common-{ver2}PGDG.{osver}.noarch".format(ver2=ver2, osver=osname))
+      #if osver == "el8" and ver2 != '':
+      #  pkgs.insert(1,"postgresql-common-{ver2}PGDG.{osver}.noarch".format(ver2=ver2, osver=osname))
 
       ver_no_dot = maj_ver
       if ver.startswith('11.5'):
