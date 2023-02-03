@@ -8,6 +8,7 @@ import itertools
 import subprocess
 from pathlib import Path
 import platform
+import time
 
 COMMAND_TIMEOUT=600
 
@@ -71,12 +72,21 @@ def run_get_line(args,err_msg, ignore_msg=None, print_cmd=True, env=None):
 
 
 
-def get_node_ip(namespace, name):
+def get_node_ip(provider, namespace, name):
   container_name = name
   if namespace != "":
     container_name = namespace + "-" + name
 
-  return list(run_get_line(["docker", "inspect", "-f", "{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}", container_name], "Can't get node ip").splitlines())[0]
+  if provider == "docker":
+    return list(run_get_line(["docker", "inspect", "-f", "{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}", container_name], "Can't get node ip").splitlines())[0]
+  elif provider == "lxd":
+    result = subprocess.run(['lxc', 'info', container_name], stdout=subprocess.PIPE)
+    for l in result.stdout.decode('utf-8').splitlines():
+      if "inet:" in l and "127.0.0.1" not in l:
+        return l.split(':')[1].strip().split('/')[0]
+    return ""
+  else:
+    return ""
 
 def get_docker_os_image(os_name):
   if os_name is None:
@@ -112,19 +122,31 @@ def start_container(args, name):
 
   (docker_img, python_path) = get_docker_os_image(get_node_os(args.os, name))
 
-  net = "{ns_prefix}{usr}-anydbver".format(ns_prefix=ns_prefix, usr=args.user)
-  run_fatal(["docker", "network", "create", net], "Can't create a docker network", "already exists")
-  ptfm = "linux/amd64"
-  if platform.machine() == "aarch64":
-    ptfm = "linux/arm64"
-  run_fatal([
-    "docker", "run",
-    "--platform", ptfm, "--name", container_name,
-    "-d", "--cgroupns=host", "--tmpfs", "/tmp", "--network", net,
-    "--tmpfs", "/run", "--tmpfs", "/run/lock", "-v", "/sys/fs/cgroup:/sys/fs/cgroup",
-    "--hostname", name, "{}-{}".format(docker_img, args.user)],
-            "Can't start docker container")
-  node_ip = get_node_ip(args.namespace, name_user)
+  if args.provider=="docker":
+    net = "{ns_prefix}{usr}-anydbver".format(ns_prefix=ns_prefix, usr=args.user)
+    run_fatal(["docker", "network", "create", net], "Can't create a docker network", "already exists")
+    ptfm = "linux/amd64"
+    if platform.machine() == "aarch64":
+      ptfm = "linux/arm64"
+    run_fatal([
+      "docker", "run",
+      "--platform", ptfm, "--name", container_name,
+      "-d", "--cgroupns=host", "--tmpfs", "/tmp", "--network", net,
+      "--tmpfs", "/run", "--tmpfs", "/run/lock", "-v", "/sys/fs/cgroup:/sys/fs/cgroup",
+      "--hostname", name, "{}-{}".format(docker_img, args.user)],
+              "Can't start docker container")
+  elif args.provider=="lxd":
+    run_fatal([
+      "lxc", "launch",
+      "--profile", args.user, "{}-{}".format(docker_img.replace(":","/"),args.user), container_name ],
+              "Can't start lxd container")
+
+  os.system("until lxc exec {node} true ; do sleep 1;done; echo 'Connected to {node} via lxc'".format(node=container_name))
+  node_ip = ""
+  while node_ip == "":
+    node_ip = get_node_ip(args.provider, args.namespace, name_user)
+    time.sleep(1)
+  logger.info("Found node {} with ip {}".format(name_user, node_ip))
   ssh_config_append_node(args.namespace, name, node_ip, args.user)
   ansible_hosts_append_node(args.namespace, name, node_ip, args.user, python_path)
   os.system("until ssh -F {ns_prefix}ssh_config root@{node} true ; do sleep 1;done; echo 'Connected to {node} via ssh'".format(ns_prefix=ns_prefix, node=name))
@@ -159,6 +181,7 @@ def main():
   parser.add_argument('--nodes', dest="nodes", type=int, default=1)
   parser.add_argument('--os', dest="os", type=str, default="rocky8")
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
+  parser.add_argument('--provider', dest="provider", type=str, default="docker")
   args = parser.parse_args()
 
   if "USER" in os.environ:

@@ -58,8 +58,29 @@ def get_servers_list(provider, net):
   return list(run_get_line([provider, "ps", "-a", "--filter", "network="+net, "--format", "{{.ID}}"],
     "Can't get containers list").splitlines())
 
+
 def destroy(args):
   logger.info("Removing nodes")
+  if args.provider == "docker":
+    destroy_docker(args)
+  elif args.provider == "lxd":
+    destroy_lxd(args)
+
+def destroy_lxd(args):
+  ns_prefix = args.namespace
+  if ns_prefix != "":
+    ns_prefix = ns_prefix + "-"
+
+  container_name_prefix = "{ns_prefix}{user}-".format(ns_prefix=ns_prefix, user=args.user)
+  names = []
+  result = subprocess.run(['lxc', 'list', '--format=csv'], stdout=subprocess.PIPE)
+  for l in result.stdout.decode('utf-8').splitlines():
+    container_name = l.split(',', 1)[0]
+    if container_name.startswith(container_name_prefix):
+      names.append(container_name)
+  run_fatal(["lxc", "delete", "-f"] + names, "Can't remove LXD containers")
+
+def destroy_docker(args):
   ns_prefix = args.namespace
   if ns_prefix != "":
     ns_prefix = ns_prefix + "-"
@@ -791,6 +812,8 @@ def detect_provider(args):
     except FileNotFoundError as e:
       args.provider=""
       return
+  elif args.provider=="lxd":
+    pass
   else:
     args.provider=""
 
@@ -1113,14 +1136,13 @@ def apply_node_actions(ns, node, actions):
 def apply_node_command(node, env, cmd):
   run_fatal(cmd, "failed to deploy node {}".format(node), env=env)
 
-def create_nodes(nodes_cnt, osver, ns):
-  create_nodes_cmd = "rm -f ssh_config ansible_hosts; ./docker_container.py --nodes={} --os={} --destroy --deploy".format(nodes_cnt, osver)
+def create_nodes(provider, nodes_cnt, osver, ns):
+  create_nodes_cmd = "rm -f ssh_config ansible_hosts; ./docker_container.py --provider={} --nodes={} --os={} --destroy --deploy".format(provider, nodes_cnt, osver)
   if ns != "":
-    create_nodes_cmd = "rm -f {ns}-ssh_config {ns}-ansible_hosts; ./docker_container.py --namespace={ns} --nodes={nodes} --os={os} --destroy --deploy".format(ns=ns, nodes=nodes_cnt, os=osver)
+    create_nodes_cmd = "rm -f {ns}-ssh_config {ns}-ansible_hosts; ./docker_container.py --provider={provider} --namespace={ns} --nodes={nodes} --os={os} --destroy --deploy".format(provider=provider, ns=ns, nodes=nodes_cnt, os=osver)
 
   logger.info(create_nodes_cmd)
   os.system(create_nodes_cmd)
-
 
 def ssh_login(namespace, node):
   ns = namespace
@@ -1279,7 +1301,7 @@ def main():
 
   nodes_cnt = len(node_names)
   if args.deploy:
-    create_nodes(nodes_cnt, nodes_os, args.namespace)
+    create_nodes(args.provider, nodes_cnt, nodes_os, args.namespace)
 
   cmds = []
 
