@@ -65,6 +65,8 @@ def destroy(args):
     destroy_docker(args)
   elif args.provider == "lxd":
     destroy_lxd(args)
+  elif args.provider == "kubectl":
+    pass
 
 def destroy_lxd(args):
   ns_prefix = args.namespace
@@ -205,8 +207,17 @@ def deploy(args, node_actions):
       if node.k8s_pg:
         logger.info("Starting postgresql in kubernetes managed by Percona operator {}".format(node.k8s_pg))
         run_k8s_operator_cmd.append("--operator=percona-postgresql-operator")
-        run_k8s_operator_cmd.append("--version={}".format(node.k8s_pg))
-        if node.db_version:
+        operator_subversion = ""
+        if "," in node.k8s_pg:
+          (operator_version, operator_subversion) = node.k8s_pg.split(",",1)
+          run_k8s_operator_cmd.append("--version={}".format(operator_version))
+          for param in operator_subversion.split(","):
+            if param.startswith("name="):
+              run_k8s_operator_cmd.append("--cluster-name={}".format(param.split("=",1)[1]))
+        else:
+          run_k8s_operator_cmd.append("--version={}".format(node.k8s_pg))
+
+      if node.db_version:
           run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
       if node.k8s_ps:
         logger.info("Starting Percona Server for MySQL in kubernetes managed by Percona operator {}".format(node.k8s_ps))
@@ -242,7 +253,8 @@ def deploy(args, node_actions):
       if node.ingress_port or node.k8s_pg or node.k8s_pxc or node.k8s_ps or node.k8s_mongo or node.pmm:
         run_fatal(run_k8s_operator_cmd, "Can't run the operator")
 
-  run_fatal(["ansible-playbook", "-i", "{}ansible_hosts_run".format(ns_prefix), "playbook.yml"], "Error running playbook")
+  if args.provider != "kubectl":
+    run_fatal(["ansible-playbook", "-i", "{}ansible_hosts_run".format(ns_prefix), "playbook.yml"], "Error running playbook")
 
 def append_versions_from_url(vers, url, r):
   try:
@@ -609,6 +621,9 @@ def save_percona_xtradb_cluster_versions_to_sqlite(osver):
       cur.execute(sql, project)
   conn.commit()
 
+def save_mariadb_versions_to_sqlite(osver):
+  pass
+
 def save_percona_server_versions_to_sqlite(osver):
   db_file = 'anydbver_version.db'
   conn = None
@@ -872,6 +887,7 @@ def update_versions():
     save_percona_server_mongodb_versions_to_sqlite(osver)
     save_percona_postgresql_versions_to_sqlite(osver)
     save_postgresql_versions_to_sqlite(osver)
+    save_mariadb_versions_to_sqlite(osver)
 
 def detect_provider(args):
   if args.provider in ("kubectl", "kubernetes", "k8s"):
@@ -939,6 +955,8 @@ def find_version(args):
   if args.os is not None:
     if args.os == "rocky8":
       osver = "el8"
+    elif args.os in ("centos7", "el7", "rhel7"):
+      osver = "el7"
     elif args.os == "rocky9":
       osver = "el9"
 
@@ -999,6 +1017,15 @@ def find_version(args):
         version = ver
         break
     args.percona_orchestrator = version.rstrip()
+  if args.mariadb:
+    vers = list(open(".version-info/mariadb.{os}.txt".format(os=osver)))
+    version = vers[-1]
+    for line in reversed(vers):
+      ver = line.rstrip()
+      if ver.startswith(args.mariadb):
+        version = ver
+        break
+    args.mariadb = version.rstrip()
 
 
 def parse_node(args):
@@ -1013,6 +1040,7 @@ def parse_node(args):
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--mysql-server', '--mysql', '--mysql-community-server', type=str, nargs='?')
+  parser.add_argument('--mariadb', '--maria', '--mariadb-server', type=str, nargs='?')
   parser.add_argument('--mysql-router', type=str, nargs='?')
   parser.add_argument('--percona-server', '--ps', type=str, nargs='?')
   parser.add_argument('--percona-xtradb-cluster', '--pxc', type=str, nargs='?')
@@ -1099,6 +1127,15 @@ def apply_node_actions(ns, node, actions):
     extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["PS"] = actions.percona_server
     env["DB_OPTS"] = "mysql/async-repl-gtid.cnf"
+    env["DB_USER"] = "root"
+    env["DB_PASS"]= "verysecretpassword1^"
+  if actions.mariadb is not None:
+    extra_vars["extra_mariadb_version"] = actions.mariadb
+    extra_vars["extra_db_opts_file"] = "mariadb/async-repl-gtid-row.cnf"
+    extra_vars["extra_db_user"] = "root"
+    extra_vars["extra_db_password"] = "verysecretpassword1^"
+    env["MARIADB"] = actions.percona_server
+    env["DB_OPTS"] = "mariadb/async-repl-gtid-row.cnf"
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.mysql_server is not None:
@@ -1226,6 +1263,8 @@ def apply_node_command(node, env, cmd):
   run_fatal(cmd, "failed to deploy node {}".format(node), env=env)
 
 def create_nodes(provider, nodes_cnt, osver, ns):
+  if provider == "kubectl":
+    return
   create_nodes_cmd = "rm -f ssh_config ansible_hosts; ./docker_container.py --provider={} --nodes={} --os={} --destroy --deploy".format(provider, nodes_cnt, osver)
   if ns != "":
     create_nodes_cmd = "rm -f {ns}-ssh_config {ns}-ansible_hosts; ./docker_container.py --provider={provider} --namespace={ns} --nodes={nodes} --os={os} --destroy --deploy".format(provider=provider, ns=ns, nodes=nodes_cnt, os=osver)
