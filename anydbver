@@ -215,6 +215,8 @@ def deploy(args, node_actions):
           for param in operator_subversion.split(","):
             if param.startswith("name="):
               run_k8s_operator_cmd.append("--cluster-name={}".format(param.split("=",1)[1]))
+            if param.startswith("namespace=") or param.startswith("ns=") :
+              run_k8s_operator_cmd.append("--namespace={}".format(param.split("=",1)[1]))
         else:
           run_k8s_operator_cmd.append("--version={}".format(node.k8s_pg))
 
