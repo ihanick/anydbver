@@ -384,16 +384,15 @@ def run_pmm_server(args, helm_path, pmm):
         "can't fix pmm password")
   if args.loki:
     pass_encoded = urllib.parse.quote_plus(args.pmm["password"])
-    wait_for_success
-    if not wait_for_success(["kubectl", "-n", "default",
-      "exec", "-it", "monitoring-0", "--", "bash", "-c",
-      "curl 'http://admin:"+pass_encoded +"""@127.0.0.1:3000/api/datasources' -X POST -H 'Content-Type: application/json;charset=UTF-8' """
-      +"""--data-binary '{ "orgId": 1, "name": "Loki", "type": "loki", "typeLogoUrl": "", "access": "proxy", """
-      +""""url": "http://loki-stack.loki-stack.svc."""+args.cluster_domain+""":3100", "password": "","""
-      +""" "user": "", "database": "", "basicAuth": false, "basicAuthUser": "", "basicAuthPassword": "", "withCredentials": false,"""
-      +""" "isDefault": false, "jsonData": {}, "secureJsonFields": {}, "version": 1, "readOnly": false }'"""],
-      "can't setup loki datasource", r"Connection refused"):
-      raise Exception("Can't setup loki in PMM")
+    msg = run_get_line(
+      [
+        "kubectl", "run", "--restart=Never", "loki-pmm-setup", "--image=curlimages/curl", "--",
+        "curl", "-i", "http://admin:"+pass_encoded+"@monitoring-service."+pmm["namespace"]+".svc.cluster.local/graph/api/datasources",
+        "-X", "POST", "-H", "Content-Type: application/json;charset=UTF-8",
+        "--data-binary", """{"orgId": 1, "name": "Loki", "type": "loki", "typeLogoUrl": "", "access": "proxy", "url": "http://loki-stack.loki-stack.svc.cluster.local:3100", "password": "", "user": "", "database": "", "basicAuth": false, "basicAuthUser": "", "basicAuthPassword": "", "withCredentials": false, "isDefault": false, "jsonData": {}, "secureJsonFields": {}, "version": 1, "readOnly": false }""" ], "can't setup loki datasource", r"data source with the same name already exists")
+    logger.info("Added loki to PMM: {}".format(msg))
+    #run_fatal(["kubectl", "delete", "pod", "loki-pmm-setup"], "can't cleanup loki setup pod")
+
 
 def run_minio_server(args):
   tls_key_path = Path(args.anydbver_path) / args.minio_certs / "tls.key"
@@ -872,24 +871,28 @@ def setup_ingress_nginx(args):
     "--set", "controller.defaultTLS.secret=default/ingress-default-tls"])
   run_helm(args.helm_path, nginx_helm_install_cmd, "Can't nginx ingress with helm")
   ingress_svc = []
+  ingress_ns = {}
   if args.pmm:
     ingress_svc.append("monitoring-service")
+    ingress_ns["monitoring-service"] = args.pmm["namespace"]
   if args.minio:
     ingress_svc.append("minio-service")
+    ingress_ns["minio-service"] = "default"
   ingress_svc_yaml = """
     apiVersion: networking.k8s.io/v1
     kind: Ingress
     metadata:
       name: ingress-{svc}
+      namespace: {ns}
       annotations:
         nginx.org/ssl-services: "{svc}"
     spec:
       tls:
       - hosts:
-        - {svc}.default.svc.{cluster_domain}
+        - {svc}.{ns}.svc.{cluster_domain}
         secretName: {svc}-tls
       rules:
-      - host: {svc}.default.svc.{cluster_domain}
+      - host: {svc}.{ns}.svc.{cluster_domain}
         http:
           paths:
           - path: /
@@ -903,8 +906,8 @@ def setup_ingress_nginx(args):
   for svc in ingress_svc:
     ingress_yaml_path = str((Path(args.data_path) / "ingress-{}.yaml".format(svc)).resolve())
     with open(ingress_yaml_path,"w+") as f:
-      f.writelines(ingress_svc_yaml.format(cluster_domain=args.cluster_domain, svc=svc))
-    run_fatal(["kubectl", "apply", "-n", "default", "-f", ingress_yaml_path ], "Can't create ingress resource for {}".format(svc))
+      f.writelines(ingress_svc_yaml.format(cluster_domain=args.cluster_domain, svc=svc,ns=ingress_ns[svc]))
+    run_fatal(["kubectl", "apply", "-f", ingress_yaml_path ], "Can't create ingress resource for {}".format(svc))
 
 
 def populate_db(args):
