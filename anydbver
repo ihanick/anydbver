@@ -189,60 +189,15 @@ def deploy(args, node_actions):
         #run_fatal(["kubectl", "apply", "-f", "https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml"], "Can't install metrics server")
         
     if args.provider == "kubectl":
-      if node.helm:
-        run_k8s_operator_cmd.append("--helm")
       if node.k8s_namespace:
         run_k8s_operator_cmd.append("--namespace={}".format(node.k8s_namespace))
       if node.pmm:
         if node.pmm == "True":
           node.pmm = "2.31.0,helm=percona-helm-charts:0.3.9,certs=self-signed,namespace=monitoring"
         run_k8s_operator_cmd.append("--pmm={}".format(node.pmm))
+        
       if node.cluster_name:
         run_k8s_operator_cmd.append("--cluster-name={}".format(node.cluster_name))
-      if node.k8s_pxc:
-        logger.info("Starting PXC in kubernetes managed by Percona operator {}".format(node.k8s_pxc))
-        run_k8s_operator_cmd.append("--operator=percona-xtradb-cluster-operator")
-        run_k8s_operator_cmd.append("--version={}".format(node.k8s_pxc))
-        if node.db_version:
-          run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
-      if node.k8s_pg:
-        logger.info("Starting postgresql in kubernetes managed by Percona operator {}".format(node.k8s_pg))
-        run_k8s_operator_cmd.append("--operator=percona-postgresql-operator")
-        operator_subversion = ""
-        if "," in node.k8s_pg:
-          (operator_version, operator_subversion) = node.k8s_pg.split(",",1)
-          run_k8s_operator_cmd.append("--version={}".format(operator_version))
-          for param in operator_subversion.split(","):
-            if param.startswith("name="):
-              run_k8s_operator_cmd.append("--cluster-name={}".format(param.split("=",1)[1]))
-            if param.startswith("namespace=") or param.startswith("ns=") :
-              run_k8s_operator_cmd.append("--namespace={}".format(param.split("=",1)[1]))
-        else:
-          run_k8s_operator_cmd.append("--version={}".format(node.k8s_pg))
-
-      if node.db_version:
-          run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
-      if node.k8s_ps:
-        logger.info("Starting Percona Server for MySQL in kubernetes managed by Percona operator {}".format(node.k8s_ps))
-        run_k8s_operator_cmd.append("--operator=percona-server-mysql-operator")
-        run_k8s_operator_cmd.append("--version={}".format(node.k8s_ps))
-        if node.db_version:
-          run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
-      if node.k8s_mongo:
-        logger.info("Starting Percona Server for MongoDB in kubernetes managed by Percona operator {}".format(node.k8s_mongo))
-        run_k8s_operator_cmd.append("--operator=percona-server-mongodb-operator")
-        run_k8s_operator_cmd.append("--version={}".format(node.k8s_mongo))
-        if node.db_version:
-          run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
-
-      if node.cert_manager:
-        if str(node.cert_manager) == 'True':
-          run_k8s_operator_cmd.append("--cert-manager")
-        else:
-          run_k8s_operator_cmd.append("--cert-manager={}".format(node.cert_manager))
-
-      if node.sql_file:
-        run_k8s_operator_cmd.append("--sql={}".format(node.sql_file))
 
       if node.k8s_minio:
         if node.minio_certs:
@@ -256,8 +211,73 @@ def deploy(args, node_actions):
       if node.loki:
         run_k8s_operator_cmd.append("--loki")
 
-      if node.ingress_port or node.k8s_pg or node.k8s_pxc or node.k8s_ps or node.k8s_mongo or node.pmm:
+      if node.db_version:
+          run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
+
+      if node.cert_manager:
+        if str(node.cert_manager) == 'True':
+          run_k8s_operator_cmd.append("--cert-manager")
+        else:
+          run_k8s_operator_cmd.append("--cert-manager={}".format(node.cert_manager))
+
+
+      if (node.ingress_port or node.pmm or node.k8s_minio or node.loki):
         run_fatal(run_k8s_operator_cmd, "Can't run the operator")
+
+      if node.helm:
+        run_k8s_operator_cmd.append("--helm")
+
+      if node.sql_file:
+        run_k8s_operator_cmd.append("--sql={}".format(node.sql_file))
+ 
+      if node.k8s_pxc:
+        run_cmd = run_k8s_operator_cmd
+        logger.info("Starting PXC in kubernetes managed by Percona operator {}".format(node.k8s_pxc))
+        run_cmd.append("--operator=percona-xtradb-cluster-operator")
+        run_cmd.append("--version={}".format(node.k8s_pxc))
+        if node.db_version:
+          run_cmd.append("--db-version={}".format(node.db_version))
+        run_fatal(run_cmd, "Can't run the operator")
+      if node.k8s_pg:
+        run_cmd = run_k8s_operator_cmd
+        logger.info("Starting postgresql in kubernetes managed by Percona operator {}".format(node.k8s_pg))
+        run_k8s_operator_cmd.append("--operator=percona-postgresql-operator")
+        operator_subversion = ""
+        if "," in node.k8s_pg:
+          (operator_version, operator_subversion) = node.k8s_pg.split(",",1)
+          run_cmd.append("--version={}".format(operator_version))
+          for param in operator_subversion.split(","):
+            if param.startswith("name="):
+              run_cmd.append("--cluster-name={}".format(param.split("=",1)[1]))
+            if param.startswith("namespace=") or param.startswith("ns=") :
+              run_cmd.append("--namespace={}".format(param.split("=",1)[1]))
+        else:
+          run_k8s_operator_cmd.append("--version={}".format(node.k8s_pg))
+        run_fatal(run_cmd, "Can't run the operator")
+
+      if node.k8s_ps:
+        run_cmd = run_k8s_operator_cmd
+        logger.info("Starting Percona Server for MySQL in kubernetes managed by Percona operator {}".format(node.k8s_ps))
+        run_cmd.append("--operator=percona-server-mysql-operator")
+        run_cmd.append("--version={}".format(node.k8s_ps))
+        if node.db_version:
+          run_cmd.append("--db-version={}".format(node.db_version))
+        run_fatal(run_cmd, "Can't run the operator")
+
+      if node.k8s_mongo:
+        run_cmd = run_k8s_operator_cmd
+        operator_version = node.k8s_mongo
+        operator_subversion = ""
+        if "," in node.k8s_mongo:
+          (operator_version, operator_subversion) = node.k8s_mongo.split(",",1)
+          if operator_subversion.startswith("helm="):
+            run_k8s_operator_cmd.append("--helm")
+        logger.info("Starting Percona Server for MongoDB in kubernetes managed by Percona operator {}".format(node.k8s_mongo))
+        run_k8s_operator_cmd.append("--operator=percona-server-mongodb-operator")
+        run_k8s_operator_cmd.append("--version={}".format(operator_version))
+        if node.db_version:
+          run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
+        run_fatal(run_cmd, "Can't run the operator")
 
   if args.provider != "kubectl":
     run_fatal(["ansible-playbook", "-i", "{}ansible_hosts_run".format(ns_prefix), "playbook.yml"], "Error running playbook")
