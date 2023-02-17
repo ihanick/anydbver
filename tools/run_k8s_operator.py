@@ -12,6 +12,7 @@ from distutils.version import StrictVersion
 import argparse
 import base64
 import urllib
+import json
 
 COMMAND_TIMEOUT=600
 
@@ -33,10 +34,13 @@ def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
     raise Exception((err_msg+" '{}'").format(subprocess.list2cmdline(process.args)))
   return ret_code
 
-def run_get_line(args,err_msg, ignore_msg=None, print_cmd=True, env=None):
+def run_get_line(args,err_msg, ignore_msg=None, print_cmd=True, env=None, keep_stderr=True):
   if print_cmd:
     logger.info(subprocess.list2cmdline(args))
-  process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True, env=env)
+  stderr_stream = None
+  if keep_stderr: 
+    stderr_stream = subprocess.STDOUT
+  process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=stderr_stream, close_fds=True, env=env)
   ret_code = process.wait(timeout=COMMAND_TIMEOUT)
   output = process.communicate()[0].decode('utf-8')
   if ignore_msg and re.search(ignore_msg, output):
@@ -302,6 +306,8 @@ spec:
   run_fatal(["kubectl", "--namespace", ns, "apply", "-f", cert_yaml_path], "Can't create {} certificates".format(svc_name))
 
 def run_pmm_server(args, helm_path, pmm):
+  if args.operator_name != "":
+    return
   tls_key_path = ""
   tls_crt_path = ""
 
@@ -386,15 +392,15 @@ def run_pmm_server(args, helm_path, pmm):
     pass_encoded = urllib.parse.quote_plus(args.pmm["password"])
     msg = run_get_line(
       [
-        "kubectl", "run", "--restart=Never", "loki-pmm-setup", "--image=curlimages/curl", "--",
+        "kubectl", "run", "-i", "--rm", "--restart=Never", "loki-pmm-setup", "--image=curlimages/curl", "--",
         "curl", "-i", "http://admin:"+pass_encoded+"@monitoring-service."+pmm["namespace"]+".svc.cluster.local/graph/api/datasources",
         "-X", "POST", "-H", "Content-Type: application/json;charset=UTF-8",
         "--data-binary", """{"orgId": 1, "name": "Loki", "type": "loki", "typeLogoUrl": "", "access": "proxy", "url": "http://loki-stack.loki-stack.svc.cluster.local:3100", "password": "", "user": "", "database": "", "basicAuth": false, "basicAuthUser": "", "basicAuthPassword": "", "withCredentials": false, "isDefault": false, "jsonData": {}, "secureJsonFields": {}, "version": 1, "readOnly": false }""" ], "can't setup loki datasource", r"data source with the same name already exists")
     logger.info("Added loki to PMM: {}".format(msg))
-    #run_fatal(["kubectl", "delete", "pod", "loki-pmm-setup"], "can't cleanup loki setup pod")
-
 
 def run_minio_server(args):
+  if args.operator_name != "":
+    return
   tls_key_path = Path(args.anydbver_path) / args.minio_certs / "tls.key"
   tls_crt_path = Path(args.anydbver_path) / args.minio_certs / "tls.crt"
   if args.minio_certs != "" and args.minio_certs != "self-signed":
@@ -615,9 +621,6 @@ def setup_operator_helm(args):
   if not k8s_wait_for_ready('kube-system', 'k8s-app=kube-dns'):
     raise Exception("Kubernetes cluster is not available")
 
-  if args.cert_manager != "":
-    run_cert_manager_helm(args.helm_path, cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager))
-
   run_fatal(["kubectl", "create", "namespace", args.namespace],
       "Can't create a namespace for the cluster", r"from server \(AlreadyExists\)")
 
@@ -685,6 +688,35 @@ def setup_operator_helm(args):
     args.cluster_name="{}-psmdb-db".format(args.cluster_name)
     if not k8s_wait_for_ready(args.namespace, "app.kubernetes.io/instance={}".format(args.cluster_name)):
       raise Exception("cluster is not starting")
+    if args.pmm != "":
+      pmm_sett = parse_settings("pmm", args.pmm)
+      pmm_ns = "default"
+      pmm_pass = "verysecretpassword1^"
+      if "namespace" in pmm_sett:
+        pmm_ns = pmm_sett["namespace"]
+      if "ns" in pmm_sett:
+        pmm_ns = pmm_sett["ns"]
+      if "password" in pmm_sett:
+        pmm_pass = pmm_sett["password"]
+
+      pass_encoded = urllib.parse.quote_plus(pmm_pass)
+
+      resp = run_get_line([
+        "kubectl", "run", "-i", "--rm", "--restart=Never", "create-pmm-api-key-{}".format(args.cluster_name), "--image=curlimages/curl", "--",
+        "curl", "-s", "http://admin:{password}@monitoring-service.{ns}.svc.{cluster_domain}/graph/api/auth/keys".format(
+          password=pass_encoded, ns=pmm_ns, cluster_domain=args.cluster_domain),
+        "-X", "POST", "-H", "Content-Type: application/json", "-d", '{"name":"mongopmm", "role": "Admin"}'],
+        "Can't create PMM api key", keep_stderr=False)
+      logger.info("Generated PMM key: {}".format(resp))
+      apikey = base64.b64encode(bytes(json.loads(resp)["key"], 'utf-8')).decode('utf-8')
+      run_fatal([
+        "kubectl", "-n", args.namespace, "patch", "secret/{}-psmdb-db-secrets".format(args.cluster_name),
+        "-p", '{"data":{"PMM_SERVER_API_KEY": "'+apikey+'"} }' ],
+        "Can't set PMM API key")
+#
+
+      run_fatal(["kubectl", "-n", args.namespace, "patch", "psmdb", "{}-psmdb-db".format(args.cluster_name), "--type=merge", "--patch", '{"spec":{"pmm":{"enabled": true, "serverHost": "'+ "monitoring-service.{ns}.svc.{cluster_domain}".format(ns=pmm_ns,cluster_domain=args.cluster_domain)+'"} } }'],
+          "Enable mongodb monitoring with PMM")
 
 def parse_settings(key, sett_cmd):
   # 2.31.0,helm=percona-helm-charts:0.3.9,certs=self-signed,namespace=monitoring,password=verysecretpassword1^
@@ -739,9 +771,6 @@ def parse_settings(key, sett_cmd):
 
 def setup_operator(args):
   data_path = args.data_path
-
-  if args.cert_manager != "":
-    run_cert_manager(cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager))
 
   if args.pmm != "":
     args.pmm = parse_settings("pmm", args.pmm)
@@ -855,6 +884,8 @@ def populate_pxc_db(ns, sql_file, helm_enabled, cluster_name):
   run_fatal(["sh", "-c", s], "Can't apply sql file")
 
 def setup_loki(args):
+  if args.operator_name != "":
+    return
   run_helm(args.helm_path, ["helm", "repo", "add", "grafana", "https://grafana.github.io/helm-charts"], "helm repo add problem")
   run_helm(args.helm_path, ["helm", "install", "loki-stack", "grafana/loki-stack", "--create-namespace", "--namespace", "loki-stack",
     "--set", "promtail.enabled=true,loki.persistence.enabled=true,loki.persistence.size=1Gi"], "Can't start loki with helm")
@@ -872,7 +903,7 @@ def setup_ingress_nginx(args):
   run_helm(args.helm_path, nginx_helm_install_cmd, "Can't nginx ingress with helm")
   ingress_svc = []
   ingress_ns = {}
-  if args.pmm:
+  if args.pmm and type(args.pmm) is dict and "namespace" in args.pmm:
     ingress_svc.append("monitoring-service")
     ingress_ns["monitoring-service"] = args.pmm["namespace"]
   if args.minio:
@@ -980,8 +1011,12 @@ def main():
     if args.loki:
       setup_loki(args)
     if args.helm:
+      if args.cert_manager != "" and args.operator_name == "":
+        run_cert_manager_helm(args.helm_path, args.cert_manager) # cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager)
       setup_operator_helm(args)
     else:
+      if args.cert_manager != "" and args.operator_name == "":
+        run_cert_manager(args.cert_manager) # cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager)
       setup_operator(args)
     if args.ingress == "nginx":
       setup_ingress_nginx(args)
