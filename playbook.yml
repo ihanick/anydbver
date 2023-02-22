@@ -201,6 +201,12 @@
     - name: sync configs and tools
       #      when: (not vagrant_dir_mounted.stat.exists) or sync_is_required != ''
       include_tasks: common/tasks/copy_files.yaml
+    - name: Install ca certificates on EL
+      when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+      yum:
+        name: ca-certificates
+        state: latest
+        disable_gpg_check: yes
 
     - name: Docker Role
       when: docker != ''
