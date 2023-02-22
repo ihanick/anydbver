@@ -122,7 +122,7 @@ def info_pg_operator(ns,cluster_name):
       print("kubectl -n {} exec -it {} -- env PSQL_HISTORY=/tmp/.psql_history psql -U postgres".format(
         subprocess.list2cmdline([ns]), container))
 
-def run_pg_operator(ns, op, db_ver, cluster_name):
+def run_pg_operator(ns, op, db_ver, cluster_name, op_ver):
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r's/namespace: "pgo"/namespace: "{}"/'.format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/cr.yaml"], "fix namespace in yaml")
@@ -143,7 +143,7 @@ def run_pg_operator(ns, op, db_ver, cluster_name):
     time.sleep(30)
 
   run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/cr.yaml"], "Can't deploy cluster")
-  if not k8s_wait_for_ready(ns, "name={}".format(cluster_name)):
+  if not k8s_wait_for_ready(ns, cluster_labels(op, op_ver, cluster_name)):
     raise Exception("cluster is not starting")
 
 def op_labels(op, op_ver):
@@ -167,6 +167,12 @@ def cluster_labels(op, op_ver, cluster_name):
     return "statefulset.kubernetes.io/pod-name=cluster1-mysql-0"
   elif op == "percona-server-mongodb-operator":
     return "app.kubernetes.io/instance={},app.kubernetes.io/component=mongod".format(cluster_name)
+  elif op == "percona-postgresql-operator":
+    if op_ver == "2.0.0":
+      return "postgres-operator.crunchydata.com/cluster={}".format(cluster_name)
+    else:
+      return "name={}".format(cluster_name)
+
 
 def file_contains(file, s):
   with open(file) as f:
@@ -200,6 +206,12 @@ def run_cert_manager(ver):
     raise Exception("Cert-manager is not starting webhook")
   if not k8s_wait_for_ready("cert-manager", "app.kubernetes.io/name=cainjector"):
     raise Exception("Cert-manager is not starting cainjector")
+
+
+def run_kube_fledged_helm(helm_path):
+  run_fatal(["kubectl", "create", "namespace", "kube-fledged" ], "Can't create a namespace for kube-fledged")
+  run_helm(helm_path, ["helm", "repo", "add", "kubefledged-charts", "https://senthilrch.github.io/kubefledged-charts/"], "helm repo add problem")
+  run_helm(helm_path, ["helm", "install", "kube-fledged", "-n", "kube-fledged", "--wait", "kubefledged-charts/kube-fledged"], "helm kube-fledged install problem")
 
 def run_cert_manager_helm(helm_path, ver):
   run_helm(helm_path, ["helm", "repo", "add", "jetstack", "https://charts.jetstack.io"], "helm repo add problem")
@@ -825,7 +837,7 @@ def setup_operator(args):
     enable_minio(args)
 
   if args.operator_name == "percona-postgresql-operator":
-    run_pg_operator(args.namespace, args.operator_name, args.db_version, args.cluster_name)
+    run_pg_operator(args.namespace, args.operator_name, args.db_version, args.cluster_name, args.operator_version)
   elif args.operator_name in ("percona-server-mongodb-operator", "percona-xtradb-cluster-operator", "percona-server-mysql-operator"):
     run_percona_operator(args.namespace, args.operator_name, args.operator_version, args.cluster_name)
 
@@ -980,6 +992,7 @@ def main():
   parser.add_argument('--smart-update', dest="smart_update", action='store_true')
   parser.add_argument('--helm', dest="helm", action='store_true')
   parser.add_argument('--loki', dest="loki", action='store_true')
+  parser.add_argument('--kube-fledged', dest="kube_fledged", default="")
   args = parser.parse_args()
 
   args.standby = False
@@ -1008,6 +1021,8 @@ def main():
     args.namespace = get_operator_ns(args.operator_name)
 
   if not args.info:
+    if args.operator_name == "" and args.kube_fledged != "":
+      run_kube_fledged_helm(args.helm_path)
     if args.loki:
       setup_loki(args)
     if args.helm:

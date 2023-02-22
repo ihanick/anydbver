@@ -1,23 +1,37 @@
 ---
 # tasks file for mariadb
+- name: "Package info sql"
+  ansible.builtin.debug:
+    msg: "{{ package_info_sql }}"
+- name: "Package info"
+  ansible.builtin.debug:
+    msg: "{{ package_info }}"
+
 - name: Setup yum repository
   when: ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux'
   copy:
     content: |
       [mariadb]
       name = MariaDB
-      baseurl = http://yum.mariadb.org/{{ mariadb_version | regex_replace('^([0-9]+)\.([0-9]+)\..*$', '\1.\2') }}/{{ 'centos' if ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'OracleLinux' else 'rhel' }}{{ ansible_distribution_version  | regex_replace('^([0-9]+)\..*$', '\1') }}-amd64
+      baseurl = http://yum.mariadb.org/{{ package_info['version'] | regex_replace('^([0-9]+)\.([0-9]+)\..*$', '\1.\2') }}/{{ 'centos' if dist == 'el7' else 'rhel' }}{{ ansible_distribution_version  | regex_replace('^([0-9]+)\..*$', '\1') }}-amd64
       gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
       gpgcheck=1
       module_hotfixes=1
     dest: /etc/yum.repos.d/MariaDB.repo
+
+- name: Enable EPEL
+  when: dist == 'el7'
+  package:
+    name: epel-release
+    state: present
 
 - name: install MariaDB packages
   when: ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux'
   yum:
     state: present
     disable_gpg_check: yes
-    name: "{{mariadb_rpms}}"
+    name: "{{ item }}"
+  with_items: " {{ package_info['packages'].split('|') }}"
 
 - name: Install gpg for apt-key
   when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'

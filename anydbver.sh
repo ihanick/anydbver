@@ -650,7 +650,7 @@ refresh_percona_server_version_info() {
     done
   done > .version-info/mariadb-galera.el7.txt
 
-  for maver in 10.3 10.4 10.5 ; do
+  for maver in 10.3 10.4 10.5 10.6 10.7 10.8 10.9 10.10 10.11 ; do
     curl -sL http://yum.mariadb.org/$maver/centos8-amd64/rpms/| perl -ne '/MariaDB-server-(\d[^"]*).el8.x86_64.rpm/ and print "$1\n"' >> .version-info/mariadb.el8.txt
   done
 

@@ -172,6 +172,18 @@ def deploy(args, node_actions):
         if node.k3d == 'True':
           node.k3d = 'latest'
         k3d_create_cmd = ["tools/k3d", "cluster", "create", "-i", "rancher/k3s:{}".format(node.k3d) , "--network", net, "-a", k3d_agents]
+
+        if node.registry_cache:
+          registries_path = str((Path(os.getcwd()) / "data/my-registries.yaml").resolve())
+          with open( registries_path, "w") as f:
+            f.write("""
+mirrors:
+  docker.io:
+    endpoint:
+      - "{}"
+            """.format(node.registry_cache))
+            k3d_create_cmd.append("--registry-config")
+            k3d_create_cmd.append(registries_path)
         if node.k8s_cluster_domain:
           k3d_create_cmd.append("--k3s-arg")
           k3d_create_cmd.append("--cluster-domain={}@server:0".format(node.k8s_cluster_domain))
@@ -210,6 +222,9 @@ def deploy(args, node_actions):
 
       if node.loki:
         run_k8s_operator_cmd.append("--loki")
+
+      if node.kube_fledged:
+        run_k8s_operator_cmd.append("--kube-fledged={}".format(node.kube_fledged))
 
       if node.db_version:
           run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
@@ -647,7 +662,75 @@ def save_percona_xtradb_cluster_versions_to_sqlite(osver):
       cur.execute(sql, project)
   conn.commit()
 
+"""
+CREATE TABLE mariadb_version(
+  version varchar(20),
+  os varchar(20),
+  arch varchar(20),
+  repo_url varchar(1000),
+  repo_file varchar(1000),
+  repo_enable_str varchar(20),
+  systemd_service varchar(20),
+  cnf_file varchar(100),
+  packages varchar(1000),
+  debug_packages varchar(1000),
+  rocksdb_packages varchar(1000),
+  tests_packages varchar(1000),
+  mysql_shell_packages varchar(1000),
+  constraint pk PRIMARY KEY(version, os, arch)
+);
+"""
 def save_mariadb_versions_to_sqlite(osver):
+  db_file = 'anydbver_version.db'
+  conn = None
+  try:
+    conn = sqlite3.connect(db_file)
+  except Error as e:
+    print(e)
+    return
+  cur = conn.cursor()
+  vers = list(open(".version-info/mariadb.{os}.txt".format(os=osver)))
+  sql = """\
+    INSERT OR REPLACE INTO mariadb_version(
+      version, os, arch, repo_url, repo_file, repo_enable_str,
+      systemd_service, cnf_file, packages,
+      debug_packages, rocksdb_packages,
+      tests_packages, mysql_shell_packages
+    )
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """
+  for line in vers:
+    ver = line.rstrip()
+    project = ()
+    ver_short = '.'.join(ver.split('.')[0:2])
+    if osver.startswith('el'):
+      pkgs = ['MariaDB-common', 'MariaDB-shared', 'MariaDB-client', 'MariaDB-server']
+
+      archive_url = 'https://mirror.mariadb.org/yum/{ver_short}/centos{elver}-amd64/rpms'.format(ver_short=ver_short, elver=osver.replace('el',''))
+      pkg_suffix = "{osver}.x86_64.rpm".format(osver=osver)
+      if osver.startswith('el7'):
+        pkg_suffix = "{osver}.centos.x86_64.rpm".format(osver=osver)
+      elif osver.startswith('el8'):
+        archive_url = 'https://mirror.mariadb.org/yum/{ver_short}/rhel{elver}-amd64/rpms'.format(ver_short=ver_short, elver=osver.replace('el',''))
+
+      #-10.5.18-1.el8.x86_64
+      project = (
+        ver, osver,'x86_64',
+        '',
+        '/etc/yum.repos.d/MariaDB.repo',
+        '', 'mariadb', '/etc/my.cnf.d/zz_mysqld.cnf',
+        '|'.join(["{url}/{pkg}-{ver}.{suf}".format(url=archive_url,pkg=pkg,ver=ver,suf=pkg_suffix) for pkg in pkgs ]),
+        'gdb|{url}/MariaDB-server-debuginfo-{ver}.{suf}'.format(ver=ver,url=archive_url,suf=pkg_suffix),
+        '{url}/MariaDB-rocksdb-engine-{ver}.{suf}'.format(url=archive_url,ver=ver,suf=pkg_suffix),
+        '{url}/MariaDB-test-{ver}.{suf}'.format(url=archive_url,ver=ver,suf=pkg_suffix),
+        ''
+      )
+
+    if len(project) > 1:
+      cur.execute(sql, project)
+  conn.commit()
+
+
   pass
 
 def save_percona_server_versions_to_sqlite(osver):
@@ -990,6 +1073,8 @@ def find_version(args):
     args.percona_server_mongodb = '6.0'
   if args.percona_server == 'True':
     args.percona_server = '8.0'
+  if args.mariadb == 'True':
+    args.mariadb = '10.11'
   if args.percona_xtrabackup:
     vers = list(open(".version-info/xtrabackup.{os}.txt".format(os=osver)))
     version = vers[-1]
@@ -1043,15 +1128,6 @@ def find_version(args):
         version = ver
         break
     args.percona_orchestrator = version.rstrip()
-  if args.mariadb:
-    vers = list(open(".version-info/mariadb.{os}.txt".format(os=osver)))
-    version = vers[-1]
-    for line in reversed(vers):
-      ver = line.rstrip()
-      if ver.startswith(args.mariadb):
-        version = ver
-        break
-    args.mariadb = version.rstrip()
 
 
 def parse_node(args):
@@ -1096,8 +1172,10 @@ def parse_node(args):
   parser.add_argument('--cert-manager', dest="cert_manager", type=str, nargs='?')
   parser.add_argument('--k8s-minio', dest="k8s_minio", type=str, nargs='?')
   parser.add_argument('--loki', dest="loki", type=str, nargs='?')
+  parser.add_argument('--kube-fledged', dest="kube_fledged", type=str, nargs='?')
   parser.add_argument('--minio-certs', dest="minio_certs", type=str, nargs='?')
   parser.add_argument('--k3d', type=str, nargs='?')
+  parser.add_argument('--registry-cache', type=str, nargs='?')
   parser.add_argument('--helm', type=str, nargs='?')
   parser.add_argument('--os', type=str, default="")
   parser.add_argument('--k8s-pg', dest="k8s_pg", type=str, nargs='?')
@@ -1331,6 +1409,7 @@ def handle_non_deployment_commands():
   parser.add_argument('--update', dest="update", action='store_true')
   parser.add_argument('--ssh', dest="ssh", type=str, nargs='?')
   parser.add_argument('--ip', dest="ip", type=str, nargs='?')
+  parser.add_argument('--tools', dest="tools", type=str, nargs='?')
   args = parser.parse_args()
 
   if "USER" in os.environ:
@@ -1362,6 +1441,13 @@ def handle_non_deployment_commands():
     destroy(args)
   elif args.test:
     test(args.test)
+  elif args.tools and args.provider == "docker":
+    for tool in args.tools.split(","):
+      if tool in ("registry","docker-cache"):
+        os.system("bash tools/docker_registry_cache.sh")
+      elif tool in ("s3","minio"):
+        os.system("bash tools/create_backup_server.sh")
+    sys.exit(0)
   if args.update:
     update_versions()
     sys.exit(0)
