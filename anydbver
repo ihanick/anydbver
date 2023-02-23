@@ -998,7 +998,21 @@ def update_versions():
     save_postgresql_versions_to_sqlite(osver)
     save_mariadb_versions_to_sqlite(osver)
 
+def load_sett_file():
+  sett = {}
+  with open(".anydbver") as file:
+   for l in file.readlines():
+     (k,v) = l.split('=',1)
+     sett[k] = v.strip()
+  print("Loaded settings: ", sett)
+  return sett
+
 def detect_provider(args):
+  if args.provider == "":
+    sett = load_sett_file()
+    if "PROVIDER" in sett:
+      args.provider = sett["PROVIDER"]
+
   if args.provider in ("kubectl", "kubernetes", "k8s"):
       if re.search(
           r"Server Version",
