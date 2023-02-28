@@ -63,6 +63,18 @@ def k8s_wait_for_ready(ns, labels, timeout=COMMAND_TIMEOUT):
       time.sleep(2)
   return False
 
+def k8s_wait_for_job_complete(ns, jobname, timeout=COMMAND_TIMEOUT):
+  logger.info("Waiting for: kubectl wait --for=condition=complete -n {} {}".format(ns, jobname))
+  for i in range(timeout // 2):
+    s = datetime.datetime.now()
+    if run_fatal(["kubectl", "-n", ns, "wait", "--for=condition=complete", jobname], "Job complete wait failed",
+        r"not found|timed out waiting for the condition", False) == 0:
+      return True
+    if (datetime.datetime.now() - s).total_seconds() < 1.5:
+      time.sleep(2)
+  return False
+
+
 def wait_for_success(cmd_with_args, fail_with_msg,ignore_error_pattern, timeout=COMMAND_TIMEOUT):
   logger.info("Waiting for: {}".format(subprocess.list2cmdline(cmd_with_args)))
   for i in range(timeout // 2):
@@ -122,10 +134,12 @@ def info_pg_operator(ns,cluster_name):
       print("kubectl -n {} exec -it {} -- env PSQL_HISTORY=/tmp/.psql_history psql -U postgres".format(
         subprocess.list2cmdline([ns]), container))
 
-def run_pg_operator(ns, op, db_ver, cluster_name, op_ver):
+def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby):
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r's/namespace: "pgo"/namespace: "{}"/'.format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/cr.yaml"], "fix namespace in yaml")
+  if standby:
+    run_fatal(["sed", "-i", "-re", r"s/standby: false\>/standby: true/", "./deploy/cr.yaml"], "enable standby in yaml")
   if db_ver != "":
     run_fatal(["sed", "-i", "-re", r"s/ppg[0-9.]+/ppg{}/".format(db_ver), "./deploy/cr.yaml"], "change PG major version")
 
@@ -837,7 +851,7 @@ def setup_operator(args):
     enable_minio(args)
 
   if args.operator_name == "percona-postgresql-operator":
-    run_pg_operator(args.namespace, args.operator_name, args.db_version, args.cluster_name, args.operator_version)
+    run_pg_operator(args.namespace, args.operator_name, args.db_version, args.cluster_name, args.operator_version, args.standby)
   elif args.operator_name in ("percona-server-mongodb-operator", "percona-xtradb-cluster-operator", "percona-server-mysql-operator"):
     run_percona_operator(args.namespace, args.operator_name, args.operator_version, args.cluster_name)
 
@@ -868,11 +882,12 @@ def info_mongo_operator(ns, cluster_name):
 def populate_mongodb(ns, js_file):
   pass
 
-def populate_pg_db(ns, sql_file):
+def populate_pg_db(ns, cluster_name, sql_file):
+  k8s_wait_for_job_complete(ns ,"job/backrest-backup-{}".format(cluster_name))
   print("kubectl -n {} get PerconaPGCluster cluster1".format(subprocess.list2cmdline([ns])))
   for container in get_containers_list(ns,"name=cluster1"):
     if container != "":
-      s = "kubectl -n {} exec -it {} -- env PSQL_HISTORY=/tmp/.psql_history psql -U postgres < {}".format(
+      s = "kubectl -n {} exec -i {} -- env PSQL_HISTORY=/tmp/.psql_history psql -U postgres < {}".format(
           subprocess.list2cmdline([ns]), container, subprocess.list2cmdline([sql_file]))
       run_fatal(["sh", "-c", s], "Can't apply sql file")
 
@@ -957,7 +972,13 @@ def populate_db(args):
   if args.operator_name == "percona-server-mongodb-operator":
     populate_mongodb(args.namespace, args.js_file)
   if args.operator_name == "percona-postgresql-operator":
-    populate_pg_db(args.namespace, args.sql_file)
+    if not Path(args.sql_file).is_file():
+      dest = str((Path(args.data_path) / "data.sql").resolve())
+      script = str((Path(args.anydbver_path) / "tools/download_file_from_s3.sh").resolve())
+      s = "{} {} > {}".format(script, subprocess.list2cmdline([args.sql_file]), dest)
+      run_fatal(["sh", "-c", s], "Can't download sql file from s3")
+      args.sql_file = dest
+    populate_pg_db(args.namespace, args.cluster_name, args.sql_file)
   if args.operator_name == "percona-xtradb-cluster-operator":
     populate_pxc_db(args.namespace, args.sql_file, args.helm, args.cluster_name)
 
@@ -990,20 +1011,11 @@ def main():
   parser.add_argument('--js', dest="js_file", type=str, default="")
   parser.add_argument('--info-only', dest="info", action='store_true')
   parser.add_argument('--smart-update', dest="smart_update", action='store_true')
+  parser.add_argument('--standby', dest="standby", action='store_true')
   parser.add_argument('--helm', dest="helm", action='store_true')
   parser.add_argument('--loki', dest="loki", action='store_true')
   parser.add_argument('--kube-fledged', dest="kube_fledged", default="")
   args = parser.parse_args()
-
-  args.standby = False
-  for option in args.operator_options.split(","):
-    n = option.split("=",1)[0]
-    if n in ("name", "cluster-name"):
-      args.cluster_name = option.split("=",1)[1]
-    elif n in ("namespace", "ns"):
-      args.namespace = option.split("=",1)[1]
-    elif n == "standby":
-      args.standby = True
 
   args.anydbver_path = (Path(__file__).parents[1]).resolve()
   if not args.helm_path:

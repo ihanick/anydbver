@@ -235,6 +235,8 @@ mirrors:
         else:
           run_k8s_operator_cmd.append("--cert-manager={}".format(node.cert_manager))
 
+      if node.s3sql:
+          run_k8s_operator_cmd.append("--sql={}".format(node.s3sql))
 
       if (node.ingress_port or node.pmm or node.k8s_minio or node.loki):
         run_fatal(run_k8s_operator_cmd, "Can't run the operator")
@@ -246,32 +248,36 @@ mirrors:
         run_k8s_operator_cmd.append("--sql={}".format(node.sql_file))
  
       if node.k8s_pxc:
-        run_cmd = run_k8s_operator_cmd
+        run_cmd = run_k8s_operator_cmd.copy()
         logger.info("Starting PXC in kubernetes managed by Percona operator {}".format(node.k8s_pxc))
         run_cmd.append("--operator=percona-xtradb-cluster-operator")
         run_cmd.append("--version={}".format(node.k8s_pxc))
         if node.db_version:
           run_cmd.append("--db-version={}".format(node.db_version))
         run_fatal(run_cmd, "Can't run the operator")
-      if node.k8s_pg:
-        run_cmd = run_k8s_operator_cmd
-        logger.info("Starting postgresql in kubernetes managed by Percona operator {}".format(node.k8s_pg))
-        run_k8s_operator_cmd.append("--operator=percona-postgresql-operator")
+      for pg in node.k8s_pg:
+        run_cmd = run_k8s_operator_cmd.copy()
+        logger.info("Starting postgresql in kubernetes managed by Percona operator {}, '{}'".format(pg, run_cmd))
+        run_cmd.append("--operator=percona-postgresql-operator")
         operator_subversion = ""
-        if "," in node.k8s_pg:
-          (operator_version, operator_subversion) = node.k8s_pg.split(",",1)
+        if "," in pg:
+          (operator_version, operator_subversion) = pg.split(",",1)
           run_cmd.append("--version={}".format(operator_version))
           for param in operator_subversion.split(","):
             if param.startswith("name="):
               run_cmd.append("--cluster-name={}".format(param.split("=",1)[1]))
             if param.startswith("namespace=") or param.startswith("ns=") :
               run_cmd.append("--namespace={}".format(param.split("=",1)[1]))
+            if param.startswith("sql=") or param.startswith("s3sql=") :
+              run_cmd.append("--sql={}".format(param.split("=",1)[1]))
+            if param.startswith("standby"):
+              run_cmd.append("--standby")
         else:
-          run_k8s_operator_cmd.append("--version={}".format(node.k8s_pg))
+          run_cmd.append("--version={}".format(pg))
         run_fatal(run_cmd, "Can't run the operator")
 
       if node.k8s_ps:
-        run_cmd = run_k8s_operator_cmd
+        run_cmd = run_k8s_operator_cmd.copy()
         logger.info("Starting Percona Server for MySQL in kubernetes managed by Percona operator {}".format(node.k8s_ps))
         run_cmd.append("--operator=percona-server-mysql-operator")
         run_cmd.append("--version={}".format(node.k8s_ps))
@@ -280,7 +286,7 @@ mirrors:
         run_fatal(run_cmd, "Can't run the operator")
 
       if node.k8s_mongo:
-        run_cmd = run_k8s_operator_cmd
+        run_cmd = run_k8s_operator_cmd.copy()
         operator_version = node.k8s_mongo
         operator_subversion = ""
         if "," in node.k8s_mongo:
@@ -1111,6 +1117,8 @@ def find_version(args):
     args.proxysql = version.rstrip()
   if args.mysql_server == 'True':
     args.mysql_server = '8.0'
+  if args.k3s == 'True':
+    args.k3s = "latest"
   if args.percona_postgresql == 'True':
     args.percona_postgresql = '15'
   if args.postgresql == 'True':
@@ -1192,7 +1200,7 @@ def parse_node(args):
   parser.add_argument('--registry-cache', type=str, nargs='?')
   parser.add_argument('--helm', type=str, nargs='?')
   parser.add_argument('--os', type=str, default="")
-  parser.add_argument('--k8s-pg', dest="k8s_pg", type=str, nargs='?')
+  parser.add_argument('--k8s-pg', dest="k8s_pg", type=str, action='append', nargs='?')
   parser.add_argument('--k8s-ps', dest="k8s_ps", type=str, nargs='?')
   parser.add_argument('--k8s-mongo', dest="k8s_mongo", type=str, nargs='?')
   parser.add_argument('--k8s-pxc', dest="k8s_pxc", type=str, nargs='?')
@@ -1201,6 +1209,7 @@ def parse_node(args):
   parser.add_argument('--k8s-cluster-domain', type=str, nargs='?')
   parser.add_argument('--k8s-namespace', type=str, nargs='?')
   parser.add_argument('--sql', dest="sql_file", type=str, nargs='?')
+  parser.add_argument('--k3s', dest="k3s", type=str, nargs='?')
   parser.add_argument('--nginx-ingress', '--ingress-port', dest="ingress_port", type=str, nargs='?')
   args = parser.parse_args(args)
 
@@ -1257,6 +1266,8 @@ def apply_node_actions(ns, node, actions):
     env["DB_OPTS"] = "mariadb/async-repl-gtid-row.cnf"
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
+  if actions.k3s is not None:
+    extra_vars["extra_k3s_version"] = actions.k3s
   if actions.mysql_server is not None:
     extra_vars["extra_mysql_version"] = actions.mysql_server
     extra_vars["extra_db_opts_file"] = "mysql/async-repl-gtid.cnf"
