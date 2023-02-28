@@ -214,6 +214,10 @@ cd anydbver
 ansible-galaxy collection install theredgreek.sqlite
 ```
 
+## Kubernetes, Docker
+### Percona Postgresql Operator
+* `./anydbver deploy k3d registry-cache:http://172.17.0.1:5000 cert-manager:1.7.2 k8s-minio minio-certs:self-signed k8s-pg:1.3.0,namespace=pgo,sql="http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/pagila.sql" k8s-pg:1.3.0,namespace=pgo1,standby`
+
 ## Kubernetes, PMM
 
 Nested containers support is required for PMM server and Kubernetes operators.
