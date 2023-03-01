@@ -1,14 +1,67 @@
 # anydbver
-LXD+Ansible setup to install Percona database products with exact version specified.
+Configuring MySQL, Percona MySQL/Postgresql/Mongo, MongoDB with ansible scripts.
+Running multi-node replication clusters in Docker, LXD and Kubernetes.
 
-## Simple usage:
+## Simple usage with Docker:
 
-Start VirtualBox VM with LXD configured:
+Clone and install sqlite ansible dependency:
 ```bash
-vagrant up
-vagrant ssh
+git clone https://github.com/ihanick/anydbver.git
+cd anydbver
+ansible-galaxy collection install theredgreek.sqlite
 ```
-Start Percona Server 5.6:
+
+Create .anydbver file containing:
+```bash
+PROVIDER=docker
+```
+Build docker images with systemd and sshd, simulating standalone physical servers:
+```bash
+cd images-build;
+./build.sh
+cd ..
+```
+
+Start Percona Server 5.7 on RockyLinux 8:
+```bash
+cd anydbver
+./anydbver deploy ps:5.7
+```
+Login to container with Percona Server and connect with mysql command:
+```bash
+./anydbver ssh
+mysql
+```
+
+### Pre-requirements
+* git
+* ansible (not just ansible-core)
+* Redhat 7 systemd containers require `systemd.unified_cgroup_hierarchy=0` kernel boot parameter in grub
+
+## Multi-node Kubernetes cluster inside Docker
+### Percona Postgresql Operator
+* Start two 3 node clusters replicated  via S3 bucket (MinIO Server), load sample database, cache docker images locally with proxying registry
+`./anydbver deploy k3d registry-cache:http://172.17.0.1:5000 cert-manager:1.7.2 k8s-minio minio-certs:self-signed k8s-pg:1.3.0,namespace=pgo,sql="http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/pagila.sql" k8s-pg:1.3.0,namespace=pgo1,standby`
+  * The script starting S3 server with sql database example could be found at: `tools/create_backup_server.sh`
+  * The script starting caching docker registry: `tools/docker_registry_cache.sh`
+
+
+
+## Simple usage with LXD:
+
+Create .anydbver file containing (replace ihanick with your `$USER`):
+```bash
+PROVIDER=lxd
+LXD_PROFILE=ihanick
+```
+Build docker images with systemd and sshd, simulating standalone physical servers:
+```bash
+cd images-build;
+./build-lxd.sh
+cd ..
+```
+
+Start Percona Server 5.7:
 ```bash
 cd anydbver
 ./anydbver deploy ps:5.6
@@ -18,6 +71,7 @@ Login to container with Percona Server and connect with mysql command:
 ./anydbver ssh
 mysql
 ```
+
 
 ## Running other database products:
 
@@ -213,10 +267,6 @@ cd anydbver
 ./anydbver update
 ansible-galaxy collection install theredgreek.sqlite
 ```
-
-## Kubernetes, Docker
-### Percona Postgresql Operator
-* `./anydbver deploy k3d registry-cache:http://172.17.0.1:5000 cert-manager:1.7.2 k8s-minio minio-certs:self-signed k8s-pg:1.3.0,namespace=pgo,sql="http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/pagila.sql" k8s-pg:1.3.0,namespace=pgo1,standby`
 
 ## Kubernetes, PMM
 
@@ -425,27 +475,6 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 ## Tools
 * `tools/create_backup_server.sh` start a docker container with minio and upload sample databases into it
 
-## Port forwarding
-
-If you want forward port from lxc container to Vagrant VM run
-```
-./anydbver port forward
-```
-
-Start Vagrant box with `ANYDBVER_PUBNET=yes` environment variable to bridge virtual machine with host machine.
-
-## Vagrant bridge mode
-
-You can setup Vagrant virtual machine it and all inner containers to your local network with bridge:
-```
-ANYDBVER_BRIDGE=yes vagrant up
-```
-
-## Docker provider, still using ansible
-### Pre-requirements
-* git
-* ansible (not just ansible-core)
-* Redhat 7 systemd containers require `systemd.unified_cgroup_hierarchy=0` kernel boot parameter in grub
 ### Setup
 ```
 git clone https://github.com/ihanick/anydbver.git
