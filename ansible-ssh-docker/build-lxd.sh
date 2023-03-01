@@ -17,8 +17,8 @@ lxc publish $CONTAINER_NAME --alias centos/7-sshd-systemd-$USER
 lxc delete $CONTAINER_NAME
 
 # Rocky8
-#lxc launch --profile $USER images:rockylinux/8/amd64 $CONTAINER_NAME
-lxc launch --profile $USER images:centos/8-Stream $CONTAINER_NAME
+lxc launch --profile $USER images:rockylinux/8/amd64 $CONTAINER_NAME
+#lxc launch --profile $USER images:centos/8-Stream $CONTAINER_NAME
 until lxc exec $CONTAINER_NAME true ; do sleep 1 ; done
 lxc file push ../secret/id_rsa.pub $CONTAINER_NAME/root/authorized_keys
 lxc file push ../tools/node_ip.sh $CONTAINER_NAME/usr/bin/node_ip.sh
@@ -30,8 +30,8 @@ lxc publish $CONTAINER_NAME --alias rockylinux/8-sshd-systemd-$USER
 lxc delete $CONTAINER_NAME
 
 # Rocky9
-#lxc launch --profile $USER images:rockylinux/9/amd64 $CONTAINER_NAME
-lxc launch --profile $USER images:centos/9-Stream $CONTAINER_NAME
+lxc launch --profile $USER images:rockylinux/9/amd64 $CONTAINER_NAME
+#lxc launch --profile $USER images:centos/9-Stream $CONTAINER_NAME
 until lxc exec $CONTAINER_NAME true ; do sleep 1 ; done
 lxc file push ../secret/id_rsa.pub $CONTAINER_NAME/root/authorized_keys
 lxc file push ../tools/node_ip.sh $CONTAINER_NAME/usr/bin/node_ip.sh
