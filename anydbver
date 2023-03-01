@@ -176,17 +176,32 @@ def deploy(args, node_actions):
           node.k3d = 'latest'
         k3d_create_cmd = ["tools/k3d", "cluster", "create", "-i", "rancher/k3s:{}".format(node.k3d) , "--network", net, "-a", k3d_agents]
 
+        registry_cache_conf = ""
         if node.registry_cache:
-          registries_path = str((Path(os.getcwd()) / "data/my-registries.yaml").resolve())
-          with open( registries_path, "w") as f:
-            f.write("""
-mirrors:
+          registry_cache_conf =  """\
   docker.io:
     endpoint:
       - "{}"
-            """.format(node.registry_cache))
+""".format(node.registry_cache)
+        private_registry_conf = ""
+        if node.private_registry:
+          (name, url) = node.private_registry.split('=', 1)
+          private_registry_conf = """\
+  {}:
+    endpoint:
+      - "{}" 
+""".format(name, url)
+        if node.private_registry or node.registry_cache:
+          registries_path = str((Path(os.getcwd()) / "data/my-registries.yaml").resolve())
+          with open( registries_path, "w") as f:
+            f.write("""\
+mirrors:
+{}
+{}
+""".format(registry_cache_conf, private_registry_conf))
             k3d_create_cmd.append("--registry-config")
             k3d_create_cmd.append(registries_path)
+
         if node.k8s_cluster_domain:
           k3d_create_cmd.append("--k3s-arg")
           k3d_create_cmd.append("--cluster-domain={}@server:0".format(node.k8s_cluster_domain))
@@ -258,26 +273,27 @@ mirrors:
         if node.db_version:
           run_cmd.append("--db-version={}".format(node.db_version))
         run_fatal(run_cmd, "Can't run the operator")
-      for pg in node.k8s_pg:
-        run_cmd = run_k8s_operator_cmd.copy()
-        logger.info("Starting postgresql in kubernetes managed by Percona operator {}, '{}'".format(pg, run_cmd))
-        run_cmd.append("--operator=percona-postgresql-operator")
-        operator_subversion = ""
-        if "," in pg:
-          (operator_version, operator_subversion) = pg.split(",",1)
-          run_cmd.append("--version={}".format(operator_version))
-          for param in operator_subversion.split(","):
-            if param.startswith("name="):
-              run_cmd.append("--cluster-name={}".format(param.split("=",1)[1]))
-            if param.startswith("namespace=") or param.startswith("ns=") :
-              run_cmd.append("--namespace={}".format(param.split("=",1)[1]))
-            if param.startswith("sql=") or param.startswith("s3sql=") :
-              run_cmd.append("--sql={}".format(param.split("=",1)[1]))
-            if param.startswith("standby"):
-              run_cmd.append("--standby")
-        else:
-          run_cmd.append("--version={}".format(pg))
-        run_fatal(run_cmd, "Can't run the operator")
+      if node.k8s_pg:
+        for pg in node.k8s_pg:
+          run_cmd = run_k8s_operator_cmd.copy()
+          logger.info("Starting postgresql in kubernetes managed by Percona operator {}, '{}'".format(pg, run_cmd))
+          run_cmd.append("--operator=percona-postgresql-operator")
+          operator_subversion = ""
+          if "," in pg:
+            (operator_version, operator_subversion) = pg.split(",",1)
+            run_cmd.append("--version={}".format(operator_version))
+            for param in operator_subversion.split(","):
+              if param.startswith("name="):
+                run_cmd.append("--cluster-name={}".format(param.split("=",1)[1]))
+              if param.startswith("namespace=") or param.startswith("ns=") :
+                run_cmd.append("--namespace={}".format(param.split("=",1)[1]))
+              if param.startswith("sql=") or param.startswith("s3sql=") :
+                run_cmd.append("--sql={}".format(param.split("=",1)[1]))
+              if param.startswith("standby"):
+                run_cmd.append("--standby")
+          else:
+            run_cmd.append("--version={}".format(pg))
+          run_fatal(run_cmd, "Can't run the operator")
 
       if node.k8s_ps:
         run_cmd = run_k8s_operator_cmd.copy()
@@ -1201,6 +1217,7 @@ def parse_node(args):
   parser.add_argument('--minio-certs', dest="minio_certs", type=str, nargs='?')
   parser.add_argument('--k3d', type=str, nargs='?')
   parser.add_argument('--registry-cache', type=str, nargs='?')
+  parser.add_argument('--private-registry', type=str, nargs='?')
   parser.add_argument('--helm', type=str, nargs='?')
   parser.add_argument('--os', type=str, default="")
   parser.add_argument('--k8s-pg', dest="k8s_pg", type=str, action='append', nargs='?')
