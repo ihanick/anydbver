@@ -45,6 +45,22 @@ mysql
   * The script starting S3 server with sql database example could be found at: `tools/create_backup_server.sh`
   * The script starting caching docker registry: `tools/docker_registry_cache.sh`
 
+### Private Docker registry
+* create image
+```bash
+cat > Dockerfile <<EOF
+FROM busybox:latest
+EOF
+docker build . -t localhost:5001/ihanick/busybox:latest
+docker run -d -p 5001:5000 --restart=always --name ihanick-registry registry:2
+docker push localhost:5001/ihanick/busybox:latest
+```
+* Run kubernetes and start the container using the image
+```bash
+./anydbver deploy k3d private-registry:ihanick-registry.example.com=http://172.17.0.1:5001
+kubectl run -it --rm --image=ihanick-registry.example.com/ihanick/busybox:latest busybox -- sh
+```
+
 
 
 ## Simple usage with LXD:
