@@ -81,7 +81,10 @@ def destroy_lxd(args):
     container_name = l.split(',', 1)[0]
     if container_name.startswith(container_name_prefix):
       names.append(container_name)
-  run_fatal(["lxc", "delete", "-f"] + names, "Can't remove LXD containers")
+  if names:
+    run_fatal(["lxc", "delete", "-f"] + names, "Can't remove LXD containers")
+  else:
+    logger.info("No nodes to delete")
 
 def destroy_docker(args):
   ns_prefix = args.namespace
