@@ -471,6 +471,12 @@ def merge_cr_yaml(yq, cr_path, part_path):
   logger.info(cmd)
   os.system(cmd)
 
+def yq_cmd_cr_yaml(yq, cr_path, yq_cmd):
+  cmd = yq + " '" + yq_cmd + "' " + cr_path + " > " + cr_path + ".tmp && mv " + cr_path + ".tmp " + cr_path
+  logger.info(cmd)
+  os.system(cmd)
+
+
 def enable_pmm(args):
   if args.pmm == "":
     return
@@ -827,6 +833,8 @@ def setup_operator(args):
       args.users_secret = "my-cluster-secrets"
     else:
       args.users_secret = args.cluster_name + "-secrets"
+    if args.proxysql:
+      yq_cmd_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), '.spec.haproxy.enabled=false,.spec.proxysql.enabled=true')
 
   if args.operator_name == "percona-postgresql-operator" and args.helm != True:
     args.users_secret = args.cluster_name + "-users"
@@ -906,7 +914,7 @@ def populate_pxc_db(ns, sql_file, helm_enabled, cluster_name):
     raise Exception("cluster node0 is not available")
 
   pwd = extract_secret_password(ns, pxc_users_secret, "root")
-  root_cluster_pxc = ["kubectl", "-n", ns, "exec", "-i", pxc_node_0, "-c", "pxc", "--", "env", "LANG=C.utf8", "MYSQL_HISTFILE=/tmp/.mysql_history", "mysql", "-uroot", "-p"+pwd]
+  root_cluster_pxc = ["kubectl", "-n", ns, "exec", "-i", pxc_node_0, "-c", "pxc", "--", "env", "LANG=C.utf8", "MYSQL_HISTFILE=/tmp/.mysql_history", "mysql", "-uroot", "-p" + subprocess.list2cmdline([pwd])]
   s = subprocess.list2cmdline(root_cluster_pxc) + " < " + subprocess.list2cmdline([sql_file])
   run_fatal(["sh", "-c", s], "Can't apply sql file")
 
@@ -930,9 +938,12 @@ def setup_ingress_nginx(args):
   run_helm(args.helm_path, nginx_helm_install_cmd, "Can't nginx ingress with helm")
   ingress_svc = []
   ingress_ns = {}
+  ingress_dns = {}
   if args.pmm and type(args.pmm) is dict and "namespace" in args.pmm:
     ingress_svc.append("monitoring-service")
     ingress_ns["monitoring-service"] = args.pmm["namespace"]
+  if args.pmm and type(args.pmm) is dict and "dns" in args.pmm:
+    ingress_dns["monitoring-service"] = args.pmm["dns"]
   if args.minio:
     ingress_svc.append("minio-service")
     ingress_ns["minio-service"] = "default"
@@ -948,6 +959,7 @@ def setup_ingress_nginx(args):
       tls:
       - hosts:
         - {svc}.{ns}.svc.{cluster_domain}
+{more_hosts_tls}
         secretName: {svc}-tls
       rules:
       - host: {svc}.{ns}.svc.{cluster_domain}
@@ -960,24 +972,46 @@ def setup_ingress_nginx(args):
                 name: {svc}
                 port:
                   number: 443
+{more_hosts_rules}
       ingressClassName: nginx"""
+  ingress_hosts_tls="""\
+        - {dns}"""
+  ingress_hosts_rules="""\
+      - host: {dns}
+        http:
+          paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {svc}
+                port:
+                  number: 443
+"""
   for svc in ingress_svc:
+    more_tls = ""
+    more_rules = ""
+    if svc in ingress_dns:
+      more_tls = ingress_hosts_tls.format(dns=ingress_dns[svc])
+      more_rules = ingress_hosts_rules.format(dns=ingress_dns[svc],svc=svc)
+
     ingress_yaml_path = str((Path(args.data_path) / "ingress-{}.yaml".format(svc)).resolve())
     with open(ingress_yaml_path,"w+") as f:
-      f.writelines(ingress_svc_yaml.format(cluster_domain=args.cluster_domain, svc=svc,ns=ingress_ns[svc]))
+      f.writelines(ingress_svc_yaml.format(cluster_domain=args.cluster_domain, svc=svc,ns=ingress_ns[svc],more_hosts_tls=more_tls,more_hosts_rules=more_rules))
     run_fatal(["kubectl", "apply", "-f", ingress_yaml_path ], "Can't create ingress resource for {}".format(svc))
 
 
 def populate_db(args):
+  if not Path(args.sql_file).is_file():
+    dest = str((Path(args.data_path) / "data.sql").resolve())
+    script = str((Path(args.anydbver_path) / "tools/download_file_from_s3.sh").resolve())
+    s = "{} {} > {}".format(script, subprocess.list2cmdline([args.sql_file]), dest)
+    run_fatal(["sh", "-c", s], "Can't download sql file from s3")
+    args.sql_file = dest
+
   if args.operator_name == "percona-server-mongodb-operator":
     populate_mongodb(args.namespace, args.js_file)
   if args.operator_name == "percona-postgresql-operator":
-    if not Path(args.sql_file).is_file():
-      dest = str((Path(args.data_path) / "data.sql").resolve())
-      script = str((Path(args.anydbver_path) / "tools/download_file_from_s3.sh").resolve())
-      s = "{} {} > {}".format(script, subprocess.list2cmdline([args.sql_file]), dest)
-      run_fatal(["sh", "-c", s], "Can't download sql file from s3")
-      args.sql_file = dest
     populate_pg_db(args.namespace, args.cluster_name, args.sql_file)
   if args.operator_name == "percona-xtradb-cluster-operator":
     populate_pxc_db(args.namespace, args.sql_file, args.helm, args.cluster_name)
@@ -1015,6 +1049,7 @@ def main():
   parser.add_argument('--helm', dest="helm", action='store_true')
   parser.add_argument('--loki', dest="loki", action='store_true')
   parser.add_argument('--kube-fledged', dest="kube_fledged", default="")
+  parser.add_argument('--proxysql', dest="proxysql", action='store_true')
   args = parser.parse_args()
 
   args.anydbver_path = (Path(__file__).parents[1]).resolve()

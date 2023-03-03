@@ -154,6 +154,31 @@ def test(name):
     exec_shell_from_sqlite("SELECT cmd FROM test_cases WHERE test_id = ?", (t_id,), "Can't run a test {}".format(name))
   conn = None
 
+def soft_params(opt):
+  params = {}
+  (operator_version, operator_params) = opt.split(",",1)
+  params["version"] = operator_version
+  for param in operator_params.split(","):
+    if param.startswith("name="):
+      params["cluster-name"] = param.split("=",1)[1]
+    if param.startswith("namespace=") or param.startswith("ns=") :
+      params["namespace"] = param.split("=",1)[1]
+    if param.startswith("sql=") or param.startswith("s3sql=") :
+      params["sql"] = param.split("=",1)[1]
+    if param.startswith("standby"):
+      if '=' in param and param.startswith("standby="):
+        params["standby"] = param.split("=",1)[1]
+      else:
+        params["standby"] = True
+    if param.startswith("proxysql"):
+      if '=' in param and param.startswith("proxysql="):
+        params["proxysql"] = param.split("=",1)[1]
+      else:
+        params["proxysql"] = True
+
+  return params
+
+
 def deploy(args, node_actions):
   logger.info("Deploy")
   ns_prefix = args.namespace
@@ -266,13 +291,27 @@ mirrors:
         run_k8s_operator_cmd.append("--sql={}".format(node.sql_file))
  
       if node.k8s_pxc:
-        run_cmd = run_k8s_operator_cmd.copy()
-        logger.info("Starting PXC in kubernetes managed by Percona operator {}".format(node.k8s_pxc))
-        run_cmd.append("--operator=percona-xtradb-cluster-operator")
-        run_cmd.append("--version={}".format(node.k8s_pxc))
-        if node.db_version:
-          run_cmd.append("--db-version={}".format(node.db_version))
-        run_fatal(run_cmd, "Can't run the operator")
+        for pxc in node.k8s_pxc:
+          run_cmd = run_k8s_operator_cmd.copy()
+          logger.info("Starting PXC in kubernetes managed by Percona operator {}, '{}'".format(pxc, run_cmd))
+          run_cmd.append("--operator=percona-xtradb-cluster-operator")
+          operator_subversion = ""
+          if "," in pxc:
+            params = soft_params(pxc)
+            run_cmd.append("--version={}".format(params["version"]))
+            if "cluster-name" in params:
+              run_cmd.append("--cluster-name={}".format(params["cluster-name"]))
+            if "namespace" in params:
+              run_cmd.append("--namespace={}".format(params["namespace"]))
+            if "sql" in params:
+              run_cmd.append("--sql={}".format(params["sql"]))
+            if "proxysql" in params and params["proxysql"]:
+              run_cmd.append("--proxysql")
+          else:
+            run_cmd.append("--version={}".format(pxc))
+          run_fatal(run_cmd, "Can't run the operator")
+
+
       if node.k8s_pg:
         for pg in node.k8s_pg:
           run_cmd = run_k8s_operator_cmd.copy()
@@ -280,17 +319,16 @@ mirrors:
           run_cmd.append("--operator=percona-postgresql-operator")
           operator_subversion = ""
           if "," in pg:
-            (operator_version, operator_subversion) = pg.split(",",1)
-            run_cmd.append("--version={}".format(operator_version))
-            for param in operator_subversion.split(","):
-              if param.startswith("name="):
-                run_cmd.append("--cluster-name={}".format(param.split("=",1)[1]))
-              if param.startswith("namespace=") or param.startswith("ns=") :
-                run_cmd.append("--namespace={}".format(param.split("=",1)[1]))
-              if param.startswith("sql=") or param.startswith("s3sql=") :
-                run_cmd.append("--sql={}".format(param.split("=",1)[1]))
-              if param.startswith("standby"):
-                run_cmd.append("--standby")
+            params = soft_params(pg)
+            run_cmd.append("--version={}".format(params["version"]))
+            if "cluster-name" in params:
+              run_cmd.append("--cluster-name={}".format(params["cluster-name"]))
+            if "namespace" in params:
+              run_cmd.append("--namespace={}".format(params["namespace"]))
+            if "sql" in params:
+              run_cmd.append("--sql={}".format(params["sql"]))
+            if "standby" in params and params["standby"]:
+              run_cmd.append("--standby")
           else:
             run_cmd.append("--version={}".format(pg))
           run_fatal(run_cmd, "Can't run the operator")
@@ -1220,10 +1258,10 @@ def parse_node(args):
   parser.add_argument('--private-registry', type=str, nargs='?')
   parser.add_argument('--helm', type=str, nargs='?')
   parser.add_argument('--os', type=str, default="")
-  parser.add_argument('--k8s-pg', dest="k8s_pg", type=str, action='append', nargs='?')
+  parser.add_argument('--k8s-pg',  dest="k8s_pg",  type=str, action='append', nargs='?')
   parser.add_argument('--k8s-ps', dest="k8s_ps", type=str, nargs='?')
   parser.add_argument('--k8s-mongo', dest="k8s_mongo", type=str, nargs='?')
-  parser.add_argument('--k8s-pxc', dest="k8s_pxc", type=str, nargs='?')
+  parser.add_argument('--k8s-pxc', dest="k8s_pxc", type=str, action='append', nargs='?')
   parser.add_argument('--pmm', dest="pmm", type=str, nargs='?')
   parser.add_argument('--db-version', dest="db_version", type=str, nargs='?')
   parser.add_argument('--k8s-cluster-domain', type=str, nargs='?')
