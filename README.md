@@ -45,6 +45,12 @@ mysql
   * The script starting S3 server with sql database example could be found at: `tools/create_backup_server.sh`
   * The script starting caching docker registry: `tools/docker_registry_cache.sh`
 
+### Percona XtraDB cluster
+* Start PXC cluster with ProxySQL, PMM, Loki, load `world` database, allow access local IP address 192.168.1.102 by domain name https://pmm.192-168-1-102.nip.io/
+```bash
+./anydbver deploy k3d registry-cache:http://172.17.0.1:5000 cert-manager:1.7.2 k8s-pxc:1.12.0,name=world,ns=db1,s3sql="http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql",proxysql pmm:2.35.0,helm=percona-helm-charts:1.0.1,certs=self-signed,namespace=monitoring,dns=pmm.192-168-1-102.nip.io nginx-ingress:443 loki
+```
+
 ### Private Docker registry
 * create image
 ```bash
