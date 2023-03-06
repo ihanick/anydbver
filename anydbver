@@ -166,6 +166,12 @@ def soft_params(opt):
       params["namespace"] = param.split("=",1)[1]
     if param.startswith("sql=") or param.startswith("s3sql=") :
       params["sql"] = param.split("=",1)[1]
+    if param.startswith("backup-type=") or param.startswith("backup_type=") :
+      params["backup-type"] = param.split("=",1)[1]
+    if param.startswith("bucket="):
+      params["bucket"] = param.split("=",1)[1]
+    if param.startswith("gcs-key="):
+      params["gcs-key"] = param.split("=",1)[1]
     if param.startswith("standby"):
       if '=' in param and param.startswith("standby="):
         params["standby"] = param.split("=",1)[1]
@@ -329,6 +335,12 @@ mirrors:
               run_cmd.append("--cluster-name={}".format(params["cluster-name"]))
             if "namespace" in params:
               run_cmd.append("--namespace={}".format(params["namespace"]))
+            if "backup-type" in params:
+              run_cmd.append("--backup-type={}".format(params["backup-type"]))
+            if "bucket" in params:
+              run_cmd.append("--bucket={}".format(params["bucket"]))
+            if "gcs-key" in params:
+              run_cmd.append("--gcs-key={}".format(params["gcs-key"]))
             if "sql" in params:
               run_cmd.append("--sql={}".format(params["sql"]))
             if "standby" in params and params["standby"]:
