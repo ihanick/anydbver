@@ -134,7 +134,7 @@ def info_pg_operator(ns,cluster_name):
       print("kubectl -n {} exec -it {} -- env PSQL_HISTORY=/tmp/.psql_history psql -U postgres".format(
         subprocess.list2cmdline([ns]), container))
 
-def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby):
+def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, bucket, gcs_key, yq):
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r's/namespace: "pgo"/namespace: "{}"/'.format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/cr.yaml"], "fix namespace in yaml")
@@ -142,6 +142,11 @@ def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby):
     run_fatal(["sed", "-i", "-re", r"s/standby: false\>/standby: true/", "./deploy/cr.yaml"], "enable standby in yaml")
   if db_ver != "":
     run_fatal(["sed", "-i", "-re", r"s/ppg[0-9.]+/ppg{}/".format(db_ver), "./deploy/cr.yaml"], "change PG major version")
+
+  if backup_type == "gcs":
+    run_fatal(["kubectl", "-n", ns, "create", "secret", "generic", "{}-backrest-repo-config".format(cluster_name), "--from-file=gcs-key={}".format(gcs_key)], "Can't create gcs secrets from file")
+    run_fatal([yq, "-i", '.spec.backup.storages["my-gcs"].type = "gcs", .spec.backup.storages["my-gcs"].bucket = "{bucket}" '.format(bucket=bucket),
+               "./deploy/cr.yaml"], "Enable GCS backups")
 
   if file_contains('./deploy/cr.yaml','pg.percona.com/v2'):
     op_env = os.environ.copy()
@@ -859,7 +864,9 @@ def setup_operator(args):
     enable_minio(args)
 
   if args.operator_name == "percona-postgresql-operator":
-    run_pg_operator(args.namespace, args.operator_name, args.db_version, args.cluster_name, args.operator_version, args.standby)
+    run_pg_operator(args.namespace, args.operator_name, args.db_version,
+                    args.cluster_name, args.operator_version, args.standby,
+                    args.backup_type, args.bucket,args.gcs_key, args.yq)
   elif args.operator_name in ("percona-server-mongodb-operator", "percona-xtradb-cluster-operator", "percona-server-mysql-operator"):
     run_percona_operator(args.namespace, args.operator_name, args.operator_version, args.cluster_name)
 
@@ -1036,6 +1043,9 @@ def main():
   parser.add_argument('--cluster-domain', dest="cluster_domain", type=str, default="cluster.local")
   parser.add_argument('--pmm', dest="pmm", type=str, default="")
   parser.add_argument('--minio', dest="minio", action='store_true')
+  parser.add_argument('--backup-type', dest="backup_type", type=str, default="")
+  parser.add_argument('--bucket', dest="bucket", type=str, default="")
+  parser.add_argument('--gcs-key', dest="gcs_key", type=str, default="")
   parser.add_argument('--minio-certs', dest="minio_certs", type=str, default="")
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
   parser.add_argument('--cluster-name', dest="cluster_name", type=str, default="")

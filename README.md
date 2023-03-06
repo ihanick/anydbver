@@ -44,6 +44,10 @@ mysql
 `./anydbver deploy k3d registry-cache:http://172.17.0.1:5000 cert-manager:1.7.2 k8s-minio minio-certs:self-signed k8s-pg:1.3.0,namespace=pgo,sql="http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/pagila.sql" k8s-pg:1.3.0,namespace=pgo1,standby`
   * The script starting S3 server with sql database example could be found at: `tools/create_backup_server.sh`
   * The script starting caching docker registry: `tools/docker_registry_cache.sh`
+* Postgresql and backups to Google GCS
+```bash
+anydbver deploy k3d k8s-pg:1.3.0,backup-type=gcs,bucket=my-gcs-bucket,gcs-key=/full/path/to/gcloud/key.json
+```
 
 ### Percona XtraDB cluster
 * Start PXC cluster with ProxySQL, PMM, Loki, load `world` database, allow access local IP address 192.168.1.102 by domain name https://pmm.192-168-1-102.nip.io/

@@ -20,6 +20,6 @@ test -f ../../secret/id_rsa || ssh-keygen -t rsa -f ../../secret/id_rsa -P '' &&
 cp ../../tools/node_ip.sh ../../secret/id_rsa.pub ./
 docker build --platform $PLATFORM -t ubuntu:jammy-sshd-systemd-$USER .
 cd ../..
-tar -czf ansible-ssh-docker/ansible-anydbver/anydbver.tar.gz .
-cd ansible-ssh-docker/ansible-anydbver/
+tar --exclude=images-build --exclude=data --exclude=.git -czf images-build/ansible-anydbver/anydbver.tar.gz .
+cd images-build/ansible-anydbver/
 docker build -t rockylinux:8-anydbver-ansible-$USER .
