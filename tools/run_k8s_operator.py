@@ -431,7 +431,7 @@ def run_pmm_server(args, helm_path, pmm):
     logger.info("Added loki to PMM: {}".format(msg))
   if pmm["dbaas"]:
     msg = run_get_line(
-      ["bash", "-c", """kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service.default.svc.cluster.local/v1/Settings/Change --header 'Accept: application/json' --data '{"enable_dbaas": true}';sleep 10; kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service.default.svc.cluster.local/v1/management/DBaaS/Kubernetes/UnRegister --header 'Accept: application/json' --data "{ \\"kubernetes_cluster_name\\": \\"default-pmm-cluster\\" }" ; kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service.default.svc.cluster.local/v1/management/DBaaS/Kubernetes/Register --header 'Accept: application/json' --data "{ \\"kubernetes_cluster_name\\": \\"my-cluster\\", \\"kube_auth\\": { \\"kubeconfig\\": \\"$(kubectl config view --flatten --minify | sed -e ':a' -e 'N' -e '$!ba' -e 's/\\n/\\\\n/g' -re 's/0\.0\.0\.0:[0-9]+/kubernetes.default.svc.cluster.local:443/')\\" }}" """],
+      ["bash", "-c", """kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service.default.svc.cluster.local/v1/Settings/Change --header 'Accept: application/json' --data '{"enable_dbaas": true}';kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service.default.svc.cluster.local/v1/Settings/Change --header 'Accept: application/json' --data '{"enable_backup_management": true}';sleep 10; kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service.default.svc.cluster.local/v1/management/DBaaS/Kubernetes/UnRegister --header 'Accept: application/json' --data "{ \\"kubernetes_cluster_name\\": \\"default-pmm-cluster\\" }" ; kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service.default.svc.cluster.local/v1/management/DBaaS/Kubernetes/Register --header 'Accept: application/json' --data "{ \\"kubernetes_cluster_name\\": \\"my-cluster\\", \\"kube_auth\\": { \\"kubeconfig\\": \\"$(kubectl config view --flatten --minify | sed -e ':a' -e 'N' -e '$!ba' -e 's/\\n/\\\\n/g' -re 's/0\.0\.0\.0:[0-9]+/kubernetes.default.svc.cluster.local:443/')\\" }}" """],
       "Cann't enable DBaaS"
     )
     logger.info("Added DBaaS to PMM: {}".format(msg))
@@ -933,7 +933,7 @@ def populate_pxc_db(ns, sql_file, helm_enabled, cluster_name):
     raise Exception("cluster node0 is not available")
 
   pwd = extract_secret_password(ns, pxc_users_secret, "root")
-  root_cluster_pxc = ["kubectl", "-n", ns, "exec", "-i", pxc_node_0, "-c", "pxc", "--", "env", "LANG=C.utf8", "MYSQL_HISTFILE=/tmp/.mysql_history", "mysql", "-uroot", "-p" + subprocess.list2cmdline([pwd])]
+  root_cluster_pxc = ["kubectl", "-n", ns, "exec", "-i", pxc_node_0, "-c", "pxc", "--", "env", "LANG=C.utf8", "MYSQL_HISTFILE=/tmp/.mysql_history", "mysql", "-uroot", "-p" + subprocess.list2cmdline([subprocess.list2cmdline([pwd])])]
   s = subprocess.list2cmdline(root_cluster_pxc) + " < " + subprocess.list2cmdline([sql_file])
   run_fatal(["sh", "-c", s], "Can't apply sql file")
 
@@ -958,14 +958,18 @@ def setup_ingress_nginx(args):
   ingress_svc = []
   ingress_ns = {}
   ingress_dns = {}
+  ingress_annotations = {}
   if args.pmm and type(args.pmm) is dict and "namespace" in args.pmm:
     ingress_svc.append("monitoring-service")
     ingress_ns["monitoring-service"] = args.pmm["namespace"]
+    ingress_annotations["monitoring-service"] = """\
+        nginx.org/websocket-services: {svc}""".format(svc="monitoring-service")
   if args.pmm and type(args.pmm) is dict and "dns" in args.pmm:
     ingress_dns["monitoring-service"] = args.pmm["dns"]
   if args.minio:
     ingress_svc.append("minio-service")
     ingress_ns["minio-service"] = "default"
+    ingress_annotations["minio-service"] = ""
   ingress_svc_yaml = """
     apiVersion: networking.k8s.io/v1
     kind: Ingress
@@ -974,6 +978,7 @@ def setup_ingress_nginx(args):
       namespace: {ns}
       annotations:
         nginx.org/ssl-services: "{svc}"
+{more_annotations}
     spec:
       tls:
       - hosts:
@@ -1016,7 +1021,7 @@ def setup_ingress_nginx(args):
 
     ingress_yaml_path = str((Path(args.data_path) / "ingress-{}.yaml".format(svc)).resolve())
     with open(ingress_yaml_path,"w+") as f:
-      f.writelines(ingress_svc_yaml.format(cluster_domain=args.cluster_domain, svc=svc,ns=ingress_ns[svc],more_hosts_tls=more_tls,more_hosts_rules=more_rules))
+      f.writelines(ingress_svc_yaml.format(cluster_domain=args.cluster_domain, svc=svc,ns=ingress_ns[svc],more_hosts_tls=more_tls,more_hosts_rules=more_rules,more_annotations=ingress_annotations[svc]))
     run_fatal(["kubectl", "apply", "-f", ingress_yaml_path ], "Can't create ingress resource for {}".format(svc))
 
 
