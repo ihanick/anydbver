@@ -419,8 +419,9 @@ def run_pmm_server(args, helm_path, pmm):
         "exec", "-it", "monitoring-0", "--", "bash", "-c",
         "grafana-cli --homepath /usr/share/grafana --configOverrides cfg:default.paths.data=/srv/grafana admin reset-admin-password \"$ADMIN_PASSWORD\""],
         "can't fix pmm password")
+
+  pass_encoded = urllib.parse.quote_plus(args.pmm["password"])
   if args.loki:
-    pass_encoded = urllib.parse.quote_plus(args.pmm["password"])
     msg = run_get_line(
       [
         "kubectl", "run", "-i", "--rm", "--restart=Never", "loki-pmm-setup", "--image=curlimages/curl", "--",
@@ -428,6 +429,12 @@ def run_pmm_server(args, helm_path, pmm):
         "-X", "POST", "-H", "Content-Type: application/json;charset=UTF-8",
         "--data-binary", """{"orgId": 1, "name": "Loki", "type": "loki", "typeLogoUrl": "", "access": "proxy", "url": "http://loki-stack.loki-stack.svc.cluster.local:3100", "password": "", "user": "", "database": "", "basicAuth": false, "basicAuthUser": "", "basicAuthPassword": "", "withCredentials": false, "isDefault": false, "jsonData": {}, "secureJsonFields": {}, "version": 1, "readOnly": false }""" ], "can't setup loki datasource", r"data source with the same name already exists")
     logger.info("Added loki to PMM: {}".format(msg))
+  if pmm["dbaas"]:
+    msg = run_get_line(
+      ["bash", "-c", """kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service.default.svc.cluster.local/v1/Settings/Change --header 'Accept: application/json' --data '{"enable_dbaas": true}';sleep 10; kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service.default.svc.cluster.local/v1/management/DBaaS/Kubernetes/UnRegister --header 'Accept: application/json' --data "{ \\"kubernetes_cluster_name\\": \\"default-pmm-cluster\\" }" ; kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service.default.svc.cluster.local/v1/management/DBaaS/Kubernetes/Register --header 'Accept: application/json' --data "{ \\"kubernetes_cluster_name\\": \\"my-cluster\\", \\"kube_auth\\": { \\"kubeconfig\\": \\"$(kubectl config view --flatten --minify | sed -e ':a' -e 'N' -e '$!ba' -e 's/\\n/\\\\n/g' -re 's/0\.0\.0\.0:[0-9]+/kubernetes.default.svc.cluster.local:443/')\\" }}" """],
+      "Cann't enable DBaaS"
+    )
+    logger.info("Added DBaaS to PMM: {}".format(msg))
 
 def run_minio_server(args):
   if args.operator_name != "":
@@ -796,6 +803,11 @@ def parse_settings(key, sett_cmd):
       sett["labels"] = "app=monitoring,component=pmm"
   else:
     sett["helm_repo_url"] = sett["helm"]
+
+  if "dbaas" in sett:
+    sett["dbaas"] = True
+  else:
+    sett["dbaas"] = False
 
   if "certs" in sett:
     sett["certificates"] = "self-signed"
