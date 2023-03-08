@@ -225,6 +225,12 @@ def run_cert_manager(ver):
     raise Exception("Cert-manager is not starting webhook")
   if not k8s_wait_for_ready("cert-manager", "app.kubernetes.io/name=cainjector"):
     raise Exception("Cert-manager is not starting cainjector")
+  msg = run_get_line(
+    [
+      "kubectl", "run", "-i", "--rm", "--restart=Never", "cert-manager-webook-test", "--image=curlimages/curl", "--",
+      "curl", "-ks", "https://cert-manager-webhook.cert-manager.svc:443/mutate"],
+      "call cert-manager webhook", r"Bad Request")
+  logger.info("cert-manager webhook returns: {}".format(msg))
 
 
 def run_kube_fledged_helm(helm_path):
@@ -431,14 +437,61 @@ def run_pmm_server(args, helm_path, pmm):
     logger.info("Added loki to PMM: {}".format(msg))
   if pmm["dbaas"]:
     msg = run_get_line(
-      ["bash", "-c", """kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service.default.svc.cluster.local/v1/Settings/Change --header 'Accept: application/json' --data '{"enable_dbaas": true}';kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service.default.svc.cluster.local/v1/Settings/Change --header 'Accept: application/json' --data '{"enable_backup_management": true}';sleep 10; kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service.default.svc.cluster.local/v1/management/DBaaS/Kubernetes/UnRegister --header 'Accept: application/json' --data "{ \\"kubernetes_cluster_name\\": \\"default-pmm-cluster\\" }" ; kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service.default.svc.cluster.local/v1/management/DBaaS/Kubernetes/Register --header 'Accept: application/json' --data "{ \\"kubernetes_cluster_name\\": \\"my-cluster\\", \\"kube_auth\\": { \\"kubeconfig\\": \\"$(kubectl config view --flatten --minify | sed -e ':a' -e 'N' -e '$!ba' -e 's/\\n/\\\\n/g' -re 's/0\.0\.0\.0:[0-9]+/kubernetes.default.svc.cluster.local:443/')\\" }}" """],
+      ["bash", "-c", """kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service."""+pmm["namespace"]+""".svc.cluster.local/v1/Settings/Change --header 'Accept: application/json' --data '{"enable_dbaas": true}';kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service."""+pmm["namespace"]+""".svc.cluster.local/v1/Settings/Change --header 'Accept: application/json' --data '{"enable_backup_management": true}';sleep 10; kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service."""+pmm["namespace"]+""".svc.cluster.local/v1/management/DBaaS/Kubernetes/UnRegister --header 'Accept: application/json' --data "{ \\"kubernetes_cluster_name\\": \\"default-pmm-cluster\\" }" ; kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service."""+pmm["namespace"]+""".svc.cluster.local/v1/management/DBaaS/Kubernetes/Register --header 'Accept: application/json' --data "{ \\"kubernetes_cluster_name\\": \\"my-cluster\\", \\"kube_auth\\": { \\"kubeconfig\\": \\"$(kubectl config view --flatten --minify | sed -e ':a' -e 'N' -e '$!ba' -e 's/\\n/\\\\n/g' -re 's/0\.0\.0\.0:[0-9]+/kubernetes.default.svc.cluster.local:443/')\\" }}" """],
       "Cann't enable DBaaS"
     )
     logger.info("Added DBaaS to PMM: {}".format(msg))
 
+def soft_params(opt):
+  params = {}
+  (operator_version, operator_params) = opt.split(",",1)
+  params["version"] = operator_version
+  for param in operator_params.split(","):
+    if param.startswith("name="):
+      params["cluster-name"] = param.split("=",1)[1]
+    if param.startswith("helm="):
+      params["helm"] = param.split("=",1)[1]
+    if param.startswith("dns="):
+      params["dns"] = param.split("=",1)[1]
+    elif param == "helm":
+      params["helm"] = 'True'
+    if param.startswith("certs="):
+      params["certs"] = param.split("=",1)[1]
+    elif param == "certs":
+      params["certs"] = 'self-signed'
+    if param.startswith("namespace=") or param.startswith("ns=") :
+      params["namespace"] = param.split("=",1)[1]
+    if param.startswith("sql=") or param.startswith("s3sql=") :
+      params["sql"] = param.split("=",1)[1]
+    if param.startswith("backup-type=") or param.startswith("backup_type=") :
+      params["backup-type"] = param.split("=",1)[1]
+    if param.startswith("bucket="):
+      params["bucket"] = param.split("=",1)[1]
+    if param.startswith("gcs-key="):
+      params["gcs-key"] = param.split("=",1)[1]
+    if param.startswith("standby"):
+      if '=' in param and param.startswith("standby="):
+        params["standby"] = param.split("=",1)[1]
+      else:
+        params["standby"] = True
+    if param.startswith("proxysql"):
+      if '=' in param and param.startswith("proxysql="):
+        params["proxysql"] = param.split("=",1)[1]
+      else:
+        params["proxysql"] = True
+
+  return params
+
+
+
 def run_minio_server(args):
+  params = soft_params(args.minio)
+  if "certs" in params:
+    args.minio_certs = params["certs"]
+
   if args.operator_name != "":
     return
+  logger.info( "Certificates for minio: " + str(args.minio_certs))
   tls_key_path = Path(args.anydbver_path) / args.minio_certs / "tls.key"
   tls_crt_path = Path(args.anydbver_path) / args.minio_certs / "tls.crt"
   if args.minio_certs != "" and args.minio_certs != "self-signed":
@@ -457,26 +510,32 @@ def run_minio_server(args):
       "--cert="+str(tls_crt_path.resolve())],
       "can't create minio tls secret", "already exists")
 
-  run_helm(args.helm_path, ["helm", "repo", "add", "minio", "https://helm.min.io/"], "helm repo add problem")
+  run_helm(args.helm_path, ["helm", "repo", "add", "bitnami", "https://charts.bitnami.com/bitnami"], "helm repo add problem")
   run_helm(args.helm_path, ["helm", "repo", "update"], "helm repo update problem")
+  helm_cmd = ["helm", "install", "minio-service", "bitnami/minio",
+      "--set", "fullnameOverride=minio-service",
+      "--set", "auth.rootUser=REPLACE-WITH-AWS-ACCESS-KEY",
+      "--set", "auth.rootPassword=REPLACE-WITH-AWS-SECRET-KEY",
+      "--set", "service.type=ClusterIP",
+      "--set", "persistence.size=2G", "--set", "defaultBuckets=operator-testing"
+      ]
+
+  if args.ingress != "" and "dns" in params:
+    helm_cmd = helm_cmd + [
+      "--set", "ingress.enabled=true",
+      "--set", "ingress.ingressClassName={}".format(args.ingress),
+      "--set", "ingress.tls=true",
+      "--set", "ingress.selfSigned=true",
+      "--set", "ingress.hostname={}".format(params["dns"])
+      ]
   if (args.cert_manager != "" and args.minio_certs == "self-signed") or args.minio_custom_ssl:
-    run_helm(args.helm_path, ["helm", "install", "minio-service", "minio/minio",
-      "--set", "accessKey=REPLACE-WITH-AWS-ACCESS-KEY", "--set", "secretKey=REPLACE-WITH-AWS-SECRET-KEY",
-      "--set", "service.type=ClusterIP", "--set", "configPath=/tmp/.minio/",
-      "--set", "persistence.size=2G", "--set", "buckets[0].name=operator-testing",
-      "--set", "buckets[0].policy=none", "--set", "buckets[0].purge=false",
-      "--set", "environment.MINIO_REGION=us-east-1",
-      "--set", "service.port=443",
-      "--set", "tls.enabled=true,tls.certSecret=minio-service-tls,tls.publicCrt=tls.crt,tls.privateKey=tls.key"
-      ], "helm minio+certs install problem")
+    helm_cmd = helm_cmd + ["--set", "tls.enabled=true", "--set", "tls.autoGenerated=true", "--set", "service.ports.api=443"]
+    run_helm(args.helm_path, helm_cmd , "helm minio+certs install problem")
+    if args.ingress == "nginx" and "dns" in params:
+      run_fatal(["kubectl", "annotate", "ing/minio-service", "nginx.org/ssl-services=minio-service"], "Can't annotate ingress to use ssl service")
   else:
-    run_helm(args.helm_path, ["helm", "install", "minio-service", "minio/minio",
-      "--set", "accessKey=REPLACE-WITH-AWS-ACCESS-KEY", "--set", "secretKey=REPLACE-WITH-AWS-SECRET-KEY",
-      "--set", "service.type=ClusterIP", "--set", "configPath=/tmp/.minio/",
-      "--set", "persistence.size=2G", "--set", "buckets[0].name=operator-testing",
-      "--set", "buckets[0].policy=none", "--set", "buckets[0].purge=false",
-      "--set", "environment.MINIO_REGION=us-east-1"
-      ], "helm minio install problem")
+    helm_cmd = helm_cmd + ["--set", "tls.enabled=false"]
+    run_helm(args.helm_path, helm_cmd, "helm minio install problem")
 
 def merge_cr_yaml(yq, cr_path, part_path):
   cmd = yq + " ea '. as $item ireduce ({}; . * $item )' " + cr_path + " " + part_path + " > " + cr_path + ".tmp && mv " + cr_path + ".tmp " + cr_path
@@ -585,6 +644,7 @@ def enable_minio(args):
         backup:
           storages:
             minio:
+              verifyTLS: false
               type: s3
               s3:
                 bucket: operator-testing
@@ -777,6 +837,9 @@ def parse_settings(key, sett_cmd):
   if key == "pmm" and "helm" not in sett:
     sett["helm"] = "True"
 
+  if key == "pmm" and "namespace" not in sett and "ns" not in sett:
+    sett["namespace"] = "monitoring"
+
   if "helm" in sett:
     if sett["helm"] == "True":
       if key == "pmm":
@@ -944,7 +1007,7 @@ def setup_loki(args):
   run_helm(args.helm_path, ["helm", "install", "loki-stack", "grafana/loki-stack", "--create-namespace", "--namespace", "loki-stack",
     "--set", "promtail.enabled=true,loki.persistence.enabled=true,loki.persistence.size=1Gi"], "Can't start loki with helm")
 
-def setup_ingress_nginx(args):
+def deploy_ingress_nginx(args):
   # generate certificate, generate set controller.defaultTLS.secret	and controller.wildcardTLS.secret
   run_helm(args.helm_path, ["helm", "repo", "add", "nginx-stable", "https://helm.nginx.com/stable"], "helm repo add problem")
   nginx_helm_install_cmd = ["helm", "install", "nginx-ingress", "nginx-stable/nginx-ingress",
@@ -955,6 +1018,9 @@ def setup_ingress_nginx(args):
     nginx_helm_install_cmd.extend(["--set", "controller.wildcardTLS.secret=default/ingress-default-tls",
     "--set", "controller.defaultTLS.secret=default/ingress-default-tls"])
   run_helm(args.helm_path, nginx_helm_install_cmd, "Can't nginx ingress with helm")
+
+
+def setup_ingress_nginx(args):
   ingress_svc = []
   ingress_ns = {}
   ingress_dns = {}
@@ -1059,7 +1125,7 @@ def main():
   parser.add_argument('--cert-manager', dest="cert_manager", type=str, default="")
   parser.add_argument('--cluster-domain', dest="cluster_domain", type=str, default="cluster.local")
   parser.add_argument('--pmm', dest="pmm", type=str, default="")
-  parser.add_argument('--minio', dest="minio", action='store_true')
+  parser.add_argument('--minio', dest="minio", type=str, nargs='?')
   parser.add_argument('--backup-type', dest="backup_type", type=str, default="")
   parser.add_argument('--bucket', dest="bucket", type=str, default="")
   parser.add_argument('--gcs-key', dest="gcs_key", type=str, default="")
@@ -1094,6 +1160,7 @@ def main():
   if args.namespace == "":
     args.namespace = get_operator_ns(args.operator_name)
 
+
   if not args.info:
     if args.operator_name == "" and args.kube_fledged != "":
       run_kube_fledged_helm(args.helm_path)
@@ -1102,10 +1169,14 @@ def main():
     if args.helm:
       if args.cert_manager != "" and args.operator_name == "":
         run_cert_manager_helm(args.helm_path, args.cert_manager) # cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager)
+      if args.ingress == "nginx" and args.operator_name == "":
+        deploy_ingress_nginx(args)
       setup_operator_helm(args)
     else:
       if args.cert_manager != "" and args.operator_name == "":
         run_cert_manager(args.cert_manager) # cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager)
+      if args.ingress == "nginx" and args.operator_name == "":
+        deploy_ingress_nginx(args)
       setup_operator(args)
     if args.ingress == "nginx":
       setup_ingress_nginx(args)
