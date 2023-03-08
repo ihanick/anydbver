@@ -269,9 +269,11 @@ mirrors:
           run_k8s_operator_cmd.append("--minio-certs={}".format(node.minio_certs))
 
         if str(node.k8s_minio) == 'True':
-          run_k8s_operator_cmd.append("--minio")
-        else:
+          run_k8s_operator_cmd.append("--minio=2023.2.27,helm=bitnami")
+        elif node.k8s_minio[0].isdigit():
           run_k8s_operator_cmd.append("--minio={}".format(node.k8s_minio))
+        else:
+          run_k8s_operator_cmd.append("--minio=2023.2.27,{}".format(node.k8s_minio))
 
       if node.loki:
         run_k8s_operator_cmd.append("--loki")
