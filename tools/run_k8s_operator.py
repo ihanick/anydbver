@@ -240,7 +240,7 @@ def run_kube_fledged_helm(helm_path):
 
 def run_cert_manager_helm(helm_path, ver):
   run_helm(helm_path, ["helm", "repo", "add", "jetstack", "https://charts.jetstack.io"], "helm repo add problem")
-  run_helm(helm_path, ["helm", "repo", "update"], "helm repo update problem")
+  run_helm(helm_path, ["helm", "repo", "update", "jetstack"], "helm repo update problem")
   run_helm(helm_path, ["helm", "install", "cert-manager", "jetstack/cert-manager",
     "--namespace", "cert-manager",
     "--create-namespace",
@@ -374,7 +374,7 @@ def run_pmm_server(args, helm_path, pmm):
   if k8s_check_ready(pmm["namespace"], "app=monitoring,component=pmm"):
     return
   run_helm(helm_path, ["helm", "repo", "add", pmm["helm_repo_name"], pmm["helm_repo_url"] ], "helm repo add problem")
-  run_helm(helm_path, ["helm", "repo", "update"], "helm repo update problem")
+  run_helm(helm_path, ["helm", "repo", "update", pmm["helm_repo_name"] ], "helm repo update problem")
 
   if pmm["helm_repo_name"] == "percona":
     helm_pmm_install_cmd = ["helm", "install", "monitoring", "percona/pmm",
@@ -415,6 +415,12 @@ def run_pmm_server(args, helm_path, pmm):
     helm_pmm_install_cmd.append("--namespace")
     helm_pmm_install_cmd.append("default")
 
+  if pmm["dbaas"]:
+    helm_pmm_install_cmd.append("--set-string")
+    helm_pmm_install_cmd.append('pmmEnv.ENABLE_DBAAS=1')
+    helm_pmm_install_cmd.append("--set-string")
+    helm_pmm_install_cmd.append('pmmEnv.ENABLE_BACKUP_MANAGEMENT=1')
+
   run_helm(helm_path, helm_pmm_install_cmd,
     "helm pmm install problem")
   if not k8s_wait_for_ready(pmm["namespace"], pmm["labels"]):
@@ -436,10 +442,13 @@ def run_pmm_server(args, helm_path, pmm):
         "--data-binary", """{"orgId": 1, "name": "Loki", "type": "loki", "typeLogoUrl": "", "access": "proxy", "url": "http://loki-stack.loki-stack.svc.cluster.local:3100", "password": "", "user": "", "database": "", "basicAuth": false, "basicAuthUser": "", "basicAuthPassword": "", "withCredentials": false, "isDefault": false, "jsonData": {}, "secureJsonFields": {}, "version": 1, "readOnly": false }""" ], "can't setup loki datasource", r"data source with the same name already exists")
     logger.info("Added loki to PMM: {}".format(msg))
   if pmm["dbaas"]:
-    msg = run_get_line(
-      ["bash", "-c", """kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service."""+pmm["namespace"]+""".svc.cluster.local/v1/Settings/Change --header 'Accept: application/json' --data '{"enable_dbaas": true}';kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service."""+pmm["namespace"]+""".svc.cluster.local/v1/Settings/Change --header 'Accept: application/json' --data '{"enable_backup_management": true}';sleep 10; kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service."""+pmm["namespace"]+""".svc.cluster.local/v1/management/DBaaS/Kubernetes/UnRegister --header 'Accept: application/json' --data "{ \\"kubernetes_cluster_name\\": \\"default-pmm-cluster\\" }" ; kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service."""+pmm["namespace"]+""".svc.cluster.local/v1/management/DBaaS/Kubernetes/Register --header 'Accept: application/json' --data "{ \\"kubernetes_cluster_name\\": \\"my-cluster\\", \\"kube_auth\\": { \\"kubeconfig\\": \\"$(kubectl config view --flatten --minify | sed -e ':a' -e 'N' -e '$!ba' -e 's/\\n/\\\\n/g' -re 's/0\.0\.0\.0:[0-9]+/kubernetes.default.svc.cluster.local:443/')\\" }}" """],
-      "Cann't enable DBaaS"
-    )
+    msg = ""
+    # sleep 10; kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service."""+pmm["namespace"]+""".svc.cluster.local/v1/management/DBaaS/Kubernetes/UnRegister --header 'Accept: application/json' --data "{ \\"kubernetes_cluster_name\\": \\"default-pmm-cluster\\" }" ; 
+    # kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service."""+pmm["namespace"]+""".svc.cluster.local/v1/Settings/Change --header 'Accept: application/json' --data '{"enable_dbaas": true}';kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service."""+pmm["namespace"]+""".svc.cluster.local/v1/Settings/Change --header 'Accept: application/json' --data '{"enable_backup_management": true}';
+    #msg = run_get_line(
+    #  ["bash", "-c", """kubectl run -i --rm --restart=Never percona-dbaas-setup --image=curlimages/curl -- curl -i http://admin:"""+pass_encoded+"""@monitoring-service."""+pmm["namespace"]+""".svc.cluster.local/v1/management/DBaaS/Kubernetes/Register --header 'Accept: application/json' --data "{ \\"kubernetes_cluster_name\\": \\"my-cluster\\", \\"kube_auth\\": { \\"kubeconfig\\": \\"$(kubectl config view --flatten --minify | sed -e ':a' -e 'N' -e '$!ba' -e 's/\\n/\\\\n/g' -re 's/0\.0\.0\.0:[0-9]+/kubernetes.default.svc.cluster.local:443/')\\" }}" """],
+    #  "Cann't enable DBaaS"
+    #)
     logger.info("Added DBaaS to PMM: {}".format(msg))
 
 def soft_params(opt):
@@ -511,7 +520,7 @@ def run_minio_server(args):
       "can't create minio tls secret", "already exists")
 
   run_helm(args.helm_path, ["helm", "repo", "add", "bitnami", "https://charts.bitnami.com/bitnami"], "helm repo add problem")
-  run_helm(args.helm_path, ["helm", "repo", "update"], "helm repo update problem")
+  run_helm(args.helm_path, ["helm", "repo", "update", "bitnami"], "helm repo update problem")
   helm_cmd = ["helm", "install", "minio-service", "bitnami/minio",
       "--set", "fullnameOverride=minio-service",
       "--set", "auth.rootUser=REPLACE-WITH-AWS-ACCESS-KEY",
