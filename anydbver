@@ -369,10 +369,10 @@ mirrors:
           if operator_subversion.startswith("helm="):
             run_k8s_operator_cmd.append("--helm")
         logger.info("Starting Percona Server for MongoDB in kubernetes managed by Percona operator {}".format(node.k8s_mongo))
-        run_k8s_operator_cmd.append("--operator=percona-server-mongodb-operator")
-        run_k8s_operator_cmd.append("--version={}".format(operator_version))
+        run_cmd.append("--operator=percona-server-mongodb-operator")
+        run_cmd.append("--version={}".format(operator_version))
         if node.db_version:
-          run_k8s_operator_cmd.append("--db-version={}".format(node.db_version))
+          run_cmd.append("--db-version={}".format(node.db_version))
         run_fatal(run_cmd, "Can't run the operator")
 
   if args.provider != "kubectl":
@@ -1528,7 +1528,7 @@ def handle_non_deployment_commands():
     sys.exit(0)
   if args.ssh:
     host = "default"
-    if args.ssh == "":
+    if args.ssh != "":
       host = args.ssh
     ssh_login(args.namespace, host)
     sys.exit(0)

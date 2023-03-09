@@ -95,7 +95,7 @@
     (package_info or db_systemd_service != '' or (soft != '' and 'systemd_service' in os[dist][soft] and os[dist][soft].systemd_service)  ) and
     ('garbd' not in db_features.split(','))
   command:
-    cmd: systemctl start "{{ package_info['systemd_service'] if package_info else os[dist][soft].systemd_service if soft else db_systemd_service }}"
+    cmd: systemctl start "{{ package_info['systemd_service'] if package_info and 'systemd_service' in package_info else os[dist][soft].systemd_service if soft else db_systemd_service }}"
 
 - name: Sample databases
   when: sample_db != ''
