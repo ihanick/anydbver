@@ -903,10 +903,11 @@ def setup_operator(args):
   if args.operator_name == "":
     return
 
+  cr_yaml_path = str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve())
   prepare_operator_repository(data_path.resolve(), args.operator_name, args.operator_version)
   if not args.smart_update and args.operator_name not in ("percona-server-mysql-operator") \
-      and not file_contains(str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()),'pg.percona.com/v2'):
-    merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), str((Path(args.conf_path) / "cr-smart-update.yaml").resolve()) )
+      and not file_contains(cr_yaml_path,'pg.percona.com/v2'):
+    merge_cr_yaml(args.yq, cr_yaml_path, str((Path(args.conf_path) / "cr-smart-update.yaml").resolve()) )
 
   if not k8s_wait_for_ready('kube-system', 'k8s-app=kube-dns'):
     raise Exception("Kubernetes cluster is not available")
@@ -918,6 +919,8 @@ def setup_operator(args):
       args.cluster_name = "cluster1"
     else:
       run_fatal(["sed", "-i", "-re", r"s/: cluster1\>/: {}/".format(args.cluster_name), "./deploy/cr.yaml"], "fix cluster name in cr.yaml")
+    if args.db_version:
+      run_fatal([args.yq,'.spec.pxc.image = "{}"'.format(args.db_version), "-i", cr_yaml_path],"Can't set PXC version")
     if re.match('^[0-9\.]*$', args.operator_version) and StrictVersion(args.operator_version) < StrictVersion("1.11.0"):
       args.users_secret = "my-cluster-secrets"
     else:
@@ -1163,7 +1166,7 @@ def main():
     args.data_path = (Path(args.anydbver_path) / 'data' / 'k8s').resolve()
   else:
     args.data_path = (Path(args.data_path)).resolve()
-  args.conf_path = (Path(__file__).resolve().parents[2] / 'configs' / 'k8s').resolve()
+  args.conf_path = (Path(__file__).resolve().parents[1] / 'configs' / 'k8s').resolve()
   args.yq = str((Path(__file__).parents[0] / 'yq').resolve())
 
   if args.namespace == "":

@@ -172,6 +172,8 @@ def soft_params(opt):
       params["bucket"] = param.split("=",1)[1]
     if param.startswith("gcs-key="):
       params["gcs-key"] = param.split("=",1)[1]
+    if param.startswith("db_version=") or param.startswith("db-version="):
+      params["db_version"] = param.split("=",1)[1]
     if param.startswith("standby"):
       if '=' in param and param.startswith("standby="):
         params["standby"] = param.split("=",1)[1]
@@ -319,6 +321,8 @@ mirrors:
               run_cmd.append("--sql={}".format(params["sql"]))
             if "proxysql" in params and params["proxysql"]:
               run_cmd.append("--proxysql")
+            if "db_version" in params and params["db_version"]:
+              run_cmd.append("--db-version={}".format(params["db_version"]))
           else:
             run_cmd.append("--version={}".format(pxc))
           run_fatal(run_cmd, "Can't run the operator")
