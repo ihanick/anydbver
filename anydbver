@@ -160,30 +160,18 @@ def soft_params(opt):
   (operator_version, operator_params) = opt.split(",",1)
   params["version"] = operator_version
   for param in operator_params.split(","):
-    if param.startswith("name="):
-      params["cluster-name"] = param.split("=",1)[1]
-    if param.startswith("namespace=") or param.startswith("ns=") :
-      params["namespace"] = param.split("=",1)[1]
-    if param.startswith("sql=") or param.startswith("s3sql=") :
-      params["sql"] = param.split("=",1)[1]
-    if param.startswith("backup-type=") or param.startswith("backup_type=") :
-      params["backup-type"] = param.split("=",1)[1]
-    if param.startswith("bucket="):
-      params["bucket"] = param.split("=",1)[1]
-    if param.startswith("gcs-key="):
-      params["gcs-key"] = param.split("=",1)[1]
-    if param.startswith("db_version=") or param.startswith("db-version="):
-      params["db_version"] = param.split("=",1)[1]
-    if param.startswith("standby"):
-      if '=' in param and param.startswith("standby="):
-        params["standby"] = param.split("=",1)[1]
-      else:
-        params["standby"] = True
-    if param.startswith("proxysql"):
-      if '=' in param and param.startswith("proxysql="):
-        params["proxysql"] = param.split("=",1)[1]
-      else:
-        params["proxysql"] = True
+    if '=' in param:
+      (k,v) = param.split("=",1)
+      k.replace('_','-')
+      if k == "ns":
+        k = "namespace"
+      if k == "s3sql":
+        k = "sql"
+      if k == "s3sql":
+        k = "sql"
+      params[k] = v
+    else:
+      params[param] = True
 
   return params
 
@@ -242,12 +230,39 @@ mirrors:
         if node.k8s_cluster_domain:
           k3d_create_cmd.append("--k3s-arg")
           k3d_create_cmd.append("--cluster-domain={}@server:0".format(node.k8s_cluster_domain))
-        if node.ingress_port:
-          k3d_create_cmd.append("--k3s-arg")
-          k3d_create_cmd.append("--disable=traefik@server:0")
-          k3d_create_cmd.append("-p")
-          k3d_create_cmd.append("{ingress_port}:{ingress_port}@loadbalancer".format(ingress_port=node.ingress_port))
-          run_k8s_operator_cmd.append("--ingress=nginx")
+        if node.ingress:
+          params = soft_params(node.ingress)
+          node.ingress_port = params["version"]
+          if "traefik" in params:
+            node.ingress_type = "traefik"
+          elif "nginx" in params:
+            node.ingress_type = "nginx"
+          elif "traefik-metallb" in params:
+            """
+            helm install -n kube-system -f traefik-values.yaml traefik traefik/traefik
+            bash tools/setup_metallb.sh
+            """
+            node.ingress_type = "traefik-metallb"
+          else:
+            node.ingress_type = "nginx"
+
+          if node.ingress_type is None or node.ingress_type == "":
+            node.ingress_type = 'traefik'
+          if node.ingress_type != 'traefik':
+            k3d_create_cmd.append("--k3s-arg")
+            k3d_create_cmd.append("--disable=traefik@server:0")
+            run_k8s_operator_cmd.append("--ingress={}".format(node.ingress_type))
+
+          if node.ingress_type == 'traefik-metallb':
+            k3d_create_cmd.append("--no-lb")
+          if node.ingress_type in ("nginx", "traefik"):
+            k3d_create_cmd.append("-p")
+            k3d_create_cmd.append("{ingress_port}:{ingress_port}@loadbalancer".format(ingress_port=node.ingress_port))
+            k3d_create_cmd.append("-p")
+            k3d_create_cmd.append("{ingress_port}:{ingress_port}/udp@loadbalancer".format(ingress_port=node.ingress_port))
+            if "http" in params:
+              k3d_create_cmd.append("-p")
+              k3d_create_cmd.append("{port}:80@loadbalancer".format(port=params["http"]))
           run_k8s_operator_cmd.append("--ingress-port={}".format(node.ingress_port))
         k3d_create_cmd.append(cluster)
         run_fatal(k3d_create_cmd, "Can't create k3d cluster")
@@ -321,8 +336,8 @@ mirrors:
               run_cmd.append("--sql={}".format(params["sql"]))
             if "proxysql" in params and params["proxysql"]:
               run_cmd.append("--proxysql")
-            if "db_version" in params and params["db_version"]:
-              run_cmd.append("--db-version={}".format(params["db_version"]))
+            if "db-version" in params and params["db-version"]:
+              run_cmd.append("--db-version={}".format(params["db-version"]))
           else:
             run_cmd.append("--version={}".format(pxc))
           run_fatal(run_cmd, "Can't run the operator")
@@ -1291,6 +1306,7 @@ def parse_node(args):
   parser.add_argument('--sql', dest="sql_file", type=str, nargs='?')
   parser.add_argument('--k3s', dest="k3s", type=str, nargs='?')
   parser.add_argument('--nginx-ingress', '--ingress-port', dest="ingress_port", type=str, nargs='?')
+  parser.add_argument('--ingress', type=str, nargs='?')
   args = parser.parse_args(args)
 
   find_version(args)
