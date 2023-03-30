@@ -243,6 +243,8 @@ mirrors:
             bash tools/setup_metallb.sh
             """
             node.ingress_type = "traefik-metallb"
+          elif "istio" in params:
+            node.ingress_type = "istio"
           else:
             node.ingress_type = "nginx"
 
@@ -255,7 +257,7 @@ mirrors:
 
           if node.ingress_type == 'traefik-metallb':
             k3d_create_cmd.append("--no-lb")
-          if node.ingress_type in ("nginx", "traefik"):
+          if node.ingress_type in ("nginx", "traefik", "istio"):
             k3d_create_cmd.append("-p")
             k3d_create_cmd.append("{ingress_port}:{ingress_port}@loadbalancer".format(ingress_port=node.ingress_port))
             k3d_create_cmd.append("-p")
