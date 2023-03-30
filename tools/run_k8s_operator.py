@@ -1032,6 +1032,12 @@ def deploy_ingress_nginx(args):
   run_helm(args.helm_path, nginx_helm_install_cmd, "Can't nginx ingress with helm")
 
 
+def deploy_ingress_istio(args):
+  run_helm(args.helm_path, ["helm", "repo", "add", "istio", "https://istio-release.storage.googleapis.com/charts"], "helm repo add problem")
+  run_helm(args.helm_path, ["helm", "install", "istio-base", "istio/base", "-n", "istio-system", "--create-namespace"], "Can't install istio base")
+  run_helm(args.helm_path, ["helm", "install", "istiod", "istio/istiod", "-n", "istio-system", "--wait"], "Can't install istiod")
+  run_helm(args.helm_path, ["helm", "install", "istio-ingress", "istio/gateway", "-n", "istio-system", "--wait"], "Can't install istio ingress")
+
 def setup_ingress_nginx(args):
   ingress_svc = []
   ingress_ns = {}
@@ -1183,12 +1189,16 @@ def main():
         run_cert_manager_helm(args.helm_path, args.cert_manager) # cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager)
       if args.ingress == "nginx" and args.operator_name == "":
         deploy_ingress_nginx(args)
+      if args.ingress == "istio" and args.operator_name == "":
+        deploy_ingress_istio(args)
       setup_operator_helm(args)
     else:
       if args.cert_manager != "" and args.operator_name == "":
         run_cert_manager(args.cert_manager) # cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager)
       if args.ingress == "nginx" and args.operator_name == "":
         deploy_ingress_nginx(args)
+      if args.ingress == "istio" and args.operator_name == "":
+        deploy_ingress_istio(args)
       setup_operator(args)
     if args.ingress == "nginx":
       setup_ingress_nginx(args)
