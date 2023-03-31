@@ -48,6 +48,8 @@ mysql
 ```bash
 anydbver deploy k3d k8s-pg:1.3.0,backup-type=gcs,bucket=my-gcs-bucket,gcs-key=/full/path/to/gcloud/key.json
 ```
+* 2.0.0:
+```./anydbver deploy k3d  cert-manager:1.11.0 k8s-minio minio-certs:self-signed k8s-pg:2.0.0,namespace=pgo k8s-pg:2.0.0,namespace=pgo1,standby```
 
 ### Percona XtraDB cluster
 * Start PXC cluster with ProxySQL, PMM, Loki, load `world` database, allow access local IP address 192.168.1.102 by domain name https://pmm.192-168-1-102.nip.io/

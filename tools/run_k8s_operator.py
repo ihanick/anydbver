@@ -68,12 +68,22 @@ def k8s_wait_for_job_complete(ns, jobname, timeout=COMMAND_TIMEOUT):
   for i in range(timeout // 2):
     s = datetime.datetime.now()
     if run_fatal(["kubectl", "-n", ns, "wait", "--for=condition=complete", jobname], "Job complete wait failed",
-        r"not found|timed out waiting for the condition", False) == 0:
+        r"not found|timed out waiting for the condition|no matching resources found", False) == 0:
       return True
     if (datetime.datetime.now() - s).total_seconds() < 1.5:
       time.sleep(2)
   return False
 
+def k8s_wait_for_job_complete_label(ns, label, timeout=COMMAND_TIMEOUT):
+  logger.info("Waiting for: kubectl wait --for=condition=complete -n  {} job -l {}".format(ns, label))
+  for i in range(timeout // 2):
+    s = datetime.datetime.now()
+    if run_fatal(["kubectl", "-n", ns, "wait", "--for=condition=complete", "job", "-l", label], "Job complete wait failed",
+        r"not found|timed out waiting for the condition|no matching resources found", False) == 0:
+      return True
+    if (datetime.datetime.now() - s).total_seconds() < 1.5:
+      time.sleep(2)
+  return False
 
 def wait_for_success(cmd_with_args, fail_with_msg,ignore_error_pattern, timeout=COMMAND_TIMEOUT):
   logger.info("Waiting for: {}".format(subprocess.list2cmdline(cmd_with_args)))
@@ -152,7 +162,7 @@ def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, 
     op_env = os.environ.copy()
     op_env["PGO_NAMESPACE"] = ns
     op_env["PGO_TARGET_NAMESPACE"] = ns
-    run_fatal(["kubectl", "create", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator", env=op_env)
+    run_fatal(["kubectl", "create", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator", r"already exists", env=op_env)
     if not k8s_wait_for_ready(ns, "pg.percona.com/control-plane=postgres-operator"):
       raise Exception("Kubernetes operator is not starting")
   else:
@@ -686,6 +696,41 @@ spec:
       f.writelines(minio_storage)
     run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", "./deploy/backup-s3.yaml"], "Can't apply s3 secrets")
     merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), minio_storage_path )
+  if args.operator_name == "percona-postgresql-operator" and file_contains('./deploy/cr.yaml','pg.percona.com/v2'):
+    cr_yaml_path = str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve())
+    run_fatal(
+      [
+        args.yq,
+        '(del(.spec.backups.pgbackrest.repos[0].volume))|'
+        '(.spec.backups.pgbackrest.configuration[0].secret.name="cluster1-pgbackrest-secrets")|'
+        '(.spec.backups.pgbackrest.repos[0].name="repo1")|'
+        '(.spec.backups.pgbackrest.repos[0].s3.bucket="operator-testing")|'
+        '(.spec.backups.pgbackrest.repos[0].s3.region="us-east-1")|'
+        '(.spec.backups.pgbackrest.repos[0].s3.endpoint="{proto}://minio-service.default.svc.{cluster_domain}:{minio_port}")'.format(
+          proto="https", cluster_domain=args.cluster_domain, minio_port=443),
+        "-i",
+        cr_yaml_path], "enable minio backups")
+    minio_cred_path = str((deploy_path / "{}-backrest-backrest-secrets.yaml".format(args.cluster_name)).resolve())
+    s3_conf="""\
+[global]
+repo1-s3-key=REPLACE-WITH-AWS-ACCESS-KEY
+repo1-s3-key-secret=REPLACE-WITH-AWS-SECRET-KEY
+repo1-storage-verify-tls=n
+repo1-s3-uri-style=path
+"""
+    pg_minio_secret_repo = """\
+apiVersion: v1
+data:
+  s3.conf: {s3conf}
+kind: Secret
+metadata:
+  name: cluster1-pgbackrest-secrets
+type: Opaque
+""".format(s3conf = base64.b64encode(bytes(s3_conf, 'utf-8')).decode('utf-8'))
+    with open(minio_cred_path,"w+") as f:
+      f.writelines(pg_minio_secret_repo)
+    run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", minio_cred_path], "Can't apply s3 secrets")
+
   if args.operator_name == "percona-postgresql-operator" and not file_contains('./deploy/cr.yaml','pg.percona.com/v2'):
     if args.minio_certs == "":
       logger.warning("Percona Postgresql Operator MinIO backups requires TLS")
@@ -934,8 +979,17 @@ def setup_operator(args):
       args.cluster_name = "cluster1"
     else:
       run_fatal(["sed", "-i", "-re", r"s/: cluster1\>/: {}/".format(args.cluster_name), "./deploy/cr.yaml"], "fix cluster name in cr.yaml")
-    if args.standby:
+    if args.standby and args.operator_version.startswith("1."):
       run_fatal(["sed", "-i", "-re", r"s/standby: false/standby: true/".format(args.cluster_name), "./deploy/cr.yaml"], "fix cluster name in cr.yaml")
+    elif args.standby:
+      run_fatal(
+        [
+          args.yq,
+          '(.spec.standby.enabled=true)|'
+          '(.spec.standby.repoName="repo1")',
+          "-i",
+          "./deploy/cr.yaml"], "enable minio backups")
+
 
 
   if args.operator_name == "percona-server-mongodb-operator" and args.helm != True:
@@ -984,8 +1038,11 @@ def info_mongo_operator(ns, cluster_name):
 def populate_mongodb(ns, js_file):
   pass
 
-def populate_pg_db(ns, cluster_name, sql_file):
-  k8s_wait_for_job_complete(ns ,"job/backrest-backup-{}".format(cluster_name))
+def populate_pg_db(ver, ns, cluster_name, sql_file):
+  if ver.startswith("1."):
+    k8s_wait_for_job_complete(ns ,"job/backrest-backup-{}".format(cluster_name))
+  else:
+    k8s_wait_for_job_complete_label(ns ,"postgres-operator.crunchydata.com/pgbackrest-backup=replica-create")
   print("kubectl -n {} get PerconaPGCluster cluster1".format(subprocess.list2cmdline([ns])))
   for container in get_containers_list(ns,"name=cluster1"):
     if container != "":
@@ -1120,7 +1177,7 @@ def populate_db(args):
   if args.operator_name == "percona-server-mongodb-operator":
     populate_mongodb(args.namespace, args.js_file)
   if args.operator_name == "percona-postgresql-operator":
-    populate_pg_db(args.namespace, args.cluster_name, args.sql_file)
+    populate_pg_db(args.operator_version, args.namespace, args.cluster_name, args.sql_file)
   if args.operator_name == "percona-xtradb-cluster-operator":
     populate_pxc_db(args.namespace, args.sql_file, args.helm, args.cluster_name)
 
