@@ -1280,6 +1280,8 @@ def parse_node(args):
   parser.add_argument('--postgresql', '--postgres', '--pg', type=str, nargs='?')
   parser.add_argument('--pgbackrest', type=str, nargs='?')
   parser.add_argument('--wal', '--postgres-wal', type=str, nargs='?')
+  parser.add_argument('--pg-stat-monitor','--pg_stat_monitor', type=str, nargs='?')
+  parser.add_argument('--development', type=str, nargs='?')
   parser.add_argument('--leader', '--master', '--primary', type=str, nargs='?')
   parser.add_argument('--percona-xtrabackup', type=str, nargs='?')
   parser.add_argument('--debug-packages', '--debug', type=str, nargs='?')
@@ -1331,6 +1333,8 @@ def apply_node_actions(ns, node, actions):
   env = {"DB_USER":"dba", "DB_PASS":"secret", "START":"1"}
   db_features = []
   #print('Node: ', node, 'Actions: ',actions)
+  if actions.development is not None:
+    db_features.append("development")
   if actions.ldap is not None :
     extra_vars["extra_ldap_server"] = "1"
     env["LDAP_SERVER"] = "1"
@@ -1386,6 +1390,8 @@ def apply_node_actions(ns, node, actions):
     env["DB_PASS"]= "verysecretpassword1^"
     if actions.wal == "logical":
       extra_vars["extra_db_opts_file"] = "postgresql/logical.conf"
+  if actions.pg_stat_monitor:
+    extra_vars["extra_pg_stat_monitor"] = "1"
   if actions.postgresql is not None:
     extra_vars["extra_postgresql_version"] = actions.postgresql
     extra_vars["extra_db_user"] = "postgres"
