@@ -952,6 +952,13 @@ def update_versions():
     ])
 
 
+  generate_versions_file("percona-server.el7.txt",
+    [
+      {"url": "https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/",
+      "pattern": r'Percona-Server-server-\d\d-(\d[^"]*).el7.x86_64.rpm'},
+      {"url": "https://repo.percona.com/ps-80/yum/release/7/RPMS/x86_64/",
+      "pattern": r'percona-server-server-(\d[^"]*)[.]el7.x86_64.rpm'}
+    ])
   generate_versions_file("percona-server.el8.txt",
     [
       {"url": "https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/",
