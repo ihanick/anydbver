@@ -1,5 +1,12 @@
 ---
 # tasks file for mysql
+- name: "Package info sql"
+  ansible.builtin.debug:
+    msg: "{{ package_info_sql }}"
+- name: "Package info"
+  ansible.builtin.debug:
+    msg: "{{ package_info }}"
+
 - name: Enable EPEL
   when: >
     (orchestrator_version != '' or percona_orchestrator_version != ''
