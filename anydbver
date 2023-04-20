@@ -654,9 +654,9 @@ def save_mysql_server_versions_to_sqlite(osver):
       version, os, arch, repo_url, repo_file, repo_enable_str,
       systemd_service, cnf_file, packages,
       debug_packages,
-      tests_packages, mysql_shell_packages
+      tests_packages, mysql_shell_packages, mysql_router_packages
     )
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
     """
   for line in vers:
     ver = line.rstrip()
@@ -688,7 +688,8 @@ def save_mysql_server_versions_to_sqlite(osver):
         '|'.join(["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]),
         '|'.join(dbg_pkg),
         'mysql-community-test-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
-        mysql_shell_pkg
+        mysql_shell_pkg,
+        'mysql-router-community-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver)
       )
 
     if len(project) > 1:
