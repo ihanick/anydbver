@@ -157,6 +157,9 @@ def test(name):
 
 def soft_params(opt):
   params = {}
+  if ',' not in opt:
+    params["version"] = opt
+    return params
   (operator_version, operator_params) = opt.split(",",1)
   params["version"] = operator_version
   for param in operator_params.split(","):
@@ -678,7 +681,7 @@ def save_mysql_server_versions_to_sqlite(osver):
         repo_url = 'http://repo.mysql.com/mysql80-community-release-el9-1.noarch.rpm'
 
       mysql_shell_pkg = 'https://cdn.mysql.com/archives/mysql-shell/mysql-shell'
-      if ver.startswith('8.0.31'):
+      if ver.startswith('8.0.33'):
         mysql_shell_pkg = 'http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell'
       mysql_shell_pkg = '{url}-{ver}.{osver}.x86_64.rpm'.format(url=mysql_shell_pkg,ver=ver,osver=osver)
       project = (
@@ -851,9 +854,9 @@ def save_percona_server_versions_to_sqlite(osver):
       version, os, arch, repo_url, repo_file, repo_enable_str,
       systemd_service, cnf_file, packages,
       debug_packages, rocksdb_packages,
-      tests_packages, mysql_shell_packages
+      tests_packages, mysql_shell_packages, mysql_router_packages
     )
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """
   for line in vers:
     ver = line.rstrip()
@@ -871,7 +874,8 @@ def save_percona_server_versions_to_sqlite(osver):
         'gdb|percona-server-debuginfo-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
         'percona-server-rocksdb-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
         'percona-server-test-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
-        'percona-mysql-shell-{ver}-1.{osver}.x86_64'.format(ver=ver.split('-',1)[0],osver=osver)
+        'percona-mysql-shell-{ver}-1.{osver}.x86_64'.format(ver=ver.split('-',1)[0],osver=osver),
+        'percona-mysql-router-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver)
       )
     elif ver.startswith('5.7') and osver.startswith('el'):
       pkgs = ['Percona-Server-shared-compat-57','Percona-Server-shared-57','Percona-Server-client-57','Percona-Server-server-57']
@@ -884,7 +888,7 @@ def save_percona_server_versions_to_sqlite(osver):
         'gdb|Percona-Server-57-debuginfo-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
         'Percona-Server-rocksdb-57-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
         'Percona-Server-test-57-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
-        ''
+        '',''
       )
     elif ver.startswith('5.6') and osver.startswith('el'):
       pkgs = ['Percona-Server-shared-56','Percona-Server-client-56','Percona-Server-server-56']
@@ -897,7 +901,7 @@ def save_percona_server_versions_to_sqlite(osver):
         'gdb|Percona-Server-56-debuginfo-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
         'Percona-Server-rocksdb-56-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
         'Percona-Server-test-56-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
-        ''
+        '',''
       )
     elif ver.startswith('5.5') and osver.startswith('el'):
       pkgs = ['Percona-Server-shared-55','Percona-Server-client-55','Percona-Server-server-55']
@@ -910,7 +914,7 @@ def save_percona_server_versions_to_sqlite(osver):
         'gdb|Percona-Server-55-debuginfo-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
         'Percona-Server-rocksdb-55-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
         'Percona-Server-test-55-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
-        ''
+        '',''
       )
     if len(project) > 1:
       cur.execute(sql, project)
@@ -1359,6 +1363,10 @@ def apply_node_actions(ns, node, actions):
       env["REPLICA_SET"] = actions.replica_set
       os.system("test -f secret/{rs}-keyfile || openssl rand -base64 756 > secret/{rs}-keyfile".format(rs=actions.replica_set))
   if actions.percona_server is not None:
+    params = soft_params(actions.percona_server)
+    actions.percona_server = params["version"]
+    if "mysql-router" in params:
+      actions.mysql_router = 'percona-server'
     extra_vars["extra_percona_server_version"] = actions.percona_server
     extra_vars["extra_db_opts_file"] = "mysql/async-repl-gtid.cnf"
     extra_vars["extra_db_user"] = "root"
@@ -1379,6 +1387,10 @@ def apply_node_actions(ns, node, actions):
   if actions.k3s is not None:
     extra_vars["extra_k3s_version"] = actions.k3s
   if actions.mysql_server is not None:
+    params = soft_params(actions.mysql_server)
+    actions.mysql_server = params["version"]
+    if "mysql-router" in params:
+      actions.mysql_router = 'mysql-server'
     extra_vars["extra_mysql_version"] = actions.mysql_server
     extra_vars["extra_db_opts_file"] = "mysql/async-repl-gtid.cnf"
     extra_vars["extra_db_user"] = "root"

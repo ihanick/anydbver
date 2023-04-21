@@ -121,11 +121,8 @@ Deploy:
 ./anydbver deploy ps:8.0.22 hn:ps0 node1 ps:8.0.22 hn:ps1 node2 ps:8.0.22 hn:ps2 master:ps0 node2 ps:8.0.22 master:ps1 channel:ps1ch
 ./anydbver deploy node0 ps s3sql:"http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql" node1 ps master:node0
 ./anydbver deploy mysql
-./anydbver deploy \
-  hn:mysql_rs0_gr0 mysql:8.0.18 group-replication \
-  node1 hn:mysql_rs0_gr1 mysql:8.0.18 group-replication master:default \
-  node2 hn:mysql_rs0_gr2 mysql:8.0.18 group-replication master:default \
-  node3 hn:mysql_rs0_router mysql-router:8.0.18 master:default
+./anydbver deploy node0 mysql:8.0 group-replication node1 mysql:8.0 group-replication master:node0 node2 mysql:8.0,mysql-router master:node0
+./anydbver deploy node0 ps:8.0 group-replication node1 ps:8.0 group-replication master:node0 node2 ps:8.0,mysql-router master:node0
 ./anydbver deploy mariadb:10.4
 ./anydbver deploy maria:10.4
 ./anydbver deploy mariadb node1 mariadb master:default
