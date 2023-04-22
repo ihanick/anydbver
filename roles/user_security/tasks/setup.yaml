@@ -40,3 +40,8 @@
     cmd: /bin/bash /vagrant/tools/setup_kerberos_client.sh "{{db_user}}" "{{db_password}}" "{{ 'yes' if samba_kerberos != '' else 'no' }}"
     creates: /root/kerberos-client.configured
 
+- name: start Python KMIP server
+  when: kmip_server != ''
+  systemd:
+    name: pykmip-server.service
+    state: started
