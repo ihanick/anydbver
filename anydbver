@@ -1285,6 +1285,7 @@ def parse_node(args):
   parser.add_argument('--group-replication', '--innodb-cluster', type=str, nargs='?')
   parser.add_argument('--cluster-name', '--cluster', type=str, default='cluster1', nargs='?')
   parser.add_argument('--ldap', type=str, nargs='?')
+  parser.add_argument('--kmip-server', type=str, nargs='?')
   parser.add_argument('--percona-server-mongodb', '--psmdb', type=str, nargs='?')
   parser.add_argument('--ldap-master', type=str, nargs='?')
   parser.add_argument('--replica-set', type=str, nargs='?')
@@ -1347,6 +1348,9 @@ def apply_node_actions(ns, node, actions):
   #print('Node: ', node, 'Actions: ',actions)
   if actions.development is not None:
     db_features.append("development")
+  if actions.kmip_server is not None :
+    extra_vars["extra_kmip_server"] = "1"
+    env["KMIP_SERVER"] = "1"
   if actions.ldap is not None :
     extra_vars["extra_ldap_server"] = "1"
     env["LDAP_SERVER"] = "1"

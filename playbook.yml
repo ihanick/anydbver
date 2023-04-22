@@ -31,6 +31,7 @@
     pmm_url: "{{ lookup('vars', 'extra_pmm_url', default=lookup('env','PMM_URL',default='') ) }}"
     vault_url: "{{ lookup('vars', 'extra_vault_url', default=lookup('env','VAULT_URL',default='') ) }}"
     vault_version: "{{ lookup('vars', 'extra_percona_vault_version', default=lookup('env', 'VAULT', default='') ) }}"
+    kmip_server: "{{ lookup('vars', 'extra_kmip_server', default=lookup('env', 'KMIP_SERVER', default='') ) }}"
     percona_postgresql_version: "{{ lookup('vars', 'extra_percona_postgresql_version', default=lookup('env', 'PPGSQL', default='') ) }}"
     percona_postgresql_version2: "{{ lookup('vars', 'extra_percona_postgresql_version2', default=lookup('env', 'PPGSQL2', default='') ) }}"
     python3_pg_version: "{{ lookup('vars', 'extra_python3_pg_version', default=lookup('env', 'PG_PYTHON3', default='') ) }}"
@@ -254,7 +255,7 @@
       include_tasks: roles/tools_and_monitoring/tasks/minio-client.yaml
 
     - name: User Security LDAP, PAM, Active Directory, Vault, Kerberos
-      when: vault_version != '' or samba_ad != '' or ldap_server != '' or ldap_server_ip != '' or kerberos_server != '' or kerberos_client != ''
+      when: vault_version != '' or samba_ad != '' or ldap_server != '' or ldap_server_ip != '' or kerberos_server != '' or kerberos_client != '' or kmip_server != ''
       include_role:
         name: user_security
 

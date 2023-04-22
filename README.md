@@ -430,6 +430,7 @@ ERROR! Specified hosts and/or --limit does not match any hosts
 * `k8s-pg-zalando`, Zalando Postgresql Operator
 * `k8s-pmm`
 * `k8s-pxc`
+* `kmip-server`, Installs PyKMIP server
 * `kube-config`
 * `ldap-master`, alias `ldap-leader`, OpenLDAP server node name
 * `ldap-server`, short `ldap`

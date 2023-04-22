@@ -1,5 +1,9 @@
 ---
 # tasks file for user_security
+- name: Install Python KMIP server
+  when: dist.startswith('el') and kmip_server != ''
+  install_pykmip:
+    state: installed
 - name: Install symas.com repo for openldap-servers
   when: dist == 'el8' and ldap_server != ''
   get_url:

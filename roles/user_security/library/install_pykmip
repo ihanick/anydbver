@@ -1,0 +1,57 @@
+#!/bin/bash
+changed="false"
+ok="false"
+
+source $1
+
+
+if [[ -f /usr/bin/dnf ]]  ; then
+  PKG=dnf
+elif [[ -f /usr/bin/yum ]]  ; then
+  PKG=yum
+fi
+ 
+
+$PKG install -y wget yum-utils make gcc openssl-devel bzip2-devel libffi-devel zlib-devel python3-pip
+$PKG groupinstall -y 'Development Tools'
+python3 -m pip install setuptools-rust
+pip3 install --upgrade pip
+python3 -m pip install pykmip cryptography pycryptodome
+
+
+git clone https://github.com/OpenKMIP/PyKMIP.git /opt/PyKMIP
+mkdir /opt/certs /opt/polices
+cp /opt/PyKMIP/examples/policy.json /opt/polices
+cd /opt/certs && \
+    python3 /opt/PyKMIP/bin/create_certificates.py
+
+echo "[server]
+hostname=0.0.0.0
+port=5696
+certificate_path=/opt/certs/server_certificate.pem
+key_path=/opt/certs/server_key.pem
+ca_path=/opt/certs/root_certificate.pem
+policy_path=/opt/polices
+logging_level=DEBUG
+auth_suite=TLS1.2
+enable_tls_client_auth=True" | tee /opt/PyKMIP/server.conf
+
+
+cat > /etc/systemd/system/pykmip-server.service <<EOF
+[Unit]
+Description=Python kmip server
+
+[Service]
+ExecStart=/usr/local/bin/pykmip-server -f /opt/PyKMIP/server.conf
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+
+changed="true"
+ok="true"
+msg="installed pykmip"
+
+printf '{"changed": %s, "ok": %s, "msg": "%s"}' "$changed" "$ok" "$msg"
