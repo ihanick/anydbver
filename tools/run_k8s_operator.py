@@ -696,7 +696,7 @@ spec:
       f.writelines(minio_storage)
     run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", "./deploy/backup-s3.yaml"], "Can't apply s3 secrets")
     merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), minio_storage_path )
-  if args.operator_name == "percona-postgresql-operator" and file_contains('./deploy/cr.yaml','pg.percona.com/v2'):
+  if args.operator_name == "percona-postgresql-operator" and file_contains('./deploy/cr.yaml','pg.percona.com/v2') and args.backup_type != "gcs":
     cr_yaml_path = str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve())
     run_fatal(
       [
@@ -731,7 +731,7 @@ type: Opaque
       f.writelines(pg_minio_secret_repo)
     run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", minio_cred_path], "Can't apply s3 secrets")
 
-  if args.operator_name == "percona-postgresql-operator" and not file_contains('./deploy/cr.yaml','pg.percona.com/v2'):
+  if args.operator_name == "percona-postgresql-operator" and not file_contains('./deploy/cr.yaml','pg.percona.com/v2') and args.backup_type != "gcs":
     if args.minio_certs == "":
       logger.warning("Percona Postgresql Operator MinIO backups requires TLS")
       return
