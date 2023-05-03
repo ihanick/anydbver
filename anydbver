@@ -287,8 +287,10 @@ mirrors:
         run_k8s_operator_cmd.append("--cluster-name={}".format(node.cluster_name))
 
       if node.k8s_minio:
-        if node.minio_certs:
+        if node.minio_certs or "certs=" in node.k8s_minio:
           run_k8s_operator_cmd.append("--minio-certs={}".format(node.minio_certs))
+          if not node.cert_manager:
+            node.cert_manager='True'
 
         if str(node.k8s_minio) == 'True':
           run_k8s_operator_cmd.append("--minio=2023.2.27,helm=bitnami")
@@ -308,7 +310,8 @@ mirrors:
 
       if node.cert_manager:
         if str(node.cert_manager) == 'True':
-          run_k8s_operator_cmd.append("--cert-manager")
+          CERT_MANAGER_DEFAULT_VERSION='1.7.2'
+          run_k8s_operator_cmd.append("--cert-manager={}".format(CERT_MANAGER_DEFAULT_VERSION))
         else:
           run_k8s_operator_cmd.append("--cert-manager={}".format(node.cert_manager))
 
