@@ -132,6 +132,7 @@ def prepare_operator_repository(data_path, operator_name, operator_version):
     os.chdir(data_path / operator_name)
     run_fatal(["git", "fetch"], "Can't fetch new changes from operator repository at {}".format(os.getcwd()))
     run_fatal(["git", "reset", "--hard"], "Can't reset operator repository")
+    run_fatal(["git", "pull"], "Can't pull operator repository")
     run_fatal(["git", "checkout", branch_name(operator_version)], "Can't checkout operator repository")
 
 def get_containers_list(ns,labels):
