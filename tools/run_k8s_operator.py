@@ -144,7 +144,7 @@ def info_pg_operator(ns,cluster_name):
       print("kubectl -n {} exec -it {} -- env PSQL_HISTORY=/tmp/.psql_history psql -U postgres".format(
         subprocess.list2cmdline([ns]), container))
 
-def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, bucket, gcs_key, yq):
+def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, bucket, gcs_key, yq, db_replicas):
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r's/namespace: "pgo"/namespace: "{}"/'.format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/cr.yaml"], "fix namespace in yaml")
@@ -152,6 +152,22 @@ def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, 
     run_fatal(["sed", "-i", "-re", r"s/standby: false\>/standby: true/", "./deploy/cr.yaml"], "enable standby in yaml")
   if db_ver != "":
     run_fatal(["sed", "-i", "-re", r"s/ppg[0-9.]+/ppg{}/".format(db_ver), "./deploy/cr.yaml"], "change PG major version")
+
+  if db_replicas and op_ver.startswith("1"):
+    run_fatal(
+    [
+      yq,
+      '.spec.pgReplicas.hotStandby.size={replicas}'.format(replicas=db_replicas),
+      "-i",
+      "./deploy/cr.yaml"], "Change number of replicas")
+  if db_replicas and op_ver.startswith("2"):
+    run_fatal(
+    [
+      yq,
+      '.spec.instances[0].replicas={replicas}'.format(replicas=int(db_replicas)+1),
+      "-i",
+      "./deploy/cr.yaml"], "Change number of replicas")
+
 
   if backup_type == "gcs":
     run_fatal(["kubectl", "-n", ns, "create", "secret", "generic", "{}-backrest-repo-config".format(cluster_name), "--from-file=gcs-key={}".format(gcs_key)], "Can't create gcs secrets from file")
@@ -197,7 +213,7 @@ def cluster_labels(op, op_ver, cluster_name):
   elif op == "percona-server-mongodb-operator":
     return "app.kubernetes.io/instance={},app.kubernetes.io/component=mongod".format(cluster_name)
   elif op == "percona-postgresql-operator":
-    if op_ver == "2.0.0":
+    if op_ver.startswith("2"):
       return "postgres-operator.crunchydata.com/cluster={}".format(cluster_name)
     else:
       return "name={}".format(cluster_name)
@@ -1007,7 +1023,7 @@ def setup_operator(args):
   if args.operator_name == "percona-postgresql-operator":
     run_pg_operator(args.namespace, args.operator_name, args.db_version,
                     args.cluster_name, args.operator_version, args.standby,
-                    args.backup_type, args.bucket,args.gcs_key, args.yq)
+                    args.backup_type, args.bucket,args.gcs_key, args.yq, args.db_replicas)
   elif args.operator_name in ("percona-server-mongodb-operator", "percona-xtradb-cluster-operator", "percona-server-mysql-operator"):
     run_percona_operator(args.namespace, args.operator_name, args.operator_version, args.cluster_name)
 
@@ -1214,6 +1230,7 @@ def main():
   parser.add_argument('--info-only', dest="info", action='store_true')
   parser.add_argument('--smart-update', dest="smart_update", action='store_true')
   parser.add_argument('--standby', dest="standby", action='store_true')
+  parser.add_argument('--db-replicas', dest="db_replicas", type=str, nargs='?')
   parser.add_argument('--helm', dest="helm", action='store_true')
   parser.add_argument('--loki', dest="loki", action='store_true')
   parser.add_argument('--kube-fledged', dest="kube_fledged", default="")

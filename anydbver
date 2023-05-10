@@ -370,6 +370,8 @@ mirrors:
               run_cmd.append("--bucket={}".format(params["bucket"]))
             if "gcs-key" in params:
               run_cmd.append("--gcs-key={}".format(params["gcs-key"]))
+            if "replicas" in params:
+              run_cmd.append("--db-replicas={}".format(params["replicas"]))
             if "sql" in params:
               run_cmd.append("--sql={}".format(params["sql"]))
             if "standby" in params and params["standby"]:

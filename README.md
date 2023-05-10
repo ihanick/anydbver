@@ -47,6 +47,7 @@ mysql
 * Postgresql and backups to Google GCS
 ```bash
 anydbver deploy k3d k8s-pg:1.3.0,backup-type=gcs,bucket=my-gcs-bucket,gcs-key=/full/path/to/gcloud/key.json
+anydbver deploy k3d k8s-pg:2.1.0,replicas=1
 ```
 * 2.0.0:
 ```./anydbver deploy k3d  cert-manager:1.11.0 k8s-minio minio-certs:self-signed k8s-pg:2.0.0,namespace=pgo k8s-pg:2.0.0,namespace=pgo1,standby```
