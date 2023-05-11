@@ -1263,6 +1263,15 @@ def find_version(args):
         version = ver
         break
     args.percona_orchestrator = version.rstrip()
+  if args.mysql_jdbc:
+    vers = list(open(".version-info/mysql-jdbc.txt".format(os=osver)))
+    version = vers[-1]
+    for line in reversed(vers):
+      ver = line.rstrip()
+      if ver.startswith(args.mysql_jdbc):
+        version = ver
+        break
+    args.mysql_jdbc = version.rstrip()
 
 
 def parse_node(args):
@@ -1286,6 +1295,7 @@ def parse_node(args):
   parser.add_argument('--haproxy', type=str, nargs='?')
   parser.add_argument('--haproxy-galera', type=str, nargs='?')
   parser.add_argument('--clustercheck', type=str, nargs='?')
+  parser.add_argument('--mysql-jdbc', type=str, nargs='?')
   parser.add_argument('--galera-leader', '--galera-master', '--galera-join', type=str, nargs='?')
   parser.add_argument('--group-replication', '--innodb-cluster', type=str, nargs='?')
   parser.add_argument('--cluster-name', '--cluster', type=str, default='cluster1', nargs='?')
@@ -1507,6 +1517,9 @@ def apply_node_actions(ns, node, actions):
     env["PXB"] = actions.percona_xtrabackup
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
+  if actions.mysql_jdbc is not None:
+    extra_vars["extra_mysql_connector_java_version"] = actions.mysql_jdbc
+    env["MYSQL_JAVA"] = actions.mysql_jdbc
   if actions.percona_orchestrator is not None:
     extra_vars["extra_percona_orchestrator_version"] = actions.percona_orchestrator
     extra_vars["extra_db_user"] = "root"

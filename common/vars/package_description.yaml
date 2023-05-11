@@ -507,7 +507,7 @@ el7:
     install_packages:
       - java-1.8.0-openjdk.x86_64
       - java-1.8.0-openjdk-devel
-      - http://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-{{mysql_connector_java_version}}.el7.noarch.rpm
+      - https://cdn.mysql.com/Downloads/Connector-J/mysql-connector-j-{{mysql_connector_java_version}}.el7.noarch.rpm
 
   pgpool:
     systemd_service: pgpool
@@ -551,7 +551,7 @@ el8:
     install_packages:
       - java-1.8.0-openjdk.x86_64
       - java-1.8.0-openjdk-devel
-      - http://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-{{mysql_connector_java_version}}.el8.noarch.rpm
+      - https://cdn.mysql.com/Downloads/Connector-J/mysql-connector-j-{{mysql_connector_java_version}}.el8.noarch.rpm
   percona_proxysql:
     systemd_service: "proxysql"
     install_packages:
