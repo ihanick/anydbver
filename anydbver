@@ -372,10 +372,16 @@ mirrors:
               run_cmd.append("--gcs-key={}".format(params["gcs-key"]))
             if "replicas" in params:
               run_cmd.append("--db-replicas={}".format(params["replicas"]))
+            if "db-version" in params:
+              run_cmd.append("--db-version={}".format(params["db-version"]))
+            if "replicas" in params:
+              run_cmd.append("--db-replicas={}".format(params["replicas"]))
             if "sql" in params:
               run_cmd.append("--sql={}".format(params["sql"]))
             if "standby" in params and params["standby"]:
               run_cmd.append("--standby")
+            if "helm" in params and params["helm"]:
+              run_cmd.append("--helm")
           else:
             run_cmd.append("--version={}".format(pg))
           run_fatal(run_cmd, "Can't run the operator")

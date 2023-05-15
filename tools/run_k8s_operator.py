@@ -840,11 +840,16 @@ def setup_operator_helm(args):
     run_helm(args.helm_path, ["helm", "repo", "add", "percona", "https://percona.github.io/percona-helm-charts/"], "helm repo add problem")
     run_helm(args.helm_path, ["helm", "install", "my-operator", "percona/pg-operator",
         "--version", args.operator_version, "--namespace", args.namespace,
-        "--create-namespace", "--timeout", "{}s".format(COMMAND_TIMEOUT)], "Can't start Percona Postgresql operator with helm")
-    args.cluster_name="my-db"
+        "--create-namespace", "--timeout", "{}s".format(COMMAND_TIMEOUT)] , "Can't start Percona Postgresql operator with helm")
+    if not args.cluster_name:
+      args.cluster_name="my-db"
     if not k8s_wait_for_ready(args.namespace, op_labels("postgres-operator", args.operator_version)):
       raise Exception("Kubernetes operator is not starting")
     pg_helm_install_cmd = ["helm", "install", args.cluster_name, "percona/pg-db", "--namespace", args.namespace, "--timeout", "{}s".format(COMMAND_TIMEOUT), "--version", args.operator_version]
+    if args.db_version:
+        pg_helm_install_cmd.extend(["--set", "image.pgver={}".format(args.db_version)])
+    if args.db_replicas:
+        pg_helm_install_cmd.extend(["--set", "replicas.size={}".format(args.db_replicas)])
     run_helm(args.helm_path, pg_helm_install_cmd, "Can't start Postgresql with helm")
     args.cluster_name="{}-pg-db".format(args.cluster_name)
     if not k8s_wait_for_ready(args.namespace, "name={}".format(args.cluster_name)):
