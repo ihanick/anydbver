@@ -820,6 +820,8 @@ def setup_operator_helm(args):
     pxc_helm_install_cmd = ["helm", "install", args.cluster_name, "percona/pxc-db", "--version", args.operator_version, "--namespace", args.namespace]
     if args.cert_manager:
       pxc_helm_install_cmd.extend(["--set", "pxc.certManager=true"])
+    if args.update_strategy:
+      pxc_helm_install_cmd.extend(["--set", "updateStrategy={}".format(args.update_strategy)])
     run_helm(args.helm_path, pxc_helm_install_cmd, "Can't start PXC with helm")
     args.cluster_name="{}-pxc-db".format(args.cluster_name)
     args.users_secret= args.cluster_name
@@ -1245,6 +1247,7 @@ def main():
   parser.add_argument('--smart-update', dest="smart_update", action='store_true')
   parser.add_argument('--standby', dest="standby", action='store_true')
   parser.add_argument('--db-replicas', dest="db_replicas", type=str, nargs='?')
+  parser.add_argument('--update-strategy', dest="update_strategy", type=str, nargs='?')
   parser.add_argument('--helm', dest="helm", action='store_true')
   parser.add_argument('--memory', dest="memory", type=str, nargs='?')
   parser.add_argument('--loki', dest="loki", action='store_true')
