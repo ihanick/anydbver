@@ -348,6 +348,8 @@ mirrors:
               run_cmd.append("--db-version={}".format(params["db-version"]))
             if "helm" in params and params["helm"]:
               run_cmd.append("--helm")
+            if "updateStrategy" in params and params["updateStrategy"]:
+              run_cmd.append("--update-strategy={}".format(params["updateStrategy"]))
           else:
             run_cmd.append("--version={}".format(pxc))
           run_fatal(run_cmd, "Can't run the operator")
