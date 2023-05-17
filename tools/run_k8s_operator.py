@@ -846,10 +846,19 @@ def setup_operator_helm(args):
     if not k8s_wait_for_ready(args.namespace, op_labels("postgres-operator", args.operator_version)):
       raise Exception("Kubernetes operator is not starting")
     pg_helm_install_cmd = ["helm", "install", args.cluster_name, "percona/pg-db", "--namespace", args.namespace, "--timeout", "{}s".format(COMMAND_TIMEOUT), "--version", args.operator_version]
-    if args.db_version:
-        pg_helm_install_cmd.extend(["--set", "image.pgver={}".format(args.db_version)])
+    if args.db_version and args.db_version.startswith("ppg"):
+      pg_helm_install_cmd.extend(["--set", "image.pgver={}".format(args.db_version)])
+    elif args.db_version:
+      pg_helm_install_cmd.extend(["--set", "pgPrimary.image={}".format(args.db_version)])
     if args.db_replicas:
-        pg_helm_install_cmd.extend(["--set", "replicas.size={}".format(args.db_replicas)])
+      pg_helm_install_cmd.extend(["--set", "replicas.size={}".format(args.db_replicas)])
+    if args.memory and args.operator_version.startswith("1."):
+      pg_helm_install_cmd.extend(["--set", "pgPrimary.resources.requests.memory={}".format(args.memory)])
+      pg_helm_install_cmd.extend(["--set", "pgPrimary.resources.limits.memory={}".format(args.memory)])
+      pg_helm_install_cmd.extend(["--set", "backup.resources.requests.memory={}".format(args.memory)])
+      pg_helm_install_cmd.extend(["--set", "backup.resources.limits.memory={}".format(args.memory)])
+      pg_helm_install_cmd.extend(["--set", "replicas.resources.requests.memory={}".format(args.memory)])
+      pg_helm_install_cmd.extend(["--set", "replicas.resources.limits.memory={}".format(args.memory)])
     run_helm(args.helm_path, pg_helm_install_cmd, "Can't start Postgresql with helm")
     args.cluster_name="{}-pg-db".format(args.cluster_name)
     if not k8s_wait_for_ready(args.namespace, "name={}".format(args.cluster_name)):
@@ -1237,6 +1246,7 @@ def main():
   parser.add_argument('--standby', dest="standby", action='store_true')
   parser.add_argument('--db-replicas', dest="db_replicas", type=str, nargs='?')
   parser.add_argument('--helm', dest="helm", action='store_true')
+  parser.add_argument('--memory', dest="memory", type=str, nargs='?')
   parser.add_argument('--loki', dest="loki", action='store_true')
   parser.add_argument('--kube-fledged', dest="kube_fledged", default="")
   parser.add_argument('--proxysql', dest="proxysql", action='store_true')

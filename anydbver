@@ -346,6 +346,8 @@ mirrors:
               run_cmd.append("--proxysql")
             if "db-version" in params and params["db-version"]:
               run_cmd.append("--db-version={}".format(params["db-version"]))
+            if "helm" in params and params["helm"]:
+              run_cmd.append("--helm")
           else:
             run_cmd.append("--version={}".format(pxc))
           run_fatal(run_cmd, "Can't run the operator")
@@ -374,6 +376,8 @@ mirrors:
               run_cmd.append("--db-replicas={}".format(params["replicas"]))
             if "db-version" in params:
               run_cmd.append("--db-version={}".format(params["db-version"]))
+            if "memory" in params:
+              run_cmd.append("--memory={}".format(params["memory"]))
             if "replicas" in params:
               run_cmd.append("--db-replicas={}".format(params["replicas"]))
             if "sql" in params:
