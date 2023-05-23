@@ -167,8 +167,10 @@ def get_all_nodes(args):
   return nodes
 
 def deploy(args):
+  skip_nodes_list = args.skip_nodes.split(",")
   for name in get_all_nodes(args):
-    start_container(args, name)
+    if name not in skip_nodes_list:
+      start_container(args, name)
 
 def destroy(args):
   for name in get_all_nodes(args):
@@ -180,6 +182,7 @@ def main():
   parser.add_argument('--deploy', dest="deploy", action='store_true')
   parser.add_argument('--destroy', dest="destroy", action='store_true')
   parser.add_argument('--nodes', dest="nodes", type=int, default=1)
+  parser.add_argument('--skip-nodes', dest="skip_nodes", type=str, default="")
   parser.add_argument('--os', dest="os", type=str, default="rocky8")
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
   parser.add_argument('--provider', dest="provider", type=str, default="docker")
