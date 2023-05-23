@@ -1021,7 +1021,13 @@ def setup_operator(args):
           '(.spec.standby.repoName="repo1")',
           "-i",
           "./deploy/cr.yaml"], "enable minio backups")
-
+    if args.memory and args.operator_version.startswith("1."):
+      run_fatal(
+        [
+          args.yq,
+          '.spec.pgPrimary.resources.limits.memory="{mem}" | .spec.pgReplicas.resources.limits.memory="{mem}"'.format(mem=args.memory),
+          "-i",
+          "./deploy/cr.yaml"], "set memory limit")
 
 
   if args.operator_name == "percona-server-mongodb-operator" and args.helm != True:

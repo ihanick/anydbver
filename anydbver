@@ -92,7 +92,7 @@ def destroy_docker(args):
   if ns_prefix != "":
     ns_prefix = ns_prefix + "-"
   net = "{}{}-anydbver".format(ns_prefix, args.user)
-  cluster = "{}-cluster1".format(args.user)
+  cluster = "{}{}-cluster1".format(ns_prefix, args.user)
   if args.provider == "docker" and Path("tools/k3d").is_file():
     run_fatal(["tools/k3d", "cluster", "delete", cluster], "Can't remove k3d cluster")
   for c in get_servers_list(args.provider, net):
@@ -185,11 +185,12 @@ def deploy(args, node_actions):
   if ns_prefix != "":
     ns_prefix = ns_prefix + "-"
   net = "{}{}-anydbver".format(ns_prefix, args.user)
-  cluster = "{}-cluster1".format(args.user)
+  cluster = "{}{}-cluster1".format(ns_prefix, args.user)
   for node_action in node_actions:
     #print("Applying node: ", node_action)
     node = node_action[1]
 
+    old_provider = args.provider
 
     run_k8s_operator_cmd = ['python3', 'tools/run_k8s_operator.py']
     if args.provider == "docker":
@@ -415,7 +416,7 @@ mirrors:
         if node.db_version:
           run_cmd.append("--db-version={}".format(node.db_version))
         run_fatal(run_cmd, "Can't run the operator")
-
+    args.provider = old_provider
   if args.provider != "kubectl":
     run_fatal(["ansible-playbook", "-i", "{}ansible_hosts_run".format(ns_prefix), "playbook.yml"], "Error running playbook")
 
@@ -1556,10 +1557,10 @@ def apply_node_actions(ns, node, actions):
 def apply_node_command(node, env, cmd):
   run_fatal(cmd, "failed to deploy node {}".format(node), env=env)
 
-def create_nodes(provider, nodes_cnt, osver, ns):
+def create_nodes(provider, nodes_cnt, osver, ns, skip_nodes):
   if provider == "kubectl":
     return
-  create_nodes_cmd = "rm -f ssh_config ansible_hosts; ./docker_container.py --provider={} --nodes={} --os={} --destroy --deploy".format(provider, nodes_cnt, osver)
+  create_nodes_cmd = "rm -f ssh_config ansible_hosts; ./docker_container.py --provider={provider} --nodes={nodes} --skip-nodes={skip_nodes} --os={osver} --destroy --deploy".format(provider=provider, nodes=nodes_cnt, skip_nodes=skip_nodes, osver=osver)
   if ns != "":
     create_nodes_cmd = "rm -f {ns}-ssh_config {ns}-ansible_hosts; ./docker_container.py --provider={provider} --namespace={ns} --nodes={nodes} --os={os} --destroy --deploy".format(provider=provider, ns=ns, nodes=nodes_cnt, os=osver)
 
@@ -1717,6 +1718,7 @@ def main():
   node_actions = []
   node_names = {}
   nodes_os = args.os + ","
+  args.skip_nodes = ""
   for nodeline in nodelines:
     node_actions.append(parse_node(nodeline))
     node = node_actions[-1][0]
@@ -1724,6 +1726,14 @@ def main():
     if (node_actions[-1][1]).os == "":
       (node_actions[-1][1]).os = args.os
     nodes_os = nodes_os + node + "=" + (node_actions[-1][1]).os + ","
+    if (node_actions[-1][1]).k3d: 
+      if args.skip_nodes == "":
+        args.skip_nodes = node
+      else:
+        args.skip_nodes = args.skip_nodes + "," + node
+      if node == "node0":
+        args.skip_nodes = args.skip_nodes + "," + "default"
+
 
   detect_provider(args)
 
@@ -1732,7 +1742,7 @@ def main():
 
   nodes_cnt = len(node_names)
   if args.deploy:
-    create_nodes(args.provider, nodes_cnt, nodes_os, args.namespace)
+    create_nodes(args.provider, nodes_cnt, nodes_os, args.namespace, args.skip_nodes)
 
   cmds = []
 
@@ -1753,11 +1763,12 @@ def main():
     if n[1].os in ("centos7", "el7"):
         python_path="/usr/bin/python"
 
-    ansible_hosts_run.write(
-    "{user}.{node} ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host={ip} ansible_python_interpreter={python_path} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none' {extra_vars}\n".format(
-        user=args.user,node=node, python_path=python_path,extra_vars=extrastr, ip=resolve_hostname(args.namespace, node))
-    )
-    logger.info('Node ' + node + ': ' + extrastr.replace('extra_',''))
+    if node not in args.skip_nodes.split(","):
+      ansible_hosts_run.write(
+      "{user}.{node} ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host={ip} ansible_python_interpreter={python_path} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none' {extra_vars}\n".format(
+          user=args.user,node=node, python_path=python_path,extra_vars=extrastr, ip=resolve_hostname(args.namespace, node))
+      )
+      logger.info('Node ' + node + ': ' + extrastr.replace('extra_',''))
 
   ansible_hosts_run.close()
   for cmd in cmds:
