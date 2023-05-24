@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 import urllib.request
 import sqlite3
+import json
 
 COMMAND_TIMEOUT=600
 FORMAT = '%(asctime)s %(levelname)s %(message)s'
@@ -111,6 +112,21 @@ def destroy_docker(args):
   except:
     pass
 
+
+def read_latest_version_from_sqlite(name):
+  db_file = 'anydbver_version.db'
+  try:
+    conn = sqlite3.connect(db_file)
+    conn.row_factory = sqlite3.Row
+  except Error as e:
+    print(e)
+    return ""
+  cur = conn.cursor()
+  sql = "SELECT version FROM k8s_operators_version WHERE name=? ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1"
+  cur.execute(sql, (name,))
+  rows = cur.fetchall()
+  return rows[0]["version"]
+
 def exec_shell_from_sqlite(sql, params, err_msg):
   db_file = 'anydbver_version.db'
   try:
@@ -157,9 +173,11 @@ def test(name):
 
 def soft_params(opt):
   params = {}
-  if ',' not in opt:
+  if (',' not in opt) and '=' not in opt:
     params["version"] = opt
     return params
+  if (',' not in opt):
+    opt = "True," + opt
   (operator_version, operator_params) = opt.split(",",1)
   params["version"] = operator_version
   for param in operator_params.split(","):
@@ -194,16 +212,25 @@ def deploy(args, node_actions):
 
     run_k8s_operator_cmd = ['python3', 'tools/run_k8s_operator.py']
     if args.provider == "docker":
+      if not node.k3d and (node.k8s_pxc or node.k8s_pg or node.k8s_ps or node.k8s_mongo):
+        node.k3d = 'True'
       if node.k3d:
+        params = soft_params(node.k3d)
+
         if not Path("tools/k3d").is_file():
           run_fatal(["bash", "-c", "curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | PATH=$PATH:{adir} K3D_INSTALL_DIR={adir} USE_SUDO=false bash".format(adir=str((Path(ANYDBVER_DIR) / "tools").resolve()))], "Can't download k3d")
-        k3d_agents = "4"
         if not Path("tools/yq").is_file():
           run_fatal(["bash", "-c", "curl -L -s --output tools/yq https://github.com/mikefarah/yq/releases/download/v4.24.2/yq_linux_amd64 && chmod +x tools/yq"], "Can't download yq")
 
-        if node.k3d == 'True':
-          node.k3d = 'latest'
-        k3d_create_cmd = ["tools/k3d", "cluster", "create", "-i", "rancher/k3s:{}".format(node.k3d) , "--network", net, "-a", k3d_agents]
+        if params["version"] == 'True':
+          params["version"] = 'latest'
+
+        k3d_agents = 4
+        if "nodes" in params:
+          k3d_agents = int(params["nodes"]) - 1
+        if k3d_agents <= 0:
+          k3d_agents = 0
+        k3d_create_cmd = ["tools/k3d", "cluster", "create", "-i", "rancher/k3s:{}".format(params["version"]) , "--network", net, "-a", str(k3d_agents)]
 
         registry_cache_conf = ""
         if node.registry_cache:
@@ -334,25 +361,24 @@ mirrors:
           logger.info("Starting PXC in kubernetes managed by Percona operator {}, '{}'".format(pxc, run_cmd))
           run_cmd.append("--operator=percona-xtradb-cluster-operator")
           operator_subversion = ""
-          if "," in pxc:
-            params = soft_params(pxc)
-            run_cmd.append("--version={}".format(params["version"]))
-            if "cluster-name" in params:
-              run_cmd.append("--cluster-name={}".format(params["cluster-name"]))
-            if "namespace" in params:
-              run_cmd.append("--namespace={}".format(params["namespace"]))
-            if "sql" in params:
-              run_cmd.append("--sql={}".format(params["sql"]))
-            if "proxysql" in params and params["proxysql"]:
-              run_cmd.append("--proxysql")
-            if "db-version" in params and params["db-version"]:
-              run_cmd.append("--db-version={}".format(params["db-version"]))
-            if "helm" in params and params["helm"]:
-              run_cmd.append("--helm")
-            if "updateStrategy" in params and params["updateStrategy"]:
-              run_cmd.append("--update-strategy={}".format(params["updateStrategy"]))
-          else:
-            run_cmd.append("--version={}".format(pxc))
+          params = soft_params(pxc)
+          if params["version"] == "True":
+            params["version"] = read_latest_version_from_sqlite("percona/percona-xtradb-cluster-operator")
+          run_cmd.append("--version={}".format(params["version"]))
+          if "cluster-name" in params:
+            run_cmd.append("--cluster-name={}".format(params["cluster-name"]))
+          if "namespace" in params:
+            run_cmd.append("--namespace={}".format(params["namespace"]))
+          if "sql" in params:
+            run_cmd.append("--sql={}".format(params["sql"]))
+          if "proxysql" in params and params["proxysql"]:
+            run_cmd.append("--proxysql")
+          if "db-version" in params and params["db-version"]:
+            run_cmd.append("--db-version={}".format(params["db-version"]))
+          if "helm" in params and params["helm"]:
+            run_cmd.append("--helm")
+          if "updateStrategy" in params and params["updateStrategy"]:
+            run_cmd.append("--update-strategy={}".format(params["updateStrategy"]))
           run_fatal(run_cmd, "Can't run the operator")
 
 
@@ -362,59 +388,67 @@ mirrors:
           logger.info("Starting postgresql in kubernetes managed by Percona operator {}, '{}'".format(pg, run_cmd))
           run_cmd.append("--operator=percona-postgresql-operator")
           operator_subversion = ""
-          if "," in pg:
-            params = soft_params(pg)
-            run_cmd.append("--version={}".format(params["version"]))
-            if "cluster-name" in params:
-              run_cmd.append("--cluster-name={}".format(params["cluster-name"]))
-            if "namespace" in params:
-              run_cmd.append("--namespace={}".format(params["namespace"]))
-            if "backup-type" in params:
-              run_cmd.append("--backup-type={}".format(params["backup-type"]))
-            if "bucket" in params:
-              run_cmd.append("--bucket={}".format(params["bucket"]))
-            if "gcs-key" in params:
-              run_cmd.append("--gcs-key={}".format(params["gcs-key"]))
-            if "replicas" in params:
-              run_cmd.append("--db-replicas={}".format(params["replicas"]))
-            if "db-version" in params:
-              run_cmd.append("--db-version={}".format(params["db-version"]))
-            if "memory" in params:
-              run_cmd.append("--memory={}".format(params["memory"]))
-            if "replicas" in params:
-              run_cmd.append("--db-replicas={}".format(params["replicas"]))
-            if "sql" in params:
-              run_cmd.append("--sql={}".format(params["sql"]))
-            if "standby" in params and params["standby"]:
-              run_cmd.append("--standby")
-            if "helm" in params and params["helm"]:
-              run_cmd.append("--helm")
-          else:
-            run_cmd.append("--version={}".format(pg))
+          params = soft_params(pg)
+          if params["version"] == "True":
+            params["version"] = read_latest_version_from_sqlite("percona/percona-postgresql-operator")
+          run_cmd.append("--version={}".format(params["version"]))
+          if "cluster-name" in params:
+            run_cmd.append("--cluster-name={}".format(params["cluster-name"]))
+          if "namespace" in params:
+            run_cmd.append("--namespace={}".format(params["namespace"]))
+          if "backup-type" in params:
+            run_cmd.append("--backup-type={}".format(params["backup-type"]))
+          if "bucket" in params:
+            run_cmd.append("--bucket={}".format(params["bucket"]))
+          if "gcs-key" in params:
+            run_cmd.append("--gcs-key={}".format(params["gcs-key"]))
+          if "replicas" in params:
+            run_cmd.append("--db-replicas={}".format(params["replicas"]))
+          if "db-version" in params:
+            run_cmd.append("--db-version={}".format(params["db-version"]))
+          if "memory" in params:
+            run_cmd.append("--memory={}".format(params["memory"]))
+          if "replicas" in params:
+            run_cmd.append("--db-replicas={}".format(params["replicas"]))
+          if "sql" in params:
+            run_cmd.append("--sql={}".format(params["sql"]))
+          if "standby" in params and params["standby"]:
+            run_cmd.append("--standby")
+          if "helm" in params and params["helm"]:
+            run_cmd.append("--helm")
           run_fatal(run_cmd, "Can't run the operator")
 
       if node.k8s_ps:
         run_cmd = run_k8s_operator_cmd.copy()
+        params = soft_params(node.k8s_ps)
+        if params["version"] == "True":
+          params["version"] = read_latest_version_from_sqlite("percona/percona-server-mysql-operator")
+        run_cmd.append("--version={}".format(params["version"]))
+        if "helm" in params and params["helm"]:
+          run_cmd.append("--helm")
+        if "db-version" in params:
+          run_cmd.append("--db-version={}".format(params["db-version"]))
+        elif node.db_version:
+          run_cmd.append("--db-version={}".format(node.db_version))
+
         logger.info("Starting Percona Server for MySQL in kubernetes managed by Percona operator {}".format(node.k8s_ps))
         run_cmd.append("--operator=percona-server-mysql-operator")
-        run_cmd.append("--version={}".format(node.k8s_ps))
-        if node.db_version:
-          run_cmd.append("--db-version={}".format(node.db_version))
         run_fatal(run_cmd, "Can't run the operator")
 
       if node.k8s_mongo:
         run_cmd = run_k8s_operator_cmd.copy()
-        operator_version = node.k8s_mongo
-        operator_subversion = ""
-        if "," in node.k8s_mongo:
-          (operator_version, operator_subversion) = node.k8s_mongo.split(",",1)
-          if operator_subversion.startswith("helm="):
-            run_k8s_operator_cmd.append("--helm")
+        params = soft_params(node.k8s_mongo)
+        if params["version"] == "True":
+          params["version"] = read_latest_version_from_sqlite("percona/percona-server-mongodb-operator")
+        run_cmd.append("--version={}".format(params["version"]))
+        if "helm" in params and params["helm"]:
+          run_cmd.append("--helm")
+        if "db-version" in params:
+          run_cmd.append("--db-version={}".format(params["db-version"]))
+        elif node.db_version:
+          run_cmd.append("--db-version={}".format(node.db_version))
         logger.info("Starting Percona Server for MongoDB in kubernetes managed by Percona operator {}".format(node.k8s_mongo))
         run_cmd.append("--operator=percona-server-mongodb-operator")
-        run_cmd.append("--version={}".format(operator_version))
-        if node.db_version:
-          run_cmd.append("--db-version={}".format(node.db_version))
         run_fatal(run_cmd, "Can't run the operator")
     args.provider = old_provider
   if args.provider != "kubectl":
@@ -857,6 +891,31 @@ def save_mariadb_versions_to_sqlite(osver):
 
   pass
 
+def save_github_tags_to_sqlite(repo_name, tbl):
+  db_file = 'anydbver_version.db'
+  conn = None
+  try:
+    conn = sqlite3.connect(db_file)
+  except Error as e:
+    print(e)
+    return
+  cur = conn.cursor()
+  sql = "INSERT OR REPLACE INTO {tbl} (name,version) VALUES(?, ?)".format(tbl=tbl)
+  url = "https://api.github.com/repos/{}/tags".format(repo_name)
+  try:
+    with urllib.request.urlopen(url) as response:
+      r = json.loads(response.read().decode('utf-8'))
+      for ver in r:
+        if ver["name"].startswith("v"):
+          ver["name"] = ver["name"][1:]
+        cur.execute(sql, (repo_name, ver["name"]))
+  except urllib.error.HTTPError as e:
+    print(e, url, sql)
+    return
+
+
+  conn.commit()
+
 def save_percona_server_versions_to_sqlite(osver):
   db_file = 'anydbver_version.db'
   conn = None
@@ -1120,6 +1179,11 @@ def update_versions():
       "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
      ])
  
+  for op in ("percona/percona-xtradb-cluster-operator",
+             "percona/percona-postgresql-operator",
+             "percona/percona-server-mongodb-operator",
+             "percona/percona-server-mysql-operator"):
+    save_github_tags_to_sqlite(op, "k8s_operators_version")
 
   for osver in ("el7","el8","el9"):
     save_percona_server_versions_to_sqlite(osver)
@@ -1712,6 +1776,8 @@ def main():
   else:
     args.user = os.getlogin()
 
+  detect_provider(args)
+
   ns_prefix = args.namespace
   if ns_prefix != "":
     ns_prefix = ns_prefix + "-"
@@ -1726,7 +1792,8 @@ def main():
     if (node_actions[-1][1]).os == "":
       (node_actions[-1][1]).os = args.os
     nodes_os = nodes_os + node + "=" + (node_actions[-1][1]).os + ","
-    if (node_actions[-1][1]).k3d: 
+    act = node_actions[-1][1]
+    if act.k3d or (args.provider == "docker" and (act.k8s_ps or act.k8s_pxc or act.k8s_pg or act.k8s_mongo)):
       if args.skip_nodes == "":
         args.skip_nodes = node
       else:
@@ -1734,8 +1801,6 @@ def main():
       if node == "node0":
         args.skip_nodes = args.skip_nodes + "," + "default"
 
-
-  detect_provider(args)
 
   if args.destroy or args.deploy:
     destroy(args)
