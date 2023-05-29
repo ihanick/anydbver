@@ -13,7 +13,7 @@ MINIO_ROOT_USER=$MINIO_USER
 MINIO_ROOT_PASSWORD=$MINIO_PASS
 MINIO_VOLUMES="/mnt/data"
 EOF
-docker run -dt -p 9000:9000 -p 9090:9090 \
+docker run -dt --restart unless-stopped -p 9000:9000 -p 9090:9090 \
   -v $PWD/data/minio-bkp-config.env:/etc/config.env \
   -e "MINIO_CONFIG_ENV_FILE=/etc/config.env" \
   -v $PWD/data/minio:/mnt/data \

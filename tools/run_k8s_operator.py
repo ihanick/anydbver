@@ -7,11 +7,11 @@ import shutil
 import time
 import datetime
 import re
-import sys
 from distutils.version import StrictVersion
 import argparse
 import base64
 import urllib
+import urllib.parse
 import json
 
 COMMAND_TIMEOUT=600
@@ -31,7 +31,7 @@ def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
     return ret_code
   if ret_code:
     logger.error(output)
-    raise Exception((err_msg+" '{}'").format(subprocess.list2cmdline(process.args)))
+    raise Exception((err_msg+" '{}'").format(subprocess.list2cmdline(args)))
   return ret_code
 
 def run_get_line(args,err_msg, ignore_msg=None, print_cmd=True, env=None, keep_stderr=True):
@@ -47,13 +47,13 @@ def run_get_line(args,err_msg, ignore_msg=None, print_cmd=True, env=None, keep_s
     return output
   if ret_code:
     logger.error(output)
-    raise Exception((err_msg+" '{}'").format(subprocess.list2cmdline(process.args)))
+    raise Exception((err_msg+" '{}'").format(subprocess.list2cmdline(args)))
   return output
   
 
 def k8s_wait_for_ready(ns, labels, timeout=COMMAND_TIMEOUT):
   logger.info("Waiting for: kubectl wait --for=condition=ready -n {} pod -l {}".format(ns, labels))
-  for i in range(timeout // 2):
+  for _ in range(timeout // 2):
     s = datetime.datetime.now()
     if run_fatal(["kubectl", "wait", "--timeout=2s", "--for=condition=ready", "-n", ns, "pod", "-l", labels],
         "Pod ready wait problem",
@@ -65,7 +65,7 @@ def k8s_wait_for_ready(ns, labels, timeout=COMMAND_TIMEOUT):
 
 def k8s_wait_for_job_complete(ns, jobname, timeout=COMMAND_TIMEOUT):
   logger.info("Waiting for: kubectl wait --for=condition=complete -n {} {}".format(ns, jobname))
-  for i in range(timeout // 2):
+  for _ in range(timeout // 2):
     s = datetime.datetime.now()
     if run_fatal(["kubectl", "-n", ns, "wait", "--for=condition=complete", jobname], "Job complete wait failed",
         r"not found|timed out waiting for the condition|no matching resources found", False) == 0:
@@ -76,7 +76,7 @@ def k8s_wait_for_job_complete(ns, jobname, timeout=COMMAND_TIMEOUT):
 
 def k8s_wait_for_job_complete_label(ns, label, timeout=COMMAND_TIMEOUT):
   logger.info("Waiting for: kubectl wait --for=condition=complete -n  {} job -l {}".format(ns, label))
-  for i in range(timeout // 2):
+  for _ in range(timeout // 2):
     s = datetime.datetime.now()
     if run_fatal(["kubectl", "-n", ns, "wait", "--for=condition=complete", "job", "-l", label], "Job complete wait failed",
         r"not found|timed out waiting for the condition|no matching resources found", False) == 0:
@@ -87,7 +87,7 @@ def k8s_wait_for_job_complete_label(ns, label, timeout=COMMAND_TIMEOUT):
 
 def wait_for_success(cmd_with_args, fail_with_msg,ignore_error_pattern, timeout=COMMAND_TIMEOUT):
   logger.info("Waiting for: {}".format(subprocess.list2cmdline(cmd_with_args)))
-  for i in range(timeout // 2):
+  for _ in range(timeout // 2):
     s = datetime.datetime.now()
     if run_fatal(cmd_with_args,
         fail_with_msg,
@@ -193,7 +193,7 @@ def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, 
 
 def op_labels(op, op_ver):
   if (op in ("percona-xtradb-cluster-operator", "pxc-operator")
-      and (not re.match('^[0-9\.]*$', op_ver)
+      and (not re.match(r'^[0-9\.]*$', op_ver)
            or StrictVersion(op_ver) > StrictVersion("1.6.0") ) ):
     return "app.kubernetes.io/name="+op
   elif op == "ps-operator":
@@ -386,12 +386,12 @@ def run_pmm_server(args, helm_path, pmm):
 
   args.pmm_custom_ssl = ("certificates" in pmm 
       and pmm["certificates"] != "self-signed"
-      and tls_key_path.is_file()
-      and tls_crt_path.is_file())
+      and isinstance(tls_key_path, Path) and tls_key_path.is_file()
+      and isinstance(tls_crt_path, Path) and tls_crt_path.is_file())
 
   if args.cert_manager != "" and pmm["certificates"] == "self-signed":
     gen_self_signed_cert(args, "pmm." + args.cluster_domain, pmm["namespace"], "monitoring-service", "pmm-certs")
-  elif args.pmm_custom_ssl:
+  elif args.pmm_custom_ssl and isinstance(tls_key_path, Path) and isinstance(tls_crt_path, Path):
     run_fatal(["kubectl", "create", "secret", "tls", "monitoring-service-tls",
       "--key="+str(tls_key_path.resolve()),
       "--cert="+str(tls_crt_path.resolve())],
@@ -818,6 +818,8 @@ def setup_operator_helm(args):
       raise Exception("Kubernetes operator is not starting")
 
     pxc_helm_install_cmd = ["helm", "install", args.cluster_name, "percona/pxc-db", "--version", args.operator_version, "--namespace", args.namespace]
+    if args.helm_values:
+      pxc_helm_install_cmd.extend(["-f", args.helm_values])
     if args.cert_manager:
       pxc_helm_install_cmd.extend(["--set", "pxc.certManager=true"])
     if args.update_strategy:
@@ -834,6 +836,8 @@ def setup_operator_helm(args):
     if not k8s_wait_for_ready(args.namespace, op_labels("ps-operator", args.operator_version)):
       raise Exception("Kubernetes operator is not starting")
     ps_helm_install_cmd = ["helm", "install", args.cluster_name, "percona/ps-db", "--namespace", args.namespace]
+    if args.helm_values:
+      ps_helm_install_cmd.extend(["-f", args.helm_values])
     run_helm(args.helm_path, ps_helm_install_cmd, "Can't start PS MySQL with helm")
     args.cluster_name="{}-ps-db".format(args.cluster_name)
     if not k8s_wait_for_ready(args.namespace, "app.kubernetes.io/component=mysql,statefulset.kubernetes.io/pod-name={}-mysql-0".format(args.cluster_name), timeout=2*COMMAND_TIMEOUT):
@@ -861,6 +865,8 @@ def setup_operator_helm(args):
       pg_helm_install_cmd.extend(["--set", "backup.resources.limits.memory={}".format(args.memory)])
       pg_helm_install_cmd.extend(["--set", "replicas.resources.requests.memory={}".format(args.memory)])
       pg_helm_install_cmd.extend(["--set", "replicas.resources.limits.memory={}".format(args.memory)])
+    if args.helm_values:
+      pg_helm_install_cmd.extend(["-f", args.helm_values])
     run_helm(args.helm_path, pg_helm_install_cmd, "Can't start Postgresql with helm")
     args.cluster_name="{}-pg-db".format(args.cluster_name)
     if not k8s_wait_for_ready(args.namespace, "name={}".format(args.cluster_name)):
@@ -870,11 +876,14 @@ def setup_operator_helm(args):
     run_helm(args.helm_path, ["helm", "install", "my-operator", "percona/psmdb-operator",
         "--version", args.operator_version, "--namespace", args.namespace,
         "--create-namespace", "--timeout", "{}s".format(COMMAND_TIMEOUT)], "Can't start Percona Postgresql operator with helm")
-    args.cluster_name="my-db"
+    if args.cluster_name == "":
+      args.cluster_name="my-db"
     if not k8s_wait_for_ready(args.namespace, op_labels("psmdb-operator", args.operator_version)):
       raise Exception("Kubernetes operator is not starting")
-    pg_helm_install_cmd = ["helm", "install", args.cluster_name, "percona/psmdb-db", "--namespace", args.namespace, "--timeout", "{}s".format(COMMAND_TIMEOUT), "--version", args.operator_version]
-    run_helm(args.helm_path, pg_helm_install_cmd, "Can't start Postgresql with helm")
+    psmdb_helm_install_cmd = ["helm", "install", args.cluster_name, "percona/psmdb-db", "--namespace", args.namespace, "--timeout", "{}s".format(COMMAND_TIMEOUT), "--version", args.operator_version]
+    if args.helm_values:
+      psmdb_helm_install_cmd.extend(["-f", args.helm_values])
+    run_helm(args.helm_path, psmdb_helm_install_cmd, "Can't start Percona Server for Mongodb with helm")
     args.cluster_name="{}-psmdb-db".format(args.cluster_name)
     if not k8s_wait_for_ready(args.namespace, "app.kubernetes.io/instance={}".format(args.cluster_name)):
       raise Exception("cluster is not starting")
@@ -998,7 +1007,7 @@ def setup_operator(args):
       run_fatal(["sed", "-i", "-re", r"s/: cluster1\>/: {}/".format(args.cluster_name), "./deploy/cr.yaml"], "fix cluster name in cr.yaml")
     if args.db_version:
       run_fatal([args.yq,'.spec.pxc.image = "{}"'.format(args.db_version), "-i", cr_yaml_path],"Can't set PXC version")
-    if re.match('^[0-9\.]*$', args.operator_version) and StrictVersion(args.operator_version) < StrictVersion("1.11.0"):
+    if re.match(r'^[0-9\.]*$', args.operator_version) and StrictVersion(args.operator_version) < StrictVersion("1.11.0"):
       args.users_secret = "my-cluster-secrets"
     else:
       args.users_secret = args.cluster_name + "-secrets"
@@ -1073,7 +1082,7 @@ def info_mongo_operator(ns, cluster_name):
   print(subprocess.list2cmdline(user_admin_mongo))
 
 
-def populate_mongodb(ns, js_file):
+def populate_mongodb(*_):
   pass
 
 def populate_pg_db(ver, ns, cluster_name, sql_file):
@@ -1255,6 +1264,8 @@ def main():
   parser.add_argument('--db-replicas', dest="db_replicas", type=str, nargs='?')
   parser.add_argument('--update-strategy', dest="update_strategy", type=str, nargs='?')
   parser.add_argument('--helm', dest="helm", action='store_true')
+  parser.add_argument("--helm-chart-version", dest="helm_chart_version", type=str, default="")
+  parser.add_argument("--helm-values", dest="helm_values", type=str, default="")
   parser.add_argument('--memory', dest="memory", type=str, nargs='?')
   parser.add_argument('--loki', dest="loki", action='store_true')
   parser.add_argument('--kube-fledged', dest="kube_fledged", default="")
