@@ -388,7 +388,12 @@ mirrors:
   if args.provider != "kubectl":
     run_fatal(logger, ["ansible-playbook", "-i", "{}ansible_hosts_run".format(ns_prefix), "playbook.yml"], "Error running playbook")
 
-def load_sett_file():
+def load_sett_file(provider):
+  if not Path(".anydbver").is_file():
+    logger.info("Creating new settings file .anydbver with provider {}".format(provider))
+    with open(".anydbver", "w") as file:
+      file.write("PROVIDER={}".format(provider))
+
   sett = {}
   with open(".anydbver") as file:
    for l in file.readlines():
@@ -399,7 +404,7 @@ def load_sett_file():
 
 def detect_provider(args):
   if args.provider == "":
-    sett = load_sett_file()
+    sett = load_sett_file("docker")
     if "PROVIDER" in sett:
       args.provider = sett["PROVIDER"]
 
@@ -421,7 +426,8 @@ def detect_provider(args):
           run_get_line(logger, ["docker", "version"],
             "Can't find docker",
             r"Cannot connect to the Docker", print_cmd = False)):
-        logger.info("Found docker server")
+        if args.provider == "":
+          logger.info("Found docker server")
         args.provider="docker"
       else:
         args.provider = ""
