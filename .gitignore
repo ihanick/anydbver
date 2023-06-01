@@ -15,3 +15,17 @@ configs/*hosts
 .version-info/*
 test-run.log
 *ssh_config
+tools/k3d
+tools/k9s
+tools/kubectl-*
+tools/mc
+tools/yq
+tools/pt-k8s-debug-collector
+*ansible_hosts_run
+images-build/*/id_rsa.pub
+images-build/*/node_ip.sh
+images-build/ansible-anydbver/anydbver.tar.gz
+tools/gather.sql
+data/
+certs/
+__pycache__/
