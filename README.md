@@ -6,7 +6,7 @@ Running multi-node replication clusters in Docker, LXD and Kubernetes.
 
 Clone and install sqlite ansible dependency:
 ```bash
-git clone --branch multi-host-ansible-and-python https://github.com/ihanick/anydbver.git
+git clone https://github.com/ihanick/anydbver.git
 cd anydbver
 ansible-galaxy collection install theredgreek.sqlite
 ```
