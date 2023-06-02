@@ -116,6 +116,26 @@ def soft_params(opt):
 
   return params
 
+def is_unmodified_docker_image(node):
+  for record in vars(node).values():
+    if record is None:
+      continue
+    if "docker-image" in record:
+      return True
+  return False
+
+def deploy_unmodified_docker_images(usr, ns, node_name, node):
+  ns_prefix = ns
+  net = "{}{}-anydbver".format(ns_prefix, usr)
+  logger.info("Deploying node with unmodified docker image")
+  if node.pmm:
+    params = soft_params(node.pmm)
+    logger.info("docker run --network={net} -p 443 -d --name={name} percona/pmm-server:{ver}".format(net=net, name=node_name, ver=params["version"]))
+    run_fatal(logger,
+              ["docker", "run", "-d", "--name={}".format(node_name),
+               "--network={}".format(net),
+               "percona/pmm-server:{ver}".format(ver=params["version"])
+               ], "Can't start PMM")
 
 def deploy(args, node_actions):
   logger.info("Deploy")
@@ -145,12 +165,19 @@ def deploy(args, node_actions):
         if params["version"] == 'True':
           params["version"] = 'latest'
 
-        k3d_agents = 4
+        k3d_agents = 2
         if "nodes" in params:
           k3d_agents = int(params["nodes"]) - 1
         if k3d_agents <= 0:
           k3d_agents = 0
         k3d_create_cmd = ["tools/k3d", "cluster", "create", "-i", "rancher/k3s:{}".format(params["version"]) , "--network", net, "-a", str(k3d_agents)]
+
+        if "ingress" in params:
+          node.ingress = params["ingress"]
+          node.ingress_port = params["ingress"]
+        if "ingress-type" in params:
+          node.ingress_type = params["ingress-type"]
+
 
         registry_cache_conf = ""
         if node.registry_cache:
@@ -610,6 +637,7 @@ def parse_node(args):
   parser.add_argument('--k8s-mongo', dest="k8s_mongo", type=str, nargs='?')
   parser.add_argument('--k8s-pxc', dest="k8s_pxc", type=str, action='append', nargs='?')
   parser.add_argument('--pmm', dest="pmm", type=str, nargs='?')
+  parser.add_argument('--pmm-client', dest="pmm_client", type=str, nargs='?')
   parser.add_argument('--db-version', dest="db_version", type=str, nargs='?')
   parser.add_argument('--k8s-cluster-domain', type=str, nargs='?')
   parser.add_argument('--k8s-namespace', type=str, nargs='?')
@@ -707,6 +735,13 @@ def apply_node_actions(ns, _, actions):
     env["DB_PASS"]= "verysecretpassword1^"
     if actions.wal == "logical":
       extra_vars["extra_db_opts_file"] = "postgresql/logical.conf"
+  if actions.pmm_client:
+    params = soft_params(actions.pmm_client)
+    extra_vars["extra_pmm_client_version"] = params["version"]
+    if "server" in params:
+      extra_vars["extra_pmm_url"] = params["server"]
+    else:
+      extra_vars["extra_pmm_url"] = "node0"
   if actions.pg_stat_monitor:
     extra_vars["extra_pg_stat_monitor"] = "1"
   if actions.postgresql is not None:
@@ -998,7 +1033,9 @@ def main():
       (node_actions[-1][1]).os = args.os
     nodes_os = nodes_os + node + "=" + (node_actions[-1][1]).os + ","
     act = node_actions[-1][1]
-    if act.k3d or (args.provider == "docker" and (act.k8s_ps or act.k8s_pxc or act.k8s_pg or act.k8s_mongo)):
+    if act.k3d or (args.provider == "docker"
+                   and (act.k8s_ps or act.k8s_pxc or act.k8s_pg or act.k8s_mongo
+                        or is_unmodified_docker_image(act) )):
       if args.skip_nodes == "":
         args.skip_nodes = node
       else:
@@ -1022,6 +1059,10 @@ def main():
     node = n[0]
     if node == "node0":
       node = "default"
+    if args.provider == "docker" and is_unmodified_docker_image(n[1]):
+      node_name = "{}{}-{}".format(ns_prefix,args.user, node)
+      deploy_unmodified_docker_images(args.user, args.namespace, node_name, n[1])
+
     (_, extra_vars) = apply_node_actions(args.namespace, node, n[1])
 
     extrastr = ""
