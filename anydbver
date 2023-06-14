@@ -11,6 +11,7 @@ import sqlite3
 import anydbver_tests
 from anydbver_run_tools import run_fatal, run_get_line
 from anydbver_updater import update_versions
+from anydbver_help import arg_help
 
 COMMAND_TIMEOUT=600
 FORMAT = '%(asctime)s %(levelname)s %(message)s'
@@ -18,6 +19,13 @@ ANYDBVER_DIR = os.path.dirname(os.path.realpath(__file__))
 logging.basicConfig(format=FORMAT)
 logger = logging.getLogger('AnyDbVer')
 logger.setLevel(logging.INFO)
+
+class SmartFormatter(argparse.HelpFormatter):
+  def _split_lines(self, text, width):
+    if text.startswith('R|'):
+      return text[2:].splitlines()  
+    # this is the RawTextHelpFormatter._split_lines
+    return argparse.HelpFormatter._split_lines(self, text, width)
 
 
 def get_servers_list(provider, net):
@@ -587,7 +595,7 @@ def find_version(args):
     args.mysql_jdbc = version.rstrip()
 
 
-def parse_node(args):
+def parse_node(args, help_cmd=False):
   node = args.pop(0)
 
   for cmd_idx, cmd in enumerate(args):
@@ -597,64 +605,67 @@ def parse_node(args):
       cmd = re.sub(r'^', '--', cmd).replace(':','=', 1)
     args[cmd_idx] = cmd
 
-  parser = argparse.ArgumentParser()
-  parser.add_argument('--mysql-server', '--mysql', '--mysql-community-server', type=str, nargs='?')
-  parser.add_argument('--mariadb', '--maria', '--mariadb-server', type=str, nargs='?')
-  parser.add_argument('--mysql-router', type=str, nargs='?')
-  parser.add_argument('--percona-server', '--ps', type=str, nargs='?')
-  parser.add_argument('--percona-xtradb-cluster', '--pxc', type=str, nargs='?')
-  parser.add_argument('--proxysql', type=str, nargs='?')
-  parser.add_argument('--percona-proxysql', type=str, nargs='?')
-  parser.add_argument('--haproxy', type=str, nargs='?')
-  parser.add_argument('--haproxy-galera', type=str, nargs='?')
-  parser.add_argument('--clustercheck', type=str, nargs='?')
-  parser.add_argument('--mysql-jdbc', type=str, nargs='?')
-  parser.add_argument('--galera-leader', '--galera-master', '--galera-join', type=str, nargs='?')
-  parser.add_argument('--group-replication', '--innodb-cluster', type=str, nargs='?')
-  parser.add_argument('--cluster-name', '--cluster', type=str, default='cluster1', nargs='?')
-  parser.add_argument('--ldap', type=str, nargs='?')
-  parser.add_argument('--kmip-server', type=str, nargs='?')
-  parser.add_argument('--percona-server-mongodb', '--psmdb', type=str, nargs='?')
-  parser.add_argument('--ldap-master', type=str, nargs='?')
-  parser.add_argument('--replica-set', type=str, nargs='?')
-  parser.add_argument('--percona-postgresql', '--percona-postgres', '--ppg', type=str, nargs='?')
-  parser.add_argument('--postgresql', '--postgres', '--pg', type=str, nargs='?')
-  parser.add_argument('--pgbackrest', type=str, nargs='?')
-  parser.add_argument('--wal', '--postgres-wal', type=str, nargs='?')
-  parser.add_argument('--pg-stat-monitor','--pg_stat_monitor', type=str, nargs='?')
-  parser.add_argument('--patroni', type=str, nargs='?')
-  parser.add_argument('--etcd-ip', type=str, nargs='?')
-  parser.add_argument('--development', type=str, nargs='?')
-  parser.add_argument('--leader', '--master', '--primary', type=str, nargs='?')
-  parser.add_argument('--percona-xtrabackup', type=str, nargs='?')
-  parser.add_argument('--debug-packages', '--debug', type=str, nargs='?')
-  parser.add_argument('--rocksdb', type=str, nargs='?')
-  parser.add_argument('--s3sql', type=str, nargs='?')
-  parser.add_argument('--percona-orchestrator', type=str, nargs='?')
-  parser.add_argument('--percona-toolkit', type=str, nargs='?')
-  parser.add_argument('--cert-manager', dest="cert_manager", type=str, nargs='?')
-  parser.add_argument('--k8s-minio', dest="k8s_minio", type=str, nargs='?')
-  parser.add_argument('--loki', dest="loki", type=str, nargs='?')
-  parser.add_argument('--kube-fledged', dest="kube_fledged", type=str, nargs='?')
-  parser.add_argument('--minio-certs', dest="minio_certs", type=str, nargs='?')
-  parser.add_argument('--k3d', type=str, nargs='?')
-  parser.add_argument('--registry-cache', type=str, nargs='?')
-  parser.add_argument('--private-registry', type=str, nargs='?')
-  parser.add_argument('--helm', type=str, nargs='?')
-  parser.add_argument('--os', type=str, default="")
-  parser.add_argument('--k8s-pg',  dest="k8s_pg",  type=str, action='append', nargs='?')
-  parser.add_argument('--k8s-ps', dest="k8s_ps", type=str, nargs='?')
-  parser.add_argument('--k8s-mongo', dest="k8s_mongo", type=str, nargs='?')
-  parser.add_argument('--k8s-pxc', dest="k8s_pxc", type=str, action='append', nargs='?')
-  parser.add_argument('--pmm', dest="pmm", type=str, nargs='?')
-  parser.add_argument('--pmm-client', dest="pmm_client", type=str, nargs='?')
-  parser.add_argument('--db-version', dest="db_version", type=str, nargs='?')
-  parser.add_argument('--k8s-cluster-domain', type=str, nargs='?')
-  parser.add_argument('--k8s-namespace', type=str, nargs='?')
-  parser.add_argument('--sql', dest="sql_file", type=str, nargs='?')
-  parser.add_argument('--k3s', dest="k3s", type=str, nargs='?')
-  parser.add_argument('--nginx-ingress', '--ingress-port', dest="ingress_port", type=str, nargs='?')
-  parser.add_argument('--ingress', type=str, nargs='?')
+  if help_cmd:
+    args.append('-h')
+
+  parser = argparse.ArgumentParser(formatter_class=SmartFormatter)
+  parser.add_argument('--mysql-server', '--mysql', '--mysql-community-server', type=str, nargs='?', help=arg_help("mysql-server"))
+  parser.add_argument('--mariadb', '--maria', '--mariadb-server', type=str, nargs='?', help=arg_help("mariadb"))
+  parser.add_argument('--mysql-router', type=str, nargs='?', help=arg_help("mysql-router"))
+  parser.add_argument('--percona-server', '--ps', type=str, nargs='?', help=arg_help("percona-server"))
+  parser.add_argument('--percona-xtradb-cluster', '--pxc', type=str, nargs='?', help=arg_help("percona-xtradb-cluster"))
+  parser.add_argument('--proxysql', type=str, nargs='?', help=arg_help("proxysql"))
+  parser.add_argument('--percona-proxysql', type=str, nargs='?', help=arg_help("percona-proxysql"))
+  parser.add_argument('--haproxy', type=str, nargs='?', help=arg_help("haproxy"))
+  parser.add_argument('--haproxy-galera', type=str, nargs='?', help=arg_help("haproxy-galera"))
+  parser.add_argument('--clustercheck', type=str, nargs='?', help=arg_help("clustercheck"))
+  parser.add_argument('--mysql-jdbc', type=str, nargs='?', help=arg_help("mysql-jdbc"))
+  parser.add_argument('--galera-leader', '--galera-master', '--galera-join', type=str, nargs='?', help=arg_help("galera-leader"))
+  parser.add_argument('--group-replication', '--innodb-cluster', type=str, nargs='?', help=arg_help("group-replication"))
+  parser.add_argument('--cluster-name', '--cluster', type=str, default='cluster1', nargs='?', help=arg_help("cluster-name"))
+  parser.add_argument('--ldap', type=str, nargs='?', help=arg_help("ldap"))
+  parser.add_argument('--kmip-server', type=str, nargs='?', help=arg_help("kmip-server"))
+  parser.add_argument('--percona-server-mongodb', '--psmdb', type=str, nargs='?', help=arg_help("percona-server-mongodb"))
+  parser.add_argument('--ldap-master', type=str, nargs='?', help=arg_help("ldap-master"))
+  parser.add_argument('--replica-set', type=str, nargs='?', help=arg_help("replica-set"))
+  parser.add_argument('--percona-postgresql', '--percona-postgres', '--ppg', type=str, nargs='?', help=arg_help("percona-postgresql"))
+  parser.add_argument('--postgresql', '--postgres', '--pg', type=str, nargs='?', help=arg_help("postgresql"))
+  parser.add_argument('--pgbackrest', type=str, nargs='?', help=arg_help("pgbackrest"))
+  parser.add_argument('--wal', '--postgres-wal', type=str, nargs='?', help=arg_help("wal"))
+  parser.add_argument('--pg-stat-monitor','--pg_stat_monitor', type=str, nargs='?', help=arg_help("pg-stat-monitor"))
+  parser.add_argument('--patroni', type=str, nargs='?', help=arg_help("patroni"))
+  parser.add_argument('--etcd-ip', type=str, nargs='?', help=arg_help("etcd-ip"))
+  parser.add_argument('--development', type=str, nargs='?', help=arg_help("development"))
+  parser.add_argument('--leader', '--master', '--primary', type=str, nargs='?', help=arg_help("leader"))
+  parser.add_argument('--percona-xtrabackup', type=str, nargs='?', help=arg_help("percona-xtrabackup"))
+  parser.add_argument('--debug-packages', '--debug', type=str, nargs='?', help=arg_help("debug-packages"))
+  parser.add_argument('--rocksdb', type=str, nargs='?', help=arg_help("rocksdb"))
+  parser.add_argument('--s3sql', type=str, nargs='?', help=arg_help("s3sql"))
+  parser.add_argument('--percona-orchestrator', type=str, nargs='?', help=arg_help("percona-orchestrator"))
+  parser.add_argument('--percona-toolkit', type=str, nargs='?', help=arg_help("percona-toolkit"))
+  parser.add_argument('--cert-manager', dest="cert_manager", type=str, nargs='?', help=arg_help("cert-manager"))
+  parser.add_argument('--k8s-minio', dest="k8s_minio", type=str, nargs='?', help=arg_help("k8s-minio"))
+  parser.add_argument('--loki', dest="loki", type=str, nargs='?', help=arg_help("loki"))
+  parser.add_argument('--kube-fledged', dest="kube_fledged", type=str, nargs='?', help=arg_help("kube-fledged"))
+  parser.add_argument('--minio-certs', dest="minio_certs", type=str, nargs='?', help=arg_help("minio-certs"))
+  parser.add_argument('--k3d', type=str, nargs='?', help=arg_help("k3d"))
+  parser.add_argument('--registry-cache', type=str, nargs='?', help=arg_help("registry-cache"))
+  parser.add_argument('--private-registry', type=str, nargs='?', help=arg_help("private-registry"))
+  parser.add_argument('--helm', type=str, nargs='?', help=arg_help("helm"))
+  parser.add_argument('--os', type=str, default="", help=arg_help("os"))
+  parser.add_argument('--k8s-pg',  dest="k8s_pg",  type=str, action='append', nargs='?', help=arg_help("k8s-pg"))
+  parser.add_argument('--k8s-ps', dest="k8s_ps", type=str, nargs='?', help=arg_help("k8s-ps"))
+  parser.add_argument('--k8s-mongo', dest="k8s_mongo", type=str, nargs='?', help=arg_help("k8s-mongo"))
+  parser.add_argument('--k8s-pxc', dest="k8s_pxc", type=str, action='append', nargs='?', help=arg_help("k8s-pxc"))
+  parser.add_argument('--pmm', dest="pmm", type=str, nargs='?', help=arg_help("pmm"))
+  parser.add_argument('--pmm-client', dest="pmm_client", type=str, nargs='?', help=arg_help("pmm-client"))
+  parser.add_argument('--db-version', dest="db_version", type=str, nargs='?', help=arg_help("db-version"))
+  parser.add_argument('--k8s-cluster-domain', type=str, nargs='?', help=arg_help("k8s-cluster-domain"))
+  parser.add_argument('--k8s-namespace', type=str, nargs='?', help=arg_help("k8s-namespace"))
+  parser.add_argument('--sql', dest="sql_file", type=str, nargs='?', help=arg_help("sql"))
+  parser.add_argument('--k3s', dest="k3s", type=str, nargs='?', help=arg_help("k3s"))
+  parser.add_argument('--nginx-ingress', '--ingress-port', dest="ingress_port", type=str, nargs='?', help=arg_help("nginx-ingress"))
+  parser.add_argument('--ingress', type=str, nargs='?', help=arg_help("ingress"))
   args = parser.parse_args(args)
 
   find_version(args)
@@ -702,6 +713,13 @@ def apply_node_actions(ns, _, actions):
     actions.percona_server = params["version"]
     if "mysql-router" in params:
       actions.mysql_router = 'percona-server'
+    if "master" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["master"])
+      env["DB_IP"] = extra_vars["extra_master_ip"]
+    if "leader" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["leader"])
+      env["DB_IP"] = extra_vars["extra_master_ip"]
+
     extra_vars["extra_percona_server_version"] = actions.percona_server
     extra_vars["extra_db_opts_file"] = "mysql/async-repl-gtid.cnf"
     extra_vars["extra_db_user"] = "root"
@@ -963,10 +981,19 @@ def handle_non_deployment_commands():
 def main():
   os.chdir(ANYDBVER_DIR)
   deployment = False
+  help_cmd = False
+  help_idx = 0
+  argv_cnt = 0
   for arg in sys.argv:
+    if arg in ("--help"):
+        help_cmd = True
+        help_idx = argv_cnt
     if arg in ("--deploy","deploy", "--replace", "replace", "--add", "add"):
       deployment = True
-      break
+    argv_cnt = argv_cnt + 1
+
+  if deployment and help_cmd:
+    del(sys.argv[help_idx])
 
   if not deployment:
     handle_non_deployment_commands()
@@ -1035,8 +1062,10 @@ def main():
   node_names = {}
   nodes_os = args.os + ","
   args.skip_nodes = ""
+  if len(nodelines) == 0:
+    nodelines.append(['node0'])
   for nodeline in nodelines:
-    node_actions.append(parse_node(nodeline))
+    node_actions.append(parse_node(nodeline, help_cmd))
     node = node_actions[-1][0]
     node_names[ node ] = 1
     if (node_actions[-1][1]).os == "":
@@ -1058,7 +1087,7 @@ def main():
     destroy(args)
 
   nodes_cnt = len(node_names)
-  if args.deploy:
+  if args.deploy and not help_cmd:
     create_nodes(args.provider, nodes_cnt, nodes_os, args.namespace, args.skip_nodes)
 
   cmds = []
