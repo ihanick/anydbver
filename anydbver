@@ -136,6 +136,15 @@ def deploy_unmodified_docker_images(usr, ns, node_name, node):
                "--network={}".format(net),
                "percona/pmm-server:{ver}".format(ver=params["version"])
                ], "Can't start PMM")
+  if node.percona_server:
+    params = soft_params(node.percona_server)
+    logger.info("docker run --network={net} -d --name={name} percona/percona-server:{ver}".format(net=net, name=node_name, ver=params["version"]))
+    run_fatal(logger,
+              ["docker", "run", "-d", "--name={}".format(node_name),
+               "-e", "MYSQL_ROOT_PASSWORD=verysecretpassword1^",
+               "--network={}".format(net),
+               "percona/percona-server:{ver}".format(ver=params["version"])
+               ], "Can't start percona server docker container")
 
 def deploy(args, node_actions):
   logger.info("Deploy")
@@ -211,20 +220,21 @@ mirrors:
         if node.ingress:
           params = soft_params(node.ingress)
           node.ingress_port = params["version"]
-          if "traefik" in params:
-            node.ingress_type = "traefik"
-          elif "nginx" in params:
-            node.ingress_type = "nginx"
-          elif "traefik-metallb" in params:
-            """
-            helm install -n kube-system -f traefik-values.yaml traefik traefik/traefik
-            bash tools/setup_metallb.sh
-            """
-            node.ingress_type = "traefik-metallb"
-          elif "istio" in params:
-            node.ingress_type = "istio"
-          else:
-            node.ingress_type = "nginx"
+          if not node.ingress_type:
+            if "traefik" in params:
+              node.ingress_type = "traefik"
+            elif "nginx" in params:
+              node.ingress_type = "nginx"
+            elif "traefik-metallb" in params:
+              """
+              helm install -n kube-system -f traefik-values.yaml traefik traefik/traefik
+              bash tools/setup_metallb.sh
+              """
+              node.ingress_type = "traefik-metallb"
+            elif "istio" in params:
+              node.ingress_type = "istio"
+            else:
+              node.ingress_type = "nginx"
 
           if node.ingress_type is None or node.ingress_type == "":
             node.ingress_type = 'traefik'
