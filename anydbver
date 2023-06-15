@@ -8,12 +8,15 @@ import itertools
 import subprocess
 from pathlib import Path
 import sqlite3
+from types import SimpleNamespace
+import urllib.parse
 import anydbver_tests
 from anydbver_run_tools import run_fatal, run_get_line
 from anydbver_updater import update_versions
 from anydbver_help import arg_help
 
 COMMAND_TIMEOUT=600
+DEFAULT_PASSWORD='verysecretpassword1^'
 FORMAT = '%(asctime)s %(levelname)s %(message)s'
 ANYDBVER_DIR = os.path.dirname(os.path.realpath(__file__))
 logging.basicConfig(format=FORMAT)
@@ -138,18 +141,27 @@ def deploy_unmodified_docker_images(usr, ns, node_name, node):
   logger.info("Deploying node with unmodified docker image")
   if node.pmm:
     params = soft_params(node.pmm)
-    logger.info("docker run --network={net} -p 443 -d --name={name} percona/pmm-server:{ver}".format(net=net, name=node_name, ver=params["version"]))
+    pmm_port = ""
+    if "port" in params and params["port"] != "":
+      pmm_port = params["port"] + ":"
+
     run_fatal(logger,
               ["docker", "run", "-d", "--name={}".format(node_name),
+               "-p", "{port}443".format(port=pmm_port),
                "--network={}".format(net),
                "percona/pmm-server:{ver}".format(ver=params["version"])
                ], "Can't start PMM")
+
+    run_fatal(logger,
+              [
+    "docker", "exec", node_name, "bash", "-c", 'sleep 30;grafana-cli --homepath /usr/share/grafana --configOverrides cfg:default.paths.data=/srv/grafana admin reset-admin-password {}'.format(DEFAULT_PASSWORD)
+    ], "Can't change PMM password")
   if node.percona_server:
     params = soft_params(node.percona_server)
     logger.info("docker run --network={net} -d --name={name} percona/percona-server:{ver}".format(net=net, name=node_name, ver=params["version"]))
     run_fatal(logger,
               ["docker", "run", "-d", "--name={}".format(node_name),
-               "-e", "MYSQL_ROOT_PASSWORD=verysecretpassword1^",
+               "-e", "MYSQL_ROOT_PASSWORD={}".format(DEFAULT_PASSWORD),
                "--network={}".format(net),
                "percona/percona-server:{ver}".format(ver=params["version"])
                ], "Can't start percona server docker container")
@@ -433,7 +445,7 @@ mirrors:
   if args.provider != "kubectl":
     run_fatal(logger, ["ansible-playbook", "-i", "{}ansible_hosts_run".format(ns_prefix), "playbook.yml"], "Error running playbook")
 
-def load_sett_file(provider):
+def load_sett_file(provider, echo=True):
   if not Path(".anydbver").is_file():
     logger.info("Creating new settings file .anydbver with provider {}".format(provider))
     with open(".anydbver", "w") as file:
@@ -444,12 +456,13 @@ def load_sett_file(provider):
    for l in file.readlines():
      (k,v) = l.split('=',1)
      sett[k] = v.strip()
-  print("Loaded settings: ", sett)
+  if echo:
+    print("Loaded settings: ", sett)
   return sett
 
-def detect_provider(args):
+def detect_provider(args, echo=True):
   if args.provider == "":
-    sett = load_sett_file("docker")
+    sett = load_sett_file("docker", echo)
     if "PROVIDER" in sett:
       args.provider = sett["PROVIDER"]
 
@@ -672,18 +685,25 @@ def parse_node(args, help_cmd=False):
 
   return node,args
 
-def resolve_hostname(ns, host):
+def resolve_hostname(ns, host, user, provider):
   if ns != "":
     ns = ns + "-"
   if host == "node0":
     host = "default"
-  for line in list(open("{}ansible_hosts".format(ns))):
-    result = re.search(r"[.]{host} .*ansible_host=([^ ]+)".format(host=host), line)
-    if result:
-      return result.groups()[0]
+  if Path("{}ansible_hosts".format(ns)).is_file():
+    for line in list(open("{}ansible_hosts".format(ns))):
+      result = re.search(r"[.]{host} .*ansible_host=([^ ]+)".format(host=host), line)
+      if result:
+        return result.groups()[0]
+  if provider == "docker":
+    container_name =  "{ns}{user}-{host}".format(ns=ns, user=user, host=host)
+    return list(run_get_line(logger,
+                             ["docker", "inspect", "-f", "{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}", container_name],
+                             "Can't get node ip", print_cmd=False).splitlines())[0]
+
   raise Exception("Can't get node {host} ip".format(host=host))
 
-def apply_node_actions(ns, _, actions):
+def apply_node_actions(ns, _, actions, user, provider):
   extra_vars = {'extra_db_user': 'dba', 'extra_db_password': 'secret', 'extra_start_db': '1'}
   env = {"DB_USER":"dba", "DB_PASS":"secret", "START":"1"}
   db_features = []
@@ -697,7 +717,7 @@ def apply_node_actions(ns, _, actions):
     extra_vars["extra_ldap_server"] = "1"
     env["LDAP_SERVER"] = "1"
   if actions.ldap_master is not None:
-    extra_vars["extra_ldap_server_ip"] = resolve_hostname(ns, actions.ldap_master)
+    extra_vars["extra_ldap_server_ip"] = resolve_hostname(ns, actions.ldap_master, user, provider)
     env["LDAP_IP"] = extra_vars["extra_ldap_server_ip"]
   if actions.percona_server_mongodb is not None:
     extra_vars["extra_psmdb_version"] = actions.percona_server_mongodb
@@ -714,10 +734,10 @@ def apply_node_actions(ns, _, actions):
     if "mysql-router" in params:
       actions.mysql_router = 'percona-server'
     if "master" in params:
-      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["master"])
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["master"], user, provider)
       env["DB_IP"] = extra_vars["extra_master_ip"]
     if "leader" in params:
-      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["leader"])
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["leader"], user, provider)
       env["DB_IP"] = extra_vars["extra_master_ip"]
 
     extra_vars["extra_percona_server_version"] = actions.percona_server
@@ -766,10 +786,15 @@ def apply_node_actions(ns, _, actions):
   if actions.pmm_client:
     params = soft_params(actions.pmm_client)
     extra_vars["extra_pmm_client_version"] = params["version"]
-    if "server" in params:
+    if "server" not in params:
+      params["server"] = "node0"
+    if params["server"].startswith("http"):
       extra_vars["extra_pmm_url"] = params["server"]
     else:
-      extra_vars["extra_pmm_url"] = "node0"
+      pass_encoded = urllib.parse.quote_plus(DEFAULT_PASSWORD)
+      extra_vars["extra_pmm_url"] = "https://admin:{password}@{host}".format(
+          password=pass_encoded,
+          host=resolve_hostname(ns, params["server"], user, provider))
   if actions.pg_stat_monitor:
     extra_vars["extra_pg_stat_monitor"] = "1"
   if actions.postgresql is not None:
@@ -812,7 +837,7 @@ def apply_node_actions(ns, _, actions):
     extra_vars["extra_cluster_name"] = actions.cluster_name
     env["CLUSTER"] = actions.cluster_name
   if actions.galera_leader:
-    extra_vars["extra_master_ip"] = resolve_hostname(ns, actions.galera_leader)
+    extra_vars["extra_master_ip"] = resolve_hostname(ns, actions.galera_leader, user, provider)
     extra_vars["extra_replication_type"] = "galera"
     env["DB_IP"] = extra_vars["extra_master_ip"]
     env["REPLICATION_TYPE"] = "galera"
@@ -839,7 +864,7 @@ def apply_node_actions(ns, _, actions):
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.haproxy_galera is not None: 
-    extra_vars["extra_haproxy_galera"] = ','.join([resolve_hostname(ns, node) for node in actions.haproxy_galera.split(',') ])
+    extra_vars["extra_haproxy_galera"] = ','.join([resolve_hostname(ns, node, user, provider) for node in actions.haproxy_galera.split(',') ])
     extra_vars["extra_db_user"] = "root"
     extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["HAPROXY_GALERA"] = extra_vars["extra_haproxy_galera"]
@@ -871,10 +896,10 @@ def apply_node_actions(ns, _, actions):
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.leader is not None:
-    extra_vars["extra_master_ip"] = resolve_hostname(ns, actions.leader)
+    extra_vars["extra_master_ip"] = resolve_hostname(ns, actions.leader, user, provider)
     env["DB_IP"] = extra_vars["extra_master_ip"]
   if actions.etcd_ip is not None:
-    extra_vars["extra_etcd_ip"] =  resolve_hostname(ns, actions.etcd_ip)
+    extra_vars["extra_etcd_ip"] =  resolve_hostname(ns, actions.etcd_ip, user, provider)
   if len(db_features) > 0:
     extra_vars["extra_db_features"] = ",".join(db_features)
     env["DB_FEATURES"] = extra_vars["extra_db_features"]
@@ -939,13 +964,17 @@ def handle_non_deployment_commands():
   else:
     args.user = os.getlogin()
 
-  detect_provider(args)
+  if args.ip:
+    detect_provider(args, False)
+  else:
+    detect_provider(args, True)
+
 
   if args.ip:
     host = "default"
     if args.ip == "":
       host = args.ip
-    print(resolve_hostname(args.namespace, host))
+    print(resolve_hostname(args.namespace, host, args.user, args.provider))
     sys.exit(0)
   if args.ssh:
     host = "default"
@@ -1003,7 +1032,14 @@ def main():
       host = "default"
       if len(sys.argv) > 2:
         host = sys.argv[2]
-      print(resolve_hostname("", host))
+      a = SimpleNamespace(**{ "provider": "", "user": ""})
+      if "USER" in os.environ:
+        a.user = os.environ["USER"]
+      else:
+        a.user = os.getlogin()
+
+      detect_provider(a, False)
+      print(resolve_hostname("", host, a.user, a.provider))
       sys.exit(0)
     if sys.argv[1] in ("ssh", "--ssh"):
       host = "default"
@@ -1094,15 +1130,21 @@ def main():
 
   ansible_hosts_run = open("{}ansible_hosts_run".format(ns_prefix), "w")
 
+  has_net = False
+
   for n in node_actions:
     node = n[0]
     if node == "node0":
       node = "default"
     if args.provider == "docker" and is_unmodified_docker_image(n[1]):
       node_name = "{}{}-{}".format(ns_prefix,args.user, node)
+      net = "{}{}-anydbver".format(ns_prefix, args.user)
+      if not has_net:
+        run_fatal(logger, ["docker", "network", "create", net], "Can't create a docker network", "already exists")
+        has_net = True
       deploy_unmodified_docker_images(args.user, args.namespace, node_name, n[1])
 
-    (_, extra_vars) = apply_node_actions(args.namespace, node, n[1])
+    (_, extra_vars) = apply_node_actions(args.namespace, node, n[1], args.user, args.provider)
 
     extrastr = ""
     for v in extra_vars:
@@ -1116,7 +1158,7 @@ def main():
     if node not in args.skip_nodes.split(",") and args.provider in ("lxd", "docker"):
       ansible_hosts_run.write(
       "{user}.{node} ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host={ip} ansible_python_interpreter={python_path} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none' {extra_vars}\n".format(
-          user=args.user,node=node, python_path=python_path,extra_vars=extrastr, ip=resolve_hostname(args.namespace, node))
+          user=args.user,node=node, python_path=python_path,extra_vars=extrastr, ip=resolve_hostname(args.namespace, node, args.user, args.provider))
       )
       logger.info('Node ' + node + ': ' + extrastr.replace('extra_',''))
 
