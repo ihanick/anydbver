@@ -311,7 +311,7 @@ mirrors:
       if node.s3sql:
           run_k8s_operator_cmd.append("--sql={}".format(node.s3sql))
 
-      if (node.ingress_port or node.pmm or node.k8s_minio or node.loki):
+      if (node.ingress_port or node.pmm or node.k8s_minio or node.loki or node.cert_manager):
         run_fatal(logger, run_k8s_operator_cmd, "Can't run the operator")
 
       if node.helm:
@@ -373,8 +373,6 @@ mirrors:
             run_cmd.append("--db-version={}".format(params["db-version"]))
           if "memory" in params:
             run_cmd.append("--memory={}".format(params["memory"]))
-          if "replicas" in params:
-            run_cmd.append("--db-replicas={}".format(params["replicas"]))
           if "sql" in params:
             run_cmd.append("--sql={}".format(params["sql"]))
           if "standby" in params and params["standby"]:
@@ -383,6 +381,8 @@ mirrors:
             run_cmd.append("--helm")
           if "helm-values" in params and params["helm-values"]:
             run_cmd.append("--helm-values={}".format(params["helm-values"]))
+          if "tls" in params:
+            run_cmd.append("--cluster-tls")
           run_fatal(logger, run_cmd, "Can't run the operator")
 
       if node.k8s_ps:

@@ -144,7 +144,7 @@ def info_pg_operator(ns,cluster_name):
       print("kubectl -n {} exec -it {} -- env PSQL_HISTORY=/tmp/.psql_history psql -U postgres".format(
         subprocess.list2cmdline([ns]), container))
 
-def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, bucket, gcs_key, yq, db_replicas):
+def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, bucket, gcs_key, yq, db_replicas, tls):
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r's/namespace: "pgo"/namespace: "{}"/'.format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/cr.yaml"], "fix namespace in yaml")
@@ -152,6 +152,10 @@ def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, 
     run_fatal(["sed", "-i", "-re", r"s/standby: false\>/standby: true/", "./deploy/cr.yaml"], "enable standby in yaml")
   if db_ver != "":
     run_fatal(["sed", "-i", "-re", r"s/ppg[0-9.]+/ppg{}/".format(db_ver), "./deploy/cr.yaml"], "change PG major version")
+  if tls and op_ver.startswith("1"):
+    run_fatal( [ yq,
+                '.spec.tlsOnly=true | .spec.sslCA="{name}-ssl-ca" | .spec.sslSecretName="{name}-ssl-keypair" | .spec.sslReplicationSecretName="{name}-ssl-keypair"'.format(name=cluster_name),
+                "-i", "./deploy/cr.yaml"], "enable TLS encryption")
 
   if db_replicas and op_ver.startswith("1"):
     run_fatal(
@@ -1054,7 +1058,7 @@ def setup_operator(args):
   if args.operator_name == "percona-postgresql-operator":
     run_pg_operator(args.namespace, args.operator_name, args.db_version,
                     args.cluster_name, args.operator_version, args.standby,
-                    args.backup_type, args.bucket,args.gcs_key, args.yq, args.db_replicas)
+                    args.backup_type, args.bucket,args.gcs_key, args.yq, args.db_replicas, args.cluster_tls)
   elif args.operator_name in ("percona-server-mongodb-operator", "percona-xtradb-cluster-operator", "percona-server-mysql-operator"):
     run_percona_operator(args.namespace, args.operator_name, args.operator_version, args.cluster_name)
 
@@ -1261,6 +1265,7 @@ def main():
   parser.add_argument('--info-only', dest="info", action='store_true')
   parser.add_argument('--smart-update', dest="smart_update", action='store_true')
   parser.add_argument('--standby', dest="standby", action='store_true')
+  parser.add_argument('--cluster-tls', action='store_true')
   parser.add_argument('--db-replicas', dest="db_replicas", type=str, nargs='?')
   parser.add_argument('--update-strategy', dest="update_strategy", type=str, nargs='?')
   parser.add_argument('--helm', dest="helm", action='store_true')
