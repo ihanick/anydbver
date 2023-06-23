@@ -1050,6 +1050,16 @@ def setup_operator(args):
       run_fatal(["sed", "-i", "-re", r"s/: my-cluster-name\>/: {}/".format(args.cluster_name), "./deploy/cr.yaml"], "fix cluster name in cr.yaml")
     args.users_secret = args.cluster_name + "-secrets"
 
+    if args.cluster_domain != "":
+      run_fatal(
+        [
+          args.yq,
+          '.spec.clusterServiceDNSSuffix="svc.{}"'.format(args.cluster_domain),
+          "-i",
+          "./deploy/cr.yaml"], "change cluster domain")
+
+      
+
   enable_pmm(args)
 
   if args.minio:

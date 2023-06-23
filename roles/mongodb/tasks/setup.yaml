@@ -3,22 +3,10 @@
   block:
     - name: Merge conf file part and main config
       command:
-        cmd: /usr/local/bin/yq merge -i /etc/mongod.conf "/vagrant/configs/{{ db_opts_file }}"
+        cmd: /vagrant/tools/yq -i ea '. as $item ireduce ({}; . * $item )' /etc/mongod.conf "/vagrant/configs/{{ db_opts_file }}"
         creates: "/root/{{ db_opts_file | basename }}.applied"
     - name: Avoid re-merge on next runs
       file: path="/root/{{ db_opts_file | basename }}.applied" state=touch modification_time=preserve access_time=preserve
-
-- name: merge configsrv conf
-  when: mongo_configsrv  != ''
-  command:
-    cmd: /usr/local/bin/yq merge -i /etc/mongod.conf "/vagrant/configs/mongo/configsrv.conf"
-    creates: "/root/configsrv.applied"
-
-- name: merge shardsrv conf
-  when: mongo_shardsrv  != ''
-  command:
-    cmd: /usr/local/bin/yq merge -i /etc/mongod.conf "/vagrant/configs/mongo/shardsrv.conf"
-    creates: "/root/shardsrv.applied"
 
 - name: setup mongos
   when: mongos_cfg != ''
@@ -67,12 +55,18 @@
       $MONGO admin --eval 'db.createUser({user:"dba", pwd: "{{ db_password }}", roles: ["root"]})';
       {{ 'true && ' if psmdb_version != '' else 'false &&' }} percona-server-mongodb-enable-auth.sh -q;
       $MONGO admin --eval 'db.changeUserPassword("dba", "{{ db_password }}")';
-      /usr/local/bin/yq merge -i /etc/mongod.conf "/vagrant/configs/mongo/authorization.conf"
+      /vagrant/tools/yq -i ea '. as $item ireduce ({}; . * $item )' /etc/mongod.conf "/vagrant/configs/mongo/authorization.conf"
       systemctl stop mongod;
       sed -i -e 's/127.0.0.1/0.0.0.0/g' /etc/mongod.conf;
       echo 'db = connect("mongodb://dba:{{ db_password }}@127.0.0.1:27017/admin")' > /root/.mongorc.js;
       echo 'db = connect("mongodb://dba:{{ db_password }}@127.0.0.1:27017/admin")' > /root/.mongoshrc.js
     creates: /root/.mongorc.js
+
+- name: merge shardsrv conf
+  when: mongo_shardsrv  != ''
+  command:
+    cmd: /vagrant/tools/yq -i ea '. as $item ireduce ({}; . * $item )' /etc/mongod.conf "/vagrant/configs/mongo/shardsrv.conf"
+    creates: "/root/shardsrv.applied"
 
 - name: configure MongoDB replica options
   when: db_password != '' and (psmdb_version != '' or mongo_org_version != '') and mongo_replicaset != ''
@@ -90,10 +84,16 @@
         dest: "/root/replica-{{mongo_replicaset}}.yaml"
     - name: Merge conf file part and main config
       command:
-        cmd: /usr/local/bin/yq merge -i /etc/mongod.conf "/root/replica-{{mongo_replicaset}}.yaml"
+        cmd: /vagrant/tools/yq -i ea '. as $item ireduce ({}; . * $item )' /etc/mongod.conf "/root/replica-{{mongo_replicaset}}.yaml"
         creates: "/root/replica-{{mongo_replicaset}}.applied"
     - name: Avoid re-merge on next runs
       file: path="/root/replica-{{mongo_replicaset}}.applied" state=touch modification_time=preserve access_time=preserve
+
+- name: merge configsrv conf
+  when: mongo_configsrv  != ''
+  command:
+    cmd: /vagrant/tools/yq -i ea '. as $item ireduce ({}; . * $item )' /etc/mongod.conf "/vagrant/configs/mongo/configsrv.conf"
+    creates: "/root/configsrv.applied"
 
 - name: Setup LDAP on client
   when: ldap_server_ip != ''

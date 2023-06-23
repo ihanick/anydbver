@@ -206,7 +206,10 @@ def deploy(args, node_actions):
           node.ingress_port = params["ingress"]
         if "ingress-type" in params:
           node.ingress_type = params["ingress-type"]
-
+        if "cluster-domain" in params:
+          node.cluster_domain=params["cluster-domain"]
+          k3d_create_cmd.append("--k3s-arg")
+          k3d_create_cmd.append("--cluster-domain={}@server:0".format(params["cluster-domain"]))
 
         registry_cache_conf = ""
         if node.registry_cache:
@@ -438,6 +441,8 @@ mirrors:
           run_cmd.append("--db-version={}".format(params["db-version"]))
         elif node.db_version:
           run_cmd.append("--db-version={}".format(node.db_version))
+        if node.cluster_domain != "":
+          run_cmd.append("--cluster-domain={}".format(node.cluster_domain))
         logger.info("Starting Percona Server for MongoDB in kubernetes managed by Percona operator {}".format(node.k8s_mongo))
         run_cmd.append("--operator=percona-server-mongodb-operator")
         run_fatal(logger, run_cmd, "Can't run the operator")
@@ -639,6 +644,10 @@ def parse_node(args, help_cmd=False):
   parser.add_argument('--ldap', type=str, nargs='?', help=arg_help("ldap"))
   parser.add_argument('--kmip-server', type=str, nargs='?', help=arg_help("kmip-server"))
   parser.add_argument('--percona-server-mongodb', '--psmdb', type=str, nargs='?', help=arg_help("percona-server-mongodb"))
+  parser.add_argument('--shardsrv', type=str, nargs='?', help=arg_help("shardsrv"))
+  parser.add_argument('--configsrv', type=str, nargs='?', help=arg_help("configsrv"))
+  parser.add_argument('--mongos-cfg', type=str, nargs='?', help=arg_help("mongos-cfg"))
+  parser.add_argument('--mongos-shard', type=str, nargs='?', help=arg_help("mongos-shard"))
   parser.add_argument('--ldap-master', type=str, nargs='?', help=arg_help("ldap-master"))
   parser.add_argument('--replica-set', type=str, nargs='?', help=arg_help("replica-set"))
   parser.add_argument('--percona-postgresql', '--percona-postgres', '--ppg', type=str, nargs='?', help=arg_help("percona-postgresql"))
@@ -728,6 +737,23 @@ def apply_node_actions(ns, _, actions, user, provider):
       extra_vars["extra_mongo_replicaset"] = actions.replica_set
       env["REPLICA_SET"] = actions.replica_set
       os.system("test -f secret/{rs}-keyfile || openssl rand -base64 756 > secret/{rs}-keyfile".format(rs=actions.replica_set))
+    if actions.shardsrv is not None:
+      extra_vars["extra_mongo_shardsrv"] = "1"
+    if actions.configsrv is not None:
+      extra_vars["extra_mongo_configsrv"] = "1"
+    if actions.mongos_cfg is not None:
+      (rs, servers) = actions.mongos_cfg.split("/",1)
+      extra_vars["extra_mongos_cfg"] = rs+"/"+",".join([ resolve_hostname(ns, n, user, provider) +':27017'  for n in servers.split(',')])
+    if actions.mongos_shard is not None:
+      l = list(filter(None, re.split(r",?([^,/]+/)", actions.mongos_shard)))
+      shard_txt = ""
+      shard_list = []
+      for i in range(0, len(l)//2):
+        rs = l[2*i]
+        servers = l[2*i+1]
+        shard_txt = shard_txt + rs
+        shard_list.append(rs+",".join([ resolve_hostname(ns, n, user, provider) +':27017'  for n in servers.split(',')]))
+      extra_vars["extra_mongos_shard"] = ",".join(shard_list)
   if actions.percona_server is not None:
     params = soft_params(actions.percona_server)
     actions.percona_server = params["version"]

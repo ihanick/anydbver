@@ -61,13 +61,6 @@
     name: "https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-{{ pbm_version_short }}/binary/redhat/7/x86_64/percona-backup-mongodb-{{pbm_version}}.{{ dist }}.x86_64.rpm"
     state: present
 
-- name: Download yq
-  when: ( (psmdb_version != "" or mongo_org_version != "") and db_opts_file != '') or mongo_configsrv  != ''
-  get_url:
-    url: 'https://github.com/mikefarah/yq/releases/download/3.3.0/yq_linux_amd64'
-    dest: /usr/local/bin/yq
-    mode: '0755'
-
 - name: MongoDB Setup tasks
   when: install_only == ''
   include_tasks: setup.yaml
