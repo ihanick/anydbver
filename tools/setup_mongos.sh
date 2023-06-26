@@ -25,8 +25,12 @@ IFS=";"
 
 for SHARD_ITEM in $FULL_NEW_SEP ; do
   SRV=$(echo "$SHARD_ITEM"| sed -re 's,[^/]+/([^,]+).*,\1,')
+  RS=$(echo "$SHARD_ITEM" | cut -d / -f 1)
   until $MONGO -u dba -p secret --authenticationDatabase admin --norc "mongodb://$SRV" --eval 'rs.status()' |grep -q PRIMARY ; do sleep 1; done
-  $MONGO -u "$USR" -p "$PASS" --authenticationDatabase admin --norc mongodb://127.0.0.1:27017/admin --eval "sh.addShard('$SHARD_ITEM')"
+  until $MONGO -u "$USR" -p "$PASS" --authenticationDatabase admin --norc mongodb://127.0.0.1:27017/admin --eval "sh.status()" | egrep -q "\"$RS\"|'$RS'" ; do
+    $MONGO -u "$USR" -p "$PASS" --authenticationDatabase admin --norc mongodb://127.0.0.1:27017/admin --eval "sh.addShard('$SHARD_ITEM')"
+    sleep 1
+  done
 done
 
 IFS=OLDIFS
