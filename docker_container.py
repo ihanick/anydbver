@@ -4,7 +4,6 @@ import os
 import re
 import sys
 import argparse
-import itertools
 import subprocess
 from pathlib import Path
 import platform
@@ -16,6 +15,27 @@ FORMAT = '%(asctime)s %(levelname)s %(message)s'
 logging.basicConfig(format=FORMAT)
 logger = logging.getLogger('run k8s operator')
 logger.setLevel(logging.INFO)
+
+def create_ssh_keys():
+  if (not Path("secret/.ssh/id_rsa").is_file()):
+    run_fatal(["/bin/sh", "-c",
+               "test -f secret/id_rsa || ssh-keygen -t rsa -f secret/id_rsa -P '' && chmod 0600 secret/id_rsa"],
+              "Can't create a docker network", "can't create ssh keys")
+
+def load_sett_file(provider, echo=True):
+  if not Path(".anydbver").is_file():
+    logger.info("Creating new settings file .anydbver with provider {}".format(provider))
+    with open(".anydbver", "w") as file:
+      file.write("PROVIDER={}".format(provider))
+
+  sett = {}
+  with open(".anydbver") as file:
+   for l in file.readlines():
+     (k,v) = l.split('=',1)
+     sett[k] = v.strip()
+  if echo:
+    print("Loaded settings: ", sett)
+  return sett
 
 def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
   if print_cmd:
@@ -143,6 +163,10 @@ def start_container(args, name):
       "--profile", args.user, "{}-{}".format(docker_img.replace(":","/"),args.user), container_name ],
               "Can't start lxd container")
     os.system("until lxc exec {node} true ; do sleep 1;done; echo 'Connected to {node} via lxc'".format(node=container_name))
+    create_ssh_keys()
+    run_fatal(["lxc", "file", "push", "secret/id_rsa.pub", "{}/root/.ssh/authorized_keys".format(container_name)],
+              "Can't allow ssh connections with keys")
+
   node_ip = ""
   while node_ip == "":
     node_ip = get_node_ip(args.provider, args.namespace, name_user)
@@ -188,7 +212,11 @@ def main():
   parser.add_argument('--provider', dest="provider", type=str, default="docker")
   args = parser.parse_args()
 
-  if "USER" in os.environ:
+  sett = load_sett_file(args.provider)
+
+  if args.provider == "lxd" and "LXD_PROFILE" in sett:
+    args.user = sett["LXD_PROFILE"]
+  elif "USER" in os.environ:
     args.user = os.environ["USER"]
   else:
     args.user = os.getlogin()

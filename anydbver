@@ -35,6 +35,10 @@ def get_servers_list(provider, net):
   return list(run_get_line(logger, [provider, "ps", "-a", "--filter", "network="+net, "--format", "{{.ID}}"],
     "Can't get containers list").splitlines())
 
+def download_dependencies():
+  if not Path("tools/yq").is_file():
+    run_fatal(logger, ["bash", "-c", "curl -L -s --output tools/yq https://github.com/mikefarah/yq/releases/download/v4.24.2/yq_linux_amd64 && chmod +x tools/yq"], "Can't download yq")
+
 
 def destroy(args):
   logger.info("Removing nodes")
@@ -188,8 +192,6 @@ def deploy(args, node_actions):
 
         if not Path("tools/k3d").is_file():
           run_fatal(logger, ["bash", "-c", "curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | PATH=$PATH:{adir} K3D_INSTALL_DIR={adir} USE_SUDO=false bash".format(adir=str((Path(ANYDBVER_DIR) / "tools").resolve()))], "Can't download k3d")
-        if not Path("tools/yq").is_file():
-          run_fatal(logger, ["bash", "-c", "curl -L -s --output tools/yq https://github.com/mikefarah/yq/releases/download/v4.24.2/yq_linux_amd64 && chmod +x tools/yq"], "Can't download yq")
 
         if params["version"] == 'True':
           params["version"] = 'latest'
@@ -501,6 +503,15 @@ def detect_provider(args, echo=True):
     pass
   else:
     args.provider=""
+
+  sett = load_sett_file("docker", echo)
+  if args.provider == "lxd" and "LXD_PROFILE" in sett:
+    args.user = sett["LXD_PROFILE"]
+  elif "USER" in os.environ:
+    args.user = os.environ["USER"]
+  else:
+    args.user = os.getlogin()
+
 
 def container_name_prefix(args):
   if args.provider=="kubectl":
@@ -985,7 +996,9 @@ def handle_non_deployment_commands():
   parser.add_argument('--tools', dest="tools", type=str, nargs='?')
   args = parser.parse_args()
 
-  if "USER" in os.environ:
+  if args.provider == "lxd" and "LXD_PROFILE" in sett:
+    args.user = sett["LXD_PROFILE"]
+  elif "USER" in os.environ:
     args.user = os.environ["USER"]
   else:
     args.user = os.getlogin()
@@ -1147,6 +1160,9 @@ def main():
 
   if args.destroy or args.deploy:
     destroy(args)
+
+
+  download_dependencies()
 
   nodes_cnt = len(node_names)
   if args.deploy and not help_cmd:

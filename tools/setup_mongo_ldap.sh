@@ -46,7 +46,7 @@ setParameter:
   authenticationMechanisms: PLAIN,SCRAM-SHA-1
 EOF
 
-/usr/local/bin/yq merge -i /etc/mongod.conf /root/mongo-allow-plain.conf
+/vagrant/tools/yq -i ea '. as $item ireduce ({}; . * $item )' /etc/mongod.conf /root/mongo-allow-plain.conf
 
 systemctl enable saslauthd
 systemctl start saslauthd
