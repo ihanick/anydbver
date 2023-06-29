@@ -212,6 +212,9 @@ def deploy(args, node_actions):
           node.cluster_domain=params["cluster-domain"]
           k3d_create_cmd.append("--k3s-arg")
           k3d_create_cmd.append("--cluster-domain={}@server:0".format(params["cluster-domain"]))
+        if "feature-gates" in params:
+          k3d_create_cmd.append("--k3s-arg")
+          k3d_create_cmd.append("--kube-apiserver-arg=feature-gates={}@server:*".format(params["feature-gates"]))
 
         registry_cache_conf = ""
         if node.registry_cache:
