@@ -145,8 +145,9 @@ def info_pg_operator(ns,cluster_name):
         subprocess.list2cmdline([ns]), container))
 
 def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, bucket, gcs_key, yq, db_replicas, tls):
-  run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
-  run_fatal(["sed", "-i", "-re", r's/namespace: "pgo"/namespace: "{}"/'.format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
+  if op_ver.startswith("1.") or op_ver.startswith("2.0.") or op_ver.startswith("2.1."):
+    run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
+    run_fatal(["sed", "-i", "-re", r's/namespace: "pgo"/namespace: "{}"/'.format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
   run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/cr.yaml"], "fix namespace in yaml")
   if standby:
     run_fatal(["sed", "-i", "-re", r"s/standby: false\>/standby: true/", "./deploy/cr.yaml"], "enable standby in yaml")
@@ -178,12 +179,15 @@ def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, 
     run_fatal([yq, "-i", '.spec.backup.storages["my-gcs"].type = "gcs", .spec.backup.storages["my-gcs"].bucket = "{bucket}" '.format(bucket=bucket),
                "./deploy/cr.yaml"], "Enable GCS backups")
 
-  if file_contains('./deploy/cr.yaml','pg.percona.com/v2'):
+  if file_contains('./deploy/cr.yaml','.percona.com/v2'):
     op_env = os.environ.copy()
     op_env["PGO_NAMESPACE"] = ns
     op_env["PGO_TARGET_NAMESPACE"] = ns
     run_fatal(["kubectl", "create", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator", r"already exists", env=op_env)
-    if not k8s_wait_for_ready(ns, "pg.percona.com/control-plane=postgres-operator"):
+    if StrictVersion(op_ver) > StrictVersion("2.1.0"):
+      if not k8s_wait_for_ready(ns, "pgv2.percona.com/control-plane=postgres-operator"):
+        raise Exception("Kubernetes operator is not starting")
+    elif not k8s_wait_for_ready(ns, "pg.percona.com/control-plane=postgres-operator"):
       raise Exception("Kubernetes operator is not starting")
   else:
     run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/operator.yaml"], "Can't deploy operator")
@@ -996,7 +1000,7 @@ def setup_operator(args):
   cr_yaml_path = str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve())
   prepare_operator_repository(data_path.resolve(), args.operator_name, args.operator_version)
   if not args.smart_update and args.operator_name not in ("percona-server-mysql-operator") \
-      and not file_contains(cr_yaml_path,'pg.percona.com/v2'):
+      and not file_contains(cr_yaml_path,'.percona.com/v2'):
     merge_cr_yaml(args.yq, cr_yaml_path, str((Path(args.conf_path) / "cr-smart-update.yaml").resolve()) )
 
   if not k8s_wait_for_ready('kube-system', 'k8s-app=kube-dns'):

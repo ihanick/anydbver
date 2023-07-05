@@ -446,8 +446,8 @@ mirrors:
           run_cmd.append("--db-version={}".format(params["db-version"]))
         elif node.db_version:
           run_cmd.append("--db-version={}".format(node.db_version))
-        if node.cluster_domain != "":
-          run_cmd.append("--cluster-domain={}".format(node.cluster_domain))
+        if node.k8s_cluster_domain != "":
+          run_cmd.append("--cluster-domain={}".format(node.k8s_cluster_domain))
         logger.info("Starting Percona Server for MongoDB in kubernetes managed by Percona operator {}".format(node.k8s_mongo))
         run_cmd.append("--operator=percona-server-mongodb-operator")
         run_fatal(logger, run_cmd, "Can't run the operator")
