@@ -130,7 +130,7 @@ def prepare_operator_repository(data_path, operator_name, operator_version):
       run_fatal(["git", "checkout", branch_name(operator_version)], "Can't checkout operator repository")
   else:
     os.chdir(data_path / operator_name)
-    run_fatal(["git", "fetch"], "Can't fetch new changes from operator repository at {}".format(os.getcwd()))
+    run_fatal(["git", "fetch", "--all"], "Can't fetch new changes from operator repository at {}".format(os.getcwd()))
     run_fatal(["git", "reset", "--hard"], "Can't reset operator repository")
     run_fatal(["git", "checkout", branch_name(operator_version)], "Can't checkout operator repository")
 
