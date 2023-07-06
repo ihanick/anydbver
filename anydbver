@@ -195,6 +195,8 @@ def deploy(args, node_actions):
 
         if params["version"] == 'True':
           params["version"] = 'latest'
+        if "cluster-domain" not in params and node.k8s_cluster_domain is None:
+          params["cluster-domain"] = "cluster.local"
 
         k3d_agents = 2
         if "nodes" in params:
@@ -209,9 +211,9 @@ def deploy(args, node_actions):
         if "ingress-type" in params:
           node.ingress_type = params["ingress-type"]
         if "cluster-domain" in params:
+          node.k8s_cluster_domain = params["cluster-domain"]
           node.cluster_domain=params["cluster-domain"]
-          k3d_create_cmd.append("--k3s-arg")
-          k3d_create_cmd.append("--cluster-domain={}@server:0".format(params["cluster-domain"]))
+
         if "feature-gates" in params:
           k3d_create_cmd.append("--k3s-arg")
           k3d_create_cmd.append("--kube-apiserver-arg=feature-gates={}@server:*".format(params["feature-gates"]))
