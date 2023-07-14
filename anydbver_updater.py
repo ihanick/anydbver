@@ -261,52 +261,58 @@ def save_mysql_server_versions_to_sqlite(osver):
     print(e)
     return
   cur = conn.cursor()
-  vers = list(open(".version-info/mysql.{os}.txt".format(os=osver)))
-  sql = """\
-    INSERT OR REPLACE INTO mysql_server_version(
-      version, os, arch, repo_url, repo_file, repo_enable_str,
-      systemd_service, cnf_file, packages,
-      debug_packages,
-      tests_packages, mysql_shell_packages, mysql_router_packages
-    )
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-    """
-  for line in vers:
-    ver = line.rstrip()
-    project = ()
-    if osver.startswith('el'):
-      pkgs = ["mysql-community-common", "mysql-community-libs", "mysql-community-client", "mysql-community-server"]
-      dbg_pkg = ['gdb']
-      if ver.startswith('8.0'):
-        dbg_pkg.append('https://cdn.mysql.com//Downloads/MySQL-8.0/mysql-community-debuginfo-{ver}.{osver}.x86_64.rpm'.format(ver=ver,osver=osver))
-      if ver.startswith('5.7'):
-        dbg_pkg.append('https://cdn.mysql.com//Downloads/MySQL-5.7/mysql-community-debuginfo-{ver}.{osver}.x86_64.rpm'.format(ver=ver,osver=osver))
-      if ver.startswith('5.6'):
-        dbg_pkg.append('https://cdn.mysql.com//Downloads/MySQL-5.6/mysql-community-debuginfo-{ver}.{osver}.x86_64.rpm'.format(ver=ver,osver=osver))
-      if osver == 'el7':
-        repo_url = 'http://repo.mysql.com/mysql80-community-release-el7-7.noarch.rpm'
-      elif osver == 'el8':
-        repo_url = 'http://repo.mysql.com/mysql80-community-release-el8-4.noarch.rpm'
-      elif osver == 'el9':
-        repo_url = 'http://repo.mysql.com/mysql80-community-release-el9-1.noarch.rpm'
-
-      mysql_shell_pkg = 'https://cdn.mysql.com/archives/mysql-shell/mysql-shell'
-      if ver.startswith('8.0.33'):
-        mysql_shell_pkg = 'http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell'
-      mysql_shell_pkg = '{url}-{ver}.{osver}.x86_64.rpm'.format(url=mysql_shell_pkg,ver=ver,osver=osver)
-      project = (
-        ver, osver, 'x86_64', repo_url,
-        '',
-        '', 'mysqld', '/etc/my.cnf',
-        '|'.join(["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]),
-        '|'.join(dbg_pkg),
-        'mysql-community-test-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver),
-        mysql_shell_pkg,
-        'mysql-router-community-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver)
+  for arch in ("x86_64","aarch64"):
+    vers_file = ".version-info/mysql.{os}.txt".format(os=osver)
+    if arch == 'aarch64':
+      vers_file = ".version-info/mysql.{os}.{arch}.txt".format(os=osver,arch=arch)
+    if not os.path.exists(vers_file):
+      continue
+    vers = list(open(vers_file))
+    sql = """\
+      INSERT OR REPLACE INTO mysql_server_version(
+        version, os, arch, repo_url, repo_file, repo_enable_str,
+        systemd_service, cnf_file, packages,
+        debug_packages,
+        tests_packages, mysql_shell_packages, mysql_router_packages
       )
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+      """
+    for line in vers:
+      ver = line.rstrip()
+      project = ()
+      if osver.startswith('el'):
+        pkgs = ["mysql-community-common", "mysql-community-libs", "mysql-community-client", "mysql-community-server"]
+        dbg_pkg = ['gdb']
+        if ver.startswith('8.0'):
+          dbg_pkg.append('https://cdn.mysql.com//Downloads/MySQL-8.0/mysql-community-debuginfo-{ver}.{osver}.{arch}.rpm'.format(ver=ver,osver=osver,arch=arch))
+        if ver.startswith('5.7'):
+          dbg_pkg.append('https://cdn.mysql.com//Downloads/MySQL-5.7/mysql-community-debuginfo-{ver}.{osver}.{arch}.rpm'.format(ver=ver,osver=osver,arch=arch))
+        if ver.startswith('5.6'):
+          dbg_pkg.append('https://cdn.mysql.com//Downloads/MySQL-5.6/mysql-community-debuginfo-{ver}.{osver}.{arch}.rpm'.format(ver=ver,osver=osver,arch=arch))
+        if osver == 'el7':
+          repo_url = 'http://repo.mysql.com/mysql80-community-release-el7-7.noarch.rpm'
+        elif osver == 'el8':
+          repo_url = 'http://repo.mysql.com/mysql80-community-release-el8-4.noarch.rpm'
+        elif osver == 'el9':
+          repo_url = 'http://repo.mysql.com/mysql80-community-release-el9-1.noarch.rpm'
 
-    if len(project) > 1:
-      cur.execute(sql, project)
+        mysql_shell_pkg = 'https://cdn.mysql.com/archives/mysql-shell/mysql-shell'
+        if ver.startswith('8.0.33'):
+          mysql_shell_pkg = 'http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell'
+        mysql_shell_pkg = '{url}-{ver}.{osver}.{arch}.rpm'.format(url=mysql_shell_pkg,ver=ver,osver=osver,arch=arch)
+        project = (
+          ver, osver, arch, repo_url,
+          '',
+          '', 'mysqld', '/etc/my.cnf',
+          '|'.join(["{}-{}.{}.{}".format(pkg,ver,osver,arch) for pkg in pkgs ]),
+          '|'.join(dbg_pkg),
+          'mysql-community-test-{ver}.{osver}.{arch}'.format(ver=ver,osver=osver,arch=arch),
+          mysql_shell_pkg,
+          'mysql-router-community-{ver}.{osver}.{arch}'.format(ver=ver,osver=osver,arch=arch)
+        )
+
+      if len(project) > 1:
+        cur.execute(sql, project)
   conn.commit()
     
 def save_percona_xtradb_cluster_versions_to_sqlite(osver):
@@ -398,6 +404,10 @@ CREATE TABLE mariadb_version(
 """
 def save_mariadb_versions_to_sqlite(osver):
   db_file = 'anydbver_version.db'
+  vers_file = ".version-info/mariadb.{os}.txt".format(os=osver)
+  if not os.path.exists(vers_file):
+    return
+
   conn = None
   try:
     conn = sqlite3.connect(db_file)
@@ -405,7 +415,7 @@ def save_mariadb_versions_to_sqlite(osver):
     print(e)
     return
   cur = conn.cursor()
-  vers = list(open(".version-info/mariadb.{os}.txt".format(os=osver)))
+  vers = list(open(vers_file))
   sql = """\
     INSERT OR REPLACE INTO mariadb_version(
       version, os, arch, repo_url, repo_file, repo_enable_str,
@@ -670,6 +680,19 @@ def update_versions():
       {"url": "https://repo.mysql.com/yum/mysql-8.0-community/el/9/x86_64/",
       "pattern": r'mysql-community-server-(\d[^"]*).el9.x86_64.rpm'},
     ])
+
+  generate_versions_file("mysql.el8.aarch64.txt",
+    [
+      {"url": "https://repo.mysql.com/yum/mysql-8.0-community/el/8/aarch64/",
+      "pattern": r'mysql-community-server-(\d[^"]*).el8.aarch64.rpm'},
+    ])
+
+  generate_versions_file("mysql.el9.aarch64.txt",
+    [
+      {"url": "https://repo.mysql.com/yum/mysql-8.0-community/el/9/aarch64/",
+      "pattern": r'mysql-community-server-(\d[^"]*).el9.aarch64.rpm'},
+    ])
+
 
 
   #percona-postgresql-common-230-1.el8.noarch
