@@ -134,7 +134,7 @@ def get_node_os(os_str, name):
     return os_search.group(1)
   return ""
 
-def start_container(args, name):
+def start_container(args, name, priv):
   name_user = "{user}-{nodename}".format(user=args.user, nodename=name)
   ns_prefix = ""
   if args.namespace != "":
@@ -158,9 +158,10 @@ def start_container(args, name):
               "Can't start docker container")
   elif args.provider=="lxd":
     container_name = container_name.replace(".","-")
-    run_fatal([
-      "lxc", "launch",
-      "--profile", args.user, "{}-{}".format(docker_img.replace(":","/"),args.user), container_name ],
+    lxd_launch_cmd = [ "lxc", "launch", "--profile", args.user, "{}-{}".format(docker_img.replace(":","/"),args.user), container_name ]
+    if priv:
+      lxd_launch_cmd.extend(['-c', 'security.nesting=true', '-c', 'security.privileged=true'])
+    run_fatal(lxd_launch_cmd,
               "Can't start lxd container")
     os.system("until lxc exec {node} true ; do sleep 1;done; echo 'Connected to {node} via lxc'".format(node=container_name))
     create_ssh_keys()
@@ -192,9 +193,10 @@ def get_all_nodes(args):
 
 def deploy(args):
   skip_nodes_list = args.skip_nodes.split(",")
+  priv_nodes_list = args.priv_nodes.split(",")
   for name in get_all_nodes(args):
     if name not in skip_nodes_list:
-      start_container(args, name)
+      start_container(args, name, name in priv_nodes_list)
 
 def destroy(args):
   for name in get_all_nodes(args):
@@ -207,6 +209,7 @@ def main():
   parser.add_argument('--destroy', dest="destroy", action='store_true')
   parser.add_argument('--nodes', dest="nodes", type=int, default=1)
   parser.add_argument('--skip-nodes', dest="skip_nodes", type=str, default="")
+  parser.add_argument('--priv-nodes', dest="priv_nodes", type=str, default="")
   parser.add_argument('--os', dest="os", type=str, default="rocky8")
   parser.add_argument('--namespace', dest="namespace", type=str, default="")
   parser.add_argument('--provider', dest="provider", type=str, default="docker")

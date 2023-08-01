@@ -825,6 +825,14 @@ def apply_node_actions(ns, _, actions, user, provider):
     env["DB_PASS"]= "verysecretpassword1^"
     if actions.wal == "logical":
       extra_vars["extra_db_opts_file"] = "postgresql/logical.conf"
+  if actions.pmm:
+    params = soft_params(actions.pmm)
+    extra_vars["extra_pmm_server_version"] = params["version"]
+    if "password" in params:
+      extra_vars["extra_db_password"] = params["password"]
+    else:
+      extra_vars["extra_db_password"] = "verysecretpassword1^"
+    extra_vars["extra_docker"] = "1"
   if actions.pmm_client:
     params = soft_params(actions.pmm_client)
     extra_vars["extra_pmm_client_version"] = params["version"]
@@ -950,10 +958,10 @@ def apply_node_actions(ns, _, actions, user, provider):
 def apply_node_command(node, env, cmd):
   run_fatal(logger, cmd, "failed to deploy node {}".format(node), env=env)
 
-def create_nodes(provider, nodes_cnt, osver, ns, skip_nodes):
+def create_nodes(provider, nodes_cnt, osver, ns, skip_nodes, priv_nodes):
   if provider == "kubectl":
     return
-  create_nodes_cmd = "rm -f ssh_config ansible_hosts; ./docker_container.py --provider={provider} --nodes={nodes} --skip-nodes={skip_nodes} --os={osver} --destroy --deploy".format(provider=provider, nodes=nodes_cnt, skip_nodes=skip_nodes, osver=osver)
+  create_nodes_cmd = "rm -f ssh_config ansible_hosts; ./docker_container.py --provider={provider} --nodes={nodes} --skip-nodes={skip_nodes} --priv-nodes={priv_nodes} --os={osver} --destroy --deploy".format(provider=provider, nodes=nodes_cnt, skip_nodes=skip_nodes, priv_nodes=priv_nodes, osver=osver)
   if ns != "":
     create_nodes_cmd = "rm -f {ns}-ssh_config {ns}-ansible_hosts; ./docker_container.py --provider={provider} --namespace={ns} --nodes={nodes} --os={os} --destroy --deploy".format(provider=provider, ns=ns, nodes=nodes_cnt, os=osver)
 
@@ -1001,7 +1009,10 @@ def handle_non_deployment_commands():
   parser.add_argument('--tools', dest="tools", type=str, nargs='?')
   args = parser.parse_args()
 
-  if args.provider == "lxd" and "LXD_PROFILE" in sett:
+  if args.provider == "lxd":
+    sett = load_sett_file("lxd", False)
+    if "LXD_PROFILE" in sett:
+      pass
     args.user = sett["LXD_PROFILE"]
   elif "USER" in os.environ:
     args.user = os.environ["USER"]
@@ -1142,6 +1153,7 @@ def main():
   node_names = {}
   nodes_os = args.os + ","
   args.skip_nodes = ""
+  args.priv_nodes = ""
   if len(nodelines) == 0:
     nodelines.append(['node0'])
   for nodeline in nodelines:
@@ -1161,6 +1173,13 @@ def main():
         args.skip_nodes = args.skip_nodes + "," + node
       if node == "node0":
         args.skip_nodes = args.skip_nodes + "," + "default"
+    if args.provider == "lxd" and act.pmm:
+      if args.priv_nodes == "":
+        args.priv_nodes = node
+      else:
+        args.priv_nodes = args.priv_nodes + "," + node
+      if node == "node0":
+        args.priv_nodes = args.priv_nodes + "," + "default"
 
 
   if args.destroy or args.deploy:
@@ -1171,7 +1190,7 @@ def main():
 
   nodes_cnt = len(node_names)
   if args.deploy and not help_cmd:
-    create_nodes(args.provider, nodes_cnt, nodes_os, args.namespace, args.skip_nodes)
+    create_nodes(args.provider, nodes_cnt, nodes_os, args.namespace, args.skip_nodes, args.priv_nodes)
 
   cmds = []
 

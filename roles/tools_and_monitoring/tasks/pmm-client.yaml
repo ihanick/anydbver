@@ -17,6 +17,7 @@
   changed_when: "'already exists' not in pmm_admin_config.stdout"
   shell:
     cmd: >-
+      until curl -k "{{pmm_url|replace(':secret@', ':'+(db_password|urlencode)+'@')}}"/graph/ |grep -q grafana.dark ; do sleep 1 ; done;
       /usr/bin/pmm-admin config
       --server-insecure-tls
       --server-url="{{pmm_url|replace(':secret@', ':'+(db_password|urlencode)+'@')}}" || true
