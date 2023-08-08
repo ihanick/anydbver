@@ -590,6 +590,57 @@ def yq_cmd_cr_yaml(yq, cr_path, yq_cmd):
   logger.info(cmd)
   os.system(cmd)
 
+def kubectl_run_curl(ns, job_name, curl_args):
+  cmd = [
+    "kubectl", "-n", ns, "create", "job", job_name , "--image=curlimages/curl", "--"]
+  cmd.extend(curl_args)
+  run_fatal(cmd,
+    "Can't run curl job {}.{}".format(ns,job_name))
+  k8s_wait_for_job_complete(ns ,"job/{}".format(job_name))
+  resp = run_get_line([
+    "kubectl", "-n", ns, "logs", "-l", "job-name={}".format(job_name)],
+    "Can't create PMM api key", keep_stderr=False)
+  run_fatal([
+    "kubectl", "-n", ns, "delete", "job", "--wait", job_name],
+    "Can't delete curl job {}.{}".format(ns,job_name))
+  return resp
+
+def create_pmm_api_key(args, secret_name, secret_item_name):
+  if args.pmm != "":
+    pmm_sett = {}
+    if type(args.pmm) == str:
+      pmm_sett = parse_settings("pmm", args.pmm)
+    else:
+      pmm_sett = args.pmm
+
+    pmm_ns = "default"
+    pmm_pass = "verysecretpassword1^"
+    if "namespace" in pmm_sett:
+      pmm_ns = pmm_sett["namespace"]
+    if "ns" in pmm_sett:
+      pmm_ns = pmm_sett["ns"]
+    if "password" in pmm_sett:
+      pmm_pass = pmm_sett["password"]
+
+    pass_encoded = urllib.parse.quote_plus(pmm_pass)
+
+    pmm_url = "http://admin:{password}@monitoring-service.{ns}.svc.{cluster_domain}/graph".format(
+        password=pass_encoded, ns=pmm_ns, cluster_domain=args.cluster_domain)
+
+    #wait_for_success( ["kubectl", "run", "-i", "--rm", "--restart=Never", "wait-for-pmm-startup-{}".format(args.cluster_name), "--image=curlimages/curl", "--", "curl", "-s", "-f", pmm_url + "/api/admin/stats",], "can't access pmm", "")
+
+    resp = ''
+    while True:
+      resp = kubectl_run_curl(args.namespace, "create-pmm-api-key-{}".format(args.cluster_name), ["curl", "-s", pmm_url + "/api/auth/keys",
+        "-X", "POST", "-H", "Content-Type: application/json", "-d", '{"name":"' + re.sub('[^A-Za-z0-9]+', '', secret_name) +'", "role": "Admin"}'])
+      logger.info("Generated PMM key: '{}'".format(resp))
+      if resp != '':
+        break
+    apikey = base64.b64encode(bytes(json.loads(resp)["key"], 'utf-8')).decode('utf-8')
+    run_fatal([
+      "kubectl", "-n", args.namespace, "patch", "secret/{}".format(secret_name),
+      "-p", '{"data":{"'+secret_item_name+'": "'+apikey+'"} }' ],
+      "Can't set PMM API key")
 
 def enable_pmm(args):
   if args.pmm == "":
@@ -600,7 +651,7 @@ def enable_pmm(args):
 
   pmm_enable_yaml = ""
 
-  if args.operator_name == "percona-server-mongodb-operator" and StrictVersion(args.operator_version) >= StrictVersion("1.13.0"):
+  if (args.operator_name == "percona-server-mongodb-operator" and StrictVersion(args.operator_version) >= StrictVersion("1.13.0")) or (args.operator_name == "percona-postgresql-operator" and StrictVersion(args.operator_version) >= StrictVersion("2.2.0")) :
     pmm_enable_yaml = """\
 spec:
   pmm:
@@ -644,9 +695,9 @@ data:
 kind: Secret
 metadata:
   name: {cluster_name}-pmm-secret
-  namespace: pgo
+  namespace: {namespace}
 type: Opaque
-""".format(pmm_password=base64.b64encode(bytes(args.pmm["password"], 'utf-8')).decode('utf-8'), pmm_user=base64.b64encode(bytes('admin', 'utf-8')).decode('utf-8'), cluster_name=args.cluster_name)
+""".format(pmm_password=base64.b64encode(bytes(args.pmm["password"], 'utf-8')).decode('utf-8'), pmm_user=base64.b64encode(bytes('admin', 'utf-8')).decode('utf-8'), cluster_name=args.cluster_name, namespace=args.namespace)
   elif args.operator_name == "percona-server-mongodb-operator":
     pmm_secrets = """
       apiVersion: v1
@@ -671,6 +722,9 @@ type: Opaque
   with open(pmm_secret_path,"w+") as f:
             f.writelines(pmm_secrets.format(pmm_password=base64.b64encode(bytes(args.pmm["password"], 'utf-8')).decode('utf-8'), users_secret=args.users_secret))
   run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", pmm_secret_path ], "Can't apply cluster secret secret with pmmserver")
+  if args.operator_name == "percona-postgresql-operator" and StrictVersion(args.operator_version) >= StrictVersion("2.2.0"):
+      create_pmm_api_key(args, "{cluster_name}-pmm-secret".format(cluster_name=args.cluster_name), "PMM_SERVER_KEY")
+
 
 def enable_minio(args):
   deploy_path = Path(args.data_path) / args.operator_name / "deploy"
@@ -720,18 +774,18 @@ spec:
       f.writelines(minio_storage)
     run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", "./deploy/backup-s3.yaml"], "Can't apply s3 secrets")
     merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), minio_storage_path )
-  if args.operator_name == "percona-postgresql-operator" and file_contains('./deploy/cr.yaml','pg.percona.com/v2') and args.backup_type != "gcs":
+  if args.operator_name == "percona-postgresql-operator" and ( file_contains('./deploy/cr.yaml','pg.percona.com/v2') or file_contains('./deploy/cr.yaml','pgv2.percona.com/v2') ) and args.backup_type != "gcs":
     cr_yaml_path = str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve())
     run_fatal(
       [
         args.yq,
         '(del(.spec.backups.pgbackrest.repos[0].volume))|'
-        '(.spec.backups.pgbackrest.configuration[0].secret.name="cluster1-pgbackrest-secrets")|'
+        '(.spec.backups.pgbackrest.configuration[0].secret.name="{cluster_name}-pgbackrest-secrets")|'
         '(.spec.backups.pgbackrest.repos[0].name="repo1")|'
         '(.spec.backups.pgbackrest.repos[0].s3.bucket="operator-testing")|'
         '(.spec.backups.pgbackrest.repos[0].s3.region="us-east-1")|'
         '(.spec.backups.pgbackrest.repos[0].s3.endpoint="{proto}://minio-service.default.svc.{cluster_domain}:{minio_port}")'.format(
-          proto="https", cluster_domain=args.cluster_domain, minio_port=443),
+          proto="https", cluster_domain=args.cluster_domain, minio_port=443, cluster_name=args.cluster_name),
         "-i",
         cr_yaml_path], "enable minio backups")
     minio_cred_path = str((deploy_path / "{}-backrest-backrest-secrets.yaml".format(args.cluster_name)).resolve())
@@ -755,7 +809,7 @@ type: Opaque
       f.writelines(pg_minio_secret_repo)
     run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", minio_cred_path], "Can't apply s3 secrets")
 
-  if args.operator_name == "percona-postgresql-operator" and not file_contains('./deploy/cr.yaml','pg.percona.com/v2') and args.backup_type != "gcs":
+  if args.operator_name == "percona-postgresql-operator" and not ( file_contains('./deploy/cr.yaml','pg.percona.com/v2') or file_contains('./deploy/cr.yaml','pgv2.percona.com/v2') ) and args.backup_type != "gcs":
     if args.minio_certs == "":
       logger.warning("Percona Postgresql Operator MinIO backups requires TLS")
       return
@@ -895,34 +949,16 @@ def setup_operator_helm(args):
     args.cluster_name="{}-psmdb-db".format(args.cluster_name)
     if not k8s_wait_for_ready(args.namespace, "app.kubernetes.io/instance={}".format(args.cluster_name)):
       raise Exception("cluster is not starting")
+    create_pmm_api_key(args, "{}-secrets".format(args.cluster_name), "PMM_SERVER_API_KEY")
     if args.pmm != "":
       pmm_sett = parse_settings("pmm", args.pmm)
       pmm_ns = "default"
-      pmm_pass = "verysecretpassword1^"
       if "namespace" in pmm_sett:
         pmm_ns = pmm_sett["namespace"]
       if "ns" in pmm_sett:
         pmm_ns = pmm_sett["ns"]
-      if "password" in pmm_sett:
-        pmm_pass = pmm_sett["password"]
 
-      pass_encoded = urllib.parse.quote_plus(pmm_pass)
-
-      resp = run_get_line([
-        "kubectl", "run", "-i", "--rm", "--restart=Never", "create-pmm-api-key-{}".format(args.cluster_name), "--image=curlimages/curl", "--",
-        "curl", "-s", "http://admin:{password}@monitoring-service.{ns}.svc.{cluster_domain}/graph/api/auth/keys".format(
-          password=pass_encoded, ns=pmm_ns, cluster_domain=args.cluster_domain),
-        "-X", "POST", "-H", "Content-Type: application/json", "-d", '{"name":"mongopmm", "role": "Admin"}'],
-        "Can't create PMM api key", keep_stderr=False)
-      logger.info("Generated PMM key: {}".format(resp))
-      apikey = base64.b64encode(bytes(json.loads(resp)["key"], 'utf-8')).decode('utf-8')
-      run_fatal([
-        "kubectl", "-n", args.namespace, "patch", "secret/{}-psmdb-db-secrets".format(args.cluster_name),
-        "-p", '{"data":{"PMM_SERVER_API_KEY": "'+apikey+'"} }' ],
-        "Can't set PMM API key")
-#
-
-      run_fatal(["kubectl", "-n", args.namespace, "patch", "psmdb", "{}-psmdb-db".format(args.cluster_name), "--type=merge", "--patch", '{"spec":{"pmm":{"enabled": true, "serverHost": "'+ "monitoring-service.{ns}.svc.{cluster_domain}".format(ns=pmm_ns,cluster_domain=args.cluster_domain)+'"} } }'],
+      run_fatal(["kubectl", "-n", args.namespace, "patch", "psmdb", args.cluster_name, "--type=merge", "--patch", '{"spec":{"pmm":{"enabled": true, "serverHost": "'+ "monitoring-service.{ns}.svc.{cluster_domain}".format(ns=pmm_ns,cluster_domain=args.cluster_domain)+'"} } }'],
           "Enable mongodb monitoring with PMM")
 
 def parse_settings(key, sett_cmd):
