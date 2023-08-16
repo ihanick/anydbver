@@ -732,6 +732,10 @@ def enable_minio(args):
   minio_cred_path = str((deploy_path / "{}-backrest-repo-config-secret-minio.yaml".format(args.cluster_name)).resolve())
   proto = "http"
   minio_port = 9000
+  bucket = "operator-testing"
+  if args.bucket != "":
+    bucket = args.bucket
+
   if args.minio_certs != "":
     proto = "https"
     minio_port = 443
@@ -744,11 +748,11 @@ def enable_minio(args):
               verifyTLS: false
               type: s3
               s3:
-                bucket: operator-testing
+                bucket: {bucket}
                 region: us-east-1
                 credentialsSecret: my-cluster-name-backup-s3
                 endpointUrl: {proto}://minio-service.{minio_namespace}.svc.{cluster_domain}:{minio_port}
-      """.format(proto=proto, minio_namespace="default", cluster_domain=args.cluster_domain, minio_port=minio_port)
+      """.format(proto=proto, minio_namespace="default", cluster_domain=args.cluster_domain, minio_port=minio_port, bucket=bucket)
     with open(minio_storage_path,"w+") as f:
       f.writelines(minio_storage)
     run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", "./deploy/backup-s3.yaml"], "Can't apply s3 secrets")
@@ -762,14 +766,14 @@ spec:
       minio:
         type: s3
         s3:
-          bucket: operator-testing
+          bucket: {bucket}
           region: us-east-1
           credentialsSecret: my-cluster-name-backup-s3
           endpointUrl: {proto}://minio-service.{minio_namespace}.svc.{cluster_domain}:{minio_port}
           prefix: ""
     pitr:
       enabled: true
-""".format(proto=proto, minio_namespace="default", cluster_domain=args.cluster_domain, minio_port=minio_port)
+""".format(proto=proto, minio_namespace="default", cluster_domain=args.cluster_domain, minio_port=minio_port, bucket=bucket)
     with open(minio_storage_path,"w+") as f:
       f.writelines(minio_storage)
     run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", "./deploy/backup-s3.yaml"], "Can't apply s3 secrets")
@@ -782,13 +786,13 @@ spec:
         '(del(.spec.backups.pgbackrest.repos[0].volume))|'
         '(.spec.backups.pgbackrest.configuration[0].secret.name="{cluster_name}-pgbackrest-secrets")|'
         '(.spec.backups.pgbackrest.repos[0].name="repo1")|'
-        '(.spec.backups.pgbackrest.repos[0].s3.bucket="operator-testing")|'
+        '(.spec.backups.pgbackrest.repos[0].s3.bucket="{bucket}")|'
         '(.spec.backups.pgbackrest.repos[0].s3.region="us-east-1")|'
         '(.spec.backups.pgbackrest.repos[0].s3.endpoint="{proto}://minio-service.default.svc.{cluster_domain}:{minio_port}")'.format(
-          proto="https", cluster_domain=args.cluster_domain, minio_port=443, cluster_name=args.cluster_name),
+          proto="https", cluster_domain=args.cluster_domain, minio_port=443, cluster_name=args.cluster_name, bucket=bucket),
         "-i",
         cr_yaml_path], "enable minio backups")
-    minio_cred_path = str((deploy_path / "{}-backrest-backrest-secrets.yaml".format(args.cluster_name)).resolve())
+    minio_cred_path = str((deploy_path / "{}-backrest-secrets.yaml".format(args.cluster_name)).resolve())
     s3_conf="""\
 [global]
 repo1-s3-key=REPLACE-WITH-AWS-ACCESS-KEY
@@ -802,9 +806,9 @@ data:
   s3.conf: {s3conf}
 kind: Secret
 metadata:
-  name: cluster1-pgbackrest-secrets
+  name: {cluster_name}-pgbackrest-secrets
 type: Opaque
-""".format(s3conf = base64.b64encode(bytes(s3_conf, 'utf-8')).decode('utf-8'))
+""".format(s3conf = base64.b64encode(bytes(s3_conf, 'utf-8')).decode('utf-8'), cluster_name=args.cluster_name)
     with open(minio_cred_path,"w+") as f:
       f.writelines(pg_minio_secret_repo)
     run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", minio_cred_path], "Can't apply s3 secrets")
@@ -832,7 +836,7 @@ data:
         backup:
           storages:
             minio:
-              bucket: operator-testing
+              bucket: {bucket}
               endpointUrl: minio-service.{minio_namespace}.svc.{cluster_domain}
               uriStyle: "path"
               region: "us-east-1"
@@ -844,7 +848,7 @@ data:
               keep: 3
               type: full
               storage: minio
-      """.format(minio_namespace="default", cluster_domain=args.cluster_domain)
+      """.format(minio_namespace="default", cluster_domain=args.cluster_domain, bucket=bucket)
     with open(minio_storage_path,"w+") as f:
       f.writelines(minio_storage)
     run_fatal(["kubectl", "apply", "-n", args.namespace, "-f",
