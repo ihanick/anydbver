@@ -166,37 +166,35 @@ Deploy:
 ./anydbver deploy pg node1 pg master:default default pg pgpool backend-ip:default
 ./anydbver deploy pg:13 patroni node1 pg:13 master:default patroni etcd-ip:default node2 pg:13 master:default patroni etcd-ip:default
 ./anydbver deploy haproxy-pg:node1,node2,node3 node1 pg clustercheck node2 pg clustercheck master:node1 node3 pg clustercheck master:node1
-./anydbver deploy node0 pmm node1 pmm-client pmm-server:node0 pg pg_stat_monitor development
-./anydbver deploy pmm node1 ppg pmm-client pmm-server:default
 ./anydbver deploy postgresql sysbench sysbench-pg:default oltp_read_write
 ./anydbver deploy percona-postgresql \
-  sysbench sysbench-pg:default oltp_read_write # prepare, execute run_sysbench.sh to start sysbench
+sysbench sysbench-pg:default oltp_read_write # prepare, execute run_sysbench.sh to start sysbench
 ./anydbver deploy \
-        postgresql sysbench sysbench-pg:default oltp_read_write  \
-  node1 postgresql master:default logical:sbtest  \
-  node2 postgresql master:default logical:sbtest
+    postgresql sysbench sysbench-pg:default oltp_read_write  \
+node1 postgresql master:default logical:sbtest  \
+node2 postgresql master:default logical:sbtest
 ./anydbver deploy psmdb
 ./anydbver deploy mongo pbm
 ./anydbver deploy psmdb replica-set:rs0 node1 psmdb master:default replica-set:rs0 node2 psmdb master:default replica-set:rs0
 ./anydbver deploy node0 mongo-community replica-set:rs0 node1 mongo-community master:default replica-set:rs0 node2 mongo-community master:default replica-set:rs0
 ./anydbver deploy \
- psmdb:4.2 replica-set:rs0 shardsrv \
- node1 psmdb:4.2 master:default replica-set:rs0 shardsrv \
- node2 psmdb:4.2 master:default replica-set:rs0 shardsrv \
- node3 psmdb:4.2 configsrv replica-set:cfg0 \
- node4 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \
- node5 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \
- node6 psmdb:4.2 mongos-cfg:cfg0/node3,node4,node5 mongos-shard:rs0/default,node1,node2
+psmdb:4.2 replica-set:rs0 shardsrv \
+node1 psmdb:4.2 master:default replica-set:rs0 shardsrv \
+node2 psmdb:4.2 master:default replica-set:rs0 shardsrv \
+node3 psmdb:4.2 configsrv replica-set:cfg0 \
+node4 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \
+node5 psmdb:4.2 configsrv replica-set:cfg0 master:node3 \
+node6 psmdb:4.2 mongos-cfg:cfg0/node3,node4,node5 mongos-shard:rs0/default,node1,node2
 ./anydbver deploy ldap node1 ldap-master:default psmdb:4.2
 ./anydbver deploy samba node1 psmdb:4.2 samba-dc:default
 ./anydbver deploy sysbench
 ./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:default node3 proxysql master:default
 ./anydbver deploy ps:5.7 node1 ps:5.7 master:default node2 ps:5.7 master:default \
-  node3 proxysql master:default node4 proxysql proxysql-ip:node3 node5 proxysql proxysql-ip:node3
+node3 proxysql master:default node4 proxysql proxysql-ip:node3 node5 proxysql proxysql-ip:node3
 ./anydbver deploy pxc:5.7 node1 pxc:5.7 galera-master:default node2 pxc:5.7 galera-master:default node3 proxysql galera-master:default
 ./anydbver deploy pxc node1 pxc galera-master:default node2 pxc galera-master:default node3 proxysql galera-master:default
-./anydbver deploy pmm node1 ps:5.7 pmm-client pmm-server:default
-./anydbver deploy pmm:1.17.4 node1 ps:5.7 pmm-client:1.17.4 pmm-server:default
+./anydbver deploy node0 pmm:latest,docker-image,port=0.0.0.0:10443 node1 ps:5.7 pmm-client:2.37.1-6,server=node0
+./anydbver deploy pmm:latest,docker-image=perconalab/pmm-server:dev-latest,port=0.0.0.0:9443,memory=1g node1 ps:5.7 pmm-client:2.37.1-6,server=node0
 ./anydbver deploy docker
 ./anydbver deploy docker docker-registry hn:registry.percona.local
 ./anydbver deploy mongo help
