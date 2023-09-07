@@ -422,6 +422,8 @@ mirrors:
             run_cmd.append("--helm-values={}".format(params["helm-values"]))
           if "tls" in params:
             run_cmd.append("--cluster-tls")
+          if "archive-push-async" in params:
+            run_cmd.append("--archive-push-async")
           run_fatal(logger, run_cmd, "Can't run the operator")
 
       if node.k8s_ps:

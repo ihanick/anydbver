@@ -770,6 +770,7 @@ spec:
           region: us-east-1
           credentialsSecret: my-cluster-name-backup-s3
           endpointUrl: {proto}://minio-service.{minio_namespace}.svc.{cluster_domain}:{minio_port}
+          insecureSkipTLSVerify: true
           prefix: ""
     pitr:
       enabled: true
@@ -799,6 +800,18 @@ repo1-s3-key=REPLACE-WITH-AWS-ACCESS-KEY
 repo1-s3-key-secret=REPLACE-WITH-AWS-SECRET-KEY
 repo1-storage-verify-tls=n
 repo1-s3-uri-style=path
+"""
+    if args.archive_push_async:
+      s3_conf = s3_conf + """\
+archive-async=y
+spool-path=/pgdata
+
+[global:archive-get]
+process-max=2
+
+[global:archive-push]
+process-max=4
+log-level-stderr=info
 """
     pg_minio_secret_repo = """\
 apiVersion: v1
@@ -1319,6 +1332,7 @@ def main():
   parser.add_argument('--info-only', dest="info", action='store_true')
   parser.add_argument('--smart-update', dest="smart_update", action='store_true')
   parser.add_argument('--standby', dest="standby", action='store_true')
+  parser.add_argument('--archive-push-async', dest="archive_push_async", action='store_true')
   parser.add_argument('--cluster-tls', action='store_true')
   parser.add_argument('--db-replicas', dest="db_replicas", type=str, nargs='?')
   parser.add_argument('--update-strategy', dest="update_strategy", type=str, nargs='?')
