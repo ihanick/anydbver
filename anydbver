@@ -800,6 +800,8 @@ def apply_node_actions(ns, _, actions, user, provider):
     if "leader" in params:
       extra_vars["extra_master_ip"] = resolve_hostname(ns, params["leader"], user, provider)
       env["DB_IP"] = extra_vars["extra_master_ip"]
+    if "ldap" in params and params["ldap"] == "simple":
+      db_features.append("ldap_simple")
 
     extra_vars["extra_percona_server_version"] = actions.percona_server
     extra_vars["extra_db_opts_file"] = "mysql/async-repl-gtid.cnf"
