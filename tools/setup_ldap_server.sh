@@ -1,5 +1,6 @@
 #!/bin/sh
 # based on https://www.itzgeek.com/how-tos/linux/centos-how-tos/step-step-openldap-server-configuration-centos-7-rhel-7.html
+# https://www.thegeekstuff.com/2015/02/openldap-add-users-groups/
 USER=$1
 PASSWORD=$2
 
@@ -107,6 +108,35 @@ shadowMax: 99999
 shadowWarning: 7
 EOF
 ldappasswd -s $PASSWORD -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" -x "uid=perconaro,ou=People,dc=percona,dc=local"
+
+
+ldapadd -x -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" <<EOF
+dn: cn=dbas,ou=Group,dc=percona,dc=local
+objectClass: top
+objectClass: posixGroup
+gidNumber: 678
+EOF
+
+ldapadd -x -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" <<EOF
+dn: cn=developers,ou=Group,dc=percona,dc=local
+objectClass: top
+objectClass: posixGroup
+gidNumber: 679
+EOF
+
+ldapmodify -x -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" <<EOF
+dn: cn=dbas,ou=Group,dc=percona,dc=local
+changetype: modify
+add: memberuid
+memberuid: dba
+EOF
+
+ldapmodify -x -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" <<EOF
+dn: cn=developers,ou=Group,dc=percona,dc=local
+changetype: modify
+add: memberuid
+memberuid: perconaro
+EOF
 
 
 ldapadd -x -w $PASSWORD -D "cn=ldapadm,dc=percona,dc=local" -f /vagrant/configs/ldap_server/dba.ldif
