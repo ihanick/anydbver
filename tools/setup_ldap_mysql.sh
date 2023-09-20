@@ -11,10 +11,10 @@ EOF
   cat >> "$CNF_FILE" <<EOF
 authentication_ldap_simple_auth_method_name=SIMPLE
 authentication_ldap_simple_server_host='10.76.129.84'
-authentication_ldap_simple_bind_root_dn='cn=ldap,cn=Users,dc=percona,dc=local'
-authentication_ldap_simple_bind_root_pwd='verysecretpassword1^'
+authentication_ldap_simple_bind_root_dn='cn=ldapadm,dc=percona,dc=local'
+authentication_ldap_simple_bind_root_pwd='secret'
 authentication_ldap_simple_bind_base_dn='dc=percona,dc=local'
-authentication_ldap_simple_tls=1
+authentication_ldap_simple_tls=0
 authentication_ldap_simple_user_search_attr='cn'
 EOF
 else
