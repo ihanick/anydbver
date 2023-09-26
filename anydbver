@@ -11,9 +11,10 @@ import sqlite3
 from types import SimpleNamespace
 import urllib.parse
 import anydbver_tests
-from anydbver_run_tools import run_fatal, run_get_line
+from anydbver_run_tools import run_fatal, run_get_line, soft_params
 from anydbver_updater import update_versions
 from anydbver_help import arg_help
+from anydbver_unmodified_docker import deploy_unmodified_docker_images
 
 COMMAND_TIMEOUT=600
 DEFAULT_PASSWORD='verysecretpassword1^'
@@ -106,31 +107,6 @@ def read_latest_version_from_sqlite(name):
   rows = cur.fetchall()
   return rows[0]["version"]
 
-def soft_params(opt):
-  params = {}
-  if (',' not in opt) and '=' not in opt:
-    params["version"] = opt
-    return params
-  if (',' not in opt):
-    opt = "True," + opt
-  (operator_version, operator_params) = opt.split(",",1)
-  params["version"] = operator_version
-  for param in operator_params.split(","):
-    if '=' in param:
-      (k,v) = param.split("=",1)
-      k.replace('_','-')
-      if k == "ns":
-        k = "namespace"
-      if k == "s3sql":
-        k = "sql"
-      if k == "s3sql":
-        k = "sql"
-      params[k] = v
-    else:
-      params[param] = True
-
-  return params
-
 def is_unmodified_docker_image(node):
   for record in vars(node).values():
     if record is None:
@@ -138,54 +114,6 @@ def is_unmodified_docker_image(node):
     if "docker-image" in record:
       return True
   return False
-
-def deploy_unmodified_docker_images(usr, ns, node_name, node):
-  ns_prefix = ns
-  net = "{}{}-anydbver".format(ns_prefix, usr)
-  logger.info("Deploying node with unmodified docker image")
-  if node.pmm:
-    params = soft_params(node.pmm)
-    pmm_port = ""
-    if "port" in params and params["port"] != "":
-      pmm_port = params["port"] + ":"
-
-    docker_run_cmd =["docker", "run", "-d", "--name={}".format(node_name),
-               "-p", "{port}443".format(port=pmm_port),
-               "--network={}".format(net) ]
-
-    if "memory" in params:
-      docker_run_cmd.append("--memory={}".format(params["memory"]))
-
-    if type(params["docker-image"]) == type(True):
-      docker_run_cmd.append("percona/pmm-server:{ver}".format(ver=params["version"]))
-    else:
-      docker_run_cmd.append(params["docker-image"])
-
-    run_fatal(logger, docker_run_cmd, "Can't start PMM")
-
-    run_fatal(logger,
-              [
-    "docker", "exec", node_name, "bash", "-c", 'sleep 30;grafana-cli --config /etc/grafana/grafana.ini --homepath /usr/share/grafana --configOverrides cfg:default.paths.data=/srv/grafana admin reset-admin-password {}'.format(DEFAULT_PASSWORD)
-    ], "Can't change PMM password")
-  if node.percona_server:
-    params = soft_params(node.percona_server)
-    logger.info("docker run --network={net} -d --name={name} percona/percona-server:{ver}".format(net=net, name=node_name, ver=params["version"]))
-    run_fatal(logger,
-              ["docker", "run", "-d", "--name={}".format(node_name),
-               "-e", "MYSQL_ROOT_PASSWORD={}".format(DEFAULT_PASSWORD),
-               "-v", "{}:/vagrant".format(ANYDBVER_DIR),
-               "--network={}".format(net),
-               "percona/percona-server:{ver}".format(ver=params["version"])
-               ], "Can't start percona server docker container")
-  if node.mariadb:
-    params = soft_params(node.mariadb)
-    logger.info("docker run --network={net} -d --name={name} mariadb:{ver}".format(net=net, name=node_name, ver=params["version"]))
-    run_fatal(logger,
-              ["docker", "run", "-d", "--name={}".format(node_name),
-               "-e", "MYSQL_ROOT_PASSWORD={}".format(DEFAULT_PASSWORD),
-               "--network={}".format(net),
-               "mariadb:{ver}".format(ver=params["version"])
-               ], "Can't start percona server docker container")
 
 def deploy(args, node_actions):
   logger.info("Deploy")

@@ -69,7 +69,6 @@
 - name: Postgresql repo on el8, disable dnf module postgresql
   when: (postgresql_version != '' or percona_postgresql_version != '') and dist == 'el8'
   shell:
-    warn: false
     cmd: dnf -qy module disable postgresql ; touch /root/dist-postgresql.disabled
     creates: /root/dist-postgresql.disabled
 

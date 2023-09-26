@@ -45,3 +45,29 @@ def run_get_line(logger, args,err_msg, ignore_msg=None, print_cmd=True):
     raise Exception((err_msg+" '{}'").format(subprocess.list2cmdline(args)))
   return output
  
+
+def soft_params(opt):
+  params = {}
+  if (',' not in opt) and '=' not in opt:
+    params["version"] = opt
+    return params
+  if (',' not in opt):
+    opt = "True," + opt
+  (operator_version, operator_params) = opt.split(",",1)
+  params["version"] = operator_version
+  for param in operator_params.split(","):
+    if '=' in param:
+      (k,v) = param.split("=",1)
+      k.replace('_','-')
+      if k == "ns":
+        k = "namespace"
+      if k == "s3sql":
+        k = "sql"
+      if k == "s3sql":
+        k = "sql"
+      params[k] = v
+    else:
+      params[param] = True
+
+  return params
+
