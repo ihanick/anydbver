@@ -1114,6 +1114,13 @@ def setup_operator(args):
           '.spec.clusterServiceDNSSuffix="svc.{}"'.format(args.cluster_domain),
           "-i",
           "./deploy/cr.yaml"], "change cluster domain")
+    if args.expose:
+      run_fatal(
+        [
+          args.yq,
+          '.spec.replsets[0].expose.enabled=true|.spec.replsets[0].expose.exposeType="LoadBalancer"',
+          "-i",
+          "./deploy/cr.yaml"], "change cluster domain")
 
       
 
@@ -1332,6 +1339,7 @@ def main():
   parser.add_argument('--info-only', dest="info", action='store_true')
   parser.add_argument('--smart-update', dest="smart_update", action='store_true')
   parser.add_argument('--standby', dest="standby", action='store_true')
+  parser.add_argument('--expose', dest="expose", action='store_true')
   parser.add_argument('--archive-push-async', dest="archive_push_async", action='store_true')
   parser.add_argument('--cluster-tls', action='store_true')
   parser.add_argument('--db-replicas', dest="db_replicas", type=str, nargs='?')

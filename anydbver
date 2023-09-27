@@ -192,20 +192,23 @@ mirrors:
         if node.k8s_cluster_domain:
           k3d_create_cmd.append("--k3s-arg")
           k3d_create_cmd.append("--cluster-domain={}@server:0".format(node.k8s_cluster_domain))
+
+        if  "metallb" in params:
+          #k3d_create_cmd.append("--k3s-arg")
+          #k3d_create_cmd.append("--disable=traefik@server:0")
+          #k3d_create_cmd.append("--k3s-arg")
+          #k3d_create_cmd.append("--kube-proxy-arg=--ipvs-strict-arp=true@server:*")
+          k3d_create_cmd.append("--no-lb")
+
         if node.ingress:
           params = soft_params(node.ingress)
           node.ingress_port = params["version"]
+
           if not node.ingress_type:
             if "traefik" in params:
               node.ingress_type = "traefik"
             elif "nginx" in params:
               node.ingress_type = "nginx"
-            elif "traefik-metallb" in params:
-              """
-              helm install -n kube-system -f traefik-values.yaml traefik traefik/traefik
-              bash tools/setup_metallb.sh
-              """
-              node.ingress_type = "traefik-metallb"
             elif "istio" in params:
               node.ingress_type = "istio"
             else:
@@ -218,8 +221,6 @@ mirrors:
             k3d_create_cmd.append("--disable=traefik@server:0")
             run_k8s_operator_cmd.append("--ingress={}".format(node.ingress_type))
 
-          if node.ingress_type == 'traefik-metallb':
-            k3d_create_cmd.append("--no-lb")
           if node.ingress_type in ("nginx", "traefik", "istio"):
             k3d_create_cmd.append("-p")
             k3d_create_cmd.append("{ingress_port}:{ingress_port}@loadbalancer".format(ingress_port=node.ingress_port))
@@ -234,6 +235,10 @@ mirrors:
         run_fatal(logger, ["sh", "-c", """kubectl get sc local-path -o yaml | sed -r -e 's/name: local-path/name: standard/g' -e '/(uid|creationTimestamp|resourceVersion):/d' -e 's/is-default-class: "true"/is-default-class: "false"/' | kubectl apply -f -"""], "Can't create 'standard' storage class for local-path provisioner")
         args.provider = "kubectl"
         #run_fatal(logger, ["kubectl", "apply", "-f", "https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml"], "Can't install metrics server")
+        if "metallb" in params:
+          if type(params["metallb"]) != str:
+            params["metallb"] = "0.13.11"
+          run_fatal(logger, ["bash", "{}/tools/setup_metallb.sh".format(ANYDBVER_DIR), net, params["metallb"] ], "Can't setup metallb")
         
     if args.provider == "kubectl":
       if node.k8s_namespace:
@@ -397,6 +402,8 @@ mirrors:
           run_cmd.append("--db-version={}".format(node.db_version))
         if node.k8s_cluster_domain != "":
           run_cmd.append("--cluster-domain={}".format(node.k8s_cluster_domain))
+        if "expose" in params:
+          run_cmd.append("--expose")
         logger.info("Starting Percona Server for MongoDB in kubernetes managed by Percona operator {}".format(node.k8s_mongo))
         run_cmd.append("--operator=percona-server-mongodb-operator")
         run_fatal(logger, run_cmd, "Can't run the operator")

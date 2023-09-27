@@ -74,6 +74,12 @@ docker push localhost:5001/ihanick/busybox:latest
 kubectl run -it --rm --image=ihanick-registry.example.com/ihanick/busybox:latest busybox -- sh
 ```
 
+### LoadBalancer
+In order to access kubernetes LoadBalancer Services you can dedicate last 255 addresses from the docker network with MetalLB L2 load balancing.
+```bash
+./anydbver deploy k3d:latest,metallb k8s-mongo:1.14.0,expose
+```
+
 
 
 ## Simple usage with LXD:
