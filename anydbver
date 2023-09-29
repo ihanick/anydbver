@@ -317,6 +317,8 @@ mirrors:
             run_cmd.append("--helm-values={}".format(params["helm-values"]))
           if "updateStrategy" in params and params["updateStrategy"]:
             run_cmd.append("--update-strategy={}".format(params["updateStrategy"]))
+          if "expose" in params:
+            run_cmd.append("--expose")
           run_fatal(logger, run_cmd, "Can't run the operator")
 
 
@@ -357,6 +359,8 @@ mirrors:
             run_cmd.append("--cluster-tls")
           if "archive-push-async" in params:
             run_cmd.append("--archive-push-async")
+          if "expose" in params:
+            run_cmd.append("--expose")
           run_fatal(logger, run_cmd, "Can't run the operator")
 
       if node.k8s_ps:
@@ -377,6 +381,8 @@ mirrors:
           run_cmd.append("--db-version={}".format(params["db-version"]))
         elif node.db_version:
           run_cmd.append("--db-version={}".format(node.db_version))
+        if "expose" in params:
+          run_cmd.append("--expose")
 
         logger.info("Starting Percona Server for MySQL in kubernetes managed by Percona operator {}".format(node.k8s_ps))
         run_cmd.append("--operator=percona-server-mysql-operator")

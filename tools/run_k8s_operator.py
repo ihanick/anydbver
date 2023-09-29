@@ -34,6 +34,10 @@ def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
     raise Exception((err_msg+" '{}'").format(subprocess.list2cmdline(args)))
   return ret_code
 
+def set_yaml(yq_cmd, err_msg, yaml_file = "./deploy/cr.yaml"):
+  yq = str((Path(__file__).parents[0] / 'yq').resolve())
+  run_fatal( [ yq, yq_cmd, "-i", yaml_file], err_msg)
+
 def run_get_line(args,err_msg, ignore_msg=None, print_cmd=True, env=None, keep_stderr=True):
   if print_cmd:
     logger.info(subprocess.list2cmdline(args))
@@ -154,31 +158,22 @@ def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, 
   if db_ver != "":
     run_fatal(["sed", "-i", "-re", r"s/ppg[0-9.]+/ppg{}/".format(db_ver), "./deploy/cr.yaml"], "change PG major version")
   if tls and op_ver.startswith("1"):
-    run_fatal( [ yq,
-                '.spec.tlsOnly=true | .spec.sslCA="{name}-ssl-ca" | .spec.sslSecretName="{name}-ssl-keypair" | .spec.sslReplicationSecretName="{name}-ssl-keypair"'.format(name=cluster_name),
-                "-i", "./deploy/cr.yaml"], "enable TLS encryption")
+    set_yaml('.spec.tlsOnly=true \
+        | .spec.sslCA="{name}-ssl-ca" \
+        | .spec.sslSecretName="{name}-ssl-keypair" \
+        | .spec.sslReplicationSecretName="{name}-ssl-keypair"'.format(name=cluster_name),
+             "enable TLS encryption")
 
   if db_replicas and op_ver.startswith("1"):
-    run_fatal(
-    [
-      yq,
-      '.spec.pgReplicas.hotStandby.size={replicas}'.format(replicas=db_replicas),
-      "-i",
-      "./deploy/cr.yaml"], "Change number of replicas")
+    set_yaml('.spec.pgReplicas.hotStandby.size={replicas}'.format(replicas=db_replicas),"Change number of replicas")
   if db_replicas and op_ver.startswith("2"):
-    run_fatal(
-    [
-      yq,
-      '.spec.instances[0].replicas={replicas}'.format(replicas=int(db_replicas)+1),
-      "-i",
-      "./deploy/cr.yaml"], "Change number of replicas")
-
+    set_yaml('.spec.instances[0].replicas={replicas}'.format(replicas=int(db_replicas)+1),
+             "Change number of replicas")
 
   if backup_type == "gcs":
     run_fatal(["kubectl", "-n", ns, "create", "secret", "generic", "{}-backrest-repo-config".format(cluster_name), "--from-file=gcs-key={}".format(gcs_key)], "Can't create gcs secrets from file")
-    run_fatal([yq, "-i", '.spec.backup.storages["my-gcs"].type = "gcs", .spec.backup.storages["my-gcs"].bucket = "{bucket}" '.format(bucket=bucket),
-               "./deploy/cr.yaml"], "Enable GCS backups")
-
+    set_yaml('.spec.backup.storages["my-gcs"].type = "gcs", .spec.backup.storages["my-gcs"].bucket = "{bucket}" '.format(bucket=bucket),
+             "Enable GCS backups")
   if file_contains('./deploy/cr.yaml','.percona.com/v2'):
     op_env = os.environ.copy()
     op_env["PGO_NAMESPACE"] = ns
@@ -1067,13 +1062,18 @@ def setup_operator(args):
     else:
       run_fatal(["sed", "-i", "-re", r"s/: cluster1\>/: {}/".format(args.cluster_name), "./deploy/cr.yaml"], "fix cluster name in cr.yaml")
     if args.db_version:
-      run_fatal([args.yq,'.spec.pxc.image = "{}"'.format(args.db_version), "-i", cr_yaml_path],"Can't set PXC version")
+      set_yaml('.spec.pxc.image = "{}"'.format(args.db_version), "Can't set PXC version")
     if re.match(r'^[0-9\.]*$', args.operator_version) and StrictVersion(args.operator_version) < StrictVersion("1.11.0"):
       args.users_secret = "my-cluster-secrets"
     else:
       args.users_secret = args.cluster_name + "-secrets"
     if args.proxysql:
-      yq_cmd_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), '.spec.haproxy.enabled=false,.spec.proxysql.enabled=true')
+      set_yaml('.spec.haproxy.enabled=false,.spec.proxysql.enabled=true',
+               "Enable proxysql",
+               str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()))
+    if args.expose:
+      set_yaml('.spec.pxc.expose.enabled=true|.spec.pxc.expose.type="LoadBalancer"',
+               "expose pxc")
 
   if args.operator_name == "percona-postgresql-operator" and args.helm != True:
     args.users_secret = args.cluster_name + "-users"
@@ -1084,21 +1084,23 @@ def setup_operator(args):
     if args.standby and args.operator_version.startswith("1."):
       run_fatal(["sed", "-i", "-re", r"s/standby: false/standby: true/".format(args.cluster_name), "./deploy/cr.yaml"], "fix cluster name in cr.yaml")
     elif args.standby:
-      run_fatal(
-        [
-          args.yq,
+      set_yaml(
           '(.spec.standby.enabled=true)|'
           '(.spec.standby.repoName="repo1")',
-          "-i",
-          "./deploy/cr.yaml"], "enable minio backups")
-    if args.memory and args.operator_version.startswith("1."):
-      run_fatal(
-        [
-          args.yq,
-          '.spec.pgPrimary.resources.limits.memory="{mem}" | .spec.pgReplicas.resources.limits.memory="{mem}"'.format(mem=args.memory),
-          "-i",
-          "./deploy/cr.yaml"], "set memory limit")
+          "enable minio backups")
 
+    if args.memory and args.operator_version.startswith("1."):
+      set_yaml('.spec.pgPrimary.resources.limits.memory="{mem}" | .spec.pgReplicas.resources.limits.memory="{mem}"'.format(mem=args.memory),
+          "set memory limit")
+    if args.expose and args.operator_version.startswith("1."):
+      set_yaml('.spec.pgPrimary.expose.serviceType="LoadBalancer"|\
+                .spec.pgReplicas.hotStandby.expose.serviceType="LoadBalancer"|\
+                .spec.pgBouncer.expose.serviceType="LoadBalancer"',
+               "expose PG svcs")
+    elif args.expose:
+      set_yaml('.spec.expose.type="LoadBalancer"|\
+                .spec.proxy.pgBouncer.expose.type="LoadBalancer"',
+               "expose PG svcs")
 
   if args.operator_name == "percona-server-mongodb-operator" and args.helm != True:
     if args.cluster_name == "":
@@ -1108,21 +1110,11 @@ def setup_operator(args):
     args.users_secret = args.cluster_name + "-secrets"
 
     if args.cluster_domain != "":
-      run_fatal(
-        [
-          args.yq,
-          '.spec.clusterServiceDNSSuffix="svc.{}"'.format(args.cluster_domain),
-          "-i",
-          "./deploy/cr.yaml"], "change cluster domain")
+      set_yaml('.spec.clusterServiceDNSSuffix="svc.{}"'.format(args.cluster_domain),
+               "change cluster domain")
     if args.expose:
-      run_fatal(
-        [
-          args.yq,
-          '.spec.replsets[0].expose.enabled=true|.spec.replsets[0].expose.exposeType="LoadBalancer"',
-          "-i",
-          "./deploy/cr.yaml"], "change cluster domain")
-
-      
+      set_yaml('.spec.replsets[0].expose.enabled=true|.spec.replsets[0].expose.exposeType="LoadBalancer"',
+               "expose replset")
 
   enable_pmm(args)
 
