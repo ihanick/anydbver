@@ -231,7 +231,7 @@
 - name: Discover MySQL in Orchestrator
   when: orchestrator_version != '' or percona_orchestrator_version != ''
   shell:
-    cmd: orchestrator-client -c discover -i {{master_ip}}:3306
+    cmd: until orchestrator-client -c discover -i {{master_ip}}:3306 ; do sleep 5 ; done
 
 - name: Setup pmm-2 client mysql
   when: pmm_client_version.startswith('2.') and pmm_url != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')

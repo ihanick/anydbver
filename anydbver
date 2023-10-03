@@ -939,6 +939,13 @@ def ssh_login(namespace, node):
   #os.system("exec ssh -F {}ssh_config -o LogLevel=error -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa -t root@{}".format(namespace, node))
   os.execl("/usr/bin/env", "/usr/bin/env", 'ssh','-F', "{}ssh_config".format(ns), '-o', 'LogLevel=error', '-t', "root@{}".format(node))
 
+def list_containers(ns, provider, user):
+  if ns != "":
+    ns = ns + "-"
+  net = "{}{}-anydbver".format(ns, user)
+  if provider == "docker":
+    os.execl("/usr/bin/env", "/usr/bin/env", 'docker', 'ps', '-f', 'network={}'.format(net))
+
 def mysql_cli_run(ns, node):
   if ns != "":
     ns = ns + "-"
@@ -948,7 +955,7 @@ def mysql_cli_run(ns, node):
 
 def handle_non_deployment_commands():
   for cmd_idx, cmd in enumerate(sys.argv):
-    if cmd in ('destroy', 'update', 'test'):
+    if cmd in ('destroy', 'update', 'test', 'list'):
       sys.argv[cmd_idx] = '--' + cmd
 
   for cmd_idx, cmd in enumerate(sys.argv):
@@ -962,6 +969,7 @@ def handle_non_deployment_commands():
   parser.add_argument('--provider', dest="provider", type=str, default="")
   parser.add_argument('--dry-run', dest="dry_run", action='store_true')
   parser.add_argument('--destroy', dest="destroy", action='store_true')
+  parser.add_argument('--list', dest="list", action='store_true')
   parser.add_argument('--delete', dest="delete", action='store_true')
   parser.add_argument('--mysql', dest="mysql_cli", type=str, nargs='?')
   parser.add_argument('--test', dest="test", type=str, nargs='?')
@@ -1007,6 +1015,9 @@ def handle_non_deployment_commands():
     sys.exit(0)
   elif args.destroy:
     destroy(args)
+  elif args.list:
+    list_containers(args.namespace, args.provider, args.user)
+    sys.exit(0)
   elif args.test:
     anydbver_tests.test(logger, args.test)
   elif args.tools and args.provider == "docker":
