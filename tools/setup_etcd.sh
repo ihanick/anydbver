@@ -32,5 +32,5 @@ else
     -e "s|^.*ETCD_LISTEN_CLIENT_URLS=.*\$|ETCD_LISTEN_CLIENT_URLS=\"http://${NODE_IP}:2379,http://localhost:2379\"|" \
     -e "s|^.*ETCD_ADVERTISE_CLIENT_URLS=.*\$|ETCD_ADVERTISE_CLIENT_URLS=\"http://${NODE_IP}:2379\"|" \
     /etc/etcd/etcd.conf
-      etcdctl --endpoints http://${FIRST_SERVER}:2379 member add ${CLUSTER} http://${NODE_IP}:2380
+    until etcdctl --endpoints http://${FIRST_SERVER}:2379 member add ${CLUSTER} http://${NODE_IP}:2380 ; do sleep 5 ; done
 fi
