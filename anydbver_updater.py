@@ -459,6 +459,68 @@ def save_mariadb_versions_to_sqlite(osver):
 
   pass
 
+
+def save_xtrabackup_versions_to_sqlite(osver):
+  db_file = 'anydbver_version.db'
+  vers_file = ".version-info/xtrabackup.{os}.txt".format(os=osver)
+  if not os.path.exists(vers_file):
+    return
+
+  conn = None
+  try:
+    conn = sqlite3.connect(db_file)
+  except sqlite3.Error as e:
+    print(e)
+    return
+  cur = conn.cursor()
+
+  sql = """
+CREATE TABLE if not exists percona_xtrabackup_version(
+  version varchar(20),
+  os varchar(20),
+  arch varchar(20),
+  repo_url varchar(1000),
+  repo_file varchar(1000),
+  repo_enable_str varchar(20),
+  packages varchar(1000),
+  debug_packages varchar(1000),
+  tests_packages varchar(1000),
+  constraint pk PRIMARY KEY(version, os, arch)
+);
+"""
+
+  cur.execute(sql, ())
+
+  vers = list(open(vers_file))
+  sql = """\
+    INSERT OR REPLACE INTO percona_xtrabackup_version(
+      version, os, arch, repo_url, repo_file, repo_enable_str,
+      packages, debug_packages, tests_packages
+    )
+    VALUES (?,?,?,?,?,?,?,?,?)
+    """
+  for line in vers:
+    ver = line.rstrip()
+    project = ()
+    if osver.startswith('el'):
+      versuf = '24'
+      if ver.startswith('8.0'):
+        versuf = '80'
+      pkg_suffix = "{osver}.x86_64".format(osver=osver)
+      pkgs = ['percona-xtrabackup-{versuf}-{ver}.{pkg_suffix}'.format(versuf=versuf, ver=ver, pkg_suffix=pkg_suffix)]
+
+      project = (
+        ver, osver,'x86_64',
+        '', '', '',
+        '|'.join(pkgs),
+        '',
+        ''
+      )
+
+    if len(project) > 1:
+      cur.execute(sql, project)
+  conn.commit()
+
 def save_github_tags_to_sqlite(repo_name, tbl):
   db_file = 'anydbver_version.db'
   conn = None
@@ -758,6 +820,13 @@ def update_versions():
        {"url": "https://download.postgresql.org/pub/repos/yum/15/redhat/rhel-8-x86_64",
       "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
      ])
+
+  for osver in ("el7","el8","el9"):
+    generate_versions_file("xtrabackup.{osver}.txt".format(osver=osver),
+      [
+        {"url": "https://repo.percona.com/percona/yum/release/{osver}/RPMS/x86_64/".format(osver=osver.replace("el","")),
+         "pattern": r"percona-xtrabackup(?:-[0-9]+)-([0-9.-]*).{osver}.x86_64.rpm".format(osver=osver)}
+      ])
  
   for op in ("percona/percona-xtradb-cluster-operator",
              "percona/percona-postgresql-operator",
@@ -773,5 +842,6 @@ def update_versions():
     save_percona_postgresql_versions_to_sqlite(osver)
     save_postgresql_versions_to_sqlite(osver)
     save_mariadb_versions_to_sqlite(osver)
+    save_xtrabackup_versions_to_sqlite(osver)
 
 

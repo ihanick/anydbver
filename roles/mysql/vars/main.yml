@@ -17,6 +17,17 @@ package_info_sql: >
   if mysql_version != ""
   else "" }}
 
+xtrabackup_package_info_sql: >
+  {{"select * from percona_xtrabackup_version where version like '"+ percona_xtrabackup_version +"%' and os='"+ dist +"' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1"
+  if percona_xtrabackup_version != ""
+  else "" }}
+
+
 package_info: >
   {{ lookup("theredgreek.sqlite.sqlite", path=playbook_dir+"/anydbver_version.db", select=package_info_sql) if (package_info_sql|trim) != ""
   else "" }}
+
+xtrabackup_package_info: >
+  {{ lookup("theredgreek.sqlite.sqlite", path=playbook_dir+"/anydbver_version.db", select=xtrabackup_package_info_sql) if (xtrabackup_package_info_sql|trim) != ""
+  else "" }}
+

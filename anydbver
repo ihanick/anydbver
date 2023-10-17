@@ -523,15 +523,8 @@ def find_version(args):
     args.percona_server = '8.0'
   if args.mariadb == 'True':
     args.mariadb = '10.11'
-  if args.percona_xtrabackup:
-    vers = list(open(".version-info/xtrabackup.{os}.txt".format(os=osver)))
-    version = vers[-1]
-    for line in reversed(vers):
-      ver = line.rstrip()
-      if ver.startswith(args.percona_xtrabackup):
-        version = ver
-        break
-    args.percona_xtrabackup = version.rstrip()
+  if args.percona_xtrabackup == 'True':
+    args.percona_xtrabackup = '8.0'
   if args.percona_xtradb_cluster == 'True':
     args.percona_xtradb_cluster = '8.0'
   if args.proxysql:

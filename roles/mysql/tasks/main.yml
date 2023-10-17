@@ -130,10 +130,11 @@
     creates: /root/garbd.configured
 
 - name: install Percona XtraBackup
-  when: percona_xtrabackup_version != ""
+  when: percona_xtrabackup_version != "" and "packages" in xtrabackup_package_info
   package:
-    name: "percona-xtrabackup{{ '-24' if percona_xtrabackup_version.startswith('2.4') else '-80' if percona_xtrabackup_version.startswith('8.0')  else '' }}-{{ percona_xtrabackup_version }}.{{dist}}.x86_64"
+    name: "{{ item }}"
     state: present
+  with_items: "{{ xtrabackup_package_info['packages'] }}"
 
 - name: InnoDB ruby
   when: innodb_ruby_version != ''
