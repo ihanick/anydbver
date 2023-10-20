@@ -69,5 +69,15 @@ def deploy_unmodified_docker_images(usr, ns, node_name, node):
                "--network={}".format(net),
                "postgres:{ver}".format(ver=params["version"])
                ], "Can't start postgres docker container")
-
+  if node.alertmanager:
+    params = soft_params(node.alertmanager)
+    run_fatal(logger,
+              [
+                "docker", "run", "-d", "--name={}".format(node_name),
+                "-p", "0.0.0.0:{}:9093".format(params["port"]),
+                "--network={}".format(net),
+                "-v", "{}/data/alertmanager/config:/etc/alertmanager".format(ANYDBVER_DIR),
+                "-v", "{}/data/alertmanager/data:/alertmanager/data".format(ANYDBVER_DIR),
+                "prom/alertmanager:{}".format(params["version"]), "--config.file=/etc/alertmanager/alertmanager.yaml"
+                ], "Can't start alertmanager docker container")
 
