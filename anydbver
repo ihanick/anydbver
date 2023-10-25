@@ -727,6 +727,10 @@ def apply_node_actions(ns, _, actions, user, provider):
   if actions.percona_server is not None:
     params = soft_params(actions.percona_server)
     actions.percona_server = params["version"]
+
+    extra_vars["extra_percona_server_version"] = actions.percona_server
+    extra_vars["extra_db_opts_file"] = "mysql/async-repl-gtid.cnf"
+
     if "mysql-router" in params:
       actions.mysql_router = 'percona-server'
     if "master" in params:
@@ -737,9 +741,11 @@ def apply_node_actions(ns, _, actions, user, provider):
       env["DB_IP"] = extra_vars["extra_master_ip"]
     if "ldap" in params and params["ldap"] == "simple":
       db_features.append("ldap_simple")
+    if "gtid" in params:
+      if params["gtid"] == False or params["gtid"] in ("0","off","false") or params["gtid"] == 0:
+        extra_vars["extra_replication_type"] = "nogtid"
+        extra_vars["extra_db_opts_file"] = "mysql/async-repl-nogtid.cnf"
 
-    extra_vars["extra_percona_server_version"] = actions.percona_server
-    extra_vars["extra_db_opts_file"] = "mysql/async-repl-gtid.cnf"
     extra_vars["extra_db_user"] = "root"
     extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["PS"] = actions.percona_server
@@ -760,10 +766,23 @@ def apply_node_actions(ns, _, actions, user, provider):
   if actions.mysql_server is not None:
     params = soft_params(actions.mysql_server)
     actions.mysql_server = params["version"]
-    if "mysql-router" in params:
-      actions.mysql_router = 'mysql-server'
     extra_vars["extra_mysql_version"] = actions.mysql_server
     extra_vars["extra_db_opts_file"] = "mysql/async-repl-gtid.cnf"
+
+    if "mysql-router" in params:
+      actions.mysql_router = 'mysql-server'
+    if "master" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["master"], user, provider)
+      env["DB_IP"] = extra_vars["extra_master_ip"]
+    if "leader" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["leader"], user, provider)
+      env["DB_IP"] = extra_vars["extra_master_ip"]
+
+    if "gtid" in params:
+      if params["gtid"] == False or params["gtid"] in ("0","off","false") or params["gtid"] == 0:
+        extra_vars["extra_replication_type"] = "nogtid"
+        extra_vars["extra_db_opts_file"] = "mysql/async-repl-nogtid.cnf"
+
     extra_vars["extra_db_user"] = "root"
     extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["MYSQL"] = actions.mysql_server
