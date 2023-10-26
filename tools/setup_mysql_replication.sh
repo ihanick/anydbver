@@ -259,7 +259,7 @@ EOF
 
       rm "${MINF}"
       touch /root/replication.configured
-  else # non-gtid, non-mariadb
+  elif [[ "x$TYPE" == "xnogtid" ]] ; then # non-gtid, non-mariadb
     setup_replication "127.0.0.1" "$MASTER_USER" "$MASTER_PASSWORD" "$MASTER_IP" "$MASTER_USER" "$MASTER_PASSWORD"
   fi
 fi
