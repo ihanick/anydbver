@@ -15,7 +15,7 @@ FROM         rockylinux:8
  systemd-udevd\
  systemd-vconsole-setup.service\
  dnf-makecache.timer\
- ;do systemctl mask $service; done; mkdir /root/.ssh
+ ;do systemctl mask $service; done; mkdir -p /root/.ssh
  COPY node_ip.sh /usr/bin/node_ip.sh
  COPY id_rsa.pub /root/.ssh/authorized_keys
  VOLUME [ "/sys/fs/cgroup" ]

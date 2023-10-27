@@ -4,9 +4,15 @@ $script = <<-'SCRIPT'
 ANYDBVER_BRIDGE="$1"
 apt-get update
 apt-get install -y ansible git
+apt install -y apt-transport-https ca-certificates curl software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add
+add-apt-repository -y "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
+apt install -y docker-ce
 gpasswd -a vagrant lxd
+gpasswd -a vagrant docker
 cd /home/vagrant/
 git clone https://github.com/ihanick/anydbver.git
+ln -s /home/vagrant/anydbver/anydbver /usr/local/bin/anydbver
 cat >/home/vagrant/anydbver/.anydbver <<EOF
 PROVIDER=lxd
 LXD_PROFILE=vagrant
@@ -49,7 +55,7 @@ fi
 
 echo 'export LXD_PROFILE=vagrant' >> /home/vagrant/.bashrc
 echo 'export K3S_FLANNEL_BACKEND=host-gw' >> /home/vagrant/.bashrc
-sudo -u vagrant bash -c 'export HOME=/home/vagrant;cd /home/vagrant/anydbver;./anydbver update; ansible-galaxy collection install theredgreek.sqlite'
+sudo -u vagrant bash -c 'export HOME=/home/vagrant;cd /home/vagrant/anydbver;./anydbver update; ansible-galaxy collection install theredgreek.sqlite ; cd /home/vagrant/anydbver/images-build ; ./build-lxd.sh ; ./build.sh'
 cat > /etc/sysctl.d/50-k3s.conf <<EOF
 vm.overcommit_memory = 1
 vm.overcommit_ratio = 10000
@@ -82,7 +88,7 @@ Vagrant.configure("2") do |config|
     if ANYDBVER_BRIDGE != ""
       v.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
     end
-    v.memory = 4096
+    v.memory = 8192
     v.cpus = 2
   end
 end

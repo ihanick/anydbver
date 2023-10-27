@@ -14,7 +14,7 @@ FROM centos:centos7
  systemd-remount-fs.service\
  systemd-udevd\
  systemd-vconsole-setup.service\
- ;do systemctl mask $service; done; rm -f /usr/lib/tmpfiles.d/systemd-nologin.conf; mkdir /root/.ssh
+ ;do systemctl mask $service; done; rm -f /usr/lib/tmpfiles.d/systemd-nologin.conf; mkdir -p /root/.ssh
  COPY node_ip.sh /usr/bin/node_ip.sh
  COPY id_rsa.pub /root/.ssh/authorized_keys
  VOLUME [ "/sys/fs/cgroup" ]
