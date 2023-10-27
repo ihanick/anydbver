@@ -706,7 +706,7 @@ def apply_node_actions(ns, _, actions, user, provider):
     if actions.replica_set is not None:
       extra_vars["extra_mongo_replicaset"] = actions.replica_set
       env["REPLICA_SET"] = actions.replica_set
-      os.system("test -f secret/{rs}-keyfile || openssl rand -base64 756 > secret/{rs}-keyfile".format(rs=actions.replica_set))
+      os.system("test -f secret/rs0-keyfile || openssl rand -base64 756 > secret/rs0-keyfile; test -f secret/{rs}-keyfile || cp secret/rs0-keyfile secret/{rs}-keyfile".format(rs=actions.replica_set))
     if actions.shardsrv is not None:
       extra_vars["extra_mongo_shardsrv"] = "1"
     if actions.configsrv is not None:
