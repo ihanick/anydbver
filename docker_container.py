@@ -40,7 +40,7 @@ def load_sett_file(provider, echo=True):
 def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
   if print_cmd:
     logger.info(subprocess.list2cmdline(args))
-  process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True, env=env)
+  process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, close_fds=True, env=env)
   ret_code = process.wait(timeout=COMMAND_TIMEOUT)
   output = process.communicate()[0].decode('utf-8')
   if ignore_msg and re.search(ignore_msg, output):

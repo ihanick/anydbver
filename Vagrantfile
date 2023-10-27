@@ -3,6 +3,7 @@ ANYDBVER_PUBNET = ENV["ANYDBVER_PUBNET"] || ""
 $script = <<-'SCRIPT'
 ANYDBVER_BRIDGE="$1"
 apt-get update
+snap refresh lxd --channel=latest/stable
 apt-get install -y ansible git
 apt install -y apt-transport-https ca-certificates curl software-properties-common
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add
@@ -55,7 +56,6 @@ fi
 
 echo 'export LXD_PROFILE=vagrant' >> /home/vagrant/.bashrc
 echo 'export K3S_FLANNEL_BACKEND=host-gw' >> /home/vagrant/.bashrc
-sudo -u vagrant bash -c 'export HOME=/home/vagrant;cd /home/vagrant/anydbver;./anydbver update; ansible-galaxy collection install theredgreek.sqlite ; cd /home/vagrant/anydbver/images-build ; ./build-lxd.sh ; ./build.sh'
 cat > /etc/sysctl.d/50-k3s.conf <<EOF
 vm.overcommit_memory = 1
 vm.overcommit_ratio = 10000
@@ -70,6 +70,9 @@ overlay
 EOF
 modprobe br_netfilter
 modprobe overlay
+
+sudo -u vagrant bash -c 'export HOME=/home/vagrant;cd /home/vagrant/anydbver;./anydbver update; ansible-galaxy collection install theredgreek.sqlite ; cd /home/vagrant/anydbver/images-build ;  ./build.sh ; until lxc launch --profile vagrant images:centos/7/amd64 vagrant-default ; do lxc delete -f vagrant-default ; done ; lxc delete -f vagrant-default ; ./build-lxd.sh'
+
 
 SCRIPT
 
