@@ -537,8 +537,10 @@ def find_version(args):
     args.mariadb = '10.11'
   if args.percona_xtrabackup == 'True':
     args.percona_xtrabackup = '8.0'
-  if args.percona_xtradb_cluster == 'True':
-    args.percona_xtradb_cluster = '8.0'
+  if args.percona_xtradb_cluster:
+    params = soft_params(args.percona_xtradb_cluster)
+    if params["version"] in ('True', 'latest', '8'):
+      args.percona_xtradb_cluster = replace_version_in_command(args.percona_xtradb_cluster, '8.0')
   if args.proxysql:
     vers = list(open(".version-info/proxysql.{os}.txt".format(os=osver)))
     version = vers[-1]
@@ -866,7 +868,8 @@ def apply_node_actions(ns, _, actions, user, provider):
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.percona_xtradb_cluster is not None:
-    extra_vars["extra_percona_xtradb_cluster_version"] = actions.percona_xtradb_cluster
+    params = soft_params(actions.percona_xtradb_cluster)
+    extra_vars["extra_percona_xtradb_cluster_version"] = params["version"]
     extra_vars["extra_db_user"] = "root"
     extra_vars["extra_db_password"] = "verysecretpassword1^"
 
@@ -880,6 +883,10 @@ def apply_node_actions(ns, _, actions, user, provider):
     elif actions.percona_xtradb_cluster.startswith("8.0"):
       extra_vars["extra_db_opts_file"] = "mysql/pxc8-repl-gtid.cnf"
       env["DB_OPTS"] = "mysql/pxc8-repl-gtid.cnf"
+    if "master" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["master"], user, provider)
+    if "galera" in params:
+      extra_vars["extra_replication_type"] = "galera"
 
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"

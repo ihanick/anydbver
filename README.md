@@ -158,4 +158,5 @@ $ echo 'select cmd from tests'|sqlite3 anydbver_version.db
 ./anydbver deploy k3d cert-manager:1.7.2 k8s-pg:2.2.0
 ./anydbver deploy node0 ps:8.0,group-replication node1 ps:8.0,group-replication,master=node0 node2 ps:8.0,mysql-router,master=node0
 ./anydbver deploy ps:5.7 node1 ps:5.7,master=node0 node2 ps:5.7,master=node1 node3 percona-orchestrator:latest,master=node0
+./anydbver deploy pxc node1 pxc:latest,master=node0,galera
 ```

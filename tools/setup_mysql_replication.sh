@@ -265,13 +265,27 @@ EOF
 fi
 
 if [[ "x$TYPE" == "xgalera" ]] ; then
-    MYIP=$(/vagrant/tools/node_ip.sh)
-    systemctl stop $MYSQLD_UNIT
-    # pre-requirement
-    # vagrant ssh default -- sudo tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem |vagrant ssh node1 -- sudo tar -C / -xz
-    rm -rf /var/lib/mysql/*
-    [ -f /vagrant/secret/"${CLUSTER_NAME}-ssl.tar.gz" ] && tar -C / -xzf /vagrant/secret/"${CLUSTER_NAME}-ssl.tar.gz"
-    cat >> "${CNF_FILE}" << EOF
+
+  SSH="ssh -i /vagrant/secret/id_rsa -o StrictHostKeyChecking=no -o PasswordAuthentication=no"
+  MYIP=$(/vagrant/tools/node_ip.sh)
+  systemctl stop $MYSQLD_UNIT
+  # pre-requirement
+  # vagrant ssh default -- sudo tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem |vagrant ssh node1 -- sudo tar -C / -xz
+  rm -rf /var/lib/mysql/*
+
+  until echo 'set -o noclobber;{ > /root/add-galera-member ; } &> /dev/null'| $SSH root@$MASTER_IP bash ; do
+    sleep 1
+  done
+
+  create_client_my_cnf leader "${MASTER_IP}" root "$MASTER_PASSWORD"
+  wait_until_mysql_ready leader
+  $SSH root@${MASTER_IP} tar -cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem | tar -C / -xz
+
+  #if [ -f /vagrant/secret/"${CLUSTER_NAME}-ssl.tar.gz"  ] ; then
+  #  tar -C / -xzf /vagrant/secret/"${CLUSTER_NAME}-ssl.tar.gz"
+  #fi
+  #
+  cat >> "${CNF_FILE}" << EOF
 [mysqld]
 wsrep_cluster_name=${CLUSTER_NAME}
 wsrep_node_name=${MYIP}
@@ -282,6 +296,9 @@ EOF
     mysqladmin shutdown
 
     systemctl start $MYSQLD_UNIT
+
+
+  $SSH root@$MASTER_IP rm -f /root/add-galera-member
 fi
 
 
