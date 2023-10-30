@@ -530,7 +530,7 @@ def find_version(args):
     if params["version"] in ('True','latest'):
       args.percona_server_mongodb = replace_version_in_command(args.percona_server_mongodb, '6.0')
   if args.percona_server:
-    params = soft_params(args.percona_server_mongodb)
+    params = soft_params(args.percona_server)
     if args.percona_server in ('True', 'latest', '8'):
       args.percona_server = replace_version_in_command(args.percona_server, '8.0')
   if args.mariadb == 'True':
