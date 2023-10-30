@@ -67,7 +67,6 @@
 - name: Setup Orchestrator
   when: orchestrator_version != '' or percona_orchestrator_version != ''
   shell:
-    warn: false
     cmd: >-
       sed -e 's/MySQLTopologyUser":.*/MySQLTopologyUser": "{{ db_user }}",/'
       -e 's/MySQLTopologyPassword":.*/MySQLTopologyPassword": "{{ db_password }}",/'

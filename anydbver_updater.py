@@ -22,7 +22,7 @@ def strip_version(v):
       continue
     patchnum = patchnum * 1000 + int(n)
 
-  return float(vernum) + 1 / float(patchnum)
+  return float(vernum)*10000 + float(patchnum)
 
 
 def append_versions_from_url(vers, url, r):
