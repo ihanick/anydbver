@@ -766,6 +766,10 @@ def apply_node_actions(ns, _, actions, user, provider):
       if params["gtid"] == False or params["gtid"] in ("0","off","false") or params["gtid"] == 0:
         extra_vars["extra_replication_type"] = "nogtid"
         extra_vars["extra_db_opts_file"] = "mysql/async-repl-nogtid.cnf"
+    if "rocksdb" in params:
+      extra_vars["extra_rocksdb_enabled"] = "1"
+    if "sql" in params:
+      extra_vars["extra_s3sql"] = params["sql"]
 
     extra_vars["extra_db_user"] = "root"
     extra_vars["extra_db_password"] = "verysecretpassword1^"

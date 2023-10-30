@@ -1,7 +1,7 @@
 def arg_help(name):
   all_subargs = {
       "alertmanager": "alertmanager:version,docker-image,port=N",
-      "percona-server": "percona-server:ver,docker-image,mysql-router,<master=NODE|leader=NODE>,gtid=<0|1>",
+      "percona-server": "percona-server:ver,docker-image,mysql-router,<master=NODE|leader=NODE>,gtid=<0|1>,rocksdb,sql=s3_url_to_sql_dump",
       "mysql-server": "mysql:ver,docker-image,mysql-router,<master=NODE|leader=NODE>,gtid=<0|1>",
       "percona-orchestrator": "percona-orchestrator:ver,master=NODE",
       "k8s-pg": "k8s-pg:ver,tls,cluster-name=NAME,namespace=NS,backup-type=[gcs|s3],bucket=BUCKET,gcs-key=PATH_TO_JSON,replicas=N,db-version=DOCKER_IMAGE,memory=SIZE,sql=FILE,standby,helm,helm-values=VALUES_YAML",
@@ -12,7 +12,7 @@ def arg_help(name):
       "ldap": "ldap, ldap-master:NODE",
       }
   examples = {
-      "percona-server": "anydbver deploy ps:5.7.35 node1 ps:5.7.35,master=node0\nanydbver deploy ps:8.0,gtid=0 node1 ps:8.0,gtid=0,master=node0",
+      "percona-server": "anydbver deploy ps:5.7.35 node1 ps:5.7.35,master=node0\nanydbver deploy ps:8.0,gtid=0 node1 ps:8.0,gtid=0,master=node0\nanydbver deploy ps:8.0,rocksdb,sql=http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql percona-xtrabackup:8.0",
       "mysql-server": "anydbver deploy mysql:5.7.35 node1 mysql:5.7.35,master=node0\nanydbver deploy mysql:8.0,gtid=0 node1 mysql:8.0,gtid=0,master=node0",
       "percona-orchestrator": "./anydbver deploy ps:5.7 node1 ps:5.7,master=node0 node2 ps:5.7,master=node1 node3 percona-orchestrator:latest,master=node0",
       "k8s-pg": "anydbver deploy k3d cert-manager k8s-pg:1.3.0,tls",
