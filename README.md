@@ -118,6 +118,22 @@ Login to container with Percona Server and connect with mysql command:
 mysql
 ```
 
+## MongoDB
+Create a sharding cluster with 3-member replicasets (first shard, second shard, config servers) and mongos.
+```bash
+./anydbver deploy \
+           psmdb:latest,replica-set=rs0,role=shard \
+     node1 psmdb:latest,replica-set=rs0,role=shard,master=node0 \
+     node2 psmdb:latest,replica-set=rs0,role=shard,master=node0 \
+     node3 psmdb:latest,replica-set=rs1,role=shard
+     node4 psmdb:latest,replica-set=rs1,role=shard,master=node3 \
+     node5 psmdb:latest,replica-set=rs1,role=shard,master=node3 \
+     node6 psmdb:latest,replica-set=cfg0,role=cfg
+     node7 psmdb:latest,replica-set=cfg0,role=cfg,master=node6 \
+     node8 psmdb:latest,replica-set=cfg0,role=cfg,master=node6 \
+     node9 psmdb:latest mongos-cfg:cfg0/node6,node7,node8 mongos-shard:rs0/default,node1,node2,rs1/node3,node4,node5
+```
+
 ## More details and usage examples
 There are usage examples in the help output:
 ```bash
@@ -136,10 +152,10 @@ $ echo 'select cmd from tests'|sqlite3 anydbver_version.db
 ./anydbver deploy os:el7 ppg:13.5
 ./anydbver deploy os:el8 ppg:13.5
 ./anydbver deploy k3d k8s-ps:0.5.0
-./anydbver deploy psmdb replica-set:rs0 shardsrv  node1 psmdb master:default replica-set:rs0 shardsrv  node2 psmdb master:default replica-set:rs0 shardsrv node3 psmdb replica-set:rs1 shardsrv node4 psmdb replica-set:rs1 shardsrv master:node3 node5 psmdb replica-set:rs1 shardsrv master:node3 node6 psmdb configsrv replica-set:cfg0  node7 psmdb configsrv replica-set:cfg0 master:node6  node8 psmdb configsrv replica-set:cfg0 master:node6  node9 psmdb mongos-cfg:cfg0/node6,node7,node8 mongos-shard:rs0/default,node1,node2,rs1/node3,node4,node5
-./anydbver deploy psmdb:4.2 replica-set:rs0 shardsrv  node1 psmdb:4.2 master:default replica-set:rs0 shardsrv  node2 psmdb:4.2 master:default replica-set:rs0 shardsrv node3 psmdb:4.2 replica-set:rs1 shardsrv node4 psmdb:4.2 replica-set:rs1 shardsrv master:node3 node5 psmdb:4.2 replica-set:rs1 shardsrv master:node3 node6 psmdb:4.2 configsrv replica-set:cfg0  node7 psmdb:4.2 configsrv replica-set:cfg0 master:node6  node8 psmdb:4.2 configsrv replica-set:cfg0 master:node6  node9 psmdb:4.2 mongos-cfg:cfg0/node6,node7,node8 mongos-shard:rs0/default,node1,node2,rs1/node3,node4,node5
+./anydbver deploy psmdb:latest,replica-set=rs0,role=shard node1 psmdb:latest,replica-set=rs0,role=shard,master=node0 node2 psmdb:latest,replica-set=rs0,role=shard,master=node0 node3 psmdb:latest,replica-set=rs1,role=shard node4 psmdb:latest,replica-set=rs1,role=shard,master=node3 node5 psmdb:latest,replica-set=rs1,role=shard,master=node3 node6 psmdb:latest,replica-set=cfg0,role=cfg node7 psmdb:latest,replica-set=cfg0,role=cfg,master=node6 node8 psmdb:latest,replica-set=cfg0,role=cfg,master=node6 node9 psmdb:latest mongos-cfg:cfg0/node6,node7,node8 mongos-shard:rs0/node0,node1,node2,rs1/node3,node4,node5
+./anydbver deploy psmdb:4.2,replica-set=rs0,role=shard node1 psmdb:4.2,replica-set=rs0,role=shard,master=node0 node2 psmdb:4.2,replica-set=rs0,role=shard,master=node0 node3 psmdb:4.2,replica-set=rs1,role=shard node4 psmdb:4.2,replica-set=rs1,role=shard,master=node3 node5 psmdb:4.2,replica-set=rs1,role=shard,master=node3 node6 psmdb:4.2,replica-set=cfg0,role=cfg node7 psmdb:4.2,replica-set=cfg0,role=cfg,master=node6 node8 psmdb:4.2,replica-set=cfg0,role=cfg,master=node6 node9 psmdb:4.2 mongos-cfg:cfg0/node6,node7,node8 mongos-shard:rs0/node0,node1,node2,rs1/node3,node4,node5
 ./anydbver deploy ldap node1 ldap-master:default psmdb:5.0
 ./anydbver deploy k3d cert-manager:1.7.2 k8s-pg:2.2.0
-./anydbver deploy node0 ps:8.0 group-replication node1 ps:8.0 group-replication master:node0 node2 ps:8.0,mysql-router master:node0
-./anydbver deploy ps:5.7 node1 ps:5.7 master:node0 node2 ps:5.7 master:node1 node3 percona-orchestrator master:node0
+./anydbver deploy node0 ps:8.0,group-replication node1 ps:8.0,group-replication,master=node0 node2 ps:8.0,mysql-router,master=node0
+./anydbver deploy ps:5.7 node1 ps:5.7,master=node0 node2 ps:5.7,master=node1 node3 percona-orchestrator:latest,master=node0
 ```

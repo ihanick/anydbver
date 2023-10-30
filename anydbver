@@ -507,6 +507,13 @@ def fix_missing_node_commands(args):
         args.insert(cmd_idx, 'node0')
       break
 
+def replace_version_in_command(cmd, ver):
+  ver = ver.rstrip()
+  if "," in cmd:
+    return ver + "," + cmd.split(",",1)[1]
+  else:
+    return ver
+
 def find_version(args):
   osver = "el8"
   if args.os is not None:
@@ -517,10 +524,15 @@ def find_version(args):
     elif args.os == "rocky9":
       osver = "el9"
 
-  if args.percona_server_mongodb == 'True':
-    args.percona_server_mongodb = '6.0'
-  if args.percona_server == 'True':
-    args.percona_server = '8.0'
+
+  if args.percona_server_mongodb:
+    params = soft_params(args.percona_server_mongodb)
+    if params["version"] in ('True','latest'):
+      args.percona_server_mongodb = replace_version_in_command(args.percona_server_mongodb, '6.0')
+  if args.percona_server:
+    params = soft_params(args.percona_server_mongodb)
+    if args.percona_server in ('True', 'latest', '8'):
+      args.percona_server = replace_version_in_command(args.percona_server, '8.0')
   if args.mariadb == 'True':
     args.mariadb = '10.11'
   if args.percona_xtrabackup == 'True':
@@ -552,7 +564,7 @@ def find_version(args):
       if ver.startswith(args.mysql_router):
         version = ver
         break
-    args.mysql_router = version.rstrip()
+    args.mysql_router = replace_version_in_command(args.mysql_router, version)
   if args.percona_proxysql:
     vers = list(open(".version-info/percona-proxysql.{os}.txt".format(os=osver)))
     version = vers[-1]
@@ -561,16 +573,17 @@ def find_version(args):
       if ver.startswith(args.percona_proxysql):
         version = ver
         break
-    args.percona_proxysql = version.rstrip()
+    args.percona_proxysql = replace_version_in_command(args.percona_proxysql, version)
   if args.percona_orchestrator:
+    params = soft_params(args.percona_orchestrator)
     vers = list(open(".version-info/percona-orchestrator.{os}.txt".format(os=osver)))
     version = vers[-1]
     for line in reversed(vers):
       ver = line.rstrip()
-      if ver.startswith(args.percona_orchestrator):
+      if ver.startswith(params["version"]):
         version = ver
         break
-    args.percona_orchestrator = version.rstrip()
+    args.percona_orchestrator = replace_version_in_command(args.percona_orchestrator, version)
   if args.mysql_jdbc:
     vers = list(open(".version-info/mysql-jdbc.txt".format(os=osver)))
     version = vers[-1]
@@ -699,17 +712,22 @@ def apply_node_actions(ns, _, actions, user, provider):
     extra_vars["extra_ldap_server_ip"] = resolve_hostname(ns, actions.ldap_master, user, provider)
     env["LDAP_IP"] = extra_vars["extra_ldap_server_ip"]
   if actions.percona_server_mongodb is not None:
-    extra_vars["extra_psmdb_version"] = actions.percona_server_mongodb
+    params = soft_params(actions.percona_server_mongodb)
+    if "master" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["master"], user, provider)
+    extra_vars["extra_psmdb_version"] = params["version"]
     extra_vars["extra_db_opts_file"] = "mongo/enable_wt.conf"
-    env["PSMDB"] = actions.percona_server_mongodb
-    env["DB_OPTS"] = "mongo/enable_wt.conf"
+    if "replica-set" in params:
+      actions.replica_set = params["replica-set"]
+    if "rs" in params:
+      actions.replica_set = params["rs"]
     if actions.replica_set is not None:
       extra_vars["extra_mongo_replicaset"] = actions.replica_set
       env["REPLICA_SET"] = actions.replica_set
       os.system("test -f secret/rs0-keyfile || openssl rand -base64 756 > secret/rs0-keyfile; test -f secret/{rs}-keyfile || cp secret/rs0-keyfile secret/{rs}-keyfile".format(rs=actions.replica_set))
-    if actions.shardsrv is not None:
+    if (actions.shardsrv is not None) or ("role" in params and params["role"] == "shard"):
       extra_vars["extra_mongo_shardsrv"] = "1"
-    if actions.configsrv is not None:
+    if (actions.configsrv is not None) or  ("role" in params and params["role"] == "cfg"):
       extra_vars["extra_mongo_configsrv"] = "1"
     if actions.mongos_cfg is not None:
       (rs, servers) = actions.mongos_cfg.split("/",1)
@@ -739,6 +757,9 @@ def apply_node_actions(ns, _, actions, user, provider):
     if "leader" in params:
       extra_vars["extra_master_ip"] = resolve_hostname(ns, params["leader"], user, provider)
       env["DB_IP"] = extra_vars["extra_master_ip"]
+    if "group-replication" in params:
+      extra_vars["extra_db_opts_file"] = "mysql/gr.cnf"
+      extra_vars["extra_replication_type"] = "group"
     if "ldap" in params and params["ldap"] == "simple":
       db_features.append("ldap_simple")
     if "gtid" in params:
@@ -882,12 +903,12 @@ def apply_node_actions(ns, _, actions, user, provider):
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.percona_proxysql is not None:
-    extra_vars["extra_percona_proxysql_version"] = actions.percona_proxysql
+    params = soft_params(actions.percona_proxysql)
+    if "master" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["master"], user, provider)
+    extra_vars["extra_percona_proxysql_version"] = params["version"]
     extra_vars["extra_db_user"] = "root"
     extra_vars["extra_db_password"] = "verysecretpassword1^"
-    env["PERCONA_PROXYSQL"] = actions.percona_proxysql
-    env["DB_USER"] = "root"
-    env["DB_PASS"]= "verysecretpassword1^"
   if actions.haproxy_galera is not None: 
     extra_vars["extra_haproxy_galera"] = ','.join([resolve_hostname(ns, node, user, provider) for node in actions.haproxy_galera.split(',') ])
     extra_vars["extra_db_user"] = "root"
@@ -914,7 +935,10 @@ def apply_node_actions(ns, _, actions, user, provider):
     extra_vars["extra_mysql_connector_java_version"] = actions.mysql_jdbc
     env["MYSQL_JAVA"] = actions.mysql_jdbc
   if actions.percona_orchestrator is not None:
-    extra_vars["extra_percona_orchestrator_version"] = actions.percona_orchestrator
+    params = soft_params(actions.percona_orchestrator)
+    if "master" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["master"], user, provider)
+    extra_vars["extra_percona_orchestrator_version"] = params["version"]
     extra_vars["extra_db_user"] = "root"
     extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["PERCONA_ORCHESTRATOR"] = actions.percona_orchestrator
