@@ -246,8 +246,8 @@ def cert_manager_ver_compat(operator_name, operator_version, cert_manager):
     return cert_manager
 
 def run_cert_manager(ver):
-  run_fatal(["kubectl", "apply", "-f", "https://github.com/cert-manager/cert-manager/releases/download/v{}/cert-manager.crds.yaml".format(ver)], "Can't deploy cert-manager.crds.yaml:"+ver)
-  run_fatal(["kubectl", "apply", "-f", "https://github.com/cert-manager/cert-manager/releases/download/v{}/cert-manager.yaml".format(ver)], "Can't deploy cert-manager:"+ver)
+  run_fatal(["kubectl", "apply", "--server-side=true", "-f", "https://github.com/cert-manager/cert-manager/releases/download/v{}/cert-manager.crds.yaml".format(ver)], "Can't deploy cert-manager.crds.yaml:"+ver)
+  run_fatal(["kubectl", "apply", "--server-side=true", "-f", "https://github.com/cert-manager/cert-manager/releases/download/v{}/cert-manager.yaml".format(ver)], "Can't deploy cert-manager:"+ver)
   if not k8s_wait_for_ready("cert-manager", "app.kubernetes.io/name=cert-manager"):
     raise Exception("Cert-manager is not starting")
   if not k8s_wait_for_ready("cert-manager", "app.kubernetes.io/name=webhook"):
