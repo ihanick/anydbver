@@ -107,6 +107,24 @@ def read_latest_version_from_sqlite(name):
   rows = cur.fetchall()
   return rows[0]["version"]
 
+def general_version_from_sqlite(ver,program,osver,arch):
+  db_file = 'anydbver_version.db'
+  try:
+    conn = sqlite3.connect(db_file)
+    conn.row_factory = sqlite3.Row
+  except sqlite3.Error as e:
+    print(e)
+    return ""
+  cur = conn.cursor()
+  if ver in ("latest","True"):
+    ver = "%"
+  sql = "SELECT version FROM general_version WHERE version like '"+ver+"%' and program=? and os=? and arch=? ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'-')+1+ INSTR(SUBSTR(version,INSTR(version,'-')+1),'-')  ) AS INTEGER) DESC LIMIT 1"
+  cur.execute(sql, (program,osver,arch))
+  rows = cur.fetchall()
+  return rows[0]["version"]
+
+
+
 def is_unmodified_docker_image(node):
   for record in vars(node).values():
     if record is None:
@@ -578,13 +596,7 @@ def find_version(args):
     args.percona_proxysql = replace_version_in_command(args.percona_proxysql, version)
   if args.percona_orchestrator:
     params = soft_params(args.percona_orchestrator)
-    vers = list(open(".version-info/percona-orchestrator.{os}.txt".format(os=osver)))
-    version = vers[-1]
-    for line in reversed(vers):
-      ver = line.rstrip()
-      if ver.startswith(params["version"]):
-        version = ver
-        break
+    version = general_version_from_sqlite(params["version"],'percona-orchestrator',osver,'x86_64')
     args.percona_orchestrator = replace_version_in_command(args.percona_orchestrator, version)
   if args.mysql_jdbc:
     vers = list(open(".version-info/mysql-jdbc.txt".format(os=osver)))

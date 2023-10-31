@@ -460,6 +460,60 @@ def save_mariadb_versions_to_sqlite(osver):
   pass
 
 
+def create_general_updater_table():
+  db_file = 'anydbver_version.db'
+
+  conn = None
+  try:
+    conn = sqlite3.connect(db_file)
+  except sqlite3.Error as e:
+    print(e)
+    return
+  cur = conn.cursor()
+
+  sql = """
+CREATE TABLE if not exists general_version(
+  version varchar(20),
+  os varchar(20),
+  arch varchar(20),
+  program varchar(1000),
+  constraint pk PRIMARY KEY(version, os, arch, program)
+);
+"""
+
+  cur.execute(sql, ())
+  conn.commit()
+
+def save_general_version(ver, osver, arch, program):
+  db_file = 'anydbver_version.db'
+
+  conn = None
+  try:
+    conn = sqlite3.connect(db_file)
+  except sqlite3.Error as e:
+    print(e)
+    return
+  cur = conn.cursor()
+
+  sql = """
+INSERT OR REPLACE INTO general_version(
+  version,os,arch,program
+)
+VALUES (?,?,?,?)
+"""
+  cur.execute(sql, (ver,osver,arch,program))
+  conn.commit()
+
+
+def save_general_version_for_program(vers_file, osrver, arch, program):
+  vers_file = str((Path(os.getcwd()) / ".version-info" / vers_file).resolve())
+  if not os.path.exists(vers_file):
+    return
+  vers = list(open(vers_file))
+  for line in vers:
+    ver = line.rstrip()
+    save_general_version(ver, osrver, arch, program)
+
 def save_xtrabackup_versions_to_sqlite(osver):
   db_file = 'anydbver_version.db'
   vers_file = ".version-info/xtrabackup.{os}.txt".format(os=osver)
@@ -628,6 +682,7 @@ def save_percona_server_versions_to_sqlite(osver):
   conn.commit()
 
 def update_versions():
+  create_general_updater_table()
   if not os.path.exists(".version-info"):
     os.makedirs(".version-info")
   generate_versions_file("psmdb.el7.txt",
@@ -720,6 +775,9 @@ def update_versions():
       {"url": "https://repo.percona.com/pdps-8.0/yum/release/9/RPMS/x86_64/",
       "pattern": r'percona-orchestrator-(\d[^"]*).el9.x86_64.rpm'}
     ])
+
+  save_general_version_for_program("percona-orchestrator.el8.txt", "el8", "x86_64", "percona-orchestrator")
+  save_general_version_for_program("percona-orchestrator.el9.txt", "el9", "x86_64", "percona-orchestrator")
 
   generate_versions_file("mysql.el7.txt",
     [
