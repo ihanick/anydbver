@@ -13,6 +13,12 @@ is_galera_ready() {
   return 1
 }
 
+wait_for_donor() {
+  until test $( mysql --host $donor_ip -Nse 'SHOW STATUS LIKE "wsrep_%"' 2>/dev/null|egrep -c "Primary|Synced") -eq 2 ; do sleep 1 ; done
+}
+
+wait_for_donor
+
 if is_galera_ready ; then
   changed="false"
   ok="true"
