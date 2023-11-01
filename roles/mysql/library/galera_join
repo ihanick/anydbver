@@ -28,7 +28,7 @@ else
   msg="Joininig to $cluster_name via $donor_ip"
   SSH="ssh -i /vagrant/secret/id_rsa -o StrictHostKeyChecking=no -o PasswordAuthentication=no"
 
-  if test ! -f $ssl_cert_archive -o -z $ssl_cert_archive  ; then
+  #if test ! -f $ssl_cert_archive -o -z $ssl_cert_archive  ; then
     if $SSH root@$donor_ip true &>/dev/null ; then
       $SSH root@$donor_ip tar cz \
         /var/lib/mysql/ca.pem \
@@ -38,7 +38,7 @@ else
         /var/lib/mysql/server-cert.pem \
         /var/lib/mysql/server-key.pem > "$ssl_cert_archive" 2>/dev/null
     fi
-  fi
+  #fi
 
   systemctl stop "$systemd_unit"
   while pgrep -x mysqld ; do sleep 5; done
