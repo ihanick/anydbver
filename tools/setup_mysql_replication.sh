@@ -303,6 +303,7 @@ EOF
 
     systemctl start $MYSQLD_UNIT
 
+  until mysqladmin --silent --connect-timeout=30 --wait=4 ping ; do sleep 4 ; done
 
   $SSH root@$MASTER_IP rm -f /root/add-galera-member
 fi
