@@ -32,6 +32,11 @@ wait_until_mysql_ready() {
   until mysql --defaults-file=/tmp/"$FILE".cnf --silent --connect-timeout=30 --wait -e "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
 }
 
+wait_until_wsrep_synced() {
+  local FILE="$1"
+  until mysql --defaults-file=/tmp/"$FILE".cnf --silent --connect-timeout=30 --wait -e "SHOW STATUS LIKE 'wsrep_local_state_comment'" | grep -q Synced ; do sleep 5 ; done
+}
+
 is_clone_allowed() {
   local DST="$1"
   local SRC="$2"
@@ -279,6 +284,7 @@ if [[ "x$TYPE" == "xgalera" ]] ; then
 
   create_client_my_cnf leader "${MASTER_IP}" root "$MASTER_PASSWORD"
   wait_until_mysql_ready leader
+  wait_until_wsrep_synced leader
   $SSH root@${MASTER_IP} tar -cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem | tar -C / -xz
 
   #if [ -f /vagrant/secret/"${CLUSTER_NAME}-ssl.tar.gz"  ] ; then
