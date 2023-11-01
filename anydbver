@@ -1049,7 +1049,7 @@ def handle_non_deployment_commands():
   else:
     args.user = os.getlogin()
 
-  if args.ip:
+  if args.ip or args.ssh or args.update:
     detect_provider(args, False)
   else:
     detect_provider(args, True)

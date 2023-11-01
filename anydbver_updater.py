@@ -818,8 +818,6 @@ def update_versions():
   #percona-postgresql-common-230-1.el8.noarch
   generate_versions_file("ppg.el7.txt",
     [
-      {"url": "http://repo.percona.com/ppg-10/yum/release/7/RPMS/x86_64",
-      "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
       {"url": "http://repo.percona.com/ppg-11/yum/release/7/RPMS/x86_64",
       "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
        {"url": "http://repo.percona.com/ppg-12/yum/release/7/RPMS/x86_64",
@@ -833,8 +831,6 @@ def update_versions():
      ])
   generate_versions_file("ppg.el8.txt",
     [
-      {"url": "http://repo.percona.com/ppg-10/yum/release/8/RPMS/x86_64",
-      "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
       {"url": "http://repo.percona.com/ppg-11/yum/release/8/RPMS/x86_64",
       "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
        {"url": "http://repo.percona.com/ppg-12/yum/release/8/RPMS/x86_64",
@@ -849,8 +845,6 @@ def update_versions():
 
   generate_versions_file("pg.el7.txt",
     [
-      {"url": "https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-7-x86_64",
-      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
       {"url": "https://download.postgresql.org/pub/repos/yum/11/redhat/rhel-7-x86_64",
       "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
        {"url": "https://download.postgresql.org/pub/repos/yum/12/redhat/rhel-7-x86_64",
@@ -865,8 +859,6 @@ def update_versions():
      
   generate_versions_file("pg.el8.txt",
     [
-      {"url": "https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-8-x86_64",
-      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
       {"url": "https://download.postgresql.org/pub/repos/yum/11/redhat/rhel-8-x86_64",
       "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
        {"url": "https://download.postgresql.org/pub/repos/yum/12/redhat/rhel-8-x86_64",
