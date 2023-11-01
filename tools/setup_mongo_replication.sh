@@ -17,8 +17,12 @@ if [[ "x$PRIMARY" == "x" ]] ; then
   fi
 else
   # wait until local mongod become ready
+  MYSELF="$(/vagrant/tools/node_ip.sh):27017"
   until $MONGO --eval 'print("waited for connection")' &>/dev/null ; do sleep 2 ; done
   until $MONGO "mongodb://$USR:$PASS@$PRIMARY:27017/admin" --eval 'rs.status()' | grep -q PRIMARY ; do sleep 2 ; done
-  $MONGO "mongodb://$USR:$PASS@$PRIMARY:27017/admin" --eval 'rs.add({ host:"'$( hostname -I | cut -d' ' -f1 )':27017"})'
+  until $MONGO "mongodb://$USR:$PASS@$PRIMARY:27017/admin" --eval 'rs.status()' | grep -qF "$MYSELF" ; do
+    $MONGO "mongodb://$USR:$PASS@$PRIMARY:27017/admin" --eval 'rs.add({ host:"'$MYSELF'"})'
+	  sleep 2
+  done
 fi
 touch /root/${REPLICATION_SET}.init
