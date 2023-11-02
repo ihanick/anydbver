@@ -572,10 +572,14 @@ def find_version(args):
     args.mysql_server = '8.0'
   if args.k3s == 'True':
     args.k3s = "latest"
-  if args.percona_postgresql == 'True':
-    args.percona_postgresql = '15'
-  if args.postgresql == 'True':
-    args.postgresql = '15'
+  if args.percona_postgresql:
+    params = soft_params(args.percona_postgresql)
+    if params["version"] in ('True', 'latest', '15'):
+      args.percona_postgresql = replace_version_in_command(args.percona_postgresql, '15')
+  if args.postgresql:
+    params = soft_params(args.postgresql)
+    if params["version"] in ('True', 'latest', '15'):
+      args.postgresql = replace_version_in_command(args.postgresql, '15')
   if args.mysql_router:
     vers = list(open(".version-info/mysql.{os}.txt".format(os=osver)))
     version = vers[-1]
@@ -831,12 +835,20 @@ def apply_node_actions(ns, _, actions, user, provider):
   if actions.pgbackrest:
     extra_vars["extra_pgbackrest_version"] = "1"
   if actions.percona_postgresql is not None:
-    extra_vars["extra_percona_postgresql_version"] = actions.percona_postgresql
+    params = soft_params(actions.percona_postgresql)
+    extra_vars["extra_percona_postgresql_version"] = params["version"]
     extra_vars["extra_db_user"] = "postgres"
     extra_vars["extra_db_password"] = "verysecretpassword1^"
-    env["PPGSQL"] = actions.percona_postgresql
-    env["DB_USER"] = "postgres"
-    env["DB_PASS"]= "verysecretpassword1^"
+
+    if actions.wal == "logical" or ("wal" in params and params["wal"]=="logical"):
+      extra_vars["extra_db_opts_file"] = "postgresql/logical.conf"
+    if "leader" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["leader"], user, provider)
+    if "primary" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["primary"], user, provider)
+    if "master" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["master"], user, provider)
+
     if actions.wal == "logical":
       extra_vars["extra_db_opts_file"] = "postgresql/logical.conf"
   if actions.pmm:
@@ -862,14 +874,19 @@ def apply_node_actions(ns, _, actions, user, provider):
   if actions.pg_stat_monitor:
     extra_vars["extra_pg_stat_monitor"] = "1"
   if actions.postgresql is not None:
-    extra_vars["extra_postgresql_version"] = actions.postgresql
+    params = soft_params(actions.postgresql)
+    extra_vars["extra_postgresql_version"] = params["version"]
     extra_vars["extra_db_user"] = "postgres"
     extra_vars["extra_db_password"] = "verysecretpassword1^"
-    env["PG"] = actions.postgresql
-    env["DB_USER"] = "postgres"
-    env["DB_PASS"]= "verysecretpassword1^"
-    if actions.wal == "logical":
+    if actions.wal == "logical" or ("wal" in params and params["wal"]=="logical"):
       extra_vars["extra_db_opts_file"] = "postgresql/logical.conf"
+    if "leader" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["leader"], user, provider)
+    if "primary" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["primary"], user, provider)
+    if "master" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["master"], user, provider)
+
   if actions.patroni is not None:
     extra_vars["extra_percona_patroni_version"] = "True" # actions.patroni
   if actions.mysql_router is not None:

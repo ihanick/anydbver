@@ -134,6 +134,15 @@ Create a sharding cluster with 3-member replicasets (first shard, second shard, 
      node9 psmdb:latest mongos-cfg:cfg0/node6,node7,node8 mongos-shard:rs0/default,node1,node2,rs1/node3,node4,node5
 ```
 
+## Postgresql
+You can run PGDG postgresql distribution `pg`-keyword or Percona's build `ppg`-keyword.
+* `primary` instructs node to join as secondary to specified primary
+* optional `wal` parameter with logical argument switches `wal_level` to logical
+
+```bash
+./anydbver deploy node0 pg:latest,wal=logical node1 pg:latest,primary=node0,wal=logical
+```
+
 ## More details and usage examples
 There are usage examples in the help output:
 ```bash
@@ -158,5 +167,7 @@ $ echo 'select cmd from tests'|sqlite3 anydbver_version.db
 ./anydbver deploy k3d cert-manager:1.7.2 k8s-pg:2.2.0
 ./anydbver deploy node0 ps:8.0,group-replication node1 ps:8.0,group-replication,master=node0 node2 ps:8.0,mysql-router,master=node0
 ./anydbver deploy ps:5.7 node1 ps:5.7,master=node0 node2 ps:5.7,master=node1 node3 percona-orchestrator:latest,master=node0
-./anydbver deploy pxc node1 pxc:latest,master=node0,galera
+./anydbver deploy pxc node1 pxc:latest,master=node0,galera node2 pxc:latest,master=node0,galera
+./anydbver deploy node0 ppg:latest,wal=logical node1 ppg:latest,primary=node0,wal=logical
+./anydbver deploy node0 pg:latest,wal=logical node1 pg:latest,primary=node0,wal=logical
 ```

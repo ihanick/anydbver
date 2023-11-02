@@ -176,8 +176,8 @@ def save_percona_postgresql_versions_to_sqlite(osver):
       "percona-postgresql{maj}-server".format(maj=maj_ver),
       "percona-postgresql{maj}-contrib".format(maj=maj_ver)]
       pkgs = ["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]
-      if osver == "el8":
-        pkgs.insert(1,"percona-postgresql-common-{ver2}.{osver}.noarch".format(ver2=ver2, osver=osver))
+      #if osver == "el8":
+      #  pkgs.insert(1,"percona-postgresql-common-{ver2}.{osver}.noarch".format(ver2=ver2, osver=osver))
 
       ver_no_dot = maj_ver
       if ver.startswith('11.5'):

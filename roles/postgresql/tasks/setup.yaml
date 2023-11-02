@@ -48,15 +48,10 @@
 
     - name: Apply database options from file
       when: db_opts_file != '' and (postgresql_version != '' or percona_postgresql_version != '')
-      command:
+      shell:
         cmd: >-
-          /bin/bash /vagrant/tools/apply_mysql_conf.sh
-          ""
-          "/vagrant/configs/{{ db_opts_file }}"
-          "{{cluster_name}}"
-          "{{db_user}}"
-          "{{db_password}}"
-          "{{pg_conf_dir}}"
+          cat "/vagrant/configs/{{ db_opts_file }}" >> "{{pg_conf_dir}}/postgresql.conf";
+          touch "/root/{{ db_opts_file | basename }}.applied"
         creates: "/root/{{ db_opts_file | basename }}.applied"
 
     - name: Setup Kerberos for PG
