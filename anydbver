@@ -1074,7 +1074,7 @@ def handle_non_deployment_commands():
 
   if args.ip:
     host = "default"
-    if args.ip == "":
+    if args.ip != "":
       host = args.ip
     print(resolve_hostname(args.namespace, host, args.user, args.provider))
     sys.exit(0)
@@ -1133,19 +1133,6 @@ def main():
     handle_non_deployment_commands()
 
   if len(sys.argv) > 1:
-    if sys.argv[1] in ("ip", "--ip"):
-      host = "default"
-      if len(sys.argv) > 2:
-        host = sys.argv[2]
-      a = SimpleNamespace(**{ "provider": "", "user": ""})
-      if "USER" in os.environ:
-        a.user = os.environ["USER"]
-      else:
-        a.user = os.getlogin()
-
-      detect_provider(a, False)
-      print(resolve_hostname("", host, a.user, a.provider))
-      sys.exit(0)
     if sys.argv[1] in ("ssh", "--ssh"):
       host = "default"
       if len(sys.argv) > 2:
