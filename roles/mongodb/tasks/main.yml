@@ -58,7 +58,7 @@
 - name: install Percona Backup for MongoDB
   when: pbm_version != ""
   yum:
-    name: "https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-{{ pbm_version_short }}/binary/redhat/7/x86_64/percona-backup-mongodb-{{pbm_version}}.{{ dist }}.x86_64.rpm"
+    name: "{{percona_backup_mongodb_pkg}}"
     state: present
 
 - name: MongoDB Setup tasks

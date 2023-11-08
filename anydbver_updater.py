@@ -199,11 +199,74 @@ def save_percona_postgresql_versions_to_sqlite(osver):
       cur.execute(sql, project)
   conn.commit()
 
+def create_percona_backup_mongodb_table():
+  db_file = 'anydbver_version.db'
+
+  conn = None
+  try:
+    conn = sqlite3.connect(db_file)
+  except sqlite3.Error as e:
+    print(e)
+    return
+  cur = conn.cursor()
+
+  sql = """
+CREATE TABLE if not exists percona_backup_mongodb_version(
+  version varchar(20),
+  os varchar(20),
+  arch varchar(20),
+  packages varchar(1000),
+  constraint pk PRIMARY KEY(version, os, arch)
+);
+"""
+
+  cur.execute(sql, ())
+  conn.commit()
+
+
+def save_percona_backup_mongodb_versions_to_sqlite(osver):
+  create_percona_backup_mongodb_table()
+
+  arch = 'x86_64'
+
+  db_file = 'anydbver_version.db'
+  conn = None
+  try:
+    conn = sqlite3.connect(db_file)
+  except sqlite3.Error as e:
+    print(e)
+    return
+  cur = conn.cursor()
+  vers = list(open(".version-info/pbm.{os}.txt".format(os=osver)))
+  sql = """\
+    INSERT OR REPLACE INTO percona_backup_mongodb_version(
+      version, os, arch, packages
+    )
+    VALUES (?,?,?,?)
+    """
+  for line in vers:
+    ver = line.rstrip()
+    project = ()
+    if osver.startswith('el'):
+      pbm_ver_short = re.sub(r'^([0-9]+\.[0-9]+\.[0-9]+)-.*$', r'\1', ver) 
+      pbm_repo_url = 'https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-{pbm_version_short}'.format(pbm_version_short=pbm_ver_short)
+      project = (
+        ver, osver, arch,
+        '{pbm_repo_url}/binary/redhat/{osver_num}/{arch}/percona-backup-mongodb-{pbm_version}.{dist}.{arch}.rpm'.format(
+          pbm_repo_url=pbm_repo_url,
+          pbm_version=ver,
+          dist=osver,
+          osver_num=osver.replace("el",""),
+          arch=arch)
+      )
+
+    if len(project) > 1:
+      cur.execute(sql, project)
+  conn.commit()
+
 
     
 def save_percona_server_mongodb_versions_to_sqlite(osver):
-  if osver == 'el9':
-    return
 
   db_file = 'anydbver_version.db'
   conn = None
@@ -458,7 +521,6 @@ def save_mariadb_versions_to_sqlite(osver):
 
 
   pass
-
 
 def create_general_updater_table():
   db_file = 'anydbver_version.db'
@@ -717,6 +779,12 @@ def update_versions():
       "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm'}
     ])
 
+  generate_versions_file("psmdb.el9.txt",
+    [
+      {"url": "https://repo.percona.com/psmdb-60/yum/release/9/RPMS/x86_64/",
+      "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el9.x86_64.rpm'}
+    ])
+
 
   generate_versions_file("percona-server.el7.txt",
     [
@@ -764,6 +832,21 @@ def update_versions():
       "pattern": r'percona-xtradb-cluster-server-(\d[^"]*)[.]el9.x86_64.rpm'}
     ])
 
+  generate_versions_file("pbm.el7.txt",
+    [
+      {"url": "https://repo.percona.com/pbm/yum/release/7/RPMS/x86_64/",
+      "pattern": r'percona-backup-mongodb-(\d[^"]*).el7.x86_64.rpm'}
+    ])
+  generate_versions_file("pbm.el8.txt",
+    [
+      {"url": "https://repo.percona.com/pbm/yum/release/8/RPMS/x86_64/",
+      "pattern": r'percona-backup-mongodb-(\d[^"]*).el8.x86_64.rpm'}
+    ])
+  generate_versions_file("pbm.el9.txt",
+    [
+      {"url": "https://repo.percona.com/pbm/yum/release/9/RPMS/x86_64/",
+      "pattern": r'percona-backup-mongodb-(\d[^"]*).el9.x86_64.rpm'}
+    ])
 
   generate_versions_file("percona-orchestrator.el8.txt",
     [
@@ -893,5 +976,6 @@ def update_versions():
     save_postgresql_versions_to_sqlite(osver)
     save_mariadb_versions_to_sqlite(osver)
     save_xtrabackup_versions_to_sqlite(osver)
+    save_percona_backup_mongodb_versions_to_sqlite(osver)
 
 

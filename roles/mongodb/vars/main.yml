@@ -55,3 +55,10 @@ package_info: >
     select="select * from percona_server_mongodb_version where version like '"+ psmdb_version +"%' and os='"+ dist +"' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1")
   if psmdb_version != ""
   else "" }}
+
+
+percona_backup_mongodb_pkg: >
+  {{ lookup("theredgreek.sqlite.sqlite", path=playbook_dir+"/anydbver_version.db",
+    select="select packages from percona_backup_mongodb_version where version like '"+ pbm_version +"%' and os='"+ dist +"' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1")["packages"]
+  if pbm_version != ""
+  else "" }}

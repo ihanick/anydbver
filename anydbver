@@ -8,7 +8,6 @@ import itertools
 import subprocess
 from pathlib import Path
 import sqlite3
-from types import SimpleNamespace
 import urllib.parse
 import anydbver_tests
 from anydbver_run_tools import run_fatal, run_get_line, soft_params
@@ -568,6 +567,15 @@ def find_version(args):
         version = ver
         break
     args.proxysql = version.rstrip()
+  if args.percona_backup_mongodb:
+    vers = list(open(".version-info/pbm.{os}.txt".format(os=osver)))
+    version = vers[-1]
+    for line in reversed(vers):
+      ver = line.rstrip()
+      if ver.startswith(args.percona_backup_mongodb):
+        version = ver
+        break
+    args.percona_backup_mongodb = version.rstrip()
   if args.mysql_server == 'True':
     args.mysql_server = '8.0'
   if args.k3s == 'True':
@@ -644,6 +652,7 @@ def parse_node(args, help_cmd=False):
   parser.add_argument('--ldap', type=str, nargs='?', help=arg_help("ldap"))
   parser.add_argument('--kmip-server', type=str, nargs='?', help=arg_help("kmip-server"))
   parser.add_argument('--percona-server-mongodb', '--psmdb', type=str, nargs='?', help=arg_help("percona-server-mongodb"))
+  parser.add_argument('--percona-backup-mongodb', '--pbm', type=str, nargs='?', help=arg_help("percona-backup-mongodb"))
   parser.add_argument('--shardsrv', type=str, nargs='?', help=arg_help("shardsrv"))
   parser.add_argument('--configsrv', type=str, nargs='?', help=arg_help("configsrv"))
   parser.add_argument('--mongos-cfg', type=str, nargs='?', help=arg_help("mongos-cfg"))
@@ -729,6 +738,9 @@ def apply_node_actions(ns, _, actions, user, provider):
   if actions.ldap_master is not None:
     extra_vars["extra_ldap_server_ip"] = resolve_hostname(ns, actions.ldap_master, user, provider)
     env["LDAP_IP"] = extra_vars["extra_ldap_server_ip"]
+  if actions.percona_backup_mongodb is not None:
+    params = soft_params(actions.percona_backup_mongodb)
+    extra_vars["extra_pbm_version"] = params["version"]
   if actions.percona_server_mongodb is not None:
     params = soft_params(actions.percona_server_mongodb)
     if "master" in params:
