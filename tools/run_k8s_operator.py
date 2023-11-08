@@ -20,6 +20,7 @@ FORMAT = '%(asctime)s %(levelname)s %(message)s'
 logging.basicConfig(format=FORMAT)
 logger = logging.getLogger('run k8s operator')
 logger.setLevel(logging.INFO)
+yq_path = str((Path(__file__).parents[0] / 'yq').resolve())
 
 def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
   if print_cmd:
@@ -35,8 +36,7 @@ def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
   return ret_code
 
 def set_yaml(yq_cmd, err_msg, yaml_file = "./deploy/cr.yaml"):
-  yq = str((Path(__file__).parents[0] / 'yq').resolve())
-  run_fatal( [ yq, yq_cmd, "-i", yaml_file], err_msg)
+  run_fatal( [ yq_path, yq_cmd, "-i", yaml_file], err_msg)
 
 def run_get_line(args,err_msg, ignore_msg=None, print_cmd=True, env=None, keep_stderr=True):
   if print_cmd:
@@ -156,7 +156,8 @@ def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, 
   if standby:
     run_fatal(["sed", "-i", "-re", r"s/standby: false\>/standby: true/", "./deploy/cr.yaml"], "enable standby in yaml")
   if db_ver != "":
-    run_fatal(["sed", "-i", "-re", r"s/ppg[0-9.]+/ppg{}/".format(db_ver), "./deploy/cr.yaml"], "change PG major version")
+    run_fatal(["sed", "-i", "-re", r"s/ppg[0-9.]+/ppg{}/".format(db_ver), "./deploy/cr.yaml"], "change PG major version in images")
+    set_yaml('.spec.postgresVersion={dbver}'.format(dbver=db_ver),"change PG major version")
   if tls and op_ver.startswith("1"):
     set_yaml('.spec.tlsOnly=true \
         | .spec.sslCA="{name}-ssl-ca" \
@@ -724,6 +725,7 @@ type: Opaque
 def enable_minio(args):
   deploy_path = Path(args.data_path) / args.operator_name / "deploy"
   minio_storage_path = str((deploy_path / "cr-minio.yaml").resolve())
+  minio_secret_yaml_path = str((deploy_path / "minio-secret.yaml").resolve())
   minio_cred_path = str((deploy_path / "{}-backrest-repo-config-secret-minio.yaml".format(args.cluster_name)).resolve())
   proto = "http"
   minio_port = 9000
@@ -750,7 +752,20 @@ def enable_minio(args):
       """.format(proto=proto, minio_namespace="default", cluster_domain=args.cluster_domain, minio_port=minio_port, bucket=bucket)
     with open(minio_storage_path,"w+") as f:
       f.writelines(minio_storage)
-    run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", "./deploy/backup-s3.yaml"], "Can't apply s3 secrets")
+    minio_secret_yaml = """\
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-cluster-name-backup-s3
+type: Opaque
+data:
+  AWS_ACCESS_KEY_ID: UkVQTEFDRS1XSVRILUFXUy1BQ0NFU1MtS0VZ
+  AWS_SECRET_ACCESS_KEY: UkVQTEFDRS1XSVRILUFXUy1TRUNSRVQtS0VZ
+"""
+    with open(minio_secret_yaml_path,"w+") as f:
+      f.writelines(minio_secret_yaml)
+
+    run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", minio_secret_yaml_path], "Can't apply s3 secrets")
     merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), minio_storage_path )
   if args.operator_name == "percona-server-mongodb-operator":
     minio_storage = """\
