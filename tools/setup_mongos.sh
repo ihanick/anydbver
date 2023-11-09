@@ -33,6 +33,8 @@ for SHARD_ITEM in $FULL_NEW_SEP ; do
   done
 done
 
+$MONGO -u "$USR" -p "$PASS" --authenticationDatabase admin --norc mongodb://127.0.0.1:27017/admin --eval 'db.getSiblingDB("admin").createRole({ "role": "pbmAnyAction", "privileges": [ { "resource": { "anyResource": true }, "actions": [ "anyAction" ] } ], "roles": [] });db.grantRolesToUser("dba", [{role: "pbmAnyAction", db: "admin"}])'
+
 IFS=OLDIFS
 
 touch /root/mongos.configured

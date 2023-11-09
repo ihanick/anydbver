@@ -79,6 +79,10 @@ def destroy_docker(args):
     if c != "":
       run_fatal(logger, [args.provider, "rm", "-f", c], "Can't remove container")
   run_fatal(logger, [args.provider, "network", "rm", net], "Can't remove network", r"No such network:|network .* not found")
+  run_fatal(logger, [args.provider, "run", "-i", "--rm", "-v",
+    str((Path(os.getcwd()) / "data").resolve())+":/data",
+    "busybox", "sh", "-c", "rm -rf -- /data/nfs"], "Can't clean data directory")
+
   clean_data_needed = False
   if clean_data_needed:
     run_fatal(logger, [args.provider, "run", "-i", "--rm", "-v",
@@ -432,7 +436,7 @@ mirrors:
         run_fatal(logger, run_cmd, "Can't run the operator")
     args.provider = old_provider
   if args.provider != "kubectl":
-    run_fatal(logger, ["ansible-playbook", "-i", "{}ansible_hosts_run".format(ns_prefix), "playbook.yml"], "Error running playbook")
+    run_fatal(logger, ["ansible-playbook", "-i", "{}ansible_hosts_run".format(ns_prefix), "--forks", "16", "playbook.yml"], "Error running playbook")
 
 def load_sett_file(provider, echo=True):
   if not Path(".anydbver").is_file():
@@ -568,14 +572,9 @@ def find_version(args):
         break
     args.proxysql = version.rstrip()
   if args.percona_backup_mongodb:
-    vers = list(open(".version-info/pbm.{os}.txt".format(os=osver)))
-    version = vers[-1]
-    for line in reversed(vers):
-      ver = line.rstrip()
-      if ver.startswith(args.percona_backup_mongodb):
-        version = ver
-        break
-    args.percona_backup_mongodb = version.rstrip()
+    params = soft_params(args.percona_backup_mongodb)
+    if params["version"] in ('True', 'latest', '2'):
+      args.percona_backup_mongodb = replace_version_in_command(args.percona_backup_mongodb, '2')
   if args.mysql_server == 'True':
     args.mysql_server = '8.0'
   if args.k3s == 'True':

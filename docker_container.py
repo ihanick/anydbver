@@ -144,6 +144,9 @@ def start_container(args, name, priv):
   (docker_img, python_path) = get_docker_os_image(get_node_os(args.os, name))
 
   if args.provider=="docker":
+    shared_directory_path = str((Path(os.getcwd()) / "data" / "nfs").resolve())
+    if not Path(shared_directory_path).is_dir():
+      run_fatal(["/bin/sh","-c","mkdir -p '{}'".format(shared_directory_path)], "Can't create shared directory path")
     net = "{ns_prefix}{usr}-anydbver".format(ns_prefix=ns_prefix, usr=args.user)
     run_fatal(["docker", "network", "create", net], "Can't create a docker network", "already exists")
     ptfm = "linux/amd64"
@@ -153,6 +156,7 @@ def start_container(args, name, priv):
       "docker", "run",
       "--platform", ptfm, "--name", container_name,
       "-d", "--cgroupns=host", "--tmpfs", "/tmp", "--network", net,
+      "-v", "{}:/nfs".format(shared_directory_path),
       "--tmpfs", "/run", "--tmpfs", "/run/lock", "-v", "/sys/fs/cgroup:/sys/fs/cgroup",
       "--hostname", name, "{}-{}".format(docker_img, args.user)],
               "Can't start docker container")

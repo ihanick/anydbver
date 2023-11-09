@@ -11,15 +11,11 @@ export PBM_MONGODB_URI
 
 systemctl daemon-reload
 
-until pgrep -xn pbm-agent ; do
-  systemctl start pbm-agent
-  sleep 5
-done
 
 
 [ -d /nfs/local_backups ] || mkdir /nfs/local_backups
 
-chown pbm:pbm /nfs/local_backups
+chown mongod:mongod /nfs/local_backups
 
 cat > pbm_config.yaml <<EOF
 storage:
@@ -36,4 +32,6 @@ EOF
 
 fi
 
-pbm config --file pbm_config.yaml
+cp pbm_config.yaml /etc/pbm-storage.conf
+
+nohup bash -c "until pgrep -xn pbm-agent ; do systemctl start pbm-agent; sleep 5; done ; pbm config --file pbm_config.yaml" &> /root/pbm-start.log & disown

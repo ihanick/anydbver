@@ -139,7 +139,7 @@
         creates: /root/{{mongo_replicaset}}.init
 
 - name: Setup PBM agent
-  when: pbm_agent  != ''
+  when: pbm_agent  != '' or (pbm_version != '' and mongo_replicaset != '')
   command:
     cmd: /bin/bash /vagrant/tools/setup_pbm_agent.sh "{{mongo_replicaset}}"
 
