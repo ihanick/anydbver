@@ -1,5 +1,6 @@
 #!/bin/bash
 RS="$1"
+S3_URL="$2"
 if [ "x$RS" = "x" ] ; then
   RS=$(yq r /etc/mongod.conf  replication.replSetName)
 fi
@@ -12,20 +13,35 @@ export PBM_MONGODB_URI
 systemctl daemon-reload
 
 
-
-[ -d /nfs/local_backups ] || mkdir /nfs/local_backups
-
-chown mongod:mongod /nfs/local_backups
-
-cat > pbm_config.yaml <<EOF
+if [ "x${S3_URL}" = "x" ] ; then
+  [ -d /nfs/local_backups ] || mkdir /nfs/local_backups
+  chown mongod:mongod /nfs/local_backups
+  cat > pbm_config.yaml <<EOF
 storage:
-  type: filesystem
-  filesystem:
-    path: /nfs/local_backups
+type: filesystem
+filesystem:
+path: /nfs/local_backups
 EOF
+else
+  MINIO_USER=UIdgE4sXPBTcBB4eEawU
+  MINIO_PASS=7UdlDzBF769dbIOMVILV
+  export MC_HOST_bkp=http://$MINIO_USER:$MINIO_PASS@172.17.0.1:9000
+  cat > pbm_config.yaml <<EOF
+storage:
+  type: s3
+  s3:
+    endpointUrl: "http://172.17.0.1:9000"
+    region: my-region
+    bucket: pbm-example
+    prefix: data/pbm/test
+    credentials:
+      access-key-id: $MINIO_USER
+      secret-access-key: $MINIO_PASS
+EOF
+fi
 
 if ! grep -q pbm-agent ~/.bashrc ; then
-  cat >> ~/.bashrc <<EOF
+cat >> ~/.bashrc <<EOF
 source /etc/sysconfig/pbm-agent
 export PBM_MONGODB_URI
 EOF

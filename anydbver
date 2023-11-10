@@ -530,10 +530,18 @@ def fix_missing_node_commands(args):
 
 def replace_version_in_command(cmd, ver):
   ver = ver.rstrip()
+
   if "," in cmd:
-    return ver + "," + cmd.split(",",1)[1]
+    (program_version, program_params) = cmd.split(",",1)
+    if '=' in program_version:
+      return ver + "," + cmd
+    else:
+      return ver + "," + program_params
   else:
-    return ver
+    if '=' in cmd:
+      return ver + "," + cmd
+    else:
+      return ver
 
 def find_version(args):
   osver = "el8"
@@ -740,6 +748,8 @@ def apply_node_actions(ns, _, actions, user, provider):
   if actions.percona_backup_mongodb is not None:
     params = soft_params(actions.percona_backup_mongodb)
     extra_vars["extra_pbm_version"] = params["version"]
+    if "s3" in params:
+      extra_vars["extra_pbm_s3_url"] = params["s3"]
   if actions.percona_server_mongodb is not None:
     params = soft_params(actions.percona_server_mongodb)
     if "master" in params:

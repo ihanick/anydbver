@@ -53,9 +53,13 @@ def soft_params(opt):
     return params
   if (',' not in opt):
     opt = "True," + opt
-  (operator_version, operator_params) = opt.split(",",1)
-  params["version"] = operator_version
-  for param in operator_params.split(","):
+  (program_version, program_params) = opt.split(",",1)
+  if '=' not in program_version:
+    params["version"] = program_version
+  else:
+    params["version"] = "True"
+    program_params = opt
+  for param in program_params.split(","):
     if '=' in param:
       (k,v) = param.split("=",1)
       k.replace('_','-')

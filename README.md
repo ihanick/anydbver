@@ -119,7 +119,7 @@ mysql
 ```
 
 ## MongoDB
-Create a sharding cluster with 3-member replicasets (first shard, second shard, config servers) and mongos.
+* Create a sharding cluster with 3-member replicasets (first shard, second shard, config servers) and mongos.
 ```bash
 ./anydbver deploy \
            psmdb:latest,replica-set=rs0,role=shard \
@@ -132,6 +132,24 @@ Create a sharding cluster with 3-member replicasets (first shard, second shard, 
      node7 psmdb:latest,replica-set=cfg0,role=cfg,master=node6 \
      node8 psmdb:latest,replica-set=cfg0,role=cfg,master=node6 \
      node9 psmdb:latest mongos-cfg:cfg0/node6,node7,node8 mongos-shard:rs0/default,node1,node2,rs1/node3,node4,node5
+```
+* Same with backup to S3 storage (minio)
+
+```bash
+# create minio server in docker (outside of anydbver)
+tools/create_backup_server.sh
+tools/mc mb bkp/pbm-example
+export MC_HOST_bkp=http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000
+./anydbver deploy node0 psmdb:latest,replica-set=rs0,role=shard pbm:s3=$MC_HOST_bkp/pbm-example \
+  node1 psmdb:latest,replica-set=rs0,role=shard,master=node0 pbm:s3=$MC_HOST_bkp/pbm-example \
+  node2 psmdb:latest,replica-set=rs0,role=shard,master=node0 pbm:s3=$MC_HOST_bkp/pbm-example \
+  node3 psmdb:latest,replica-set=rs1,role=shard pbm:s3=$MC_HOST_bkp/pbm-example \
+  node4 psmdb:latest,replica-set=rs1,role=shard,master=node3 pbm:s3=$MC_HOST_bkp/pbm-example \
+  node5 psmdb:latest,replica-set=rs1,role=shard,master=node3 pbm:s3=$MC_HOST_bkp/pbm-example \
+  node6 psmdb:latest,replica-set=cfg0,role=cfg pbm:s3=$MC_HOST_bkp/pbm-example \
+  node7 psmdb:latest,replica-set=cfg0,role=cfg,master=node6 pbm:s3=$MC_HOST_bkp/pbm-example \
+  node8 psmdb:latest,replica-set=cfg0,role=cfg,master=node6 pbm:s3=$MC_HOST_bkp/pbm-example \
+  node9 psmdb:latest mongos-cfg:cfg0/node6,node7,node8 mongos-shard:rs0/node0,node1,node2,rs1/node3,node4,node5
 ```
 
 ## Postgresql

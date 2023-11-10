@@ -26,6 +26,7 @@
     mongo_org_version: "{{ lookup('vars', 'extra_mongo_org_version', default=lookup('env','MONGO_ORG',default='') ) }}"
     pbm_version: "{{ lookup('vars', 'extra_pbm_version', default=lookup('env','PBM',default='') ) }}"
     pbm_agent: "{{ lookup('vars', 'extra_pbm_agent', default=lookup('env','PBM_AGENT',default='') ) }}"
+    pbm_s3: "{{ lookup('vars', 'extra_pbm_s3_url', default=lookup('env','PBM_S3',default='') ) }}"
     pmm_server_version: "{{ lookup('vars', 'extra_pmm_server_version', default=lookup('env','PMM_SERVER',default='') ) }}"
     pmm_client_version: "{{ lookup('vars', 'extra_pmm_client_version', default=lookup('env','PMM_CLIENT',default='') ) }}"
     pmm_url: "{{ lookup('vars', 'extra_pmm_url', default=lookup('env','PMM_URL',default='') ) }}"
