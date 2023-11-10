@@ -319,7 +319,7 @@ mirrors:
           logger.info("Starting PXC in kubernetes managed by Percona operator {}, '{}'".format(pxc, run_cmd))
           run_cmd.append("--operator=percona-xtradb-cluster-operator")
           params = soft_params(pxc)
-          if params["version"] == "True":
+          if params["version"] in ("True", "latest"):
             params["version"] = read_latest_version_from_sqlite("percona/percona-xtradb-cluster-operator")
           run_cmd.append("--version={}".format(params["version"]))
           if "cluster-name" in params:
@@ -349,7 +349,7 @@ mirrors:
           logger.info("Starting postgresql in kubernetes managed by Percona operator {}, '{}'".format(pg, run_cmd))
           run_cmd.append("--operator=percona-postgresql-operator")
           params = soft_params(pg)
-          if params["version"] == "True":
+          if params["version"] in ("True","latest"):
             params["version"] = read_latest_version_from_sqlite("percona/percona-postgresql-operator")
           run_cmd.append("--version={}".format(params["version"]))
           if "cluster-name" in params:
