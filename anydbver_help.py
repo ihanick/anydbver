@@ -12,6 +12,7 @@ def arg_help(name):
       "pmm-client": "pmm-client:ver,server=URL_OR_NODE",
       "k3d": "k3d:ver,cluster-domain=K8S_CLUSTER_DOMAIN,ingress=PORT,ingress-type=[nginx|traefik|traefik-metallb|istio,feature-gates=VAL=[true|false],metallb",
       "percona-server-mongodb": "psmdb:version,role=<shard|cfg>,replica-set=RSN mongos-cfg:RS/NODE,NODE,NODE mongos-shard:RS0/NODE,NODE,RS1/NODE,NODE...",
+      "percona-backup-mongodb": "pbm:version,s3=https://access:secret@endpointurl:port/bucket",
       "ldap": "ldap, ldap-master:NODE",
       }
   examples = {

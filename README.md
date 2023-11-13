@@ -138,8 +138,8 @@ mysql
 ```bash
 # create minio server in docker (outside of anydbver)
 tools/create_backup_server.sh
-tools/mc mb bkp/pbm-example
 export MC_HOST_bkp=http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000
+tools/mc mb bkp/pbm-example
 ./anydbver deploy node0 psmdb:latest,replica-set=rs0,role=shard pbm:s3=$MC_HOST_bkp/pbm-example \
   node1 psmdb:latest,replica-set=rs0,role=shard,master=node0 pbm:s3=$MC_HOST_bkp/pbm-example \
   node2 psmdb:latest,replica-set=rs0,role=shard,master=node0 pbm:s3=$MC_HOST_bkp/pbm-example \

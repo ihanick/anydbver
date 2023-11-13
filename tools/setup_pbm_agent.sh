@@ -23,20 +23,23 @@ filesystem:
 path: /nfs/local_backups
 EOF
 else
-  MINIO_USER=UIdgE4sXPBTcBB4eEawU
-  MINIO_PASS=7UdlDzBF769dbIOMVILV
-  export MC_HOST_bkp=http://$MINIO_USER:$MINIO_PASS@172.17.0.1:9000
+  proto="$(echo $S3_URL|sed -re 's,^(https?://)([^:@/]*):([^@]*)@([^:/]+):([^/]+)/([^/]+),\1|\2|\3|\4|\5|\6|,' | cut -d\| -f 1)"
+  user="$(echo $S3_URL|sed -re 's,^(https?://)([^:@/]*):([^@]*)@([^:/]+):([^/]+)/([^/]+),\1|\2|\3|\4|\5|\6|,' | cut -d\| -f 2)"
+  pass="$(echo $S3_URL|sed -re 's,^(https?://)([^:@/]*):([^@]*)@([^:/]+):([^/]+)/([^/]+),\1|\2|\3|\4|\5|\6|,' | cut -d\| -f 3)"
+  host="$(echo $S3_URL|sed -re 's,^(https?://)([^:@/]*):([^@]*)@([^:/]+):([^/]+)/([^/]+),\1|\2|\3|\4|\5|\6|,' | cut -d\| -f 4)"
+  port="$(echo $S3_URL|sed -re 's,^(https?://)([^:@/]*):([^@]*)@([^:/]+):([^/]+)/([^/]+),\1|\2|\3|\4|\5|\6|,' | cut -d\| -f 5)"
+  bucket="$(echo $S3_URL|sed -re 's,^(https?://)([^:@/]*):([^@]*)@([^:/]+):([^/]+)/([^/]+),\1|\2|\3|\4|\5|\6|,' | cut -d\| -f 6)"
   cat > pbm_config.yaml <<EOF
 storage:
   type: s3
   s3:
-    endpointUrl: "http://172.17.0.1:9000"
+    endpointUrl: "$proto$host:$port"
     region: my-region
-    bucket: pbm-example
+    bucket: $bucket
     prefix: data/pbm/test
     credentials:
-      access-key-id: $MINIO_USER
-      secret-access-key: $MINIO_PASS
+      access-key-id: $user
+      secret-access-key: $pass
 EOF
 fi
 
