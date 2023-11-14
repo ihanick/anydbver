@@ -1,6 +1,6 @@
 FROM         rockylinux:8
  ENV container docker
- RUN dnf -y install openssh-server rsync python3 iproute procps-ng openssh-clients; dnf clean all; systemctl enable sshd
+ RUN dnf -y install openssh-server rsync python3 iproute procps-ng openssh-clients; dnf -y install epel-release; dnf -y install kitty-terminfo.noarch vim less man; dnf clean all; systemctl enable sshd
  STOPSIGNAL SIGRTMIN+3
  EXPOSE 22
  RUN for service in\

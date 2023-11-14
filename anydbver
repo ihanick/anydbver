@@ -853,6 +853,16 @@ def apply_node_actions(ns, _, actions, user, provider):
     env["DB_OPTS"] = "mysql/async-repl-gtid.cnf"
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
+  if actions.patroni:
+    params = soft_params(actions.patroni)
+    extra_vars["extra_patroni_version"] = "1"
+    if "leader" in params:
+      extra_vars["extra_etcd_ip"] = resolve_hostname(ns, params["leader"], user, provider)
+    if "primary" in params:
+      extra_vars["extra_etcd_ip"] = resolve_hostname(ns, params["primary"], user, provider)
+    if "master" in params:
+      extra_vars["extra_etcd_ip"] = resolve_hostname(ns, params["master"], user, provider)
+
   if actions.pgbackrest:
     extra_vars["extra_pgbackrest_version"] = "1"
   if actions.percona_postgresql is not None:
