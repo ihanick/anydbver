@@ -230,6 +230,8 @@ mirrors:
               node.ingress_type = "traefik"
             elif "nginx" in params:
               node.ingress_type = "nginx"
+            elif "nginxinc" in params:
+              node.ingress_type = "nginxinc"
             elif "istio" in params:
               node.ingress_type = "istio"
             else:
@@ -242,7 +244,7 @@ mirrors:
             k3d_create_cmd.append("--disable=traefik@server:0")
             run_k8s_operator_cmd.append("--ingress={}".format(node.ingress_type))
 
-          if node.ingress_type in ("nginx", "traefik", "istio"):
+          if node.ingress_type in ("nginx", "nginxinc", "traefik", "istio"):
             k3d_create_cmd.append("-p")
             k3d_create_cmd.append("{ingress_port}:{ingress_port}@loadbalancer".format(ingress_port=node.ingress_port))
             k3d_create_cmd.append("-p")
@@ -562,6 +564,13 @@ def find_version(args):
     params = soft_params(args.percona_server)
     if args.percona_server in ('True', 'latest', '8'):
       args.percona_server = replace_version_in_command(args.percona_server, '8.0')
+  if args.sysbench:
+    params = soft_params(args.sysbench)
+    if args.sysbench in ('True', 'latest'):
+      args.sysbench = replace_version_in_command(args.sysbench, '1.0.20-6')
+    else:
+      args.sysbench = replace_version_in_command(args.sysbench, params["version"])
+
   if args.mariadb == 'True':
     args.mariadb = '10.11'
   if args.percona_xtrabackup == 'True':
@@ -649,6 +658,7 @@ def parse_node(args, help_cmd=False):
   parser.add_argument('--percona-xtradb-cluster', '--pxc', type=str, nargs='?', help=arg_help("percona-xtradb-cluster"))
   parser.add_argument('--proxysql', type=str, nargs='?', help=arg_help("proxysql"))
   parser.add_argument('--percona-proxysql', type=str, nargs='?', help=arg_help("percona-proxysql"))
+  parser.add_argument('--sysbench', type=str, nargs='?', help=arg_help("sysbench"))
   parser.add_argument('--haproxy', type=str, nargs='?', help=arg_help("haproxy"))
   parser.add_argument('--haproxy-galera', type=str, nargs='?', help=arg_help("haproxy-galera"))
   parser.add_argument('--clustercheck', type=str, nargs='?', help=arg_help("clustercheck"))
@@ -853,6 +863,12 @@ def apply_node_actions(ns, _, actions, user, provider):
     env["DB_OPTS"] = "mysql/async-repl-gtid.cnf"
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
+  if actions.sysbench:
+    params = soft_params(actions.sysbench)
+    extra_vars["extra_sysbench_version"] = params["version"]
+    if "mysql" in params:
+      extra_vars["extra_sysbench_mysql"] = resolve_hostname(ns, params["mysql"], user, provider)
+
   if actions.patroni:
     params = soft_params(actions.patroni)
     extra_vars["extra_patroni_version"] = "1"

@@ -911,6 +911,8 @@ def update_versions():
       "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
        {"url": "http://repo.percona.com/ppg-15/yum/release/7/RPMS/x86_64",
       "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
+       {"url": "http://repo.percona.com/ppg-16/yum/release/7/RPMS/x86_64",
+      "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
      ])
   generate_versions_file("ppg.el8.txt",
     [
@@ -923,6 +925,8 @@ def update_versions():
        {"url": "http://repo.percona.com/ppg-14/yum/release/8/RPMS/x86_64",
       "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
        {"url": "http://repo.percona.com/ppg-15/yum/release/8/RPMS/x86_64",
+      "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
+       {"url": "http://repo.percona.com/ppg-16/yum/release/8/RPMS/x86_64",
       "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
      ])
 

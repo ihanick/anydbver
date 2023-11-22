@@ -1208,7 +1208,7 @@ def setup_loki(args):
   run_helm(args.helm_path, ["helm", "install", "loki-stack", "grafana/loki-stack", "--create-namespace", "--namespace", "loki-stack",
     "--set", "promtail.enabled=true,loki.persistence.enabled=true,loki.persistence.size=1Gi"], "Can't start loki with helm")
 
-def deploy_ingress_nginx(args):
+def deploy_ingress_nginxinc(args):
   # generate certificate, generate set controller.defaultTLS.secret	and controller.wildcardTLS.secret
   run_helm(args.helm_path, ["helm", "repo", "add", "nginx-stable", "https://helm.nginx.com/stable"], "helm repo add problem")
   nginx_helm_install_cmd = ["helm", "install", "nginx-ingress", "nginx-stable/nginx-ingress",
@@ -1220,6 +1220,17 @@ def deploy_ingress_nginx(args):
     "--set", "controller.defaultTLS.secret=default/ingress-default-tls"])
   run_helm(args.helm_path, nginx_helm_install_cmd, "Can't nginx ingress with helm")
 
+def deploy_ingress_nginx(args):
+  # generate certificate, generate set controller.defaultTLS.secret	and controller.wildcardTLS.secret
+  run_helm(args.helm_path, ["helm", "repo", "add", "ingress-nginx", "https://kubernetes.github.io/ingress-nginx"], "helm repo add problem")
+  nginx_helm_install_cmd = ["helm", "install", "nginx-ingress", "ingress-nginx/ingress-nginx",
+    "--create-namespace", "--namespace", "ingress-nginx",
+    "--set", "controller.service.ports.https={}".format(args.ingress_port)]
+  if args.cert_manager:
+    gen_wildcard_ns_self_signed_cert(args, "default")
+    nginx_helm_install_cmd.extend(["--set", "controller.wildcardTLS.secret=default/ingress-default-tls",
+    "--set", "controller.defaultTLS.secret=default/ingress-default-tls"])
+  run_helm(args.helm_path, nginx_helm_install_cmd, "Can't nginx ingress with helm")
 
 def deploy_ingress_istio(args):
   run_helm(args.helm_path, ["helm", "repo", "add", "istio", "https://istio-release.storage.googleapis.com/charts"], "helm repo add problem")
@@ -1384,6 +1395,8 @@ def main():
     if args.helm:
       if args.cert_manager != "" and args.operator_name == "":
         run_cert_manager_helm(args.helm_path, args.cert_manager) # cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager)
+      if args.ingress == "nginxinc" and args.operator_name == "":
+        deploy_ingress_nginxinc(args)
       if args.ingress == "nginx" and args.operator_name == "":
         deploy_ingress_nginx(args)
       if args.ingress == "istio" and args.operator_name == "":
@@ -1394,9 +1407,13 @@ def main():
         run_cert_manager(args.cert_manager) # cert_manager_ver_compat(args.operator_name, args.operator_version, args.cert_manager)
       if args.ingress == "nginx" and args.operator_name == "":
         deploy_ingress_nginx(args)
+      if args.ingress == "nginxinc" and args.operator_name == "":
+        deploy_ingress_nginxinc(args)
       if args.ingress == "istio" and args.operator_name == "":
         deploy_ingress_istio(args)
       setup_operator(args)
+    if args.ingress == "nginxinc":
+      setup_ingress_nginx(args)
     if args.ingress == "nginx":
       setup_ingress_nginx(args)
     if args.sql_file != "":
