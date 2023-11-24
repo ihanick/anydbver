@@ -24,15 +24,20 @@
     gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
 - name: enable Percona MySQL 8.0 distribution repo
   when: percona_orchestrator_version != ''
-  command:
-    cmd: /usr/bin/percona-release enable pdps-8.0
-    creates: "/etc/yum.repos.d/percona-pdps-8.0-release.repo"
+  shell:
+    cmd: >-
+      sed -i -e 's/SUPPORTED_ARCHS="i386 noarch x86_64 sources"/SUPPORTED_ARCHS="i386 noarch x86_64 aarch64 sources"/' /usr/bin/percona-release;
+      /usr/bin/percona-release enable pdps-8.0;
+      touch /root/pdps-80.enabled
+    creates: /root/pdps-80.enabled
   register: percona_release_enabled
 
 - name: enable Percona MySQL 8.0 repo
   when: percona_server_version.startswith('8.0') or percona_xtradb_cluster_version.startswith('8.0')
-  command:
-    cmd: /usr/bin/percona-release enable "{{package_info['repo_enable_str'] if package_info else os[dist][soft].repo_enable_str }}"
+  shell:
+    cmd: >-
+      sed -i -e 's/SUPPORTED_ARCHS="i386 noarch x86_64 sources"/SUPPORTED_ARCHS="i386 noarch x86_64 aarch64 sources"/' /usr/bin/percona-release;
+      /usr/bin/percona-release enable "{{package_info['repo_enable_str'] if package_info else os[dist][soft].repo_enable_str }}"
     creates: "{{ package_info['repo_file'] if package_info else os[dist][soft].repo_file }}"
   register: percona_release_enabled
   

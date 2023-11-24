@@ -144,21 +144,30 @@ def start_container(args, name, priv):
   (docker_img, python_path) = get_docker_os_image(get_node_os(args.os, name))
 
   if args.provider=="docker":
-    shared_directory_path = str((Path(os.getcwd()) / "data" / "nfs").resolve())
-    if not Path(shared_directory_path).is_dir():
-      run_fatal(["/bin/sh","-c","mkdir -p '{}'".format(shared_directory_path)], "Can't create shared directory path")
-    net = "{ns_prefix}{usr}-anydbver".format(ns_prefix=ns_prefix, usr=args.user)
-    run_fatal(["docker", "network", "create", net], "Can't create a docker network", "already exists")
+    docker_run_cmd = [ "docker", "run", "--name", container_name, ]
+
     ptfm = "linux/amd64"
     if platform.machine() == "aarch64":
       ptfm = "linux/arm64"
-    run_fatal([
-      "docker", "run",
-      "--platform", ptfm, "--name", container_name,
-      "-d", "--cgroupns=host", "--tmpfs", "/tmp", "--network", net,
-      "-v", "{}:/nfs".format(shared_directory_path),
+    docker_run_cmd.extend(["--platform", ptfm, ])
+
+    shared_directory_path = str((Path(os.getcwd()) / "data" / "nfs").resolve())
+    if not Path(shared_directory_path).is_dir():
+      run_fatal(["/bin/sh","-c","mkdir -p '{}'".format(shared_directory_path)], "Can't create shared directory path", "Permission denied")
+    if Path(shared_directory_path).is_dir():
+      docker_run_cmd.extend([ 
+        "-v", "{}:/nfs".format(shared_directory_path),
+        ])
+
+    net = "{ns_prefix}{usr}-anydbver".format(ns_prefix=ns_prefix, usr=args.user)
+    docker_run_cmd.extend([ 
+      "-d", "--cgroupns=host", "--tmpfs", "/tmp",
+      "--network", net,
       "--tmpfs", "/run", "--tmpfs", "/run/lock", "-v", "/sys/fs/cgroup:/sys/fs/cgroup",
-      "--hostname", name, "{}-{}".format(docker_img, args.user)],
+      "--hostname", name, "{}-{}".format(docker_img, args.user)
+      ])
+    run_fatal(["docker", "network", "create", net], "Can't create a docker network", "already exists")
+    run_fatal(docker_run_cmd,
               "Can't start docker container")
   elif args.provider=="lxd":
     container_name = container_name.replace(".","-")
