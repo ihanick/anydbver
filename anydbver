@@ -79,15 +79,15 @@ def destroy_docker(args):
     if c != "":
       run_fatal(logger, [args.provider, "rm", "-f", c], "Can't remove container")
   run_fatal(logger, [args.provider, "network", "rm", net], "Can't remove network", r"No such network:|network .* not found")
-  run_fatal(logger, [args.provider, "run", "-i", "--rm", "-v",
-    str((Path(os.getcwd()) / "data").resolve())+":/data",
-    "busybox", "sh", "-c", "rm -rf -- /data/nfs"], "Can't clean data directory")
-
-  clean_data_needed = False
-  if clean_data_needed:
+  if (Path(os.getcwd()) / "data").is_dir():
     run_fatal(logger, [args.provider, "run", "-i", "--rm", "-v",
       str((Path(os.getcwd()) / "data").resolve())+":/data",
-      "busybox", "sh", "-c", "rm -rf -- /data/*"], "Can't clean data directory")
+      "busybox", "sh", "-c", "rm -rf -- /data/nfs"], "Can't clean data directory")
+    clean_data_needed = False
+    if clean_data_needed:
+      run_fatal(logger, [args.provider, "run", "-i", "--rm", "-v",
+        str((Path(os.getcwd()) / "data").resolve())+":/data",
+        "busybox", "sh", "-c", "rm -rf -- /data/*"], "Can't clean data directory")
   try:
     os.unlink("{ns}ssh_config".format(ns=ns_prefix))
     os.unlink("{ns}ansible_hosts".format(ns=ns_prefix))
