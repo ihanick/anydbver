@@ -15,6 +15,8 @@ logger.setLevel(logging.INFO)
 
 def deploy_unmodified_docker_images(usr, ns, node_name, node):
   ns_prefix = ns
+  if ns_prefix != "":
+    ns_prefix = ns_prefix + "-"
   net = "{}{}-anydbver".format(ns_prefix, usr)
   logger.info("Deploying node with unmodified docker image")
   if node.pmm:

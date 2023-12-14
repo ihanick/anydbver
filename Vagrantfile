@@ -71,7 +71,7 @@ EOF
 modprobe br_netfilter
 modprobe overlay
 
-sudo -u vagrant bash -c 'export HOME=/home/vagrant;cd /home/vagrant/anydbver;./anydbver update; ansible-galaxy collection install theredgreek.sqlite ; cd /home/vagrant/anydbver/images-build ;  ./build.sh ; until lxc launch --profile vagrant images:centos/7/amd64 vagrant-default ; do lxc delete -f vagrant-default ; done ; lxc delete -f vagrant-default ; ./build-lxd.sh'
+sudo -u vagrant bash -c 'export HOME=/home/vagrant;cd /home/vagrant/anydbver;./anydbver update; ansible-galaxy collection install theredgreek.sqlite ; cd /home/vagrant/anydbver/images-build ;  ./build.sh'
 
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 mv kubectl /usr/local/bin/

@@ -1049,7 +1049,7 @@ def create_nodes(provider, nodes_cnt, osver, ns, skip_nodes, priv_nodes):
     return
   create_nodes_cmd = "rm -f ssh_config ansible_hosts; ./docker_container.py --provider={provider} --nodes={nodes} --skip-nodes={skip_nodes} --priv-nodes={priv_nodes} --os={osver} --destroy --deploy".format(provider=provider, nodes=nodes_cnt, skip_nodes=skip_nodes, priv_nodes=priv_nodes, osver=osver)
   if ns != "":
-    create_nodes_cmd = "rm -f {ns}-ssh_config {ns}-ansible_hosts; ./docker_container.py --provider={provider} --namespace={ns} --nodes={nodes} --os={os} --destroy --deploy".format(provider=provider, ns=ns, nodes=nodes_cnt, os=osver)
+    create_nodes_cmd = "rm -f {ns}-ssh_config {ns}-ansible_hosts; ./docker_container.py --provider={provider} --namespace={ns} --nodes={nodes} --skip-nodes={skip_nodes} --priv-nodes={priv_nodes} --os={os} --destroy --deploy".format(provider=provider, ns=ns, nodes=nodes_cnt, skip_nodes=skip_nodes, priv_nodes=priv_nodes, os=osver)
 
   logger.info(create_nodes_cmd)
   os.system(create_nodes_cmd)
