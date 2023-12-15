@@ -189,3 +189,11 @@ $ echo 'select cmd from tests'|sqlite3 anydbver_version.db
 ./anydbver deploy node0 ppg:latest,wal=logical node1 ppg:latest,primary=node0,wal=logical
 ./anydbver deploy node0 pg:latest,wal=logical node1 pg:latest,primary=node0,wal=logical
 ```
+
+## Unmodified docker images
+Normally anydbver installs database software for each deployment to have a systemd controlled setup, similar to production environments. docker-image subcommand allows to use unmodified images from hub.docker.com
+```
+./anydbver deploy ps:8.0,docker-image,sql="http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql"
+./anydbver deploy mysql:8.0,docker-image,sql="http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql"
+./anydbver deploy mariadb:latest,docker-image,sql="http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql"
+```
