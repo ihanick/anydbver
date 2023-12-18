@@ -19,7 +19,7 @@ if [[ "x$FIRST_SERVER" == "x" ]] ; then
     /etc/etcd/etcd.conf
 else
   LAST_SERVER_ID=$(etcdctl  --endpoints http://${FIRST_SERVER}:2379 member list|sed -e 's/ /\n/g'|grep name=|sed -r -e 's/^.*-([0-9]+)$/\1/'|sort -n|tail -n 1)
-  CLUSTER="${CLUSTER}-"$(( LAST_SERVER_ID + 1 ))
+  CLUSTER="${CLUSTER}$RANDOM-"$(( LAST_SERVER_ID + 1 ))
   INITIAL_CLUSTER=$(etcdctl --endpoints http://${FIRST_SERVER}:2379 member list|sed -re 's/.*name=([^ ]+) peerURLs=([^ ]+) .*$/\1=\2/'|sed -e ':a;N;$!ba;s/\n/,/g')
   sed -i.bak \
     -e "s|^.*ETCD_NAME=.*\$|ETCD_NAME=${CLUSTER}|" \

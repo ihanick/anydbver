@@ -59,13 +59,15 @@ def deploy_unmodified_docker_images(usr, ns, node_name, node):
   if node.mysql_server:
     params = soft_params(node.mysql_server)
     logger.info("docker run --network={net} -d --name={name} mysql/mysql-server:{ver}".format(net=net, name=node_name, ver=params["version"]))
-    run_fatal(logger,
-              ["docker", "run", "-d", "--name={}".format(node_name),
+    docker_run_cmd = ["docker", "run", "-d", "--name={}".format(node_name),
                "-e", "MYSQL_ROOT_PASSWORD={}".format(DEFAULT_PASSWORD),
                "-v", "{}:/vagrant".format(ANYDBVER_DIR),
                "--network={}".format(net),
                "mysql/mysql-server:{ver}".format(ver=params["version"])
-               ], "Can't start mysql server docker container")
+               ]
+    if "args" in params:
+        docker_run_cmd.extend(params["args"].split())
+    run_fatal(logger, docker_run_cmd , "Can't start mysql server docker container")
     if not wait_mysql_ready(node_name, "mysql", "root", DEFAULT_PASSWORD):
       logger.fatal("Can't start mysql server in docker container " + node_name)
     if "sql" in params:
