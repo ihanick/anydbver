@@ -18,7 +18,7 @@ def arg_help(name):
       }
   examples = {
       "percona-server": "anydbver deploy ps:5.7.35 node1 ps:5.7.35,master=node0\nanydbver deploy ps:8.0,gtid=0 node1 ps:8.0,gtid=0,master=node0\nanydbver deploy ps:8.0,rocksdb,sql=http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql percona-xtrabackup:8.0",
-      "mysql-server": "anydbver deploy mysql:5.7.35 node1 mysql:5.7.35,master=node0\nanydbver deploy mysql:8.0,gtid=0 node1 mysql:8.0,gtid=0,master=node0",
+      "mysql-server": "anydbver deploy mysql:5.7.35 node1 mysql:5.7.35,master=node0\nanydbver deploy mysql:8.0,gtid=0 node1 mysql:8.0,gtid=0,master=node0\nanydbver deploy mysql:8.0,docker-image,group-replication node1 mysql:8.0,docker-image,group-replication,master=node0 node2 mysql:8.0,docker-image,group-replication,master=node0",
       "percona-xtradb-cluster": "anydbver deploy pxc node1 pxc:latest,master=node0,galera node2 pxc:latest,master=node0,galera",
       "percona-orchestrator": "anydbver deploy ps:5.7 node1 ps:5.7,master=node0 node2 ps:5.7,master=node1 node3 percona-orchestrator:latest,master=node0",
       "postgresql": "anydbver deploy node0 pg:latest,wal=logical node1 pg:latest,primary=node0,wal=logical\nanydbver deploy pg:14",

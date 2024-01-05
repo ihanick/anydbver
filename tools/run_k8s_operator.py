@@ -1090,6 +1090,8 @@ def setup_operator(args):
       set_yaml('.spec.pxc.expose.enabled=true|.spec.pxc.expose.type="LoadBalancer"',
                "expose pxc")
 
+    set_yaml('.spec.pxc.imagePullPolicy="IfNotPresent"|.spec.haproxy.imagePullPolicy="IfNotPresent"', "image pull policy: IfNotPresent")
+
   if args.operator_name == "percona-postgresql-operator" and args.helm != True:
     args.users_secret = args.cluster_name + "-users"
     if args.cluster_name == "":

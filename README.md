@@ -196,4 +196,5 @@ Normally anydbver installs database software for each deployment to have a syste
 ./anydbver deploy ps:8.0,docker-image,sql="http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql"
 ./anydbver deploy mysql:8.0,docker-image,sql="http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql"
 ./anydbver deploy mariadb:latest,docker-image,sql="http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql"
+./anydbver deploy mysql:8.0,docker-image,group-replication node1 mysql:8.0,docker-image,group-replication,master=node0 node2 mysql:8.0,docker-image,group-replication,master=node0 node3 mysql:8.0,docker-image,group-replication,master=node0 node4 mysql:8.0,docker-image,group-replication,master=node0 node5 mysql:8.0,docker-image,group-replication,master=node0 node6 mysql:8.0,docker-image,group-replication,master=node0
 ```

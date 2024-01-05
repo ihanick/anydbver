@@ -13,7 +13,7 @@ import anydbver_tests
 from anydbver_run_tools import run_fatal, run_get_line, soft_params
 from anydbver_updater import update_versions
 from anydbver_help import arg_help
-from anydbver_unmodified_docker import deploy_unmodified_docker_images
+from anydbver_unmodified_docker import deploy_unmodified_docker_images, setup_unmodified_docker_images
 
 COMMAND_TIMEOUT=600
 DEFAULT_PASSWORD='verysecretpassword1^'
@@ -1293,6 +1293,15 @@ def main():
         run_fatal(logger, ["docker", "network", "create", net], "Can't create a docker network", "already exists")
         has_net = True
       deploy_unmodified_docker_images(args.user, args.namespace, node_name, n[1])
+
+
+  for n in node_actions:
+    node = n[0]
+    if node == "node0":
+      node = "default"
+    if args.provider == "docker" and is_unmodified_docker_image(n[1]):
+      node_name = "{}{}-{}".format(ns_prefix,args.user, node)
+      setup_unmodified_docker_images(args.user, args.namespace, node_name, n[1])
 
     (_, extra_vars) = apply_node_actions(args.namespace, node, n[1], args.user, args.provider)
 
