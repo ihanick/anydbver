@@ -233,7 +233,7 @@
     cmd: until orchestrator-client -c discover -i {{master_ip}}:3306 ; do sleep 5 ; done
 
 - name: Setup pmm-2 client mysql
-  when: pmm_client_version.startswith('2.') and pmm_url != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
+  when: (pmm_client_version.startswith('2.') or pmm_client_version == '2') and pmm_url != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
   register: pmm_admin_mysql_config
   changed_when: "'already exists' not in pmm_admin_mysql_config.stdout"
   shell:
@@ -244,7 +244,7 @@
       --password="{{db_password}}"
 
 - name: Setup pmm-1 client mysql
-  when: pmm_client_version.startswith('1.') and pmm_url != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
+  when: (pmm_client_version.startswith('1.') or pmm_client_version == '1' ) and pmm_url != '' and (percona_server_version != '' or percona_xtradb_cluster_version != '')
   register: pmm_admin_mysql_config
   changed_when: "'already exists' not in pmm_admin_mysql_config.stdout"
   shell:

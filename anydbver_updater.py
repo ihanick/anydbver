@@ -882,6 +882,25 @@ def update_versions():
   save_general_version_for_program("percona-orchestrator.el8.txt", "el8", "x86_64", "percona-orchestrator")
   save_general_version_for_program("percona-orchestrator.el9.txt", "el9", "x86_64", "percona-orchestrator")
 
+  generate_versions_file("pmm-client.el7.txt",
+    [
+      {"url": "https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/",
+      "pattern": r'pmm\d*-client-(\d[^"]*).el7.x86_64.rpm'}
+    ])
+  generate_versions_file("pmm-client.el8.txt",
+    [
+      {"url": "https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/",
+      "pattern": r'pmm\d*-client-(\d[^"]*).el8.x86_64.rpm'}
+    ])
+  generate_versions_file("pmm-client.el9.txt",
+    [
+      {"url": "https://repo.percona.com/percona/yum/release/9/RPMS/x86_64/",
+      "pattern": r'pmm\d*-client-(\d[^"]*).el9.x86_64.rpm'}
+    ])
+  save_general_version_for_program("pmm-client.el7.txt", "el7", "x86_64", "pmm-client")
+  save_general_version_for_program("pmm-client.el8.txt", "el8", "x86_64", "pmm-client")
+  save_general_version_for_program("pmm-client.el9.txt", "el9", "x86_64", "pmm-client")
+
   generate_versions_file("mysql.el7.txt",
     [
       {"url": "https://repo.mysql.com/yum/mysql-5.6-community/el/7/x86_64/",
@@ -952,8 +971,6 @@ def update_versions():
 
   generate_versions_file("pg.el7.txt",
     [
-      {"url": "https://download.postgresql.org/pub/repos/yum/11/redhat/rhel-7-x86_64",
-      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
        {"url": "https://download.postgresql.org/pub/repos/yum/12/redhat/rhel-7-x86_64",
       "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
        {"url": "https://download.postgresql.org/pub/repos/yum/13/redhat/rhel-7-x86_64",
@@ -966,8 +983,6 @@ def update_versions():
      
   generate_versions_file("pg.el8.txt",
     [
-      {"url": "https://download.postgresql.org/pub/repos/yum/11/redhat/rhel-8-x86_64",
-      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
        {"url": "https://download.postgresql.org/pub/repos/yum/12/redhat/rhel-8-x86_64",
       "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
        {"url": "https://download.postgresql.org/pub/repos/yum/13/redhat/rhel-8-x86_64",

@@ -908,6 +908,8 @@ def apply_node_actions(ns, _, actions, user, provider):
     extra_vars["extra_docker"] = "1"
   if actions.pmm_client:
     params = soft_params(actions.pmm_client)
+    if params["version"] in ("True","latest"):
+      params["version"] = "2"
     extra_vars["extra_pmm_client_version"] = params["version"]
     if "server" not in params:
       params["server"] = "node0"

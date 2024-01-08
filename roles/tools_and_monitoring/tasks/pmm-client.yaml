@@ -1,3 +1,7 @@
+- name: include role vars
+  include_vars:
+    file: "{{playbook_dir}}/roles/tools_and_monitoring/vars/main.yml"
+
 - name: install apt db packages (pkg name)
   when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
   apt:
@@ -7,12 +11,12 @@
 - name: install PMM client rpm packages
   when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   yum:
-    name: "{{os[dist].pmm_client.install_packages }}"
+    name: "{{pmm_client_packages }}"
     state: present
-    disable_gpg_check: "{{ 'yes' if os[dist].pmm_client.install_packages[0].startswith('http') else 'no' }}"
+    disable_gpg_check: yes
 
 - name: Setup pmm-admin PMM2
-  when: pmm_client_version.startswith('2.') and pmm_url != ''
+  when: (pmm_client_version.startswith('2.') or pmm_client_version == '2' ) and pmm_url != ''
   register: pmm_admin_config
   changed_when: "'already exists' not in pmm_admin_config.stdout"
   shell:

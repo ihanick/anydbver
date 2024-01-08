@@ -2,3 +2,16 @@
 # vars file for tools_and_monitoring
 docker_cmd: "{{ 'docker' if docker != '' else 'podman' }}"
 pmm_server_image: "{{ 'percona/pmm-server:' + pmm_server_version if pmm_server_version is regex('^[0-9]') else pmm_server_version }}"
+
+general_package_info_sql: >
+  {{ "select version,os,arch from general_version where program='pmm-client' AND version like '"+ pmm_client_version +"%' and os='"+ dist +"' and arch='"+ansible_architecture+"' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1"
+  if pmm_client_version != ""
+  else "" }}
+
+general_package_info: >
+  {{ lookup("theredgreek.sqlite.sqlite", path=playbook_dir+"/anydbver_version.db", select=general_package_info_sql) if (general_package_info_sql|trim) != ""
+  else "" }}
+
+
+pmm_client_version_full: "{{ general_package_info['version'] if general_package_info != '' and pmm_client_version != '' else '' }}"
+pmm_client_packages: "pmm{{'2' if pmm_client_version_full.startswith('2') else ''}}-client-{{pmm_client_version_full}}.{{dist}}.{{ansible_architecture}}"
