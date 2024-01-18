@@ -208,7 +208,7 @@ def deploy_unmodified_docker_images(usr, ns, node_name, node):
       run_fatal(logger, ["docker", "run", "-i", "--rm",
                "-v", "{}:/vagrant".format(ANYDBVER_DIR),
                "busybox", "sh", "-c",
-               "cp /vagrant/secret/{rs}-keyfile /vagrant/secret/{rs}-keyfile-docker;chown 1001 /vagrant/secret/{rs}-keyfile-docker;chmod 0600 /vagrant/secret/{rs}-keyfile-docker".format(rs=params["replica-set"])], "Can't copy keyfile for docker")
+               "mkdir -p /vagrant/data/secret;cp /vagrant/secret/{rs}-keyfile /vagrant/data/secret/{rs}-keyfile-docker;chown 1001 /vagrant/data/secret/{rs}-keyfile-docker;chmod 0600 /vagrant/data/secret/{rs}-keyfile-docker".format(rs=params["replica-set"])], "Can't copy keyfile for docker")
 
 
     docker_run_cmd = ["docker", "run", "-d", "--name={}".format(node_name),
