@@ -21,7 +21,7 @@ def arg_help(name):
       "mysql-server": "anydbver deploy mysql:5.7.35 node1 mysql:5.7.35,master=node0\nanydbver deploy mysql:8.0,gtid=0 node1 mysql:8.0,gtid=0,master=node0\nanydbver deploy mysql:8.0,docker-image,group-replication node1 mysql:8.0,docker-image,group-replication,master=node0 node2 mysql:8.0,docker-image,group-replication,master=node0",
       "percona-xtradb-cluster": "anydbver deploy pxc node1 pxc:latest,master=node0,galera node2 pxc:latest,master=node0,galera",
       "percona-orchestrator": "anydbver deploy ps:5.7 node1 ps:5.7,master=node0 node2 ps:5.7,master=node1 node3 percona-orchestrator:latest,master=node0",
-      "postgresql": "anydbver deploy node0 pg:latest,wal=logical node1 pg:latest,primary=node0,wal=logical\nanydbver deploy pg:14",
+      "postgresql": "anydbver deploy node0 pg:latest,wal=logical node1 pg:latest,primary=node0,wal=logical\nanydbver deploy pg:14\nanydbver deploy pg:latest,docker-image node1 pg:latest,docker-image,master=node0",
       "patroni": "anydbver deploy pg patroni node1 pg:master=node0 patroni:master=node0 node2 pg:master=node0 patroni:master=node0",
       "percona-postgresql": "anydbver deploy node0 ppg:latest,wal=logical node1 ppg:latest,primary=node0,wal=logical\nanydbver deploy ppg:14",
       "k8s-pg": "anydbver deploy k3d cert-manager k8s-pg:1.3.0,tls",

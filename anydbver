@@ -596,14 +596,21 @@ def find_version(args):
     args.mysql_server = '8.0'
   if args.k3s == 'True':
     args.k3s = "latest"
+
   if args.percona_postgresql:
     params = soft_params(args.percona_postgresql)
-    if params["version"] in ('True', 'latest', '15'):
-      args.percona_postgresql = replace_version_in_command(args.percona_postgresql, '15')
+    default_ver = '15'
+    if "docker-image" in params:
+      default_ver = 'latest'
+    if params["version"] in ('True', 'latest'):
+      args.postgresql = replace_version_in_command(args.percona_postgresql, default_ver)
   if args.postgresql:
     params = soft_params(args.postgresql)
-    if params["version"] in ('True', 'latest', '15'):
-      args.postgresql = replace_version_in_command(args.postgresql, '15')
+    default_ver = '15'
+    if "docker-image" in params:
+      default_ver = 'latest'
+    if params["version"] in ('True', 'latest'):
+      args.postgresql = replace_version_in_command(args.postgresql, default_ver)
   if args.mysql_router:
     vers = list(open(".version-info/mysql.{os}.txt".format(os=osver)))
     version = vers[-1]

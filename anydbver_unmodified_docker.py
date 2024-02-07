@@ -131,6 +131,25 @@ def deploy_unmodified_docker_images(usr, ns, node_name, node):
         run_fatal(logger,
                   ["/bin/sh","-c","MC_HOST_minio={url} tools/mc cat minio/{file} | docker exec -i {node_name} mysql -uroot -p'{password}'".format(
                       url=url, file=file, node_name=node_name, password=DEFAULT_PASSWORD)],"Can't load sql file from S3")
+  if node.percona_xtradb_cluster:
+    params = soft_params(node.percona_xtradb_cluster)
+    logger.info("docker run --network={net} -d --name={name} percona/percona-xtradb-cluster:{ver}".format(net=net, name=node_name, ver=params["version"]))
+    run_fatal(logger,
+              ["docker", "run", "-d", "--name={}".format(node_name),
+               "-e", "MYSQL_ROOT_PASSWORD={}".format(DEFAULT_PASSWORD),
+               "-e", "MYSQL_ROOT_HOST=%",
+               "-v", "{}:/vagrant".format(ANYDBVER_DIR),
+               "--network={}".format(net),
+               "percona/percona-xtradb-cluster:{ver}".format(ver=params["version"])
+               ], "Can't start percona server docker container")
+    if not wait_mysql_ready(node_name, "mysql", "root", DEFAULT_PASSWORD):
+      logger.fatal("Can't start percona server in docker container " + node_name)
+    if "sql" in params:
+        url = "/".join(params["sql"].split("/",3)[:3])
+        file = params["sql"].split("/",3)[3]
+        run_fatal(logger,
+                  ["/bin/sh","-c","MC_HOST_minio={url} tools/mc cat minio/{file} | docker exec -i {node_name} mysql -uroot -p'{password}'".format(
+                      url=url, file=file, node_name=node_name, password=DEFAULT_PASSWORD)],"Can't load sql file from S3")
   if node.percona_server:
     params = soft_params(node.percona_server)
     logger.info("docker run --network={net} -d --name={name} percona/percona-server:{ver}".format(net=net, name=node_name, ver=params["version"]))
@@ -170,12 +189,32 @@ def deploy_unmodified_docker_images(usr, ns, node_name, node):
                       url=url, file=file, node_name=node_name, password=DEFAULT_PASSWORD)],"Can't load sql file from S3")
   if node.postgresql:
     params = soft_params(node.postgresql)
-    run_fatal(logger,
-              ["docker", "run", "-d", "--name={}".format(node_name),
+
+    docker_run_cmd = ["docker", "run", "-d", "--name={}".format(node_name),
                "-e", "POSTGRES_PASSWORD={}".format(DEFAULT_PASSWORD),
                "--network={}".format(net),
-               "postgres:{ver}".format(ver=params["version"])
-               ], "Can't start postgres docker container")
+               
+               ]
+    if "master" in params:
+      if params["master"] == "node0":
+        params["master"] = "default"
+      primary_host = "{}{}-{}".format(ns_prefix, usr, params["master"])
+      params["entrypoint"] = ANYDBVER_DIR + "/tools/setup_postgresql_replication_docker.sh"
+      docker_run_cmd.append("-e")
+      docker_run_cmd.append("POSTGRES_PRIMARY_HOST={}".format(primary_host))
+    else:
+      params["entrypoint"] = ANYDBVER_DIR + "/tools/setup_pg_hba.sh"
+    
+    if "entrypoint" in params:
+      docker_run_cmd.append("--entrypoint=/bin/sh")
+
+    docker_run_cmd.append("postgres:{ver}".format(ver=params["version"]))
+    if "entrypoint" in params:
+      docker_run_cmd.append("-c")
+      with open(params["entrypoint"],'r') as f:
+        docker_run_cmd.append(f.read())
+
+    run_fatal(logger, docker_run_cmd, "Can't start postgres docker container")
 
   if node.alertmanager:
     params = soft_params(node.alertmanager)

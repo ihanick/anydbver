@@ -198,3 +198,8 @@ Normally anydbver installs database software for each deployment to have a syste
 ./anydbver deploy mariadb:latest,docker-image,sql="http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql"
 ./anydbver deploy mysql:8.0,docker-image,group-replication node1 mysql:8.0,docker-image,group-replication,master=node0 node2 mysql:8.0,docker-image,group-replication,master=node0 node3 mysql:8.0,docker-image,group-replication,master=node0 node4 mysql:8.0,docker-image,group-replication,master=node0 node5 mysql:8.0,docker-image,group-replication,master=node0 node6 mysql:8.0,docker-image,group-replication,master=node0
 ```
+### Postgresql with replication
+Due to the lack of ability to configure host replication items in `pg_hba.conf` using vanilla docker images, anydbver uses `--entrypoint ... -c 'multiline script\nold_entrypoint.sh'` trick to setup the replication primary. Secondary is configured with `pg_basebackup`, using `tools/setup_postgresql_replication_docker.sh` entrypoint
+```
+./anydbver deploy pg:latest,docker-image node1 pg:latest,docker-image,master=node0
+```
