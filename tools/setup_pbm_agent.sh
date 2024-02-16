@@ -18,9 +18,9 @@ if [ "x${S3_URL}" = "x" ] ; then
   chown mongod:mongod /nfs/local_backups
   cat > pbm_config.yaml <<EOF
 storage:
-type: filesystem
-filesystem:
-path: /nfs/local_backups
+  type: filesystem
+  filesystem:
+    path: /nfs/local_backups
 EOF
 else
   proto="$(echo $S3_URL|sed -re 's,^(https?://)([^:@/]*):([^@]*)@([^:/]+):([^/]+)/([^/]+),\1|\2|\3|\4|\5|\6|,' | cut -d\| -f 1)"
