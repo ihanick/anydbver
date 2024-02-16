@@ -1,10 +1,15 @@
 #!/bin/bash
+
 DB_USER=$1
 DB_PASS=$2
 LDAP_IP=$3
 LDAP_AD=$4
 DB_LDAP_USR_PASS=$5
 yum install -y openldap-clients cyrus-sasl-ldap cyrus-sasl-plain cyrus-sasl
+
+
+MONGO=/usr/bin/mongo
+test -f $MONGO || MONGO=/usr/bin/mongosh
 
 sed -i -e 's/MECH=pam/MECH=ldap/g' /etc/sysconfig/saslauthd
 
@@ -60,13 +65,13 @@ if [[ $HAS_REPL == 0 ]]; then
 fi
 systemctl restart mongod
 
-mongo <<EOF
+$MONGO <<EOF
 db = connect("mongodb://dba:$DB_PASS@127.0.0.1:27017/admin")
 db.getSiblingDB("\$external").createUser({user : '$DB_USER', roles: [ {role : "read", db: 'percona'} ]})
 db.getSiblingDB("\$external").auth({mechanism: "PLAIN",user : '$DB_USER',pwd: '$DB_PASS',digestPassword: false})
 EOF
 
-mongo -u $DB_USER -p$DB_LDAP_USR_PASS --authenticationDatabase '$external' --authenticationMechanism PLAIN <<EOF
+$MONGO -u $DB_USER --password="$DB_LDAP_USR_PASS" --authenticationDatabase '$external' --authenticationMechanism PLAIN <<EOF
 use percona
 db.col1.find()
 EOF
@@ -76,3 +81,5 @@ if [[ $HAS_REPL == 0 ]]; then
   systemctl restart mongod
 fi
 
+
+echo "$MONGO -u $DB_USER --password=$DB_LDAP_USR_PASS --authenticationDatabase '$external' --authenticationMechanism PLAIN" >/root/mongo-ldap.configured

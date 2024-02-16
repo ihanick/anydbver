@@ -674,6 +674,7 @@ def parse_node(args, help_cmd=False):
   parser.add_argument('--group-replication', '--innodb-cluster', type=str, nargs='?', help=arg_help("group-replication"))
   parser.add_argument('--cluster-name', '--cluster', type=str, default='cluster1', nargs='?', help=arg_help("cluster-name"))
   parser.add_argument('--ldap', type=str, nargs='?', help=arg_help("ldap"))
+  parser.add_argument('--samba', '--active-directory', type=str, nargs='?', help=arg_help("samba"))
   parser.add_argument('--kmip-server', type=str, nargs='?', help=arg_help("kmip-server"))
   parser.add_argument('--percona-server-mongodb', '--psmdb', type=str, nargs='?', help=arg_help("percona-server-mongodb"))
   parser.add_argument('--percona-backup-mongodb', '--pbm', type=str, nargs='?', help=arg_help("percona-backup-mongodb"))
