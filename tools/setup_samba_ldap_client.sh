@@ -9,6 +9,10 @@ MYSQL_SERVICE=$6
 
 yum install -y authconfig openssh-clients nss-pam-ldapd nscd
 
+if [[ "$DOM_SID" == "FIND_WITH_SSH" ]] ; then
+	DOM_SID=$(ssh -o StrictHostKeyChecking=no -i /vagrant/secret/id_rsa "$SRV_IP" net getdomainsid | cut -d\  -f 6)
+fi
+
 # https://wiki.gentoo.org/wiki/Samba/Active_Directory_Guide
 cat << EOF > /etc/nslcd.conf
 uid nslcd

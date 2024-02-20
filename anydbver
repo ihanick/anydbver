@@ -675,6 +675,7 @@ def parse_node(args, help_cmd=False):
   parser.add_argument('--cluster-name', '--cluster', type=str, default='cluster1', nargs='?', help=arg_help("cluster-name"))
   parser.add_argument('--ldap', type=str, nargs='?', help=arg_help("ldap"))
   parser.add_argument('--samba', '--active-directory', type=str, nargs='?', help=arg_help("samba"))
+  parser.add_argument('--samba-client', type=str, nargs='?', help=arg_help("samba-client"))
   parser.add_argument('--kmip-server', type=str, nargs='?', help=arg_help("kmip-server"))
   parser.add_argument('--percona-server-mongodb', '--psmdb', type=str, nargs='?', help=arg_help("percona-server-mongodb"))
   parser.add_argument('--percona-backup-mongodb', '--pbm', type=str, nargs='?', help=arg_help("percona-backup-mongodb"))
@@ -760,6 +761,10 @@ def apply_node_actions(ns, _, actions, user, provider):
   if actions.ldap is not None :
     extra_vars["extra_ldap_server"] = "1"
     env["LDAP_SERVER"] = "1"
+  if actions.samba_client is not None:
+    extra_vars["extra_samba_ip"] = resolve_hostname(ns, actions.samba_client, user, provider)
+    extra_vars["extra_samba_pass"] = DEFAULT_PASSWORD
+    extra_vars["extra_samba_sid"] = "FIND_WITH_SSH"
   if actions.ldap_master is not None:
     extra_vars["extra_ldap_server_ip"] = resolve_hostname(ns, actions.ldap_master, user, provider)
     env["LDAP_IP"] = extra_vars["extra_ldap_server_ip"]

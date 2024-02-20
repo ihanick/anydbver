@@ -67,6 +67,11 @@ def setup_unmodified_docker_images(usr, ns, node_name, node):
   if node.percona_server_mongodb:
     'rs.initiate( { _id : "rs0", members: [ { _id: 0, host: "ihanick-default:27017" }, { _id: 1, host: "ihanick-node1:27017" },{ _id: 2, host: "ihanick-node2:27017" }, ] })'
     pass
+  if node.samba:
+      run_fatal(logger, [
+                "docker", "exec", node_name,
+                "sh", "/vagrant/tools/add_samba_users_and_groups.sh" ],
+                "Can't add samba users and groups")
 
 def deploy_unmodified_docker_images(usr, ns, node_name, node):
   ns_prefix = ns
@@ -266,7 +271,7 @@ def deploy_unmodified_docker_images(usr, ns, node_name, node):
     params = soft_params(node.samba)
     hostname = node_name.replace(".", "-")
     if "realm" not in params:
-      params["realm"] = "SUPPORT.PERCONA.LOCAL"
+      params["realm"] = "PERCONA.LOCAL"
 
     with open(ANYDBVER_DIR + '/secret/id_rsa.pub','r') as f:
       ssh_pub_key = f.read()
