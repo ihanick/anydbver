@@ -603,7 +603,7 @@ def find_version(args):
     if "docker-image" in params:
       default_ver = 'latest'
     if params["version"] in ('True', 'latest'):
-      args.postgresql = replace_version_in_command(args.percona_postgresql, default_ver)
+      args.percona_postgresql = replace_version_in_command(args.percona_postgresql, default_ver)
   if args.postgresql:
     params = soft_params(args.postgresql)
     default_ver = '15'
