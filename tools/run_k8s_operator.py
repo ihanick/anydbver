@@ -1141,7 +1141,7 @@ def setup_operator(args):
   if args.operator_name == "percona-postgresql-operator":
     run_pg_operator(args.namespace, args.operator_name, args.db_version,
                     args.cluster_name, args.operator_version, args.standby,
-                    args.backup_type, args.bucket,args.gcs_key, args.yq, args.db_replicas, args.cluster_tls)
+                    args.backup_type, args.bucket,args.gcs_key, args.db_replicas, args.cluster_tls)
   elif args.operator_name in ("percona-server-mongodb-operator", "percona-xtradb-cluster-operator", "percona-server-mysql-operator"):
     run_percona_operator(args.namespace, args.operator_name, args.operator_version, args.cluster_name)
 
