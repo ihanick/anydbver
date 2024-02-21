@@ -148,7 +148,7 @@ def info_pg_operator(ns,cluster_name):
       print("kubectl -n {} exec -it {} -- env PSQL_HISTORY=/tmp/.psql_history psql -U postgres".format(
         subprocess.list2cmdline([ns]), container))
 
-def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, bucket, gcs_key, yq, db_replicas, tls):
+def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, bucket, gcs_key, db_replicas, tls):
   if op_ver.startswith("1.") or op_ver.startswith("2.0.") or op_ver.startswith("2.1."):
     run_fatal(["sed", "-i", "-re", r"s/namespace: pgo\>/namespace: {}/".format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
     run_fatal(["sed", "-i", "-re", r's/namespace: "pgo"/namespace: "{}"/'.format(ns), "./deploy/operator.yaml"], "fix namespace in yaml")
@@ -218,7 +218,7 @@ def cluster_labels(op, op_ver, cluster_name):
     return "app.kubernetes.io/instance={},app.kubernetes.io/component=mongod".format(cluster_name)
   elif op == "percona-postgresql-operator":
     if op_ver.startswith("2"):
-      return "postgres-operator.crunchydata.com/cluster={}".format(cluster_name)
+      return "postgres-operator.crunchydata.com/cluster={},postgres-operator.crunchydata.com/role=master".format(cluster_name)
     else:
       return "name={}".format(cluster_name)
 
