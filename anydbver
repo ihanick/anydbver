@@ -571,8 +571,12 @@ def find_version(args):
     else:
       args.sysbench = replace_version_in_command(args.sysbench, params["version"])
 
-  if args.mariadb == 'True':
-    args.mariadb = '10.11'
+  if args.mariadb:
+    params = soft_params(args.mariadb)
+    if args.sysbench in ('True', 'latest'):
+      args.mariadb = replace_version_in_command(args.mariadb, '10.11')
+    else:
+      args.mariadb = replace_version_in_command(args.mariadb, params["version"])
   if args.percona_xtrabackup == 'True':
     args.percona_xtrabackup = '8.0'
   if args.percona_xtradb_cluster:
@@ -840,14 +844,17 @@ def apply_node_actions(ns, _, actions, user, provider):
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.mariadb is not None:
-    extra_vars["extra_mariadb_version"] = actions.mariadb
-    extra_vars["extra_db_opts_file"] = "mariadb/async-repl-gtid-row.cnf"
+    params = soft_params(actions.mariadb)
+    extra_vars["extra_mariadb_version"] = params["version"]
+    if "galera" in params:
+      extra_vars["extra_db_opts_file"] = "mariadb/galera.cnf"
+      extra_vars["extra_replication_type"] = "galera"
+    else:
+      extra_vars["extra_db_opts_file"] = "mariadb/async-repl-gtid-row.cnf"
+    if "master" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["master"], user, provider)
     extra_vars["extra_db_user"] = "root"
     extra_vars["extra_db_password"] = "verysecretpassword1^"
-    env["MARIADB"] = actions.percona_server
-    env["DB_OPTS"] = "mariadb/async-repl-gtid-row.cnf"
-    env["DB_USER"] = "root"
-    env["DB_PASS"]= "verysecretpassword1^"
   if actions.k3s is not None:
     extra_vars["extra_k3s_version"] = actions.k3s
   if actions.mysql_server is not None:

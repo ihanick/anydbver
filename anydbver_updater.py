@@ -794,6 +794,13 @@ def update_versions():
       "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el9.x86_64.rpm'}
     ])
 
+  generate_versions_file("mariadb.el8.txt",
+    [
+      {"url": "https://mirror.mariadb.org/yum/10.11/rhel8-amd64/rpms/",
+      "pattern": r'MariaDB-server-(\d[^"]*).el8.x86_64.rpm'}
+    ])
+
+
 
   generate_versions_file("percona-server.el7.txt",
     [
