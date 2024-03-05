@@ -149,6 +149,10 @@ def deploy(args, node_actions):
 
     old_provider = args.provider
 
+    if node.k8s_context:
+      run_fatal(logger, ["kubectl", "config", "use-context", node.k8s_context], "Can't change kubectl context")
+      args.provider = 'kubectl'
+
     run_k8s_operator_cmd = ['python3', 'tools/run_k8s_operator.py']
     if args.provider == "docker":
       if not node.k3d and (node.k8s_pxc or node.k8s_pg or node.k8s_ps or node.k8s_mongo):
@@ -710,6 +714,7 @@ def parse_node(args, help_cmd=False):
   parser.add_argument('--kube-fledged', dest="kube_fledged", type=str, nargs='?', help=arg_help("kube-fledged"))
   parser.add_argument('--minio-certs', dest="minio_certs", type=str, nargs='?', help=arg_help("minio-certs"))
   parser.add_argument('--k3d', type=str, nargs='?', help=arg_help("k3d"))
+  parser.add_argument('--k8s-context', type=str, nargs='?', help=arg_help("k8s-context"))
   parser.add_argument('--registry-cache', type=str, nargs='?', help=arg_help("registry-cache"))
   parser.add_argument('--private-registry', type=str, nargs='?', help=arg_help("private-registry"))
   parser.add_argument('--helm', type=str, nargs='?', help=arg_help("helm"))

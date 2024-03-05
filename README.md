@@ -86,6 +86,18 @@ docker push localhost:5001/ihanick/busybox:latest
 kubectl run -it --rm --image=ihanick-registry.example.com/ihanick/busybox:latest busybox -- sh
 ```
 
+### Existing kubernetes cluster
+kubectl provider for anydbver is not capable to do a cleanups, thus the execution 
+* Using default context
+```
+anydbver --provider=kubectl deploy k8s-pxc
+```
+* Change context before deployment
+kubectl allows simultaneous connections to different clusters. `kubectl config get-contexts` lists current contests. Specify context name with k8s-context option for each deployment target (node0 ... nodeN).
+```
+anydbver --provider=kubectl deploy k8s-context:k3d-ihanick-cluster1 k8s-pg:2.2.0 node1 k8s-context:k3d-test-ihanick-cluster1 k8s-pg
+```
+
 ### LoadBalancer
 In order to access kubernetes LoadBalancer Services you can dedicate last 255 addresses from the docker network with MetalLB L2 load balancing.
 ```bash
