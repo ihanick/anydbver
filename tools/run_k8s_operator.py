@@ -504,6 +504,8 @@ def soft_params(opt):
       params["sql"] = param.split("=",1)[1]
     if param.startswith("backup-type=") or param.startswith("backup_type=") :
       params["backup-type"] = param.split("=",1)[1]
+    if param.startswith("backup-url=") or param.startswith("backup_url=") :
+      params["backup-url"] = param.split("=",1)[1]
     if param.startswith("bucket="):
       params["bucket"] = param.split("=",1)[1]
     if param.startswith("gcs-key="):
@@ -721,6 +723,65 @@ type: Opaque
   if args.operator_name == "percona-postgresql-operator" and StrictVersion(args.operator_version) >= StrictVersion("2.2.0"):
       create_pmm_api_key(args, "{cluster_name}-pmm-secret".format(cluster_name=args.cluster_name), "PMM_SERVER_KEY")
 
+def enable_pgv2_s3(args, cr_yaml_path, deploy_path):
+  bucket = "operator-testing"
+  srv = "minio-service.default.svc.{cluster_domain}".format(cluster_domain=args.cluster_domain)
+  port = 443
+  key = "REPLACE-WITH-AWS-ACCESS-KEY"
+  key_secret = "REPLACE-WITH-AWS-SECRET-KEY" 
+  if args.bucket != "":
+    bucket = args.bucket
+  if args.backup_type == "s3" and args.backup_url:
+    urlparts = urllib.parse.urlparse(args.backup_url)
+    srv = urlparts.hostname
+    port = urlparts.port
+    key = urlparts.username
+    key_secret = urlparts.password
+
+  run_fatal(
+    [
+      args.yq,
+      '(del(.spec.backups.pgbackrest.repos[0].volume))|'
+      '(.spec.backups.pgbackrest.configuration[0].secret.name="{cluster_name}-pgbackrest-secrets")|'
+      '(.spec.backups.pgbackrest.repos[0].name="repo1")|'
+      '(.spec.backups.pgbackrest.repos[0].s3.bucket="{bucket}")|'
+      '(.spec.backups.pgbackrest.repos[0].s3.region="us-east-1")|'
+      '(.spec.backups.pgbackrest.repos[0].s3.endpoint="{proto}://{srv}:{minio_port}")'.format(
+        proto="https", srv=srv, minio_port=port, cluster_name=args.cluster_name, bucket=bucket),
+      "-i",
+      cr_yaml_path], "enable minio backups")
+  minio_cred_path = str((deploy_path / "{}-backrest-secrets.yaml".format(args.cluster_name)).resolve())
+  s3_conf="""\
+[global]
+repo1-s3-key={key}
+repo1-s3-key-secret={key_secret}
+repo1-storage-verify-tls=n
+repo1-s3-uri-style=path
+""".format(key=key, key_secret=key_secret)
+  if args.archive_push_async:
+    s3_conf = s3_conf + """\
+archive-async=y
+spool-path=/pgdata
+
+[global:archive-get]
+process-max=2
+
+[global:archive-push]
+process-max=4
+log-level-stderr=info
+"""
+  pg_minio_secret_repo = """\
+apiVersion: v1
+data:
+  s3.conf: {s3conf}
+kind: Secret
+metadata:
+  name: {cluster_name}-pgbackrest-secrets
+type: Opaque
+""".format(s3conf = base64.b64encode(bytes(s3_conf, 'utf-8')).decode('utf-8'), cluster_name=args.cluster_name)
+  with open(minio_cred_path,"w+") as f:
+    f.writelines(pg_minio_secret_repo)
+  run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", minio_cred_path], "Can't apply s3 secrets")
 
 def enable_minio(args):
   deploy_path = Path(args.data_path) / args.operator_name / "deploy"
@@ -791,51 +852,7 @@ spec:
     merge_cr_yaml(args.yq, str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve()), minio_storage_path )
   if args.operator_name == "percona-postgresql-operator" and ( file_contains('./deploy/cr.yaml','pg.percona.com/v2') or file_contains('./deploy/cr.yaml','pgv2.percona.com/v2') ) and args.backup_type != "gcs":
     cr_yaml_path = str((Path(args.data_path) / args.operator_name / "deploy" / "cr.yaml").resolve())
-    run_fatal(
-      [
-        args.yq,
-        '(del(.spec.backups.pgbackrest.repos[0].volume))|'
-        '(.spec.backups.pgbackrest.configuration[0].secret.name="{cluster_name}-pgbackrest-secrets")|'
-        '(.spec.backups.pgbackrest.repos[0].name="repo1")|'
-        '(.spec.backups.pgbackrest.repos[0].s3.bucket="{bucket}")|'
-        '(.spec.backups.pgbackrest.repos[0].s3.region="us-east-1")|'
-        '(.spec.backups.pgbackrest.repos[0].s3.endpoint="{proto}://minio-service.default.svc.{cluster_domain}:{minio_port}")'.format(
-          proto="https", cluster_domain=args.cluster_domain, minio_port=443, cluster_name=args.cluster_name, bucket=bucket),
-        "-i",
-        cr_yaml_path], "enable minio backups")
-    minio_cred_path = str((deploy_path / "{}-backrest-secrets.yaml".format(args.cluster_name)).resolve())
-    s3_conf="""\
-[global]
-repo1-s3-key=REPLACE-WITH-AWS-ACCESS-KEY
-repo1-s3-key-secret=REPLACE-WITH-AWS-SECRET-KEY
-repo1-storage-verify-tls=n
-repo1-s3-uri-style=path
-"""
-    if args.archive_push_async:
-      s3_conf = s3_conf + """\
-archive-async=y
-spool-path=/pgdata
-
-[global:archive-get]
-process-max=2
-
-[global:archive-push]
-process-max=4
-log-level-stderr=info
-"""
-    pg_minio_secret_repo = """\
-apiVersion: v1
-data:
-  s3.conf: {s3conf}
-kind: Secret
-metadata:
-  name: {cluster_name}-pgbackrest-secrets
-type: Opaque
-""".format(s3conf = base64.b64encode(bytes(s3_conf, 'utf-8')).decode('utf-8'), cluster_name=args.cluster_name)
-    with open(minio_cred_path,"w+") as f:
-      f.writelines(pg_minio_secret_repo)
-    run_fatal(["kubectl", "apply", "-n", args.namespace, "-f", minio_cred_path], "Can't apply s3 secrets")
-
+    enable_pgv2_s3(args, cr_yaml_path, deploy_path)
   if args.operator_name == "percona-postgresql-operator" and not ( file_contains('./deploy/cr.yaml','pg.percona.com/v2') or file_contains('./deploy/cr.yaml','pgv2.percona.com/v2') ) and args.backup_type != "gcs":
     if args.minio_certs == "":
       logger.warning("Percona Postgresql Operator MinIO backups requires TLS")
@@ -1347,6 +1364,7 @@ def main():
   parser.add_argument('--pmm', dest="pmm", type=str, default="")
   parser.add_argument('--minio', dest="minio", type=str, nargs='?')
   parser.add_argument('--backup-type', dest="backup_type", type=str, default="")
+  parser.add_argument('--backup-url', dest="backup_url", type=str, default="")
   parser.add_argument('--bucket', dest="bucket", type=str, default="")
   parser.add_argument('--gcs-key', dest="gcs_key", type=str, default="")
   parser.add_argument('--minio-certs', dest="minio_certs", type=str, default="")

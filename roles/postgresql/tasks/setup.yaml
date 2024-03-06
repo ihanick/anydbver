@@ -195,14 +195,14 @@
           [global]
           repo1-path=/var/lib/pgbackrest
           repo1-retention-full=2
-          [pg0app]
+          [db]
           pg1-path=/var/lib/pgsql/{{maj}}/data
           pg1-port=5432
-          # sudo -u postgres pgbackrest stanza-create --stanza=pg0app --log-level-console=info
-          # sudo -u postgres pgbackrest check --stanza=pg0app --log-level-console=info
-          # sudo -u postgres pgbackrest backup --stanza=pg0app --log-level-console=info
+          # sudo -u postgres pgbackrest stanza-create --stanza=db --log-level-console=info
+          # sudo -u postgres pgbackrest check --stanza=db --log-level-console=info
+          # sudo -u postgres pgbackrest backup --stanza=db --log-level-console=info
           # sudo -u postgres pgbackrest info
-          # pgbackrest restore --stanza=pg0app --log-level-console=info
+          # pgbackrest restore --stanza=db --log-level-console=info
     - name: pgBackRest stansa information (minio)
       when: minio_url != ''
       copy:
@@ -212,32 +212,32 @@
         mode: 0660
         content: |
           [global]
-          repo1-path=/repo
+          repo1-path = /pgbackrest/repo1
           repo1-type=s3
           repo1-s3-endpoint={{ minio_url | urlsplit('hostname')}}
           repo1-storage-host={{ minio_url | urlsplit('hostname')}}
-          repo1-storage-port=9443
+          repo1-storage-port={{ minio_url | urlsplit('port')}}
           repo1-s3-bucket=backup
-          repo1-s3-verify-tls=y
-          repo1-s3-key=UkVQTEFDRS1XSVRILUFXUy1BQ0NFU1MtS0VZ
-          repo1-s3-key-secret=UkVQTEFDRS1XSVRILUFXUy1TRUNSRVQtS0VZ
+          repo1-s3-verify-tls=n
+          repo1-s3-key={{ minio_url | urlsplit('username')}}
+          repo1-s3-key-secret={{ minio_url | urlsplit('password')}}
           repo1-s3-region=us-east-1
           repo1-s3-uri-style=path
           repo1-retention-full=2
-          [pg0app]
+          [db]
           pg1-path=/var/lib/pgsql/{{maj}}/data
           pg1-port=5432
-          # sudo -u postgres pgbackrest stanza-create --stanza=pg0app --log-level-console=info
-          # sudo -u postgres pgbackrest check --stanza=pg0app --log-level-console=info
-          # sudo -u postgres pgbackrest backup --stanza=pg0app --log-level-console=info
+          # sudo -u postgres pgbackrest stanza-create --stanza=db --log-level-console=info
+          # sudo -u postgres pgbackrest check --stanza=db --log-level-console=info
+          # sudo -u postgres pgbackrest backup --stanza=db --log-level-console=info
           # sudo -u postgres pgbackrest info
-          # sudo -u postgres pgbackrest restore --stanza=pg0app --log-level-console=info
+          # sudo -u postgres pgbackrest restore --stanza=db --log-level-console=info
     - name: Enable archiving in postgresql.conf
       blockinfile:
         path: "{{pg_conf_dir}}/postgresql.conf"
         block: |
           archive_mode = 'on'
-          archive_command = 'pgbackrest --stanza=pg0app archive-push %p'
+          archive_command = 'pgbackrest --stanza=db archive-push %p'
           archive_timeout = '60'
     - name: restart postgresql
       systemd:
@@ -247,7 +247,7 @@
     - name: Create stanza
       when: db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)
       command:
-        cmd: sudo -u postgres pgbackrest stanza-create --stanza=pg0app --log-level-console=info
+        cmd: sudo -u postgres pgbackrest stanza-create --stanza=db --log-level-console=info
 
 - name: Load database from S3
   when: s3sql != ''

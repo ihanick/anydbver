@@ -364,6 +364,8 @@ mirrors:
             run_cmd.append("--namespace={}".format(params["namespace"]))
           if "backup-type" in params:
             run_cmd.append("--backup-type={}".format(params["backup-type"]))
+          if "backup-url" in params:
+            run_cmd.append("--backup-url={}".format(params["backup-url"]))
           if "bucket" in params:
             run_cmd.append("--bucket={}".format(params["bucket"]))
           if "gcs-key" in params:
@@ -905,6 +907,9 @@ def apply_node_actions(ns, _, actions, user, provider):
       extra_vars["extra_etcd_ip"] = resolve_hostname(ns, params["master"], user, provider)
 
   if actions.pgbackrest:
+    params = soft_params(actions.pgbackrest)
+    if "s3" in params:
+      extra_vars["extra_minio_url"] = params["s3"]
     extra_vars["extra_pgbackrest_version"] = "1"
   if actions.percona_postgresql is not None:
     params = soft_params(actions.percona_postgresql)

@@ -998,6 +998,8 @@ def update_versions():
       "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
        {"url": "https://download.postgresql.org/pub/repos/yum/15/redhat/rhel-8-x86_64",
       "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+       {"url": "https://download.postgresql.org/pub/repos/yum/16/redhat/rhel-8-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
      ])
 
   for osver in ("el7","el8","el9"):

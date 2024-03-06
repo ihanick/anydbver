@@ -1,6 +1,5 @@
 - name: Setup minio CA
   shell:
-    warn: false
     cmd: >-
       tar -C / -xzf /vagrant/secret/minio-certs.tar.gz;
       cp /etc/minio/certs/ca.pem /usr/share/pki/ca-trust-source/anchors/minio-ca.pem;
