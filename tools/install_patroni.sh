@@ -5,7 +5,7 @@ PG_BIN=$(find /usr -maxdepth 1 -type d -name 'pgsql-*' -print -quit)/bin
 yum install -y epel-release
 
 if [ "$SRC_INSTALL" == "" ] && yum info percona-patroni &>/dev/null ; then
-  yum install -y percona-patroni
+  yum install -y percona-patroni python3-python-etcd etcd
 elif [ "$SRC_INSTALL" == "" ] ; then
   yum install -y patroni-etcd
 else
