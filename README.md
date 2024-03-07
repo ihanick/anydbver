@@ -63,6 +63,10 @@ anydbver deploy k3d k8s-pg:2.1.0,replicas=1
 ```
 * 2.2.0:
 ```./anydbver deploy k3d  cert-manager:1.11.0 k8s-minio minio-certs:self-signed k8s-pg:2.2.0,namespace=pgo k8s-pg:2.2.0,namespace=pgo1,standby```
+* Use external S3 as a source for the standby cluster:
+```
+./anydbver deploy k3d cert-manager:1.11.0 k8s-minio minio-certs:self-signed k8s-pg:2.3.1,namespace=pgo,backup-url=https://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/backup,bucket=backup,backup-type=s3,standby
+```
 
 ### Percona XtraDB cluster
 * Start PXC cluster with ProxySQL, PMM, Loki, load `world` database, allow access local IP address 192.168.1.102 by domain name https://pmm.192-168-1-102.nip.io/
