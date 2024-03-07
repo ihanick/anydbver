@@ -31,8 +31,9 @@ def load_sett_file(provider, echo=True):
   sett = {}
   with open(".anydbver") as file:
    for l in file.readlines():
-     (k,v) = l.split('=',1)
-     sett[k] = v.strip()
+     if '=' in l:
+       (k,v) = l.split('=',1)
+       sett[k] = v.strip()
   if echo:
     print("Loaded settings: ", sett)
   return sett
