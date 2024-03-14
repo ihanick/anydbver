@@ -179,7 +179,7 @@ def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, 
     op_env = os.environ.copy()
     op_env["PGO_NAMESPACE"] = ns
     op_env["PGO_TARGET_NAMESPACE"] = ns
-    run_fatal(["kubectl", "create", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator", r"already exists", env=op_env)
+    run_fatal(["kubectl", "apply", "--server-side=true","--force-conflicts", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator", r"already exists", env=op_env)
     if StrictVersion(op_ver) > StrictVersion("2.1.0"):
       if not k8s_wait_for_ready(ns, "pgv2.percona.com/control-plane=postgres-operator"):
         raise Exception("Kubernetes operator is not starting")
@@ -230,7 +230,7 @@ def file_contains(file, s):
   return False
 
 def run_percona_operator(ns, op, op_ver, cluster_name):
-  run_fatal(["kubectl", "apply", "--server-side=true", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator", ignore_msg=r"is invalid: status.storedVersions\[[0-9]+\]: Invalid value")
+  run_fatal(["kubectl", "apply", "--server-side=true", "--force-conflicts", "-n", ns, "-f", "./deploy/bundle.yaml"], "Can't deploy operator", ignore_msg=r"is invalid: status.storedVersions\[[0-9]+\]: Invalid value")
   if not k8s_wait_for_ready(ns, op_labels(op, op_ver)):
     raise Exception("Kubernetes operator is not starting")
   run_fatal(["kubectl", "apply", "-n", ns, "-f", "./deploy/cr.yaml"], "Can't deploy cluster")
