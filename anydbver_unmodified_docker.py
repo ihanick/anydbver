@@ -220,6 +220,17 @@ def deploy_unmodified_docker_images(usr, ns, node_name, node):
         docker_run_cmd.append(f.read())
 
     run_fatal(logger, docker_run_cmd, "Can't start postgres docker container")
+  if node.percona_postgresql:
+    params = soft_params(node.percona_postgresql)
+
+    docker_run_cmd = ["docker", "run", "-d", "--name={}".format(node_name),
+               "-e", "POSTGRES_PASSWORD={}".format(DEFAULT_PASSWORD),
+               "--network={}".format(net),
+               
+               ]
+    docker_run_cmd.append("percona/percona-distribution-postgresql:{ver}".format(ver=params["version"]))
+    run_fatal(logger, docker_run_cmd, "Can't start postgres docker container")
+
 
   if node.alertmanager:
     params = soft_params(node.alertmanager)

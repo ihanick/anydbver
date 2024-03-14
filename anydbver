@@ -443,7 +443,17 @@ mirrors:
         run_cmd.append("--operator=percona-server-mongodb-operator")
         run_fatal(logger, run_cmd, "Can't run the operator")
     args.provider = old_provider
-  if args.provider != "kubectl":
+  if args.provider == "docker" and args.simple:
+    net = "{}{}-anydbver".format(ns_prefix, args.user)
+    run_fatal(logger,
+              ["docker", "run", "-i", "--rm", "--name","{}{}-ansible".format(ns_prefix, args.user),
+               "--network", net,
+               "-v", "{}:/vagrant".format(ANYDBVER_DIR),
+               "rockylinux:8-anydbver-ansible-{}".format(args.user),
+               "sh", "-c",
+               "cd /vagrant; ansible-playbook -i {}ansible_hosts_run --forks 16 playbook.yml".format(ns_prefix)],
+              "Error running playbook")
+  elif args.provider != "kubectl":
     run_fatal(logger, ["ansible-playbook", "-i", "{}ansible_hosts_run".format(ns_prefix), "--forks", "16", "playbook.yml"], "Error running playbook")
 
 def load_sett_file(provider, echo=True):
@@ -1237,6 +1247,7 @@ def main():
   parser.add_argument('--update', dest="update", action='store_true')
   parser.add_argument('--ssh', dest="ssh", type=str, default="")
   parser.add_argument('--os', dest="os", type=str, default="rocky8")
+  parser.add_argument('--simple', dest="simple", action='store_true')
 
   nodes=[]
   for x in range(0,100):
