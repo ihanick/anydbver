@@ -148,7 +148,7 @@ def start_container(args, name, priv):
     docker_run_cmd = [ "docker", "run", "--name", container_name, ]
 
     ptfm = "linux/amd64"
-    if platform.machine() == "aarch64":
+    if platform.machine() in ("aarch64", "arm64"):
       ptfm = "linux/arm64"
     docker_run_cmd.extend(["--platform", ptfm, ])
 

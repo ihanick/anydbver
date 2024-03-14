@@ -695,7 +695,7 @@ def save_percona_server_versions_to_sqlite(osver):
       project = ()
       if ver.startswith('8.0') and osver.startswith('el'):
         pkgs = ['percona-server-shared','percona-server-client','percona-server-server']
-        if osver != 'el9':
+        if osver != 'el9' or arch != 'x86_64':
           pkgs.insert(0,'percona-server-shared-compat')
         project = (
           ver, osver,arch,

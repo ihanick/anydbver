@@ -1,6 +1,6 @@
 #!/bin/sh
 PLATFORM=linux/amd64
-if uname -m |grep -q aarch64 ; then
+if uname -m |egrep -q 'aarch64|arm64' ; then
   PLATFORM=linux/arm64
 fi
 cd centos7
