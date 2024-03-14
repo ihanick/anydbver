@@ -189,7 +189,8 @@ def start_container(args, name, priv):
   logger.info("Found node {} with ip {}".format(name_user, node_ip))
   ssh_config_append_node(args.namespace, name, node_ip, args.user)
   ansible_hosts_append_node(args.namespace, name, node_ip, args.user, python_path)
-  os.system("until ssh -F {ns_prefix}ssh_config root@{node} true ; do sleep 1;done; echo 'Connected to {node} via ssh'".format(ns_prefix=ns_prefix, node=name))
+  if args.provider != "docker":
+    os.system("until ssh -F {ns_prefix}ssh_config root@{node} true ; do sleep 1;done; echo 'Connected to {node} via ssh'".format(ns_prefix=ns_prefix, node=name))
 
 def delete_container(namespace, name):
   container_name = name

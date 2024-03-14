@@ -450,10 +450,11 @@ mirrors:
                "--network", net,
                "-v", "{}:/vagrant".format(ANYDBVER_DIR),
                "rockylinux:8-anydbver-ansible-{}".format(args.user),
-               "sh", "-c",
-               "cd /vagrant; ansible-playbook -i {}ansible_hosts_run --forks 16 playbook.yml".format(ns_prefix)],
+               "bash", "-c",
+               "cd /vagrant;until ansible -m ping -i {nsp}ansible_hosts all &>/dev/null ; do sleep 1; done ; ansible-playbook -i {nsp}ansible_hosts_run --forks 16 playbook.yml".format(nsp=ns_prefix)],
               "Error running playbook")
   elif args.provider != "kubectl":
+    run_fatal(logger, ["bash", "-c", "until ansible -m ping -i {nsp}ansible_hosts all &>/dev/null ; do sleep 1; done".format(nsp=ns_prefix)], "Error running playbook")
     run_fatal(logger, ["ansible-playbook", "-i", "{}ansible_hosts_run".format(ns_prefix), "--forks", "16", "playbook.yml"], "Error running playbook")
 
 def load_sett_file(provider, echo=True):
