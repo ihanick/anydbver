@@ -50,15 +50,15 @@ def save_postgresql_versions_to_sqlite(osver):
   osname = "el8"
   repo_url = "http://yum.postgresql.org/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
 
-  if osver == 'el9':
-    return
-
   if osver == "el7":
     repo_url = "http://yum.postgresql.org/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
     osname = 'rhel7'
   elif osver == "el8":
     repo_url = "http://yum.postgresql.org/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
     osname = 'rhel8'
+  elif osver == 'el9':
+    repo_url = "http://yum.postgresql.org/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
+    osname = 'rhel9'
 
   db_file = 'anydbver_version.db'
   conn = None
@@ -999,6 +999,14 @@ def update_versions():
        {"url": "https://download.postgresql.org/pub/repos/yum/15/redhat/rhel-8-x86_64",
       "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
        {"url": "https://download.postgresql.org/pub/repos/yum/16/redhat/rhel-8-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+     ])
+
+  generate_versions_file("pg.el9.txt",
+    [
+       {"url": "https://download.postgresql.org/pub/repos/yum/15/redhat/rhel-9-x86_64",
+      "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
+       {"url": "https://download.postgresql.org/pub/repos/yum/16/redhat/rhel-9-x86_64",
       "pattern": r'postgresql\d+-server-([0-9.-]+)PGDG\.rhel\d+.x86_64.rpm'},
      ])
 

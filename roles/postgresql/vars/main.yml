@@ -18,6 +18,13 @@ pkg:
       - "https://repo.percona.com/ppg-{{ percona_postgresql_major_ver }}/yum/release/8/RPMS/x86_64/percona-postgresql{{ percona_postgresql_major_ver }}-{{ percona_postgresql_version }}.{{dist}}.x86_64.rpm"
       - "https://repo.percona.com/ppg-{{ percona_postgresql_major_ver }}/yum/release/8/RPMS/x86_64/percona-postgresql{{ percona_postgresql_major_ver }}-server-{{ percona_postgresql_version }}.{{dist}}.x86_64.rpm"
       - "https://repo.percona.com/ppg-{{ percona_postgresql_major_ver }}/yum/release/8/RPMS/x86_64/percona-postgresql{{ percona_postgresql_major_ver }}-contrib-{{ percona_postgresql_version }}.{{dist}}.x86_64.rpm"
+  el9:
+    install_packages:
+      - "https://repo.percona.com/ppg-{{ percona_postgresql_major_ver }}/yum/release/9/RPMS/x86_64/percona-postgresql{{ percona_postgresql_major_ver }}-libs-{{ percona_postgresql_version }}.{{ dist }}.x86_64.rpm"
+      - "{{ 'https://repo.percona.com/ppg-' + percona_postgresql_major_ver + '/yum/release/9/RPMS/x86_64/percona-postgresql-common-' + percona_postgresql_version2 + '.' + dist + '.noarch.rpm' if percona_postgresql_version2 != '' else '' }}"
+      - "https://repo.percona.com/ppg-{{ percona_postgresql_major_ver }}/yum/release/9/RPMS/x86_64/percona-postgresql{{ percona_postgresql_major_ver }}-{{ percona_postgresql_version }}.{{dist}}.x86_64.rpm"
+      - "https://repo.percona.com/ppg-{{ percona_postgresql_major_ver }}/yum/release/9/RPMS/x86_64/percona-postgresql{{ percona_postgresql_major_ver }}-server-{{ percona_postgresql_version }}.{{dist}}.x86_64.rpm"
+      - "https://repo.percona.com/ppg-{{ percona_postgresql_major_ver }}/yum/release/9/RPMS/x86_64/percona-postgresql{{ percona_postgresql_major_ver }}-contrib-{{ percona_postgresql_version }}.{{dist}}.x86_64.rpm"
   focal:
     systemd: "postgresql@{{percona_postgresql_major_ver}}-main"
     install_packages:

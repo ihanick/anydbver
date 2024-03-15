@@ -640,4 +640,14 @@ el9:
       - "percona-orchestrator-client-{{ percona_orchestrator_version }}.{{dist}}.x86_64"
       - "which"
 
+  postgresql:
+    systemd_service: "postgresql-{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}"
+    cnf_file: "/var/lib/pgsql/{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}/data/postgresql.conf"
+    repo_url: http://yum.postgresql.org/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+    install_packages:
+      - glibc-langpack-en
+      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-libs-{{postgresql_version}}PGDG.rhel9.x86_64"
+      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-{{postgresql_version}}PGDG.rhel9.x86_64"
+      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-server-{{postgresql_version}}PGDG.rhel9.x86_64"
+      - "postgresql{{postgresql_version|regex_replace('^([0-9]+)\\..*$','\\1')}}-contrib-{{postgresql_version}}PGDG.rhel9.x86_64"
 
