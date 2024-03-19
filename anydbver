@@ -493,8 +493,8 @@ def detect_provider(args, echo=True):
   if args.provider == "" or args.provider == "docker":
     try:
       if re.search(
-          r"Server: Docker",
-          run_get_line(logger, ["docker", "version"],
+          r"Docker Engine .",
+          run_get_line(logger, ["docker", "version", "-f", "Docker Engine {{.Server.Version}}"],
             "Can't find docker",
             r"Cannot connect to the Docker", print_cmd = False)):
         if args.provider == "":
@@ -534,7 +534,7 @@ def run_mysql_cli(args):
 
 def fix_main_commands(args):
   for cmd_idx, cmd in enumerate(args):
-    if cmd in ('deploy', 'add', 'replace', 'destroy', 'delete', 'update', 'ssh', 'test'):
+    if cmd in ('deploy', 'add', 'replace', 'destroy', 'delete', 'update', 'ssh', 'exec', 'test'):
       args[cmd_idx] = '--' + cmd
 
 def fix_missing_node_commands(args):
@@ -577,7 +577,7 @@ def find_version(args):
   if args.percona_server_mongodb:
     params = soft_params(args.percona_server_mongodb)
     if params["version"] in ('True','latest'):
-      args.percona_server_mongodb = replace_version_in_command(args.percona_server_mongodb, '6.0')
+      args.percona_server_mongodb = replace_version_in_command(args.percona_server_mongodb, '7.0')
   if args.percona_server:
     params = soft_params(args.percona_server)
     if args.percona_server in ('True', 'latest', '8'):
@@ -1107,6 +1107,18 @@ def ssh_login(namespace, node):
   #os.system("exec ssh -F {}ssh_config -o LogLevel=error -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa -t root@{}".format(namespace, node))
   os.execl("/usr/bin/env", "/usr/bin/env", 'ssh','-F', "{}ssh_config".format(ns), '-o', 'LogLevel=error', '-t', "root@{}".format(node))
 
+def docker_exec(namespace, user, node):
+  ns = namespace
+  if ns != "":
+    ns = ns + "-"
+  if node == "node0":
+    node = "default"
+  if not sys.stdin.isatty():
+    docker_interactive = "-i"
+  else:
+    docker_interactive = "-it"
+  os.execl("/usr/bin/env", "/usr/bin/env", "docker","exec", docker_interactive, "{ns}{usr}-{n}".format(ns=ns, usr=user, n=node), "sh")
+
 def list_containers(ns, provider, user):
   if ns != "":
     ns = ns + "-"
@@ -1127,7 +1139,7 @@ def handle_non_deployment_commands():
       sys.argv[cmd_idx] = '--' + cmd
 
   for cmd_idx, cmd in enumerate(sys.argv):
-    if cmd in ('delete', 'ssh', 'mysql', 'psql', 'ip'):
+    if cmd in ('delete', 'ssh', 'exec', 'mysql', 'psql', 'ip'):
       sys.argv[cmd_idx] = '--' + cmd
       if cmd_idx+1 >= len(sys.argv) or sys.argv[cmd_idx+1].startswith("--"):
         sys.argv.insert(cmd_idx+1, "default")
@@ -1143,6 +1155,7 @@ def handle_non_deployment_commands():
   parser.add_argument('--test', dest="test", type=str, nargs='?')
   parser.add_argument('--update', dest="update", action='store_true')
   parser.add_argument('--ssh', dest="ssh", type=str, nargs='?')
+  parser.add_argument('--exec', dest="exec", type=str, nargs='?')
   parser.add_argument('--ip', dest="ip", type=str, nargs='?')
   parser.add_argument('--tools', dest="tools", type=str, nargs='?')
   args = parser.parse_args()
@@ -1157,7 +1170,7 @@ def handle_non_deployment_commands():
   else:
     args.user = os.getlogin()
 
-  if args.ip or args.ssh or args.update:
+  if args.ip or args.ssh or args.exec or args.update:
     detect_provider(args, False)
   else:
     detect_provider(args, True)
@@ -1174,6 +1187,13 @@ def handle_non_deployment_commands():
     if args.ssh != "":
       host = args.ssh
     ssh_login(args.namespace, host)
+    sys.exit(0)
+  elif args.exec:
+    host = "default"
+    if args.exec != "":
+      host = args.exec
+    if args.provider == "docker":
+      docker_exec(args.namespace, args.user, host)
     sys.exit(0)
   elif sys.argv[1] in ("mysql", "--mysql"):
     host = "default"
@@ -1273,7 +1293,7 @@ def main():
   else:
     args.user = os.getlogin()
 
-  detect_provider(args)
+  detect_provider(args, not deployment)
 
   ns_prefix = args.namespace
   if ns_prefix != "":

@@ -277,42 +277,49 @@ def save_percona_server_mongodb_versions_to_sqlite(osver):
     print(e)
     return
   cur = conn.cursor()
-  vers = list(open(".version-info/psmdb.{os}.txt".format(os=osver)))
-  sql = """\
-    INSERT OR REPLACE INTO percona_server_mongodb_version(
-      version, os, arch, repo_url, repo_file, repo_enable_str,
-      systemd_service, conf_file, packages,
-      debug_packages
-    )
-    VALUES (?,?,?,?,?,?,?,?,?,?)
-    """
-  for line in vers:
-    ver = line.rstrip()
-    project = ()
-    if osver.startswith('el'):
-      pkgs = ['percona-server-mongodb-tools','percona-server-mongodb-server', 'percona-server-mongodb-mongos', 'percona-server-mongodb']
-      pkgs = ["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]
-      if ver.startswith('6.0'):
-        mongoshver = '1.6.1-1'
-        if ver.startswith('6.0.2'):
-          mongoshver = '1.6.0-1'
-        pkgs.insert(1,'percona-mongodb-mongosh-{mongoshver}.{osver}.x86_64'.format(mongoshver=mongoshver,osver=osver))
-      else:
-        pkgs.insert(1,'percona-server-mongodb-shell-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver))
-
-      ver_no_dot = ''.join(ver.split('.',2)[0:2])
-      project = (
-        ver, osver, 'x86_64',
-        'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
-        '/etc/yum.repos.d/percona-psmdb-{ver_no_dot}-release.repo'.format(ver_no_dot=ver_no_dot),
-        'psmdb-{ver_no_dot}'.format(ver_no_dot=ver_no_dot), 'mongod', '/etc/mongod.conf',
-        '|'.join(pkgs),
-        'gdb|percona-server-mongodb-debuginfo-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver)
+  for arch in ('x86_64', 'aarch64'):
+    vers_file = ".version-info/psmdb.{os}.{arch}.txt".format(os=osver, arch=arch) 
+    if not os.path.exists(vers_file):
+      continue
+ 
+    vers = list(open(vers_file))
+    sql = """\
+      INSERT OR REPLACE INTO percona_server_mongodb_version(
+        version, os, arch, repo_url, repo_file, repo_enable_str,
+        systemd_service, conf_file, packages,
+        debug_packages
       )
+      VALUES (?,?,?,?,?,?,?,?,?,?)
+      """
+    for line in vers:
+      ver = line.rstrip()
+      project = ()
+      if osver.startswith('el'):
+        pkgs = ['percona-server-mongodb-tools','percona-server-mongodb-server', 'percona-server-mongodb-mongos', 'percona-server-mongodb']
+        pkgs = ["{}-{}.{}.{}".format(pkg,ver,osver, arch) for pkg in pkgs ]
+        if ver.startswith('6.0') or ver.startswith('7.0'):
+          mongoshver = '1.6.1-1'
+          if ver.startswith('6.0.2'):
+            mongoshver = '1.6.0-1'
+            pkgs.insert(1,'percona-mongodb-mongosh-{mongoshver}.{osver}.{arch}'.format(mongoshver=mongoshver,osver=osver, arch=arch))
+          else:
+            pkgs.insert(1,'percona-mongodb-mongosh')
+        else:
+          pkgs.insert(1,'percona-server-mongodb-shell-{ver}.{osver}.{arch}'.format(ver=ver,osver=osver, arch=arch))
 
-    if len(project) > 1:
-      cur.execute(sql, project)
-  conn.commit()
+        ver_no_dot = ''.join(ver.split('.',2)[0:2])
+        project = (
+          ver, osver, arch,
+          'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
+          '/etc/yum.repos.d/percona-psmdb-{ver_no_dot}-release.repo'.format(ver_no_dot=ver_no_dot),
+          'psmdb-{ver_no_dot}'.format(ver_no_dot=ver_no_dot), 'mongod', '/etc/mongod.conf',
+          '|'.join(pkgs),
+          'gdb|percona-server-mongodb-debuginfo-{ver}.{osver}.{arch}'.format(ver=ver,osver=osver, arch=arch)
+        )
+
+      if len(project) > 1:
+        cur.execute(sql, project)
+    conn.commit()
 
 
 def save_mysql_server_versions_to_sqlite(osver):
@@ -756,7 +763,7 @@ def update_versions():
   create_general_updater_table()
   if not os.path.exists(".version-info"):
     os.makedirs(".version-info")
-  generate_versions_file("psmdb.el7.txt",
+  generate_versions_file("psmdb.el7.x86_64.txt",
     [
       {"url": "https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/",
       "pattern": r'Percona-Server-MongoDB(?:-\d\d)?-server-(\d[^"]*).el7.x86_64.rpm'},
@@ -772,7 +779,7 @@ def update_versions():
       "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el7.x86_64.rpm'}
     ])
 
-  generate_versions_file("psmdb.el8.txt",
+  generate_versions_file("psmdb.el8.x86_64.txt",
     [
       {"url": "https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/",
       "pattern": r'Percona-Server-MongoDB(?:-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm'},
@@ -785,14 +792,34 @@ def update_versions():
       {"url": "https://repo.percona.com/psmdb-50/yum/release/8/RPMS/x86_64/",
       "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm'},
       {"url": "https://repo.percona.com/psmdb-60/yum/release/8/RPMS/x86_64/",
+      "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm'},
+      {"url": "https://repo.percona.com/psmdb-70/yum/release/8/RPMS/x86_64/",
       "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el8.x86_64.rpm'}
     ])
 
-  generate_versions_file("psmdb.el9.txt",
+  generate_versions_file("psmdb.el9.x86_64.txt",
     [
       {"url": "https://repo.percona.com/psmdb-60/yum/release/9/RPMS/x86_64/",
+      "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el9.x86_64.rpm'},
+      {"url": "https://repo.percona.com/psmdb-70/yum/release/9/RPMS/x86_64/",
       "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el9.x86_64.rpm'}
+     ])
+
+  generate_versions_file("psmdb.el8.aarch64.txt",
+    [
+      {"url": "https://repo.percona.com/psmdb-60/yum/release/8/RPMS/aarch64/",
+      "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el8.aarch64.rpm'},
+      {"url": "https://repo.percona.com/psmdb-70/yum/release/8/RPMS/aarch64/",
+      "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el8.aarch64.rpm'}
     ])
+
+  generate_versions_file("psmdb.el9.aarch64.txt",
+    [
+      {"url": "https://repo.percona.com/psmdb-60/yum/release/9/RPMS/aarch64/",
+      "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el9.aarch64.rpm'},
+      {"url": "https://repo.percona.com/psmdb-70/yum/release/9/RPMS/aarch64/",
+      "pattern": r'percona-server-mongodb(?:-\d\d)?-server-(\d[^"]*).el9.aarch64.rpm'}
+     ])
 
   generate_versions_file("mariadb.el8.txt",
     [

@@ -13,7 +13,7 @@
     content: |
       [mongodb-org-{{pkg_major}}]
       name=MongoDB Repository
-      baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/{{pkg_major}}/x86_64/
+      baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/{{pkg_major}}/{{ansible_architecture}}/
       gpgcheck=0
       enabled=1
       gpgkey=https://www.mongodb.org/static/pgp/server-{{pkg_major}}.asc

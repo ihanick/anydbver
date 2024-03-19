@@ -7,18 +7,25 @@ pkg_major_no_dot: "{{ pkg_major | replace('.','') }}"
 pkg:
   el7:
     install_packages:
-      - "{{ pkg_prefix }}-tools-{{ pkg_version }}.{{ dist }}.x86_64"
-      - "{{ pkg_prefix }}-shell-{{ pkg_version }}.{{ dist }}.x86_64"
-      - "{{ pkg_prefix }}-server-{{ pkg_version }}.{{ dist }}.x86_64"
-      - "{{ pkg_prefix }}-mongos-{{ pkg_version }}.{{ dist }}.x86_64"
-      - "{{ pkg_prefix }}-{{ pkg_version }}.{{ dist }}.x86_64"
+      - "{{ pkg_prefix }}-tools-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
+      - "{{ pkg_prefix }}-shell-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
+      - "{{ pkg_prefix }}-server-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
+      - "{{ pkg_prefix }}-mongos-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
+      - "{{ pkg_prefix }}-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
   el8:
     install_packages:
-      - "{{ pkg_prefix }}-tools-{{ pkg_version }}.{{ dist }}.x86_64"
-      - "{{ pkg_prefix }}-shell-{{ pkg_version }}.{{ dist }}.x86_64"
-      - "{{ pkg_prefix }}-server-{{ pkg_version }}.{{ dist }}.x86_64"
-      - "{{ pkg_prefix }}-mongos-{{ pkg_version }}.{{ dist }}.x86_64"
-      - "{{ pkg_prefix }}-{{ pkg_version }}.{{ dist }}.x86_64"
+      - "{{ pkg_prefix }}-tools-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
+      - "{{ pkg_prefix }}-shell-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
+      - "{{ pkg_prefix }}-server-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
+      - "{{ pkg_prefix }}-mongos-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
+      - "{{ pkg_prefix }}-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
+  el9:
+    install_packages:
+      - "{{ pkg_prefix }}-tools-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
+      - "{{ pkg_prefix }}-shell-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
+      - "{{ pkg_prefix }}-server-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
+      - "{{ pkg_prefix }}-mongos-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
+      - "{{ pkg_prefix }}-{{ pkg_version }}.{{ dist }}.{{ ansible_architecture }}"
   stretch:
     install_packages:
       - "{{ psmdb_name }}{{ psmdb_major_ver }}-tools={{ psmdb_version }}.{{ dist }}"
@@ -52,13 +59,13 @@ mongos_keyfile: "{{ mongos_cfg | regex_replace('^([^/]*)/.*$', '\\1') }}-keyfile
 
 package_info: >
   {{ lookup("theredgreek.sqlite.sqlite", path=playbook_dir+"/anydbver_version.db",
-    select="select * from percona_server_mongodb_version where version like '"+ psmdb_version +"%' and os='"+ dist +"' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1")
+    select="select * from percona_server_mongodb_version where version like '"+ psmdb_version +"%' and os='"+ dist  +"' and arch='"+ansible_architecture+"' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1")
   if psmdb_version != ""
   else "" }}
 
 
 percona_backup_mongodb_pkg: >
   {{ lookup("theredgreek.sqlite.sqlite", path=playbook_dir+"/anydbver_version.db",
-    select="select packages from percona_backup_mongodb_version where version like '"+ pbm_version +"%' and os='"+ dist +"' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1")["packages"]
+    select="select packages from percona_backup_mongodb_version where version like '"+ pbm_version +"%' and os='"+ dist  +"' and arch='"+ansible_architecture +"' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1")["packages"]
   if pbm_version != ""
   else "" }}

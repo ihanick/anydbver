@@ -228,6 +228,11 @@
             name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
             state: present
             disable_gpg_check: True
+        - name: Enable aarch64
+          ansible.builtin.replace:
+            path: /usr/bin/percona-release
+            regexp: 'SUPPORTED_ARCHS="i386 noarch x86_64 sources"'
+            replace: 'SUPPORTED_ARCHS="i386 noarch x86_64 aarch64 sources"'
     - name: Enable local repo.* caching
       include_tasks: common/tasks/repo_cache.yaml
     - name: Install Percona apt Repository
