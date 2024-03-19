@@ -8,6 +8,12 @@ MASTER_DB=postgres
 PGDATA="$PGDATA"
 LOGICAL_DB=pgbench
 
+
+
+if test -z "$PGDATA" ; then
+	export PGDATA=/data/db
+fi
+
 SERVER_ID=$(hostname)
 
 until PGPASSWORD="$MASTER_PASSWORD" PGHOST=$MASTER_IP PGDATABASE=$MASTER_DB PGUSER=$MASTER_USER psql -c "SELECT 1"  ; do
@@ -28,7 +34,7 @@ if [ "x$TYPE" = "xstreaming_physical_slots" ] ; then
     FROM pg_replication_slots WHERE slot_name='$SLOT';
 EOF
     rm -rf -- $PGDATA/*
-    if postgres --version | grep -q -F ' 9.' ; then
+    if psql --version | grep -q -F ' 9.' ; then
         PGPASSWORD="$MASTER_PASSWORD" PGHOST=$MASTER_IP PGDATABASE=$MASTER_DB PGUSER=$MASTER_USER pg_basebackup \
           -D $PGDATA -Fp -P -Xs -Rv &
     else
@@ -40,8 +46,8 @@ EOF
     CHECKPOINT;
 EOF1
     wait
-    chown -R postgres:postgres $PGDATA
-    if postgres --version | grep -q -F ' 9.' ; then
+    test $(id -u) -eq 0 && chown -R postgres:postgres $PGDATA
+    if psql --version | grep -q -F ' 9.' ; then
         cat >> $PGDATA/recovery.conf <<EOF
 primary_slot_name = '$SLOT'
 EOF
@@ -49,4 +55,8 @@ EOF
 fi
 
 
-docker-entrypoint.sh postgres
+if test -f /entrypoint.sh ; then 
+  /entrypoint.sh postgres
+else
+  docker-entrypoint.sh postgres
+fi
