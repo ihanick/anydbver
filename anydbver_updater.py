@@ -323,7 +323,7 @@ def save_percona_server_mongodb_versions_to_sqlite(osver):
 
 
 def save_mysql_server_versions_to_sqlite(osver):
-  repo_url = 'http://repo.mysql.com/mysql80-community-release-el8-4.noarch.rpm'
+  repo_url = 'http://repo.mysql.com/mysql80-community-release-el8.rpm'
   db_file = 'anydbver_version.db'
   conn = None
   try:
@@ -363,9 +363,9 @@ def save_mysql_server_versions_to_sqlite(osver):
         if osver == 'el7':
           repo_url = 'http://repo.mysql.com/mysql80-community-release-el7-7.noarch.rpm'
         elif osver == 'el8':
-          repo_url = 'http://repo.mysql.com/mysql80-community-release-el8-4.noarch.rpm'
+          repo_url = 'http://repo.mysql.com/mysql80-community-release-el8.rpm'
         elif osver == 'el9':
-          repo_url = 'http://repo.mysql.com/mysql80-community-release-el9-1.noarch.rpm'
+          repo_url = 'http://repo.mysql.com/mysql80-community-release-el9.rpm'
 
         mysql_shell_pkg = 'https://cdn.mysql.com/archives/mysql-shell/mysql-shell'
         if ver.startswith('8.0.33'):
@@ -949,25 +949,33 @@ def update_versions():
     [
       {"url": "https://repo.mysql.com/yum/mysql-8.0-community/el/8/x86_64/",
       "pattern": r'mysql-community-server-(\d[^"]*).el8.x86_64.rpm'},
-    ])
+      {"url": "https://repo.mysql.com/yum/mysql-innovation-community/el/8/x86_64/",
+      "pattern": r'mysql-community-server-(\d[^"]*).el8.x86_64.rpm'},
+     ])
 
   generate_versions_file("mysql.el9.txt",
     [
       {"url": "https://repo.mysql.com/yum/mysql-8.0-community/el/9/x86_64/",
       "pattern": r'mysql-community-server-(\d[^"]*).el9.x86_64.rpm'},
-    ])
+      {"url": "https://repo.mysql.com/yum/mysql-innovation-community/el/9/x86_64/",
+      "pattern": r'mysql-community-server-(\d[^"]*).el9.x86_64.rpm'},
+     ])
 
   generate_versions_file("mysql.el8.aarch64.txt",
     [
       {"url": "https://repo.mysql.com/yum/mysql-8.0-community/el/8/aarch64/",
       "pattern": r'mysql-community-server-(\d[^"]*).el8.aarch64.rpm'},
-    ])
+      {"url": "https://repo.mysql.com/yum/mysql-innovation-community/el/8/aarch64/",
+      "pattern": r'mysql-community-server-(\d[^"]*).el8.aarch64.rpm'},
+     ])
 
   generate_versions_file("mysql.el9.aarch64.txt",
     [
       {"url": "https://repo.mysql.com/yum/mysql-8.0-community/el/9/aarch64/",
       "pattern": r'mysql-community-server-(\d[^"]*).el9.aarch64.rpm'},
-    ])
+      {"url": "https://repo.mysql.com/yum/mysql-innovation-community/el/9/aarch64/",
+      "pattern": r'mysql-community-server-(\d[^"]*).el9.aarch64.rpm'},
+     ])
 
 
 

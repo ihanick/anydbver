@@ -51,6 +51,12 @@
         name: "{{package_info['repo_url']}}"
         disable_gpg_check: yes
         state: present
+    - name: Enable mysql innovation releases
+      when: >
+        ( mysql_version.startswith('8.1') or mysql_version.startswith('8.2') or mysql_version.startswith('8.3') ) and
+        (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+      shell:
+        cmd: "dnf config-manager --disable mysql80-community; dnf config-manager --enable mysql-innovation-community"
     - name: Switch mysql ndb cluster 8.0 repo
       when: >
         ( mysql_ndb_data_version.startswith('8.0') or mysql_ndb_sql_version.startswith('8.0') or mysql_ndb_management_version.startswith('8.0') ) and
