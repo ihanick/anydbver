@@ -176,6 +176,11 @@ You can run PGDG postgresql distribution `pg`-keyword or Percona's build `ppg`-k
 ```bash
 ./anydbver deploy node0 pg:latest,wal=logical node1 pg:latest,primary=node0,wal=logical
 ```
+### pgbackrest
+```bash
+./anydbver deploy node0 ppg pgbackrest
+```
+
 
 ## More details and usage examples
 There are usage examples in the help output:

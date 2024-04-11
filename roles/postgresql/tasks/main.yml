@@ -164,7 +164,7 @@
 - name: Install PGBackrest
   when: pgbackrest_version != ''
   package:
-    name: pgbackrest
+    name: percona-pgbackrest
     state: present
 
 - name: Postgres Setup tasks
