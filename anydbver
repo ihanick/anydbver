@@ -738,6 +738,7 @@ def parse_node(args, help_cmd=False):
   parser.add_argument('--k8s-mongo', dest="k8s_mongo", type=str, nargs='?', help=arg_help("k8s-mongo"))
   parser.add_argument('--k8s-pxc', dest="k8s_pxc", type=str, action='append', nargs='?', help=arg_help("k8s-pxc"))
   parser.add_argument('--alertmanager', dest="alertmanager", type=str, nargs='?', help=arg_help("alertmanager"))
+  parser.add_argument('--minio', dest="minio", type=str, nargs='?', help=arg_help("minio"))
   parser.add_argument('--pmm', dest="pmm", type=str, nargs='?', help=arg_help("pmm"))
   parser.add_argument('--pmm-client', dest="pmm_client", type=str, nargs='?', help=arg_help("pmm-client"))
   parser.add_argument('--db-version', dest="db_version", type=str, nargs='?', help=arg_help("db-version"))
