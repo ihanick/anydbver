@@ -1070,6 +1070,12 @@ def update_versions():
           {"url": "https://repo.percona.com/percona/yum/release/{osver}/RPMS/{arch}/".format(osver=osver.replace("el",""), arch=arch),
            "pattern": r"proxysql[0-9]*-([0-9.-]*).{osver}.{arch}.rpm".format(osver=osver, arch=arch)}
         ]) 
+      save_general_version_for_program_from_url(osver, 'x86_64', 'sysbench', 
+        [
+          {"url": "https://repo.percona.com/percona/yum/release/{osver}/RPMS/{arch}/".format(osver=osver.replace("el",""), arch=arch),
+           "pattern": r"sysbench-([0-9.-]*).{osver}.{arch}.rpm".format(osver=osver, arch=arch)}
+        ]) 
+
 
   for op in ("percona/percona-xtradb-cluster-operator",
              "percona/percona-postgresql-operator",

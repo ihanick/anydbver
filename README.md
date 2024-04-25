@@ -140,6 +140,11 @@ mysql
 ./anydbver deploy ps:5.7 node1 ps:5.7,master=node0 node2 percona-proxysql:latest,master=node0
 ```
 
+### sysbench
+```bash
+./anydbver deploy ps:5.7 node1 sysbench:latest,mysql=node0
+```
+
 ## MongoDB
 * Create a sharding cluster with 3-member replicasets (first shard, second shard, config servers) and mongos.
 ```bash

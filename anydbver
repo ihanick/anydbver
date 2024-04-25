@@ -584,10 +584,8 @@ def find_version(args):
       args.percona_server = replace_version_in_command(args.percona_server, '8.0')
   if args.sysbench:
     params = soft_params(args.sysbench)
-    if args.sysbench in ('True', 'latest'):
-      args.sysbench = replace_version_in_command(args.sysbench, '1.0.20-6')
-    else:
-      args.sysbench = replace_version_in_command(args.sysbench, params["version"])
+    version = general_version_from_sqlite(params["version"],'sysbench',osver,'x86_64')
+    args.sysbench = replace_version_in_command(args.sysbench, version)
 
   if args.mariadb:
     params = soft_params(args.mariadb)
