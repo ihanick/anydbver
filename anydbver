@@ -902,6 +902,13 @@ def apply_node_actions(ns, _, actions, user, provider):
     extra_vars["extra_sysbench_version"] = params["version"]
     if "mysql" in params:
       extra_vars["extra_sysbench_mysql"] = resolve_hostname(ns, params["mysql"], user, provider)
+      extra_vars["extra_db_user"] = "root"
+    if "postgresql" in params:
+      extra_vars["extra_sysbench_pg"] = resolve_hostname(ns, params["postgresql"], user, provider)
+      extra_vars["extra_db_user"] = "root"
+    if "oltprw" in params or "oltp-rw" in params:
+      db_features.append("sysbench_oltp_read_write")
+    extra_vars["extra_db_password"] = "verysecretpassword1^"
 
   if actions.patroni:
     params = soft_params(actions.patroni)
