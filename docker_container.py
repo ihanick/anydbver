@@ -10,6 +10,7 @@ import platform
 import time
 
 COMMAND_TIMEOUT=600
+ALWAYS_PRIVILEGED=True
 
 FORMAT = '%(asctime)s %(levelname)s %(message)s'
 logging.basicConfig(format=FORMAT)
@@ -161,6 +162,9 @@ def start_container(args, name, priv):
         ])
 
     net = "{ns_prefix}{usr}-anydbver".format(ns_prefix=ns_prefix, usr=args.user)
+    if priv:
+      docker_run_cmd.extend([ "--cap-add", "NET_ADMIN", "--cap-add", "SYS_PTRACE"])
+
     docker_run_cmd.extend([ 
       "-d", "--cgroupns=host", "--tmpfs", "/tmp",
       "--network", net,
@@ -211,7 +215,7 @@ def deploy(args):
   priv_nodes_list = args.priv_nodes.split(",")
   for name in get_all_nodes(args):
     if name not in skip_nodes_list:
-      start_container(args, name, name in priv_nodes_list)
+      start_container(args, name, ALWAYS_PRIVILEGED or (name in priv_nodes_list))
 
 def destroy(args):
   for name in get_all_nodes(args):
