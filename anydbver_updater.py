@@ -46,6 +46,17 @@ def generate_versions_file(filename, src_info):
   with open( str((Path(os.getcwd()) / ".version-info" / filename).resolve()), "w") as f:
     f.write("\n".join(versions) + "\n")
 
+def save_general_version_for_program_from_url(osver, arch, program, src_info):
+  versions = []
+  for prg in src_info:
+    append_versions_from_url(versions, prg["url"], prg["pattern"])
+  # keep only unique versions
+  versions = list(dict.fromkeys(versions))
+  versions.sort(key=lambda x: strip_version(x))
+  for ver in versions:
+    save_general_version(ver, osver, arch, program)
+
+
 def save_postgresql_versions_to_sqlite(osver):
   osname = "el8"
   repo_url = "http://yum.postgresql.org/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
@@ -1051,7 +1062,15 @@ def update_versions():
         {"url": "https://repo.percona.com/percona/yum/release/{osver}/RPMS/x86_64/".format(osver=osver.replace("el","")),
          "pattern": r"percona-xtrabackup(?:-[0-9]+)-([0-9.-]*).{osver}.x86_64.rpm".format(osver=osver)}
       ])
- 
+
+  for arch in ("x86_64",):
+    for osver in ("el7","el8","el9"):
+      save_general_version_for_program_from_url(osver, 'x86_64', 'percona-proxysql', 
+        [
+          {"url": "https://repo.percona.com/percona/yum/release/{osver}/RPMS/{arch}/".format(osver=osver.replace("el",""), arch=arch),
+           "pattern": r"proxysql[0-9]*-([0-9.-]*).{osver}.{arch}.rpm".format(osver=osver, arch=arch)}
+        ]) 
+
   for op in ("percona/percona-xtradb-cluster-operator",
              "percona/percona-postgresql-operator",
              "percona/percona-server-mongodb-operator",

@@ -111,6 +111,7 @@ In order to access kubernetes LoadBalancer Services you can dedicate last 255 ad
 
 ## Simple usage with LXD:
 
+LXD method is deprecated and not supporing all programs.
 Create .anydbver file containing (replace ihanick with your `$USER`):
 ```bash
 PROVIDER=lxd
@@ -132,6 +133,11 @@ Login to container with Percona Server and connect with mysql command:
 ```bash
 ./anydbver ssh
 mysql
+```
+
+### ProxySQL
+```bash
+./anydbver deploy ps:5.7 node1 ps:5.7,master=node0 node2 percona-proxysql:latest,master=node0
 ```
 
 ## MongoDB

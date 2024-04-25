@@ -643,14 +643,10 @@ def find_version(args):
         break
     args.mysql_router = replace_version_in_command(args.mysql_router, version)
   if args.percona_proxysql:
-    vers = list(open(".version-info/percona-proxysql.{os}.txt".format(os=osver)))
-    version = vers[-1]
-    for line in reversed(vers):
-      ver = line.rstrip()
-      if ver.startswith(args.percona_proxysql):
-        version = ver
-        break
+    params = soft_params(args.percona_proxysql)
+    version = general_version_from_sqlite(params["version"],'percona-proxysql',osver,'x86_64')
     args.percona_proxysql = replace_version_in_command(args.percona_proxysql, version)
+ 
   if args.percona_orchestrator:
     params = soft_params(args.percona_orchestrator)
     version = general_version_from_sqlite(params["version"],'percona-orchestrator',osver,'x86_64')
@@ -1074,6 +1070,15 @@ def apply_node_actions(ns, _, actions, user, provider):
     extra_vars["extra_db_user"] = "root"
     extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["PERCONA_ORCHESTRATOR"] = actions.percona_orchestrator
+    env["DB_USER"] = "root"
+    env["DB_PASS"]= "verysecretpassword1^"
+  if actions.percona_proxysql is not None:
+    params = soft_params(actions.percona_proxysql)
+    if "master" in params:
+      extra_vars["extra_master_ip"] = resolve_hostname(ns, params["master"], user, provider)
+    extra_vars["extra_percona_proxysql_version"] = params["version"]
+    extra_vars["extra_db_user"] = "root"
+    extra_vars["extra_db_password"] = "verysecretpassword1^"
     env["DB_USER"] = "root"
     env["DB_PASS"]= "verysecretpassword1^"
   if actions.leader is not None:
