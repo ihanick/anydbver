@@ -707,6 +707,7 @@ def parse_node(args, help_cmd=False):
   parser.add_argument('--wal', '--postgres-wal', type=str, nargs='?', help=arg_help("wal"))
   parser.add_argument('--pg-stat-monitor','--pg_stat_monitor', type=str, nargs='?', help=arg_help("pg-stat-monitor"))
   parser.add_argument('--patroni', type=str, nargs='?', help=arg_help("patroni"))
+  parser.add_argument('--repmgr', type=str, nargs='?', help=arg_help("repmgr"))
   parser.add_argument('--etcd-ip', type=str, nargs='?', help=arg_help("etcd-ip"))
   parser.add_argument('--development', type=str, nargs='?', help=arg_help("development"))
   parser.add_argument('--leader', '--master', '--primary', type=str, nargs='?', help=arg_help("leader"))
@@ -919,6 +920,10 @@ def apply_node_actions(ns, _, actions, user, provider):
       extra_vars["extra_etcd_ip"] = resolve_hostname(ns, params["primary"], user, provider)
     if "master" in params:
       extra_vars["extra_etcd_ip"] = resolve_hostname(ns, params["master"], user, provider)
+
+  if actions.repmgr:
+    params = soft_params(actions.repmgr)
+    extra_vars["extra_repmgr_version"] = params["version"]
 
   if actions.pgbackrest:
     params = soft_params(actions.pgbackrest)

@@ -192,6 +192,11 @@ You can run PGDG postgresql distribution `pg`-keyword or Percona's build `ppg`-k
 ./anydbver deploy node0 ppg pgbackrest
 ```
 
+### Repmgr
+```bash
+./anydbver deploy pg:16 repmgr node1 pg:16,master=node0 repmgr node2 pg:16,master=node0 repmgr
+```
+
 
 ## More details and usage examples
 There are usage examples in the help output:

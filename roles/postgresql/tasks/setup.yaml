@@ -255,3 +255,57 @@
     s3_sql: "{{ s3sql }}"
     client: psql -U postgres -h 127.0.0.1
 
+- name: setup Repmgr
+  when: repmgr_version != '' and postgresql_version != ''
+  shell:
+    cmd: |
+      until sudo -iu postgres /usr/pgsql-{{maj}}/bin/pg_isready ; do sleep 1 ; done
+      yum install -y repmgr_{{maj}}
+      cat >> /etc/repmgr/{{maj}}/repmgr.conf <<EOF
+      node_id= $(( 10 + $(hostname | sed -e 's/node//' -e 's/default/0/') ))
+      node_name=$(hostname)
+      conninfo='host=$(hostname) user=repmgr dbname=repmgr connect_timeout=2'
+      data_directory='/var/lib/pgsql/{{maj}}/data/'
+      failover=automatic
+      promote_command='/usr/pgsql-{{maj}}/bin/repmgr standby promote -f /etc/repmgr/{{maj}}/repmgr.conf --log-to-file'
+      follow_command='/usr/pgsql-{{maj}}/bin/repmgr standby follow -f /etc/repmgr/{{maj}}/repmgr.conf --log-to-file --upstream-node-id=%n'
+      service_start_command = 'sudo /usr/bin/systemctl start postgresql-{{maj}}'
+      service_stop_command = 'sudo /usr/bin/systemctl stop postgresql-{{maj}}'
+      service_restart_command = 'sudo /usr/bin/systemctl restart postgresql-{{maj}}'
+      service_reload_command = 'sudo /usr/bin/systemctl reload postgresql-{{maj}}'
+      service_promote_command = '/usr/pgsql-{{maj}}/bin/pg_ctl -D /var/lib/pgsql/{{maj}}/data promote'
+      EOF
+      cat >> /etc/sudoers <<EOF
+      postgres ALL = NOPASSWD: /usr/bin/systemctl start postgresql-{{maj}}
+      postgres ALL = NOPASSWD: /usr/bin/systemctl restart postgresql-{{maj}}
+      postgres ALL = NOPASSWD: /usr/bin/systemctl reload postgresql-{{maj}}
+      postgres ALL = NOPASSWD: /usr/bin/systemctl stop postgresql-{{maj}}
+      EOF
+      cat >>  /var/lib/pgsql/.pgpass <<EOF
+      *:*:*:*:{{db_password}}
+      EOF
+      chmod 0600 /var/lib/pgsql/.pgpass
+      chown postgres:postgres /var/lib/pgsql/.pgpass
+      if [[ '{{master_ip}}' == '' ]] ; then
+        sudo -iu postgres createuser --replication --createdb --createrole --superuser repmgr
+        sudo -iu postgres createdb repmgr --owner=repmgr
+        sudo -iu postgres psql -c "ALTER USER repmgr WITH PASSWORD '{{db_password}}';"
+      cat >> /var/lib/pgsql/{{maj}}/data/postgresql.conf <<EOF
+      hot_standby = on
+      shared_preload_libraries = 'repmgr'
+      EOF
+        /usr/bin/systemctl restart postgresql-{{maj}}
+        until sudo -iu postgres /usr/pgsql-{{maj}}/bin/pg_isready ; do sleep 1 ; done
+        until sudo -iu postgres /usr/pgsql-{{maj}}/bin/repmgr primary register ; do sleep 1 ; done
+      else
+        until sudo -iu postgres /usr/pgsql-{{maj}}/bin/pg_isready -h {{master_ip}} -U repmgr -d repmgr ; do sleep 1 ; done
+        /usr/bin/systemctl stop postgresql-{{maj}}
+        sudo -iu postgres /usr/pgsql-{{maj}}/bin/repmgr -h {{master_ip}} -U repmgr -d repmgr standby clone --force --fast-checkpoint
+        /usr/bin/systemctl start postgresql-{{maj}}
+        until sudo -iu postgres /usr/pgsql-{{maj}}/bin/pg_isready ; do sleep 1 ; done
+        until sudo -iu postgres /usr/pgsql-{{maj}}/bin/repmgr standby register ; do sleep 1 ; done
+      fi
+      systemctl daemon-reload
+      systemctl enable repmgr-{{maj}}
+      systemctl start repmgr-{{maj}}
+
