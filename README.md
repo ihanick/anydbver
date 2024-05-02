@@ -45,6 +45,11 @@ Login to container with Percona Server and connect with mysql command:
 mysql
 ```
 
+### Start interactive shell without ssh
+```bash
+./anydbver exec node0
+```
+
 ### Pre-requirements
 * git
 * ansible (not just ansible-core)
