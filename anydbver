@@ -92,6 +92,7 @@ def destroy_docker(args):
     os.unlink("{ns}ssh_config".format(ns=ns_prefix))
     os.unlink("{ns}ansible_hosts".format(ns=ns_prefix))
     os.unlink("{ns}ansible_hosts_run".format(ns=ns_prefix))
+    os.unlink("{ns}screenrc".format(ns=ns_prefix))
   except:
     pass
 
@@ -534,7 +535,7 @@ def run_mysql_cli(args):
 
 def fix_main_commands(args):
   for cmd_idx, cmd in enumerate(args):
-    if cmd in ('deploy', 'add', 'replace', 'destroy', 'delete', 'update', 'ssh', 'exec', 'test'):
+    if cmd in ('deploy', 'add', 'replace', 'destroy', 'delete', 'update', 'ssh', 'exec', 'screen', 'test'):
       args[cmd_idx] = '--' + cmd
 
 def fix_missing_node_commands(args):
@@ -1123,6 +1124,12 @@ def ssh_login(namespace, node):
   #os.system("exec ssh -F {}ssh_config -o LogLevel=error -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa -t root@{}".format(namespace, node))
   os.execl("/usr/bin/env", "/usr/bin/env", 'ssh','-F', "{}ssh_config".format(ns), '-o', 'LogLevel=error', '-t', "root@{}".format(node))
 
+def screen_run(namespace):
+  ns = namespace
+  if ns != "":
+    ns = ns + "-"
+  os.execl("/usr/bin/env", "/usr/bin/env", 'screen','-c', "{}screenrc".format(ns))
+
 def docker_exec(namespace, user, node):
   ns = namespace
   if ns != "":
@@ -1151,7 +1158,7 @@ def mysql_cli_run(ns, node):
 
 def handle_non_deployment_commands():
   for cmd_idx, cmd in enumerate(sys.argv):
-    if cmd in ('destroy', 'update', 'test', 'list'):
+    if cmd in ('destroy', 'update', 'test', 'list', 'screen'):
       sys.argv[cmd_idx] = '--' + cmd
 
   for cmd_idx, cmd in enumerate(sys.argv):
@@ -1171,6 +1178,7 @@ def handle_non_deployment_commands():
   parser.add_argument('--test', dest="test", type=str, nargs='?')
   parser.add_argument('--update', dest="update", action='store_true')
   parser.add_argument('--ssh', dest="ssh", type=str, nargs='?')
+  parser.add_argument('--screen', dest="screen", action='store_true')
   parser.add_argument('--exec', dest="exec", type=str, nargs='?')
   parser.add_argument('--ip', dest="ip", type=str, nargs='?')
   parser.add_argument('--tools', dest="tools", type=str, nargs='?')
@@ -1185,6 +1193,10 @@ def handle_non_deployment_commands():
     args.user = os.environ["USER"]
   else:
     args.user = os.getlogin()
+
+  if args.screen:
+    screen_run(args.namespace)
+    sys.exit(0)
 
   if args.ip or args.ssh or args.exec or args.update:
     detect_provider(args, False)

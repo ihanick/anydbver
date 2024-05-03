@@ -79,6 +79,37 @@ def ansible_hosts_append_node(ns, node, ip, user, python_path):
   with open("{}ansible_hosts".format(ns), "a") as ansible_hosts:
     ansible_hosts.write(ansible_host)
 
+def copy_screenrc(dest_file_path):
+    home_dir = os.path.expanduser("~")
+    screenrc_path = os.path.join(home_dir, ".screenrc")
+    if not os.path.exists(screenrc_path):
+        return
+    if os.path.exists(dest_file_path):
+        return
+    with open(screenrc_path, 'r') as src_file:
+        screenrc_content = src_file.read()
+    with open(dest_file_path, 'w') as dest_file:
+        dest_file.write(screenrc_content)
+
+def screenrc_append_node(idx, ns, node):
+  ns_prefix = ns
+  if ns_prefix != "":
+    ns_prefix = ns_prefix + "-"
+  exec_path=str((Path(os.getcwd()) / "anydbver").resolve())
+
+  ns_arg = ns
+  if ns_arg != "":
+    ns_arg = "--namespace={}".format(ns)
+
+  screen_file_name = "{}screenrc".format(ns_prefix)
+  copy_screenrc(screen_file_name)
+
+  screen_line = """\
+      screen -t {node} {idx} {exec_path} {ns_arg} ssh {node}
+""".format(exec_path=exec_path, ns_arg=ns_arg, node=node, idx=idx)
+  with open(screen_file_name, "a") as ansible_hosts:
+    ansible_hosts.write(screen_line)
+
 def run_get_line(args,err_msg, ignore_msg=None, print_cmd=True, env=None):
   if print_cmd:
     logger.info(subprocess.list2cmdline(args))
@@ -186,12 +217,17 @@ def start_container(args, name, priv):
     run_fatal(["lxc", "file", "push", "secret/id_rsa.pub", "{}/root/.ssh/authorized_keys".format(container_name)],
               "Can't allow ssh connections with keys")
 
+  idx = 0
+  if name.startswith("node"):
+    idx = int(name[4:])
+
   node_ip = ""
   while node_ip == "":
     node_ip = get_node_ip(args.provider, args.namespace, name_user)
     time.sleep(1)
   logger.info("Found node {} with ip {}".format(name_user, node_ip))
   ssh_config_append_node(args.namespace, name, node_ip, args.user)
+  screenrc_append_node(idx, args.namespace, name)
   ansible_hosts_append_node(args.namespace, name, node_ip, args.user, python_path)
   if args.provider != "docker":
     os.system("until ssh -F {ns_prefix}ssh_config root@{node} true ; do sleep 1;done; echo 'Connected to {node} via ssh'".format(ns_prefix=ns_prefix, node=name))

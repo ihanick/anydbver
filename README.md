@@ -245,3 +245,16 @@ Due to the lack of ability to configure host replication items in `pg_hba.conf` 
 ```
 ./anydbver deploy pg:latest,docker-image node1 pg:latest,docker-image,master=node0
 ```
+
+## Run screen session with all nodes
+Put desired bottom status line settings in your ~/.screenrc, e.g.
+```
+~/.screenrc
+hardstatus on
+hardstatus alwayslastline
+hardstatus lastline "%-Lw%{= BW}%50>%n%f* %t%{-}%+Lw%<"
+```
+Create screen session:
+```bash
+./anydbver screen
+```
