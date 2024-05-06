@@ -682,6 +682,7 @@ def parse_node(args, help_cmd=False):
   parser.add_argument('--percona-xtradb-cluster', '--pxc', type=str, nargs='?', help=arg_help("percona-xtradb-cluster"))
   parser.add_argument('--proxysql', type=str, nargs='?', help=arg_help("proxysql"))
   parser.add_argument('--percona-proxysql', type=str, nargs='?', help=arg_help("percona-proxysql"))
+  parser.add_argument('--valkey', type=str, nargs='?', help=arg_help("valkey"))
   parser.add_argument('--sysbench', type=str, nargs='?', help=arg_help("sysbench"))
   parser.add_argument('--haproxy', type=str, nargs='?', help=arg_help("haproxy"))
   parser.add_argument('--haproxy-galera', type=str, nargs='?', help=arg_help("haproxy-galera"))

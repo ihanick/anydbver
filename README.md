@@ -246,6 +246,12 @@ Due to the lack of ability to configure host replication items in `pg_hba.conf` 
 ./anydbver deploy pg:latest,docker-image node1 pg:latest,docker-image,master=node0
 ```
 
+### Valkey (Redis fork)
+Run a 3 node primary+two replicas
+```bash
+./anydbver deploy valkey:unstable,docker-image node1 valkey:unstable,docker-image,master=node0 node2 valkey:unstable,docker-image,master=node0
+```
+
 ## Run screen session with all nodes
 Put desired bottom status line settings in your ~/.screenrc, e.g.
 ```

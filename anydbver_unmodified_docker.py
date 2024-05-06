@@ -1,5 +1,6 @@
 from anydbver_common import logger
 from unmodified_docker import pmm as docker_pmm
+from unmodified_docker import valkey as docker_valkey
 from unmodified_docker import mysql_server as docker_mysql_server
 from unmodified_docker import pxc as docker_pxc
 from unmodified_docker import percona_server_mysql as docker_percona_server_mysql
@@ -30,6 +31,8 @@ def deploy_unmodified_docker_images(usr, ns, node_name, node):
   logger.info("Deploying node with unmodified docker image")
   if node.pmm:
     docker_pmm.deploy(node.pmm, node_name, net)
+  if node.valkey:
+    docker_valkey.deploy(node.valkey, node_name, usr, net, ns_prefix)
   if node.mysql_server:
     docker_mysql_server.deploy(node.mysql_server, node_name, usr, net, ns_prefix)
   if node.percona_xtradb_cluster:

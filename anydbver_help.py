@@ -20,6 +20,7 @@ def arg_help(name):
       "percona-backup-mongodb": "pbm:version,s3=https://access:secret@endpointurl:port/bucket",
       "ldap": "ldap, ldap-master:NODE",
       "samba": "samba:latest,docker-image,realm=PERCONA.LOCAL",
+      "valkey": "valkey:unstable,docker-image,master=NODE",
       }
   examples = {
       "percona-server": "anydbver deploy ps:5.7.35 node1 ps:5.7.35,master=node0\nanydbver deploy ps:8.0,gtid=0 node1 ps:8.0,gtid=0,master=node0\nanydbver deploy ps:8.0,rocksdb,sql=http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql percona-xtrabackup:8.0",
@@ -40,7 +41,8 @@ def arg_help(name):
       "percona-server-mongodb": "anydbver deploy psmdb:latest,replica-set=rs0,role=shard node1 psmdb:latest,replica-set=rs0,role=shard,master=node0 node2 psmdb:latest,replica-set=rs0,role=shard,master=node0 node3 psmdb:latest,replica-set=rs1,role=shard node4 psmdb:latest,replica-set=rs1,role=shard,master=node3 node5 psmdb:latest,replica-set=rs1,role=shard,master=node3 node6 psmdb:latest,replica-set=cfg0,role=cfg node7 psmdb:latest,replica-set=cfg0,role=cfg,master=node6 node8 psmdb:latest,replica-set=cfg0,role=cfg,master=node6 node9 psmdb:latest mongos-cfg:cfg0/node6,node7,node8 mongos-shard:rs0/node0,node1,node2,rs1/node3,node4,node5",
       "ldap": "anydbver deploy ldap node1 ldap-master:default psmdb:5.0\nanydbver deploy ldap node1 ldap-master:default ps:8.0,ldap=simple",
       "samba": "anydbver deploy samba:latest,docker-image node1 os:el7 ps samba-client:node0",
-      "alertmanager": "anydbver deploy node0 pmm:latest,docker-image,port=0.0.0.0:10443 node1 ps:5.7 pmm-client:2.37.1-6,server=node0 node2 alertmanager:latest,docker-image,port=9093"
+      "alertmanager": "anydbver deploy node0 pmm:latest,docker-image,port=0.0.0.0:10443 node1 ps:5.7 pmm-client:2.37.1-6,server=node0 node2 alertmanager:latest,docker-image,port=9093",
+      "valkey": "anydbver deploy valkey:unstable,docker-image node1 valkey:unstable,docker-image,master=node0 node2 valkey:unstable,docker-image,master=node0",
       }
   if name in all_subargs and name in examples:
     return "R|{}\nEx. {}".format(all_subargs[name], examples[name])
