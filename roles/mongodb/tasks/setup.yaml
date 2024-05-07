@@ -8,42 +8,6 @@
     - name: Avoid re-merge on next runs
       file: path="/root/{{ db_opts_file | basename }}.applied" state=touch modification_time=preserve access_time=preserve
 
-- name: setup mongos
-  when: mongos_cfg != ''
-  block:
-    - name: create mongos config from template
-      template:
-        src: "{{playbook_dir}}/configs/mongo/mongos.conf.j2"
-        dest: "/etc/mongos.conf"
-    - name: copy keyfile
-      copy:
-        src: "{{playbook_dir}}/secret/{{mongos_keyfile}}"
-        dest: "/etc/{{mongos_keyfile}}"
-        mode: "0400"
-        owner: "mongod"
-        group: "mongod"
-    - copy:
-        src: "{{playbook_dir}}/roles/mongodb/files/mongos.{{ 'rpm' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') else 'deb' }}.service"
-        dest: /etc/systemd/system/mongos.service
-    - copy:
-        src: "{{playbook_dir}}/roles/mongodb/files/etc.sysconfig.mongos"
-        dest: /etc/sysconfig/mongos
-      when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
-    - copy:
-        src: "{{playbook_dir}}/roles/mongodb/files/etc.default.mongos"
-        dest: /etc/default/mongos
-      when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
-    - systemd:
-        daemon_reload: yes
-    - name: Add shards to mongos
-      command:
-        cmd: /bin/bash /vagrant/tools/setup_mongos.sh "{{ db_user }}" "{{ db_password }}" "{{ mongos_shard }}"
-        creates: /root/mongos.configured
-      when: mongos_shard != ''
-    - name: Set systemd service to mongos
-      set_fact:
-        db_systemd_service: mongos
-
 - name: Create MongoDB database
   when: db_password != "" and (psmdb_version != "" or mongo_org_version != '' and mongos_cfg == '' )
   shell:
@@ -137,6 +101,42 @@
       command:
         cmd: /bin/bash /vagrant/tools/setup_mongo_replication.sh "{{mongo_replicaset}}" "dba" "{{db_password}}" "{{master_ip}}"
         creates: /root/{{mongo_replicaset}}.init
+
+- name: setup mongos
+  when: mongos_cfg != ''
+  block:
+    - name: create mongos config from template
+      template:
+        src: "{{playbook_dir}}/configs/mongo/mongos.conf.j2"
+        dest: "/etc/mongos.conf"
+    - name: copy keyfile
+      copy:
+        src: "{{playbook_dir}}/secret/{{mongos_keyfile}}"
+        dest: "/etc/{{mongos_keyfile}}"
+        mode: "0400"
+        owner: "mongod"
+        group: "mongod"
+    - copy:
+        src: "{{playbook_dir}}/roles/mongodb/files/mongos.{{ 'rpm' if (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') else 'deb' }}.service"
+        dest: /etc/systemd/system/mongos.service
+    - copy:
+        src: "{{playbook_dir}}/roles/mongodb/files/etc.sysconfig.mongos"
+        dest: /etc/sysconfig/mongos
+      when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+    - copy:
+        src: "{{playbook_dir}}/roles/mongodb/files/etc.default.mongos"
+        dest: /etc/default/mongos
+      when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+    - systemd:
+        daemon_reload: yes
+    - name: Add shards to mongos
+      command:
+        cmd: /bin/bash /vagrant/tools/setup_mongos.sh "{{ db_user }}" "{{ db_password }}" "{{ mongos_shard }}"
+        creates: /root/mongos.configured
+      when: mongos_shard != ''
+    - name: Set systemd service to mongos
+      set_fact:
+        db_systemd_service: mongos
 
 - name: Setup PBM agent
   when: pbm_agent  != '' or (pbm_version != '' and mongo_replicaset != '')

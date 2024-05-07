@@ -184,6 +184,20 @@ tools/mc mb bkp/pbm-example
   node9 psmdb:latest mongos-cfg:cfg0/node6,node7,node8 mongos-shard:rs0/node0,node1,node2,rs1/node3,node4,node5
 ```
 
+### Run minio backup server as a node
+
+* Use self-signed certificates prepared in data/minio/certs with certgen command:
+```
+export MC_HOST_bkp=https://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000
+./anydbver --simple deploy node0 psmdb:4.4.21,replica-set=rs0 pbm:2.3.1,s3=$MC_HOST_bkp/pbm-example   node1 psmdb:4.4.21,replica-set=rs0,master=node0 pbm:2.3.1,s3=$MC_HOST_bkp/pbm-example   node2 psmdb:4.4.21,replica-set=rs0,master=node0 pbm:2.3.1,s3=$MC_HOST_bkp/pbm-example node3 minio:latest,docker-image,port=9000,bucket=pbm-example
+```
+* disable TLS and use http
+```
+export MC_HOST_bkp=http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000
+./anydbver --simple deploy node0 psmdb:4.4.21,replica-set=rs0 pbm:2.3.1,s3=$MC_HOST_bkp/pbm-example   node1 psmdb:4.4.21,replica-set=rs0,master=node0 pbm:2.3.1,s3=$MC_HOST_bkp/pbm-example   node2 psmdb:4.4.21,replica-set=rs0,master=node0 pbm:2.3.1,s3=$MC_HOST_bkp/pbm-example node3 minio:latest,docker-image,port=9000,bucket=pbm-example,certs=none
+
+```
+
 ## Postgresql
 You can run PGDG postgresql distribution `pg`-keyword or Percona's build `ppg`-keyword.
 * `primary` instructs node to join as secondary to specified primary

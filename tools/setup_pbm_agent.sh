@@ -36,7 +36,7 @@ storage:
     endpointUrl: "$proto$host:$port"
     region: my-region
     bucket: $bucket
-    prefix: data/pbm/test
+    insecureSkipTLSVerify: true
     credentials:
       access-key-id: $user
       secret-access-key: $pass
