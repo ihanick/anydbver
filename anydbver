@@ -219,12 +219,14 @@ mirrors:
           k3d_create_cmd.append("--k3s-arg")
           k3d_create_cmd.append("--cluster-domain={}@server:0".format(node.k8s_cluster_domain))
 
+        internal_lb = True
         if  "metallb" in params:
           #k3d_create_cmd.append("--k3s-arg")
           #k3d_create_cmd.append("--disable=traefik@server:0")
           #k3d_create_cmd.append("--k3s-arg")
           #k3d_create_cmd.append("--kube-proxy-arg=--ipvs-strict-arp=true@server:*")
           k3d_create_cmd.append("--no-lb")
+          internal_lb = False
 
         if node.ingress:
           params = soft_params(node.ingress)
@@ -250,13 +252,14 @@ mirrors:
             run_k8s_operator_cmd.append("--ingress={}".format(node.ingress_type))
 
           if node.ingress_type in ("nginx", "nginxinc", "traefik", "istio"):
-            k3d_create_cmd.append("-p")
-            k3d_create_cmd.append("{ingress_port}:{ingress_port}@loadbalancer".format(ingress_port=node.ingress_port))
-            k3d_create_cmd.append("-p")
-            k3d_create_cmd.append("{ingress_port}:{ingress_port}/udp@loadbalancer".format(ingress_port=node.ingress_port))
-            if "http" in params:
+            if internal_lb:
               k3d_create_cmd.append("-p")
-              k3d_create_cmd.append("{port}:80@loadbalancer".format(port=params["http"]))
+              k3d_create_cmd.append("{ingress_port}:{ingress_port}@loadbalancer".format(ingress_port=node.ingress_port))
+              k3d_create_cmd.append("-p")
+              k3d_create_cmd.append("{ingress_port}:{ingress_port}/udp@loadbalancer".format(ingress_port=node.ingress_port))
+              if "http" in params:
+                k3d_create_cmd.append("-p")
+                k3d_create_cmd.append("{port}:80@loadbalancer".format(port=params["http"]))
           run_k8s_operator_cmd.append("--ingress-port={}".format(node.ingress_port))
         k3d_create_cmd.append(cluster)
         run_fatal(logger, k3d_create_cmd, "Can't create k3d cluster")
@@ -1116,14 +1119,16 @@ def create_nodes(provider, nodes_cnt, osver, ns, skip_nodes, priv_nodes):
   logger.info(create_nodes_cmd)
   os.system(create_nodes_cmd)
 
-def ssh_login(namespace, node):
+def ssh_login(namespace, node, exec_command=[]):
   ns = namespace
   if ns != "":
     ns = ns + "-"
   if node == "node0":
     node = "default"
   #os.system("exec ssh -F {}ssh_config -o LogLevel=error -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i secret/id_rsa -t root@{}".format(namespace, node))
-  os.execl("/usr/bin/env", "/usr/bin/env", 'ssh','-F', "{}ssh_config".format(ns), '-o', 'LogLevel=error', '-t', "root@{}".format(node))
+  cmd_args = [ "/usr/bin/env", 'ssh','-F', "{}ssh_config".format(ns), '-o', 'LogLevel=error', '-t', "root@{}".format(node)]
+  cmd_args.extend(exec_command)
+  os.execl("/usr/bin/env", *cmd_args)
 
 def screen_run(namespace):
   ns = namespace
@@ -1162,7 +1167,12 @@ def handle_non_deployment_commands():
     if cmd in ('destroy', 'update', 'test', 'list', 'screen'):
       sys.argv[cmd_idx] = '--' + cmd
 
+  cmd_donot_parse_part = []
   for cmd_idx, cmd in enumerate(sys.argv):
+    if cmd == '--':
+      cmd_donot_parse_part = sys.argv[cmd_idx+1:]
+      sys.argv = sys.argv[0:cmd_idx]
+      break
     if cmd in ('delete', 'ssh', 'exec', 'mysql', 'psql', 'ip'):
       sys.argv[cmd_idx] = '--' + cmd
       if cmd_idx+1 >= len(sys.argv) or sys.argv[cmd_idx+1].startswith("--"):
@@ -1215,7 +1225,7 @@ def handle_non_deployment_commands():
     host = "default"
     if args.ssh != "":
       host = args.ssh
-    ssh_login(args.namespace, host)
+    ssh_login(args.namespace, host, cmd_donot_parse_part)
     sys.exit(0)
   elif args.exec:
     host = "default"
