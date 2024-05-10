@@ -1136,7 +1136,7 @@ def screen_run(namespace):
     ns = ns + "-"
   os.execl("/usr/bin/env", "/usr/bin/env", 'screen','-c', "{}screenrc".format(ns))
 
-def docker_exec(namespace, user, node):
+def docker_exec(namespace, user, node, exec_command=[]):
   ns = namespace
   if ns != "":
     ns = ns + "-"
@@ -1146,7 +1146,12 @@ def docker_exec(namespace, user, node):
     docker_interactive = "-i"
   else:
     docker_interactive = "-it"
-  os.execl("/usr/bin/env", "/usr/bin/env", "docker","exec", docker_interactive, "{ns}{usr}-{n}".format(ns=ns, usr=user, n=node), "sh")
+  cmd_args = [ "/usr/bin/env", "docker","exec", docker_interactive, "{ns}{usr}-{n}".format(ns=ns, usr=user, n=node)]
+  if len(exec_command):
+    cmd_args.extend(exec_command)
+  else:
+    cmd_args.append("sh")
+  os.execl("/usr/bin/env", *cmd_args)
 
 def list_containers(ns, provider, user):
   if ns != "":
@@ -1232,7 +1237,7 @@ def handle_non_deployment_commands():
     if args.exec != "":
       host = args.exec
     if args.provider == "docker":
-      docker_exec(args.namespace, args.user, host)
+      docker_exec(args.namespace, args.user, host, cmd_donot_parse_part)
     sys.exit(0)
   elif sys.argv[1] in ("mysql", "--mysql"):
     host = "default"
