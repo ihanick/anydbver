@@ -15,6 +15,10 @@ def deploy(node_args, node_name, usr, net, ns_prefix):
     docker_run_cmd.append(params["docker-image"])
 
   repl_conf = ""
+  sentinel_conf = ""
+
+  master_hostname = node_name
+
   if "master" in params:
     if params["master"] == "node0":
       params["master"] = "default"
@@ -22,10 +26,25 @@ def deploy(node_args, node_name, usr, net, ns_prefix):
     master_nodename = "{}{}-{}".format(ns_prefix,usr,params["master"])
     master_hostname = master_nodename.replace(".", "-")
 
+
     repl_conf = """\
 replicaof {master_ip} 6379  
-masterauth {passwd}
 """.format(master_ip=master_hostname, passwd=DEFAULT_PASSWORD)
+
+
+  if "sentinel" in params:
+    sentinel_conf="""\
+cat > /data/sentinel.conf <<EOF
+bind 0.0.0.0
+port 26379
+sentinel resolve-hostnames yes
+sentinel monitor mymaster {master_name} 6379 2
+sentinel auth-pass mymaster {passwd}
+sentinel auth-user mymaster default
+sentinel down-after-milliseconds mymaster 10000
+EOF
+valkey-sentinel /data/sentinel.conf &
+""".format(master_name=master_hostname, passwd=DEFAULT_PASSWORD)
 
   docker_run_cmd.extend([
     "/bin/sh",
@@ -33,10 +52,12 @@ masterauth {passwd}
     """\
 cat > /data/valkey.conf <<EOF
 requirepass {passwd}
+masterauth {passwd}
 {repl_conf}
 EOF
+{sentinel_conf}
 exec valkey-server /data/valkey.conf
-""".format(passwd=DEFAULT_PASSWORD, repl_conf=repl_conf),
+""".format(passwd=DEFAULT_PASSWORD, repl_conf=repl_conf, sentinel_conf=sentinel_conf),
     ])
 
   run_fatal(logger, docker_run_cmd, "Can't start ValKey")
