@@ -46,18 +46,27 @@ EOF
 valkey-sentinel /data/sentinel.conf &
 """.format(master_name=master_hostname, passwd=DEFAULT_PASSWORD)
 
+  cluster_conf = ""
+  if "cluster" in params:
+    cluster_conf="""\
+cluster-enabled yes
+cluster-config-file nodes.conf
+cluster-node-timeout 5000
+"""
+
   docker_run_cmd.extend([
     "/bin/sh",
     "-c",
     """\
-cat > /data/valkey.conf <<EOF
+[ -f /data/valkey.conf ] || cat > /data/valkey.conf <<EOF
 requirepass {passwd}
 masterauth {passwd}
 {repl_conf}
+{cluster_conf}
 EOF
 {sentinel_conf}
 exec valkey-server /data/valkey.conf
-""".format(passwd=DEFAULT_PASSWORD, repl_conf=repl_conf, sentinel_conf=sentinel_conf),
+""".format(passwd=DEFAULT_PASSWORD, repl_conf=repl_conf, sentinel_conf=sentinel_conf, cluster_conf=cluster_conf),
     ])
 
   run_fatal(logger, docker_run_cmd, "Can't start ValKey")

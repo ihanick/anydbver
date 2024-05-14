@@ -20,7 +20,7 @@ def arg_help(name):
       "percona-backup-mongodb": "pbm:version,s3=https://access:secret@endpointurl:port/bucket",
       "ldap": "ldap, ldap-master:NODE",
       "samba": "samba:latest,docker-image,realm=PERCONA.LOCAL",
-      "valkey": "valkey:unstable,docker-image,master=NODE",
+      "valkey": "valkey:unstable,docker-image,master=NODE,sentinel,cluster",
       }
   examples = {
       "percona-server": "anydbver deploy ps:5.7.35 node1 ps:5.7.35,master=node0\nanydbver deploy ps:8.0,gtid=0 node1 ps:8.0,gtid=0,master=node0\nanydbver deploy ps:8.0,rocksdb,sql=http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql percona-xtrabackup:8.0",
@@ -42,7 +42,7 @@ def arg_help(name):
       "ldap": "anydbver deploy ldap node1 ldap-master:default psmdb:5.0\nanydbver deploy ldap node1 ldap-master:default ps:8.0,ldap=simple",
       "samba": "anydbver deploy samba:latest,docker-image node1 os:el7 ps samba-client:node0",
       "alertmanager": "anydbver deploy node0 pmm:latest,docker-image,port=0.0.0.0:10443 node1 ps:5.7 pmm-client:2.37.1-6,server=node0 node2 alertmanager:latest,docker-image,port=9093",
-      "valkey": "anydbver deploy valkey:unstable,docker-image node1 valkey:unstable,docker-image,master=node0 node2 valkey:unstable,docker-image,master=node0",
+      "valkey": "anydbver deploy valkey:unstable,docker-image,sentinel node1 valkey:unstable,docker-image,master=node0,sentinel node2 valkey:unstable,docker-image,master=node0,sentinel\nanydbver deploy valkey:unstable,docker-image,cluster node1 valkey:unstable,docker-image,cluster node2 valkey:unstable,docker-image,cluster",
       }
   if name in all_subargs and name in examples:
     return "R|{}\nEx. {}".format(all_subargs[name], examples[name])
