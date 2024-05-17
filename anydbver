@@ -189,6 +189,10 @@ def deploy(args, node_actions):
           k3d_create_cmd.append("--k3s-arg")
           k3d_create_cmd.append("--kube-apiserver-arg=feature-gates={}@server:*".format(params["feature-gates"]))
 
+        if "storage-path" in params:
+          k3d_create_cmd.append("--volume")
+          k3d_create_cmd.append("{}:/var/lib/rancher/k3s/storage@all".format(params["storage-path"]))
+
         registry_cache_conf = ""
         if node.registry_cache:
           registry_cache_conf =  """\
@@ -437,6 +441,8 @@ mirrors:
           run_cmd.append("--helm-values={}".format(params["helm-values"]))
         if "db-version" in params:
           run_cmd.append("--db-version={}".format(params["db-version"]))
+        if "memory" in params:
+          run_cmd.append("--memory={}".format(params["memory"]))
         elif node.db_version:
           run_cmd.append("--db-version={}".format(node.db_version))
         if node.k8s_cluster_domain != "":

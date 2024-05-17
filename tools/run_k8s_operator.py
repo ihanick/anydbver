@@ -1149,6 +1149,13 @@ def setup_operator(args):
     if args.expose:
       set_yaml('.spec.replsets[0].expose.enabled=true|.spec.replsets[0].expose.exposeType="LoadBalancer"',
                "expose replset")
+    if args.db_version:
+      if args.db_version[0].isdigit():
+        args.db_version = "percona/percona-server-mongodb:" + args.db_version
+      set_yaml('.spec.image = "{}"'.format(args.db_version), "Can't set PSMDB version")
+    if args.memory:
+      set_yaml('.spec.replsets[0].resources.limits.memory="{mem}" | .spec.sharding.mongos.resources.limits.memory="{mem}" '.format(mem=args.memory),
+          "set memory limit")
 
   enable_pmm(args)
 
