@@ -176,6 +176,13 @@ def deploy(args, node_actions):
           k3d_agents = 0
         k3d_create_cmd = ["tools/k3d", "cluster", "create", "-i", "rancher/k3s:{}".format(params["version"]) , "--network", net, "-a", str(k3d_agents)]
 
+        k3d_create_cmd.extend([
+            '--k3s-arg', '--kubelet-arg=eviction-hard=imagefs.available<1%,nodefs.available<1%@server:*',
+            '--k3s-arg', '--kubelet-arg=eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%@server:*',
+            '--k3s-arg', '--kubelet-arg=eviction-hard=imagefs.available<1%,nodefs.available<1%@agent:*',
+            '--k3s-arg', '--kubelet-arg=eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%@agent:*',
+           ])
+
         if "ingress" in params:
           node.ingress = params["ingress"]
           node.ingress_port = params["ingress"]
