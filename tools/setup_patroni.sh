@@ -52,7 +52,7 @@ name: ${ETCD_NAME}
 restapi:
  listen: 0.0.0.0:8008
  connect_address: ${NODE_IP}:8008
-etcd:
+etcd3:
  host: ${NODE_IP}:2379
 bootstrap:
  # this section will be written into Etcd:/<namespace>/<scope>/config after initializing new cluster
@@ -128,6 +128,8 @@ EOF
 
 chown postgres:postgres -R /home/postgres/archived /etc/patroni/${ETCD_NAME}.yml
 chmod 0600 -R /home/postgres/archived /etc/patroni/${ETCD_NAME}.yml
+
+echo "export PATRONICTL_CONFIG_FILE=/etc/patroni/${ETCD_NAME}.yml" >> ~/.bashrc
 
 
 

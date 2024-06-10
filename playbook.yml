@@ -161,7 +161,8 @@
       pmm_client_version != '' or
       sysbench_version != '' or
       percona_orchestrator_version != '' or
-      percona_proxysql_version != ''
+      percona_proxysql_version != '' or
+      patroni_version != ''
       else ''
       }}
     soft: >-

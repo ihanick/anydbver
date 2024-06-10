@@ -16,7 +16,7 @@ import (
 	"github.com/ihanick/anydbver/pkg/runtools"
 	"github.com/spf13/cobra"
 	_ "github.com/mattn/go-sqlite3"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 
@@ -190,7 +190,7 @@ func containerExec(logger *log.Logger, provider, namespace string, args []string
 		}
 
 
-		if terminal.IsTerminal(int(os.Stdin.Fd())) {
+		if term.IsTerminal(int(os.Stdin.Fd())) {
 			docker_args = append(docker_args, "-it",)
 		} else {
 			docker_args = append(docker_args, "-i",)
@@ -342,7 +342,7 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 	}
 
 	user := anydbver_common.GetUser(logger) 
-	content := user + "." + name + " ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host="+ip+" ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none'  extra_db_user='root' extra_db_password='verysecretpassword1^' "+ ansible_deployment_args +"\n"
+	content := user + "." + name + " ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host="+ip+" ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none' "+ ansible_deployment_args +"\n"
 
 	re := regexp.MustCompile(`='(node[0-9]+)'`)
 	content = re.ReplaceAllStringFunc(content, func(match string) string {
