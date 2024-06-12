@@ -421,7 +421,7 @@ def save_percona_xtradb_cluster_versions_to_sqlite(osver):
     project = ()
     if ver.startswith('8.0') and osver.startswith('el'):
       pkgs = ['percona-xtradb-cluster-shared','percona-xtradb-cluster-client','percona-xtradb-cluster-server']
-      if osver != 'el9':
+      if osver == 'el7':
         pkgs.insert(0,'percona-xtradb-cluster-shared-compat')
       pkgs = ["{}-{}.{}.x86_64".format(pkg,ver,osver) for pkg in pkgs ]
       pkgs.insert(0,'openssl')
@@ -436,7 +436,9 @@ def save_percona_xtradb_cluster_versions_to_sqlite(osver):
         'percona-xtradb-cluster-garbd-{ver}.{osver}.x86_64'.format(ver=ver,osver=osver)
       )
     elif ver.startswith('5.7') and osver.startswith('el'):
-      pkgs = ['Percona-XtraDB-Cluster-shared-compat-57','Percona-XtraDB-Cluster-shared-57','Percona-XtraDB-Cluster-client-57','Percona-XtraDB-Cluster-server-57']
+      pkgs = ['Percona-XtraDB-Cluster-shared-57','Percona-XtraDB-Cluster-client-57','Percona-XtraDB-Cluster-server-57']
+      if osver == 'el7':
+        pkgs.insert(0,'Percona-XtraDB-Cluster-shared-compat-57')
       project = (
         ver, osver, 'x86_64',
         'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
