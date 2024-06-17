@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"errors"
@@ -38,6 +39,7 @@ func listContainers(logger *log.Logger, provider string, namespace string) {
 		ignoreMsg := regexp.MustCompile("ignore this")
 
 		containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
+		
 		if err != nil {
 			logger.Fatalf("Can't list anydbver containers: %v", err)
 		}
@@ -70,8 +72,13 @@ func getNsFromString(input string, user string) string {
 func getNodeIp(provider string, logger *log.Logger, namespace string, name string) (string,error) {
 	network := getNetworkName(logger, namespace)
 	user := anydbver_common.GetUser(logger)
+	prefix := ""
+	if namespace != "" {
+		prefix = namespace + "-"
+	}
+
 	if provider == "docker" {
-		args := []string{ "docker", "inspect", user + "-" + name, "--format", "{{ index .NetworkSettings.Networks \""+network+"\" \"IPAddress\" }}",}
+		args := []string{ "docker", "inspect", prefix + user + "-" + name, "--format", "{{ index .NetworkSettings.Networks \""+network+"\" \"IPAddress\" }}",}
 
 		env := map[string]string{}
 		errMsg := "Error getting docker container ip"
@@ -102,6 +109,45 @@ func listNamespaces(provider string, logger *log.Logger) {
 
 	}
 }
+
+func deleteNamespace(logger *log.Logger, provider string, namespace string) {
+	if provider == "docker" {
+		net := getNetworkName(logger, namespace)
+		args := []string{ "docker", "ps", "--filter", "network=" + net, "--format", "{{.ID}}",}
+
+		env := map[string]string{}
+		errMsg := "Error docker ps"
+		ignoreMsg := regexp.MustCompile("ignore this")
+
+		containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
+		if err != nil {
+			logger.Fatalf("Can't list anydbver containers: %v", err)
+		}
+		containers_list := slices.DeleteFunc(strings.Split(containers, "\n"), func(e string) bool {
+			return e == ""
+		})
+
+		if len(containers_list) > 0 {
+
+			delete_args := []string{ "docker", "rm", "-f",}
+			delete_args = append(delete_args,  containers_list... )
+			runtools.RunPipe(logger, delete_args, errMsg, ignoreMsg, true, env)
+		}
+		delete_args := []string{ "docker", "network", "rm", "-f", net}
+		runtools.RunPipe(logger, delete_args, errMsg, ignoreMsg, true, env)
+		prefix := ""
+		if namespace != "" {
+			prefix = namespace + "-"
+		}
+
+		os.Remove(prefix + "ansible_hosts_run")
+
+	}
+}
+
+
+
+
 func ConvertStringToMap(input string) map[string]string {
 	result := make(map[string]string)
 	pairs := strings.Split(input, ",")
@@ -144,13 +190,18 @@ func createContainer(logger *log.Logger, name string, osver string, privileged b
 		log.Fatalf("Error getting current directory: %v", err)
 	}
 	fmt.Printf("Creating container with name %s, OS %s, privileged=%t, provider=%s, namespace=%s...\n", name, osver, privileged, provider, namespace)
+	prefix := user
+	if namespace != "" {
+		prefix = namespace + "-" + prefix
+	}
+
 	args := []string{
 		"docker", "run",
-		"--name", user + "-" + name,
+		"--name", prefix + "-" + name,
 		"--platform", "linux/amd64",
 		"-v", currentDir + "/data/nfs:/nfs",
 		"-d", "--cgroupns=host", "--tmpfs", "/tmp",
-		"--network", user + "-anydbver",
+		"--network", prefix + "-anydbver",
 		"--tmpfs", "/run", "--tmpfs", "/run/lock", 
 		"-v", "/sys/fs/cgroup:/sys/fs/cgroup",
 		"--hostname", name, }
@@ -400,13 +451,19 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 		log.Fatalf("Error getting current directory: %v", err)
 	}
 
+	prefix := user
+	if namespace != "" {
+		prefix = namespace + "-" + prefix
+	}
+
+
 	cmd_args := []string{
 		"docker", "run", "-i", "--rm",
-		"--name", user + "-ansible",
+		"--name", prefix + "-ansible",
 		"-v", currentDir + ":/vagrant",
-		"--network", user + "-anydbver",
+		"--network", prefix + "-anydbver",
 		"--hostname", user + "-ansible",
- "rockylinux:8-anydbver-ansible-" + user, "bash", "-c", "cd /vagrant;until ansible -m ping -i ansible_hosts_run all &>/dev/null ; do sleep 1; done ; ANSIBLE_FORCE_COLOR=True ansible-playbook -i ansible_hosts_run --forks 16 playbook.yml",
+ "rockylinux:8-anydbver-ansible-" + user, "bash", "-c", "cd /vagrant;until ansible -m ping -i " + ansible_hosts_run_file + " all &>/dev/null ; do sleep 1; done ; ANSIBLE_FORCE_COLOR=True ansible-playbook -i " + ansible_hosts_run_file + " --forks 16 playbook.yml",
 	}
 
 	env := map[string]string{}
@@ -453,6 +510,14 @@ func main() {
 			listNamespaces(provider, logger)
 		},
 	}
+	var deleteNsCmd = &cobra.Command{
+		Use:   "delete",
+		Short: "Delete namespace",
+		Args:  cobra.ExactArgs(1), // Expect exactly one positional argument (name)
+		Run: func(cmd *cobra.Command, args []string) {
+			deleteNamespace(logger, provider, args[0])
+		},
+	}
 
 
 	nsCreateCmd.Flags().StringP("os", "o", "", "Operating system of containers: node0=osver,node1=osver...")
@@ -460,6 +525,7 @@ func main() {
 
 	namespaceCmd.AddCommand(nsCreateCmd)
 	namespaceCmd.AddCommand(listNsCmd)
+	namespaceCmd.AddCommand(deleteNsCmd)
 	rootCmd.AddCommand(namespaceCmd)
 
 	var containerCmd = &cobra.Command{
@@ -492,9 +558,18 @@ func main() {
 		Use:   "deploy",
 		Short: "deploy hosts",
 		Run: func(cmd *cobra.Command, args []string) {
-			deployHosts(logger, "ansible_hosts_run", provider, namespace, args)
+			keep, _ := cmd.Flags().GetBool("keep")
+			if ! keep {
+				deleteNamespace(logger, provider, namespace)
+			}
+			prefix := ""
+			if namespace != "" {
+				prefix = namespace + "-"
+			}
+			deployHosts(logger, prefix + "ansible_hosts_run", provider, namespace, args)
 		},
 	}
+	deployCmd.Flags().BoolP("keep", "", false, "do not remove existing containers and network")
 
 	rootCmd.AddCommand(deployCmd)
 
