@@ -194,7 +194,7 @@ def start_container(args, name, priv):
 
     net = "{ns_prefix}{usr}-anydbver".format(ns_prefix=ns_prefix, usr=args.user)
     if priv:
-      docker_run_cmd.extend([ "--cap-add", "NET_ADMIN", "--cap-add", "SYS_PTRACE"])
+      docker_run_cmd.extend([ "--cap-add", "NET_ADMIN", "--cap-add", "SYS_PTRACE", "--security-opt", "seccomp=unconfined",])
 
     docker_run_cmd.extend([ 
       "-d", "--cgroupns=host", "--tmpfs", "/tmp",

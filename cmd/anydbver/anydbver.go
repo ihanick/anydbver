@@ -157,7 +157,8 @@ func createContainer(logger *log.Logger, name string, osver string, privileged b
 	if privileged {
 		args = append(args, []string{
 			"--cap-add", "NET_ADMIN",
-			"--cap-add", "SYS_PTRACE", }...)
+			"--cap-add", "SYS_PTRACE",
+			"--security-opt", "seccomp=unconfined", }...)
 	}
 	args = append(args, anydbver_common.GetDockerImageName(osver, user),)
 	env := map[string]string{}
