@@ -366,9 +366,9 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 	}
 }
 
-
 func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider string, namespace string, args []string) {
 	privileged := ""
+	re_lastosver := regexp.MustCompile(`=[^=]+$`)
 	osvers := "node0=el8"
 	nodeDefinitions := make(map[string][]string)
 	currentNode := "node0"
@@ -381,6 +381,10 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 				nodeDefinitions[currentNode] = append(nodeDef, arg)
 			} else {
 				nodeDefinitions[currentNode] = []string{arg}
+			}
+			if strings.HasPrefix(arg, "os:") {
+				osver := strings.TrimPrefix(arg, "os:")
+				osvers = re_lastosver.ReplaceAllString(osvers, "="+osver)
 			}
 		}
 	}
