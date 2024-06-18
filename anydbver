@@ -987,6 +987,11 @@ def apply_node_actions(ns, _, actions, user, provider):
       extra_vars["extra_pmm_url"] = "https://admin:{password}@{host}".format(
           password=pass_encoded,
           host=resolve_hostname(ns, params["server"], user, provider))
+    if "slowlog" in params:
+      db_features.append("slowlog")
+    if "perfschema" in params:
+      db_features.append("perfschema")
+
   if actions.pg_stat_monitor:
     extra_vars["extra_pg_stat_monitor"] = "1"
   if actions.postgresql is not None:
