@@ -994,7 +994,6 @@ def apply_node_actions(ns, _, actions, user, provider):
     if "profiler" in params:
       db_features.append("pmm_profiler")
 
-
   if actions.pg_stat_monitor:
     extra_vars["extra_pg_stat_monitor"] = "1"
   if actions.postgresql is not None:
