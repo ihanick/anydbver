@@ -990,7 +990,7 @@ def apply_node_actions(ns, _, actions, user, provider):
     if "slowlog" in params:
       db_features.append("slowlog")
     if "perfschema" in params:
-      db_features.append("perfschema")
+      db_features.append("pmm_perfschema")
 
   if actions.pg_stat_monitor:
     extra_vars["extra_pg_stat_monitor"] = "1"
