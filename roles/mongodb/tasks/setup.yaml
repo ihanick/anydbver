@@ -152,6 +152,7 @@
       pmm-admin add mongodb
       --username=dba
       --password="{{db_password}}"
+      {{ '--query-source=profiler' if 'pmm_profiler' in db_features.split(',') else '' }}
       {{ '--replication-set='+mongo_replicaset if mongo_replicaset != '' else ''}}
       {{ '--cluster='+cluster_name if cluster_name != '' else ''}}
 
