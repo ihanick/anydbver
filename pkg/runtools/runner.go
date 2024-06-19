@@ -109,8 +109,10 @@ func RunPipe(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp
 			io.Copy(&out, stdoutPipe)
 			io.Copy(&out, stderrPipe)
 
+			logger.Println(out.Bytes())
+
 			if ignoreMsg != nil && ignoreMsg.Match(out.Bytes()) {
-				return 1
+				return 0
 			}
 			logger.Fatalf("%s '%s'", errMsg, strings.Join(args, " "))
 			return 1

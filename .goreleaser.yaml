@@ -17,11 +17,11 @@ before:
 
 builds:
   - env:
-      - CGO_ENABLED=1
+      - CGO_ENABLED=0
     goos:
       - linux
-    goarch:
-      - amd64
+      - darwin
+      - windows
     main: ./cmd/anydbver
 
 archives:

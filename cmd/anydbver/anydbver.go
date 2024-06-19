@@ -16,7 +16,7 @@ import (
 
 	anydbver_common "github.com/ihanick/anydbver/pkg/common"
 	"github.com/ihanick/anydbver/pkg/runtools"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -132,10 +132,10 @@ func deleteNamespace(logger *log.Logger, provider string, namespace string) {
 
 			delete_args := []string{ "docker", "rm", "-f", "-v"}
 			delete_args = append(delete_args,  containers_list... )
-			runtools.RunPipe(logger, delete_args, errMsg, ignoreMsg, true, env)
+			runtools.RunFatal(logger, delete_args, errMsg, ignoreMsg, true, env)
 		}
 		delete_args := []string{ "docker", "network", "rm", net}
-		runtools.RunPipe(logger, delete_args, errMsg, ignoreMsg, true, env)
+		runtools.RunFatal(logger, delete_args, errMsg, ignoreMsg, true, env)
 		os.Remove(anydbver_common.GetAnsibleInventory(logger, namespace))
 	}
 }
@@ -271,7 +271,7 @@ func containerExec(logger *log.Logger, provider, namespace string, args []string
 
 func ExecuteQueries(dbFile string, deployCmd string, values map[string]string) (string, error) {
 	// Open the SQLite3 database
-	db, err := sql.Open("sqlite3", dbFile)
+	db, err := sql.Open("sqlite", dbFile)
 	if err != nil {
 		return "", fmt.Errorf("failed to open database: %w", err)
 	}

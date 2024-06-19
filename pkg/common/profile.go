@@ -11,7 +11,7 @@ import (
     "path/filepath"
     "strings"
     "regexp"
-    _ "github.com/mattn/go-sqlite3"
+    _ "modernc.org/sqlite"
     "github.com/ihanick/anydbver/pkg/runtools"
 )
 
@@ -112,7 +112,7 @@ func downloadVersionDatabase(url string) (string, error) {
 
 func createAndPopulateDatabase(dbpath string, sqlpath string, logger *log.Logger) error {
 	// Open (or create) the database
-	db, err := sql.Open("sqlite3", dbpath)
+	db, err := sql.Open("sqlite", dbpath)
 	if err != nil {
 		logger.Printf("Failed to open database: %v\n", err)
 		return fmt.Errorf("failed to open database: %v", err)
