@@ -29,3 +29,4 @@ tools/gather.sql
 data/
 certs/
 __pycache__/
+go.sum
