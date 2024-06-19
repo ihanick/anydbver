@@ -1,4 +1,4 @@
-FROM         ubuntu:jammy
+FROM         ubuntu:noble
  ENV container docker
  RUN apt update ;apt -y install openssh-server rsync python3 iproute2 openssh-client gawk; apt clean; systemctl enable ssh
  STOPSIGNAL SIGRTMIN+3

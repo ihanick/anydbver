@@ -1,25 +1,28 @@
-#!/bin/sh
+#!/bin/bash
 PLATFORM=linux/amd64
+IMAGE_PUBLISHER=ihanick
+IMAGE_VERSION="0.1.1"
 if uname -m |egrep -q 'aarch64|arm64' ; then
   PLATFORM=linux/arm64
 fi
+test -f ../secret/id_rsa || ssh-keygen -t rsa -f ../secret/id_rsa -P ''
 cd centos7
-test -f ../../secret/id_rsa || ssh-keygen -t rsa -f ../../secret/id_rsa -P '' && chmod 0600 ../../secret/id_rsa
-cp ../../tools/node_ip.sh ../../secret/id_rsa.pub ./
+cp ../../tools/node_ip.sh ../common/rc.local ./
 docker build --platform $PLATFORM -t centos:7-sshd-systemd-$USER .
 cd ../rockylinux8
-test -f ../../secret/id_rsa || ssh-keygen -t rsa -f ../../secret/id_rsa -P '' && chmod 0600 ../../secret/id_rsa
-cp ../../tools/node_ip.sh ../../secret/id_rsa.pub ./
+cp ../../tools/node_ip.sh ../common/rc.local ../common/rc-local.service ./
 docker build --platform $PLATFORM -t rockylinux:8-sshd-systemd-$USER .
 cd ../rockylinux9
-test -f ../../secret/id_rsa || ssh-keygen -t rsa -f ../../secret/id_rsa -P '' && chmod 0600 ../../secret/id_rsa
-cp ../../tools/node_ip.sh ../../secret/id_rsa.pub ./
+cp ../../tools/node_ip.sh ../common/rc.local ../common/rc-local.service ./
 docker build --platform $PLATFORM -t rockylinux:9-sshd-systemd-$USER .
 cd ../jammy
-test -f ../../secret/id_rsa || ssh-keygen -t rsa -f ../../secret/id_rsa -P '' && chmod 0600 ../../secret/id_rsa
-cp ../../tools/node_ip.sh ../../secret/id_rsa.pub ./
+cp ../../tools/node_ip.sh ../common/rc.local ../common/rc-local.service ./
 docker build --platform $PLATFORM -t ubuntu:jammy-sshd-systemd-$USER .
 cd ../..
-tar --exclude=images-build --exclude=data --exclude=.git -czf images-build/ansible-anydbver/anydbver.tar.gz .
+#tar --exclude=images-build --exclude=data --exclude=.git --exclude=secret --exclude=.vagrant --exclude=pkg --exclude=cmd --exclude=__pycache__  -czf images-build/ansible-anydbver/anydbver.tar.gz .
+git archive --format=tar HEAD  | gzip -c > images-build/ansible-anydbver/anydbver.tar.gz
 cd images-build/ansible-anydbver/
 docker build -t rockylinux:8-anydbver-ansible-$USER .
+for img in centos:7-sshd-systemd-$USER rockylinux:8-sshd-systemd-$USER rockylinux:9-sshd-systemd-$USER ubuntu:jammy-sshd-systemd-$USER rockylinux:8-anydbver-ansible-$USER ; do
+  docker image tag $img $IMAGE_PUBLISHER/${img/$USER/$IMAGE_VERSION}
+done

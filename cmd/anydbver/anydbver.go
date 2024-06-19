@@ -1,22 +1,23 @@
 package main
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
-	"errors"
 	"unicode"
-	"database/sql"
 
 	anydbver_common "github.com/ihanick/anydbver/pkg/common"
 	"github.com/ihanick/anydbver/pkg/runtools"
-	"github.com/spf13/cobra"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
 
@@ -129,19 +130,13 @@ func deleteNamespace(logger *log.Logger, provider string, namespace string) {
 
 		if len(containers_list) > 0 {
 
-			delete_args := []string{ "docker", "rm", "-f",}
+			delete_args := []string{ "docker", "rm", "-f", "-v"}
 			delete_args = append(delete_args,  containers_list... )
 			runtools.RunPipe(logger, delete_args, errMsg, ignoreMsg, true, env)
 		}
 		delete_args := []string{ "docker", "network", "rm", "-f", net}
 		runtools.RunPipe(logger, delete_args, errMsg, ignoreMsg, true, env)
-		prefix := ""
-		if namespace != "" {
-			prefix = namespace + "-"
-		}
-
-		os.Remove(prefix + "ansible_hosts_run")
-
+		os.Remove(anydbver_common.GetAnsibleInventory(logger, namespace))
 	}
 }
 
@@ -169,7 +164,7 @@ func createNamespace(logger *log.Logger, osvers map[string]string, privileged ma
 		args := []string{ "docker", "network", "create", network, }
 		env := map[string]string{}
 		errMsg := "Error creating docker network"
-		ignoreMsg := regexp.MustCompile("ignore this")
+		ignoreMsg := regexp.MustCompile("already exists")
 		runtools.RunFatal(logger, args, errMsg, ignoreMsg, true, env)
 	}
 	for node, value := range osvers {
@@ -185,10 +180,6 @@ func createNamespace(logger *log.Logger, osvers map[string]string, privileged ma
 
 func createContainer(logger *log.Logger, name string, osver string, privileged bool, provider, namespace string) {
 	user := anydbver_common.GetUser(logger)
-	currentDir, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Error getting current directory: %v", err)
-	}
 	fmt.Printf("Creating container with name %s, OS %s, privileged=%t, provider=%s, namespace=%s...\n", name, osver, privileged, provider, namespace)
 	prefix := user
 	if namespace != "" {
@@ -199,7 +190,8 @@ func createContainer(logger *log.Logger, name string, osver string, privileged b
 		"docker", "run",
 		"--name", prefix + "-" + name,
 		"--platform", "linux/amd64",
-		"-v", currentDir + "/data/nfs:/nfs",
+		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
+		"-v", anydbver_common.GetCacheDirectory(logger) + "/data/nfs:/nfs",
 		"-d", "--cgroupns=host", "--tmpfs", "/tmp",
 		"--network", prefix + "-anydbver",
 		"--tmpfs", "/run", "--tmpfs", "/run/lock", 
@@ -339,8 +331,25 @@ func ExecuteQueries(dbFile string, deployCmd string, values map[string]string) (
 	return strings.Join(result, " "), nil
 }
 
-func handleDeploymentKeyword(keyword string) string {
-	values := make(map[string]string)
+type DeploymentKeywordData struct {
+	Cmd string
+	Args	map[string]string
+}
+
+func IsDeploymentVersion(arg string) bool {
+	if strings.HasPrefix(arg, "v") {
+		arg = strings.TrimPrefix(arg, "v")
+	}
+
+	if len(arg) != 0 && unicode.IsDigit(rune(arg[0])) {
+		return true
+	}
+
+	return false
+}
+
+func ParseDeploymentKeyword(keyword string) DeploymentKeywordData {
+	args := make(map[string]string)
 	parts := strings.SplitN(keyword, ":", 2)
 	deployCmd := parts[0]
 	if len(parts) > 1 {
@@ -351,82 +360,137 @@ func handleDeploymentKeyword(keyword string) string {
 
 	pairs := strings.Split(keyword, ",")
 	for i, pair := range pairs {
-		if i == 0 && len(pair) != 0 && unicode.IsDigit(rune(pair[0])) {
-			values["version"] = pair
+		if i == 0 && IsDeploymentVersion(pair) {
+			args["version"] = pair
+		} else if i == 0 {
+			args["version"] = "latest"
 		}
+
 		keyValue := strings.Split(pair, "=")
 		if len(keyValue) == 1 {
 			key := keyValue[0]
-			values[key] = "" 
+			args[key] = "" 
 		}
 		if len(keyValue) == 2 {
 			key := keyValue[0]
 			value := keyValue[1]
-			values[key] = value
+			args[key] = value
 		}
 	}
 
+	return DeploymentKeywordData{
+		Cmd: deployCmd,
+		Args: args,
+	}
+}
 
 
-	result, err := ExecuteQueries("./anydbver_version.db", deployCmd, values)
+func handleDeploymentKeyword(logger *log.Logger, keyword string) string {
+	deployment_keyword := ParseDeploymentKeyword(keyword)
+	result, err := ExecuteQueries(anydbver_common.GetDatabasePath(logger), deployment_keyword.Cmd, deployment_keyword.Args)
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		logger.Fatalf("Error: %v", err)
 		return ""
 	}
 	return result
 }
 
 func deployHost(provider string, logger *log.Logger, namespace string, name string, ansible_hosts_run_file string, args []string) {
-	logger.Printf("Deploy %v", args)
-	file, err := os.OpenFile(ansible_hosts_run_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		fmt.Println("Error opening file:", err)
-		return
-	}
-	defer file.Close()
-
-	ip, err := getNodeIp(provider, logger, namespace, name)
-
-	ansible_deployment_args := ""
-
-	for _, arg := range args {
-		ansible_deployment_args = ansible_deployment_args + " " + handleDeploymentKeyword(arg)
-	}
-
-	user := anydbver_common.GetUser(logger) 
-	content := user + "." + name + " ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host="+ip+" ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none' "+ ansible_deployment_args +"\n"
-
-	re := regexp.MustCompile(`='(node[0-9]+)'`)
-	content = re.ReplaceAllStringFunc(content, func(match string) string {
-		submatches := re.FindStringSubmatch(match)
-		if len(submatches) > 1 {
-			node := submatches[1]
-			ip, err :=getNodeIp(provider, logger, namespace, node)
-			if err != nil {
-				fmt.Println("Error getting node ip:", err)
-			}
-
-			return fmt.Sprintf("='%s'", ip)
+	if provider == "docker" {
+		logger.Printf("Deploy %v", args)
+		file, err := os.OpenFile(ansible_hosts_run_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			fmt.Println("Error opening file:", err)
+			return
 		}
-		return match
-	})
+		defer file.Close()
 
-	_, err = file.WriteString(content)
-	if err != nil {
-		fmt.Println("Error writing to file:", err)
-		return
+		ip, err := getNodeIp(provider, logger, namespace, name)
+
+		ansible_deployment_args := ""
+
+		for _, arg := range args {
+			ansible_deployment_args = ansible_deployment_args + " " + handleDeploymentKeyword(logger, arg)
+		}
+
+		user := anydbver_common.GetUser(logger) 
+		content := user + "." + name + " ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host="+ip+" ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none' "+ ansible_deployment_args +"\n"
+
+		re := regexp.MustCompile(`='(node[0-9]+)'`)
+		content = re.ReplaceAllStringFunc(content, func(match string) string {
+			submatches := re.FindStringSubmatch(match)
+			if len(submatches) > 1 {
+				node := submatches[1]
+				ip, err :=getNodeIp(provider, logger, namespace, node)
+				if err != nil {
+					fmt.Println("Error getting node ip:", err)
+				}
+
+				return fmt.Sprintf("='%s'", ip)
+			}
+			return match
+		})
+
+		_, err = file.WriteString(content)
+		if err != nil {
+			fmt.Println("Error writing to file:", err)
+			return
+		}
 	}
 }
+
+func createK3dCluster(logger *log.Logger, namespace string, name string, args map[string]string) {
+	user := anydbver_common.GetUser(logger) 
+	cluster_name := user + "-" + name
+	if namespace != "" {
+		cluster_name = namespace + "-" + cluster_name
+	}
+	k3d_agents := 2
+	if nodes, ok := args["nodes"]; ok {
+		if nodes_num, err := strconv.Atoi(nodes); err == nil {
+			nodes_num--
+			if nodes_num > 0 {
+				k3d_agents = nodes_num
+			}
+		}
+	}
+	k3d_create_cmd := []string{
+		"tools/k3d", "cluster", "create",
+		cluster_name,
+		"-i", "rancher/k3s:" + args["version"],
+		"--network", getNetworkName(logger, namespace),
+		"-a", strconv.Itoa(k3d_agents),}
+	
+	k3d_create_cmd = append(k3d_create_cmd, []string{
+            "--k3s-arg", "--kubelet-arg=eviction-hard=imagefs.available<1%,nodefs.available<1%@server:*",
+            "--k3s-arg", "--kubelet-arg=eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%@server:*",
+            "--k3s-arg", "--kubelet-arg=eviction-hard=imagefs.available<1%,nodefs.available<1%@agent:*",
+            "--k3s-arg", "--kubelet-arg=eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%@agent:*", }...)
+
+	env := map[string]string{}
+	errMsg := "Error creating k3d cluster"
+	ignoreMsg := regexp.MustCompile("ignore this")
+	runtools.RunPipe(logger, k3d_create_cmd, errMsg, ignoreMsg, true, env)
+}
+
 
 func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider string, namespace string, args []string) {
 	privileged := ""
 	re_lastosver := regexp.MustCompile(`=[^=]+$`)
 	osvers := "node0=el8"
 	nodeDefinitions := make(map[string][]string)
+	nodeProvider := make(map[string]string)
 	currentNode := "node0"
-	for _, arg := range args {
+
+	nodeProvider[currentNode] = provider
+	for i, arg := range args {
 		if strings.HasPrefix(arg, "node") {
-			osvers = osvers + "," + arg + "=el8"
+			if i == 0 {
+				osvers = arg + "=el8"
+			} else {
+				osvers = osvers + "," + arg + "=el8"
+			}
+
 			currentNode = arg
 		} else {
 			if nodeDef, ok := nodeDefinitions[currentNode]; ok {
@@ -434,23 +498,24 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 			} else {
 				nodeDefinitions[currentNode] = []string{arg}
 			}
-			if strings.HasPrefix(arg, "os:") {
+			deployment_keyword := ParseDeploymentKeyword(arg)
+			if deployment_keyword.Cmd == "os" {
 				osver := strings.TrimPrefix(arg, "os:")
 				osvers = re_lastosver.ReplaceAllString(osvers, "="+osver)
+			} else if deployment_keyword.Cmd == "k3d" {
+				nodeProvider[currentNode] = "kubectl"
+				osvers = re_lastosver.ReplaceAllString(osvers, "")
+				createK3dCluster(logger, namespace, currentNode, deployment_keyword.Args)
 			}
 		}
 	}
+	anydbver_common.CreateSshKeysForContainers(logger, namespace)
 	createNamespace(logger, ConvertStringToMap(osvers), ConvertStringToMap(privileged), provider, namespace)
 	for nodeName, nodeDef := range nodeDefinitions {
-		deployHost(provider, logger, namespace, nodeName, ansible_hosts_run_file, nodeDef)
+		deployHost(nodeProvider[nodeName], logger, namespace, nodeName, ansible_hosts_run_file, nodeDef)
 	}
 
 	user := anydbver_common.GetUser(logger) 
-	currentDir, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Error getting current directory: %v", err)
-	}
-
 	prefix := user
 	if namespace != "" {
 		prefix = namespace + "-" + prefix
@@ -460,10 +525,12 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 	cmd_args := []string{
 		"docker", "run", "-i", "--rm",
 		"--name", prefix + "-ansible",
-		"-v", currentDir + ":/vagrant",
+		"-v", ansible_hosts_run_file + ":/vagrant/ansible_hosts_run",
+		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
 		"--network", prefix + "-anydbver",
 		"--hostname", user + "-ansible",
- "rockylinux:8-anydbver-ansible-" + user, "bash", "-c", "cd /vagrant;until ansible -m ping -i " + ansible_hosts_run_file + " all &>/dev/null ; do sleep 1; done ; ANSIBLE_FORCE_COLOR=True ansible-playbook -i " + ansible_hosts_run_file + " --forks 16 playbook.yml",
+		anydbver_common.GetDockerImageName("ansible", user),
+ "bash", "-c", "cd /vagrant;until ansible -m ping -i ansible_hosts_run all &>/dev/null ; do sleep 1; done ; ANSIBLE_FORCE_COLOR=True ansible-playbook -i ansible_hosts_run --forks 16 playbook.yml",
 	}
 
 	env := map[string]string{}
@@ -562,11 +629,7 @@ func main() {
 			if ! keep {
 				deleteNamespace(logger, provider, namespace)
 			}
-			prefix := ""
-			if namespace != "" {
-				prefix = namespace + "-"
-			}
-			deployHosts(logger, prefix + "ansible_hosts_run", provider, namespace, args)
+			deployHosts(logger, anydbver_common.GetAnsibleInventory(logger, namespace), provider, namespace, args)
 		},
 	}
 	deployCmd.Flags().BoolP("keep", "", false, "do not remove existing containers and network")

@@ -14,8 +14,10 @@ FROM centos:centos7
  systemd-remount-fs.service\
  systemd-udevd\
  systemd-vconsole-setup.service\
- ;do systemctl mask $service; done; rm -f /usr/lib/tmpfiles.d/systemd-nologin.conf; mkdir -p /root/.ssh
+ ;do systemctl mask $service; done; rm -f /usr/lib/tmpfiles.d/systemd-nologin.conf
  COPY node_ip.sh /usr/bin/node_ip.sh
- COPY id_rsa.pub /root/.ssh/authorized_keys
+ COPY rc.local /etc/rc.local
+ COPY rc-local.service /etc/systemd/system/rc-local.service
+ RUN chown root:root /etc/rc.local; chmod 0755 /etc/rc.local ; systemctl enable rc-local
  VOLUME [ "/sys/fs/cgroup" ]
  CMD [ "/usr/lib/systemd/systemd", "--system", "--unit=multi-user.target", "--log-target=console", "--log-level=debug", "--show-status=true" ]

@@ -17,7 +17,9 @@ FROM         rockylinux:8
  dnf-makecache.timer\
  ;do systemctl mask $service; done; mkdir -p /root/.ssh
  COPY node_ip.sh /usr/bin/node_ip.sh
- COPY id_rsa.pub /root/.ssh/authorized_keys
+ COPY rc.local /etc/rc.local
+ COPY rc-local.service /etc/systemd/system/rc-local.service
+ RUN chown root:root /etc/rc.local; chmod 0755 /etc/rc.local ; systemctl enable rc-local
  VOLUME [ "/sys/fs/cgroup" ]
  #RUN chattr +C /var/log/journal
  #ADD install/journald.conf /etc/systemd/journald.conf

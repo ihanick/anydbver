@@ -198,6 +198,7 @@ def start_container(args, name, priv):
 
     docker_run_cmd.extend([ 
       "-d", "--cgroupns=host", "--tmpfs", "/tmp",
+      "-v", "{}:/vagrant".format(os.getcwd()),
       "--network", net,
       "--tmpfs", "/run", "--tmpfs", "/run/lock", "-v", "/sys/fs/cgroup:/sys/fs/cgroup",
       "--hostname", name, "{}-{}".format(docker_img, args.user)
