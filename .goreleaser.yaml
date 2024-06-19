@@ -22,6 +22,10 @@ builds:
       - linux
       - windows
       - darwin
+    goarch:
+      - amd64
+      - arm
+      - arm64
     main: ./cmd/anydbver
 
 archives:
