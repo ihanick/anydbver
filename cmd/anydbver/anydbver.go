@@ -118,7 +118,7 @@ func deleteNamespace(logger *log.Logger, provider string, namespace string) {
 
 		env := map[string]string{}
 		errMsg := "Error docker ps"
-		ignoreMsg := regexp.MustCompile("ignore this")
+		ignoreMsg := regexp.MustCompile("not found")
 
 		containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
 		if err != nil {
@@ -134,7 +134,7 @@ func deleteNamespace(logger *log.Logger, provider string, namespace string) {
 			delete_args = append(delete_args,  containers_list... )
 			runtools.RunPipe(logger, delete_args, errMsg, ignoreMsg, true, env)
 		}
-		delete_args := []string{ "docker", "network", "rm", "-f", net}
+		delete_args := []string{ "docker", "network", "rm", net}
 		runtools.RunPipe(logger, delete_args, errMsg, ignoreMsg, true, env)
 		os.Remove(anydbver_common.GetAnsibleInventory(logger, namespace))
 	}
