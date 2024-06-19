@@ -3,6 +3,7 @@ package common
 import (
     "bufio"
     "database/sql"
+    "os/exec"
     "log"
     "io"
     "os"
@@ -183,6 +184,45 @@ func GetCacheDirectory(logger *log.Logger) string {
 	return cache_dir
 
 }
+
+
+func GetK3dPath(logger *log.Logger) string {
+	k3d_path, err  := exec.LookPath("k3d")
+	if err == nil {
+		return k3d_path
+	}
+	k3d_path = "tools/k3d"
+	_, err = os.Stat(k3d_path)
+	if err == nil {
+		return k3d_path
+	}
+
+	k3d_path= filepath.Join(GetCacheDirectory(logger), "k3d")
+	_, err = os.Stat(k3d_path) 
+	if err == nil {
+		return k3d_path
+	}
+
+	k3d_create_cmd := []string{
+		"bash", "-c",
+		"curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | PATH=$PATH:" +
+		GetCacheDirectory(logger)+
+		" K3D_INSTALL_DIR="+
+		GetCacheDirectory(logger)+
+		" USE_SUDO=false bash", }
+
+	env := map[string]string{}
+	errMsg := "Can't install k3d"
+	ignoreMsg := regexp.MustCompile(".*")
+	runtools.RunFatal(logger, k3d_create_cmd, errMsg, ignoreMsg, true, env)
+	_, err = os.Stat(k3d_path)
+	if err == nil {
+		return k3d_path
+	}
+
+	return ""
+}
+
 
 func GetAnsibleInventory(logger *log.Logger, namespace string) string {
 	ipath := "ansible_hosts_run"

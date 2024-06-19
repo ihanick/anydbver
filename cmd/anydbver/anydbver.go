@@ -111,8 +111,51 @@ func listNamespaces(provider string, logger *log.Logger) {
 	}
 }
 
+func findK3dClusters(logger *log.Logger, namespace string) []string {
+	k3d_path := anydbver_common.GetK3dPath(logger)
+	if k3d_path == "" {
+		return []string{}
+	}
+
+	net := getNetworkName(logger, namespace)
+	args := []string{ "docker", "ps", "--filter", "network=" + net, "--format", "{{.Names}}",}
+
+	env := map[string]string{}
+	errMsg := "Error docker ps"
+	ignoreMsg := regexp.MustCompile("not found|No such")
+
+	containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
+	if err != nil {
+		logger.Fatalf("Can't list anydbver containers: %v", err)
+	}
+	containers_list := slices.DeleteFunc(strings.Split(containers, "\n"), func(e string) bool {
+		return e == ""
+	})
+
+	clusters := []string{}
+	
+	for _,name := range containers_list {
+		if strings.HasSuffix(name, "-server-0") {
+			clusters = append(clusters, strings.TrimPrefix(strings.TrimSuffix(name, "-server-0"), "k3d-"))
+		}
+	}
+
+	return clusters
+}
+
 func deleteNamespace(logger *log.Logger, provider string, namespace string) {
 	if provider == "docker" {
+		k3d_path := anydbver_common.GetK3dPath(logger)
+		if k3d_path != "" {
+			for _, cluster_name := range findK3dClusters(logger, namespace) {
+				k3d_create_cmd := []string{ k3d_path, "cluster", "delete", cluster_name, }
+				env := map[string]string{}
+				errMsg := "Error deleting k3d cluster"
+				ignoreMsg := regexp.MustCompile("No clusters found")
+				runtools.RunFatal(logger, k3d_create_cmd, errMsg, ignoreMsg, true, env)
+			}
+		}
+
 		net := getNetworkName(logger, namespace)
 		args := []string{ "docker", "ps", "--filter", "network=" + net, "--format", "{{.ID}}",}
 
@@ -137,10 +180,9 @@ func deleteNamespace(logger *log.Logger, provider string, namespace string) {
 		delete_args := []string{ "docker", "network", "rm", net}
 		runtools.RunFatal(logger, delete_args, errMsg, ignoreMsg, true, env)
 		os.Remove(anydbver_common.GetAnsibleInventory(logger, namespace))
+
 	}
 }
-
-
 
 
 func ConvertStringToMap(input string) map[string]string {
@@ -454,8 +496,10 @@ func createK3dCluster(logger *log.Logger, namespace string, name string, args ma
 			}
 		}
 	}
+	k3d_path := anydbver_common.GetK3dPath(logger)
+
 	k3d_create_cmd := []string{
-		"tools/k3d", "cluster", "create",
+		k3d_path, "cluster", "create",
 		cluster_name,
 		"-i", "rancher/k3s:" + args["version"],
 		"--network", getNetworkName(logger, namespace),
@@ -586,6 +630,13 @@ func main() {
 			deleteNamespace(logger, provider, args[0])
 		},
 	}
+	var destroyCmd = &cobra.Command{
+		Use:   "destroy",
+		Short: "Delete containers and clusters for current namespace",
+		Run: func(cmd *cobra.Command, args []string) {
+			deleteNamespace(logger, provider, namespace)
+		},
+	}
 
 
 	nsCreateCmd.Flags().StringP("os", "o", "", "Operating system of containers: node0=osver,node1=osver...")
@@ -595,6 +646,7 @@ func main() {
 	namespaceCmd.AddCommand(listNsCmd)
 	namespaceCmd.AddCommand(deleteNsCmd)
 	rootCmd.AddCommand(namespaceCmd)
+	rootCmd.AddCommand(destroyCmd)
 
 	var containerCmd = &cobra.Command{
 		Use:   "container",
