@@ -492,6 +492,7 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 			}
 
 			currentNode = arg
+			nodeProvider[currentNode] = provider
 		} else {
 			if nodeDef, ok := nodeDefinitions[currentNode]; ok {
 				nodeDefinitions[currentNode] = append(nodeDef, arg)
