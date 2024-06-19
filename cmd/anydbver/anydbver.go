@@ -118,7 +118,7 @@ func deleteNamespace(logger *log.Logger, provider string, namespace string) {
 
 		env := map[string]string{}
 		errMsg := "Error docker ps"
-		ignoreMsg := regexp.MustCompile("not found")
+		ignoreMsg := regexp.MustCompile("not found|No such")
 
 		containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
 		if err != nil {
