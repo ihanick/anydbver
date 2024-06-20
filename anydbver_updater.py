@@ -962,6 +962,8 @@ def update_versions():
     [
       {"url": "https://repo.mysql.com/yum/mysql-8.0-community/el/8/x86_64/",
       "pattern": r'mysql-community-server-(\d[^"]*).el8.x86_64.rpm'},
+      {"url": "https://repo.mysql.com/yum/mysql-8.4-community/el/8/x86_64/",
+      "pattern": r'mysql-community-server-(\d[^"]*).el8.x86_64.rpm'},
       {"url": "https://repo.mysql.com/yum/mysql-innovation-community/el/8/x86_64/",
       "pattern": r'mysql-community-server-(\d[^"]*).el8.x86_64.rpm'},
      ])

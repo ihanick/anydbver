@@ -86,6 +86,10 @@ EOF
   fi
 }
 
+# SLAVE commands are not preferred
+has_replica_cmd() {
+  mysql --version | grep -v 'Ver 8.0' | grep -q 'Ver 8'
+}
 
 setup_gtid_replication() {
   local FILE="$1"
@@ -94,11 +98,19 @@ setup_gtid_replication() {
   local SRC_PASS="$4"
 
   wait_until_mysql_ready "$FILE"
+  if has_replica_cmd ; then
+  mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait <<EOF
+STOP REPLICA;
+CHANGE REPLICATION SOURCE TO SOURCE_HOST='$SRC_HOST', SOURCE_USER='$SRC_USER', SOURCE_PASSWORD='$SRC_PASS', SOURCE_AUTO_POSITION=1;
+START REPLICA;
+EOF
+  else
   mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait <<EOF
 STOP SLAVE;
 CHANGE MASTER TO MASTER_HOST='$SRC_HOST', MASTER_USER='$SRC_USER', MASTER_PASSWORD='$SRC_PASS', MASTER_AUTO_POSITION=1;
 START SLAVE;
 EOF
+  fi
 
 }
 
@@ -106,8 +118,13 @@ is_same_gtid() {
   local DST="$1"
   local SRC="$2"
 
-  SRC_GTID=$( mysql --defaults-file=/tmp/"$SRC".cnf --connect-timeout=30 --wait -e "show master status\G"|tr '\n' ' '|sed -e 's/^.*Executed_Gtid_Set: //' )
-  DST_GTID=$( mysql --defaults-file=/tmp/"$DST".cnf --connect-timeout=30 --wait -e "show master status\G"|tr '\n' ' '|sed -e 's/^.*Executed_Gtid_Set: //' )
+  if has_replica_cmd ; then
+    SRC_GTID=$( mysql --defaults-file=/tmp/"$SRC".cnf --connect-timeout=30 --wait -e "show binary log status\G"|tr '\n' ' '|sed -e 's/^.*Executed_Gtid_Set: //' )
+    DST_GTID=$( mysql --defaults-file=/tmp/"$DST".cnf --connect-timeout=30 --wait -e "show binary log status\G"|tr '\n' ' '|sed -e 's/^.*Executed_Gtid_Set: //' )
+  else
+    SRC_GTID=$( mysql --defaults-file=/tmp/"$SRC".cnf --connect-timeout=30 --wait -e "show master status\G"|tr '\n' ' '|sed -e 's/^.*Executed_Gtid_Set: //' )
+    DST_GTID=$( mysql --defaults-file=/tmp/"$DST".cnf --connect-timeout=30 --wait -e "show master status\G"|tr '\n' ' '|sed -e 's/^.*Executed_Gtid_Set: //' )
+   fi
   IS_SUBSET=$( mysql --defaults-file=/tmp/"$DST".cnf --connect-timeout=30 --wait -Ne "SELECT GTID_SUBSET('$SRC_GTID', '$DST_GTID');" )
   [ "$IS_SUBSET" = 1 ]
 }
@@ -128,11 +145,20 @@ setup_position_replication_clone() {
   wait_until_mysql_ready "$FILE"
   BINLOG_FILE=$(mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait -Ne 'SELECT BINLOG_FILE FROM performance_schema.clone_status')
   BINLOG_POS=$(mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait -Ne 'SELECT BINLOG_POSITION FROM performance_schema.clone_status')
-  mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait <<EOF
+
+  if has_replica_cmd ; then
+    mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait <<EOF
+STOP SLAVE;
+CHANGE REPLICATION SOURCE TO SOURCE_HOST='$SRC_HOST', SOURCE_USER='$SRC_USER', SOURCE_PASSWORD='$SRC_PASS', SOURCE_LOG_FILE='$BINLOG_FILE', SOURCE_LOG_POS=$BINLOG_POS;
+START SLAVE;
+EOF
+  else
+    mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait <<EOF
 STOP SLAVE;
 CHANGE MASTER TO MASTER_HOST='$SRC_HOST', MASTER_USER='$SRC_USER', MASTER_PASSWORD='$SRC_PASS', MASTER_LOG_FILE='$BINLOG_FILE', MASTER_LOG_POS=$BINLOG_POS;
 START SLAVE;
 EOF
+  fi
 
 }
 
@@ -215,10 +241,18 @@ EOF
   fi
 else
   if [[ "x$TYPE" == "xgtid" ]] ; then
+    if has_replica_cmd ; then
+      GTID=$(mysql --host $MASTER_IP -e 'show binary log status\G' |tr "\n" ' '|sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
+    else
       GTID=$(mysql --host $MASTER_IP -e 'show master status\G' |tr "\n" ' '|sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
+    fi
       if [ "x$GTID" = "x" ] ; then
         mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;'
-        GTID=$(mysql --host $MASTER_IP -e 'show master status\G' |tr "\n" ' '|sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
+        if has_replica_cmd ; then
+          GTID=$(mysql --host $MASTER_IP -e 'show binary log status\G' |tr "\n" ' '|sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
+        else
+          GTID=$(mysql --host $MASTER_IP -e 'show master status\G' |tr "\n" ' '|sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
+        fi
       fi
 
       if [[ "$SOFT" = pxc* ]] ; then
@@ -233,23 +267,40 @@ EOF
         mysqladmin shutdown
         systemctl start $MYSQLD_UNIT
         until mysqladmin --silent --connect-timeout=30 --wait=4 ping ; do sleep 5 ; done
-        mysql << EOF
+        if has_replica_cmd ; then
+          mysql << EOF
+          CHANGE REPLICATION SOURCE TO SOURCE_HOST='${MASTER_IP}', SOURCE_USER='${MASTER_USER}', SOURCE_PASSWORD='${MASTER_PASSWORD}', SOURCE_AUTO_POSITION=1, SOURCE_SSL=1;
+          START SLAVE;
+EOF
+        else
+          mysql << EOF
           CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;
           START SLAVE;
 EOF
+        fi
       else # GTID, non-pxc
         if [[ "x$CHANNEL" = x ]] ; then
           # dump restore if source has non-default databases
           if [[ $(mysql --host $MASTER_IP -Ne 'show databases;'|egrep -v '^(information_schema|performance_schema|mysql|sys)$'|wc -l) -gt 0 ]] ; then
             mysqldump --host $MASTER_IP --databases $(mysql --host $MASTER_IP -Ne 'show databases;'|egrep -v '^(information_schema|performance_schema|mysql|sys)$') | mysql
           fi
-          mysql << EOF
+          if has_replica_cmd ; then
+            mysql << EOF
+          RESET BINARY LOGS AND GTIDS;
+          SET GLOBAL GTID_PURGED='${GTID}';
+          STOP REPLICA;
+          CHANGE REPLICATION SOURCE TO SOURCE_HOST='${MASTER_IP}', SOURCE_USER='${MASTER_USER}', SOURCE_PASSWORD='${MASTER_PASSWORD}', SOURCE_AUTO_POSITION=1, SOURCE_SSL=1;
+          START REPLICA;
+EOF
+          else
+            mysql << EOF
           RESET MASTER;
           SET GLOBAL GTID_PURGED='${GTID}';
           STOP SLAVE;
           CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;
           START SLAVE;
 EOF
+          fi
         else
           mysql << EOF
           RESET MASTER;
@@ -262,7 +313,7 @@ EOF
       fi
 
 
-      rm "${MINF}"
+      rm -f "${MINF}"
       touch /root/replication.configured
   elif [[ "x$TYPE" == "xnogtid" ]] ; then # non-gtid, non-mariadb
     setup_replication "127.0.0.1" "$MASTER_USER" "$MASTER_PASSWORD" "$MASTER_IP" "$MASTER_USER" "$MASTER_PASSWORD"

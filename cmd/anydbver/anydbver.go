@@ -69,17 +69,10 @@ func getNsFromString(input string, user string) string {
 	return res
 }
 
-
-func getNodeIp(provider string, logger *log.Logger, namespace string, name string) (string,error) {
+func getContainerIp(provider string, logger *log.Logger, namespace string, containerName string) (string,error) {
 	network := getNetworkName(logger, namespace)
-	user := anydbver_common.GetUser(logger)
-	prefix := ""
-	if namespace != "" {
-		prefix = namespace + "-"
-	}
-
 	if provider == "docker" {
-		args := []string{ "docker", "inspect", prefix + user + "-" + name, "--format", "{{ index .NetworkSettings.Networks \""+network+"\" \"IPAddress\" }}",}
+		args := []string{ "docker", "inspect", containerName, "--format", "{{ index .NetworkSettings.Networks \""+network+"\" \"IPAddress\" }}",}
 
 		env := map[string]string{}
 		errMsg := "Error getting docker container ip"
@@ -87,6 +80,23 @@ func getNodeIp(provider string, logger *log.Logger, namespace string, name strin
 
 		ip, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
 		return strings.TrimSuffix(ip, "\n"), err
+	}
+	return "", errors.New("node ip is not found")
+}
+
+
+
+
+func getNodeIp(provider string, logger *log.Logger, namespace string, name string) (string,error) {
+	user := anydbver_common.GetUser(logger)
+	prefix := ""
+	if namespace != "" {
+		prefix = namespace + "-"
+	}
+
+	if provider == "docker" {
+
+		return getContainerIp(provider, logger, namespace, prefix + user + "-" + name)
 	}
 	return "", errors.New("node ip is not found")
 }
@@ -437,7 +447,48 @@ func handleDeploymentKeyword(logger *log.Logger, keyword string) string {
 	return result
 }
 
+func runK8sOperator() {
+}
+
 func deployHost(provider string, logger *log.Logger, namespace string, name string, ansible_hosts_run_file string, args []string) {
+	if provider == "kubectl"  {
+		user := anydbver_common.GetUser(logger) 
+		cluster_name := user + "-" + name
+		clusterIp, err := getContainerIp("docker", logger, namespace, "k3d-" + cluster_name + "-" + "server-0")
+		if err != nil {
+			return
+		}
+		prefix := user
+		if namespace != "" {
+			prefix = namespace + "-" + prefix
+		}
+
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			logger.Println("Error: Could not determine user's home directory")
+			return
+		}
+
+
+
+		cmd_args := []string{
+			"docker", "run", "-i", "--rm",
+			"--name", prefix + "-ansible",
+			"-v", ansible_hosts_run_file + ":/vagrant/ansible_hosts_run",
+			"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
+			"-v", filepath.Join(homeDir, ".kube", "config") + ":/vagrant/secret/.kube/config:ro",
+			"-v", filepath.Join(anydbver_common.GetCacheDirectory(logger), "data") + ":/vagrant/data",
+			"--network", prefix + "-anydbver",
+			"--hostname", user + "-ansible",
+			anydbver_common.GetDockerImageName("ansible", user),
+			"bash", "-c", "cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); sed -i -re 's/0.0.0.0:[0-9]+/" + clusterIp + ":6443/g' /root/.kube/config ;python3 tools/run_k8s_operator.py --cluster-name=cluster1 --operator=percona-postgresql-operator --version=2.3.1",
+		}
+
+		env := map[string]string{}
+		errMsg := "Error creating container"
+		ignoreMsg := regexp.MustCompile("ignore this")
+		runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+	}
 	if provider == "docker" {
 		logger.Printf("Deploy %v", args)
 		file, err := os.OpenFile(ansible_hosts_run_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)

@@ -8,3 +8,5 @@ enforce_gtid_consistency=ON
 gtid_mode=ON
 # required for 5.6
 log-slave-updates
+# mysql native auth is disabled by default in 8.4
+loose-mysql_native_password=ON 

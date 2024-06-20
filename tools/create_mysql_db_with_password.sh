@@ -17,7 +17,7 @@ if [[ "x$OLDGRANT" == "xoldgrant" ]]; then
     $EATMYDATA mysqld --pid-file=/var/lib/mysql/mysqld.pid $S --user=mysql --loose-wsrep-provider='none' --skip-networking &>/dev/null &
     mysqladmin $S --silent --connect-timeout=30 --wait=4 ping
 
-    mysql $S -e "SET PASSWORD FOR root@localhost = PASSWORD('$PASS');GRANT ALL PRIVILEGES ON *.* TO root@'%' IDENTIFIED BY '$PASS' WITH GRANT OPTION;"
+    mysql --skip-password $S -e "SET PASSWORD FOR root@localhost = PASSWORD('$PASS');GRANT ALL PRIVILEGES ON *.* TO root@'%' IDENTIFIED BY '$PASS' WITH GRANT OPTION;"
 else
     # ubuntu modifies root@localhost to use auth_socket
     systemctl stop $SERVICE
@@ -27,7 +27,7 @@ else
     $EATMYDATA mysqld --pid-file=/var/lib/mysql/mysqld.pid $S --user=mysql --loose-wsrep-provider='none' --skip-networking --loose-log-error=/var/lib/mysql/default.err --loose-log-error-verbosity=3 &>/dev/null &
     mysqladmin $S --silent --connect-timeout=30 --wait=4 ping
 
-    mysql $S -e "ALTER USER root@localhost IDENTIFIED BY '$PASS';CREATE USER root@'%' IDENTIFIED WITH mysql_native_password BY '$PASS';GRANT ALL PRIVILEGES ON *.* TO root@'%' WITH GRANT OPTION;";
+    mysql --skip-password $S -e "ALTER USER root@localhost IDENTIFIED BY '$PASS';CREATE USER root@'%' IDENTIFIED WITH mysql_native_password BY '$PASS';GRANT ALL PRIVILEGES ON *.* TO root@'%' WITH GRANT OPTION;";
 fi
 cat > /root/.my.cnf << EOF 
 [client]
