@@ -9,7 +9,6 @@
 
 - name: Enable EPEL
   when: >
-    ( 'development' in db_features.split(',') or pgbackrest_version != '' or percona_postgresql_version != '' ) and
     (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   package:
     name: epel-release
