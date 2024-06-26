@@ -22,6 +22,7 @@ logger = logging.getLogger('run k8s operator')
 logger.setLevel(logging.INFO)
 yq_path = str((Path(__file__).parents[0] / 'yq').resolve())
 
+
 def run_fatal(args, err_msg, ignore_msg=None, print_cmd=True, env=None):
   if print_cmd:
     logger.info(subprocess.list2cmdline(args))

@@ -321,7 +321,7 @@ func containerExec(logger *log.Logger, provider, namespace string, args []string
 }
 
 
-func ExecuteQueries(dbFile string, deployCmd string, values map[string]string) (string, error) {
+func ExecuteQueries(dbFile string, table string, deployCmd string, values map[string]string) (string, error) {
 	// Open the SQLite3 database
 	db, err := sql.Open("sqlite", dbFile)
 	if err != nil {
@@ -353,7 +353,7 @@ func ExecuteQueries(dbFile string, deployCmd string, values map[string]string) (
 	// Execute the select query
 	query := `
 		SELECT aa.arg || "='" || COALESCE(NULLIF(ps.val,''),aa.arg_default) ||"'" as arg_val
-		FROM ansible_arguments aa
+		FROM ` + table +` aa
 		LEFT JOIN provided_subcmd ps ON aa.subcmd = ps.subcmd
 		WHERE aa.cmd=? AND (always_add OR aa.subcmd = ps.subcmd)
 		GROUP BY arg
@@ -437,9 +437,9 @@ func ParseDeploymentKeyword(keyword string) DeploymentKeywordData {
 }
 
 
-func handleDeploymentKeyword(logger *log.Logger, keyword string) string {
+func handleDeploymentKeyword(logger *log.Logger, table string, keyword string) string {
 	deployment_keyword := ParseDeploymentKeyword(keyword)
-	result, err := ExecuteQueries(anydbver_common.GetDatabasePath(logger), deployment_keyword.Cmd, deployment_keyword.Args)
+	result, err := ExecuteQueries(anydbver_common.GetDatabasePath(logger), table, deployment_keyword.Cmd, deployment_keyword.Args)
 	if err != nil {
 		logger.Fatalf("Error: %v", err)
 		return ""
@@ -469,25 +469,30 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 			return
 		}
 
+		run_operator_args := ""
 
+		for _, arg := range args {
+			run_operator_args = run_operator_args + " " + handleDeploymentKeyword(logger, "k8s_arguments", arg)
+			cmd_args := []string{
+				"docker", "run", "-i", "--rm",
+				"--name", prefix + "-ansible",
+				"-v", ansible_hosts_run_file + ":/vagrant/ansible_hosts_run",
+				"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
+				"-v", filepath.Join(homeDir, ".kube", "config") + ":/vagrant/secret/.kube/config:ro",
+				"-v", filepath.Join(anydbver_common.GetCacheDirectory(logger), "data") + ":/vagrant/data",
+				"--network", prefix + "-anydbver",
+				"--hostname", user + "-ansible",
+				anydbver_common.GetDockerImageName("ansible", user),
+				"bash", "-c", "cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 ; chmod +x yq_linux_amd64; mv yq_linux_amd64 tools/yq); sed -i -re 's/0.0.0.0:[0-9]+/" + clusterIp + ":6443/g' /root/.kube/config ;python3 tools/run_k8s_operator.py " + run_operator_args,
+			}
 
-		cmd_args := []string{
-			"docker", "run", "-i", "--rm",
-			"--name", prefix + "-ansible",
-			"-v", ansible_hosts_run_file + ":/vagrant/ansible_hosts_run",
-			"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
-			"-v", filepath.Join(homeDir, ".kube", "config") + ":/vagrant/secret/.kube/config:ro",
-			"-v", filepath.Join(anydbver_common.GetCacheDirectory(logger), "data") + ":/vagrant/data",
-			"--network", prefix + "-anydbver",
-			"--hostname", user + "-ansible",
-			anydbver_common.GetDockerImageName("ansible", user),
-			"bash", "-c", "cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); sed -i -re 's/0.0.0.0:[0-9]+/" + clusterIp + ":6443/g' /root/.kube/config ;python3 tools/run_k8s_operator.py --cluster-name=cluster1 --operator=percona-postgresql-operator --version=2.3.1",
+			env := map[string]string{}
+			errMsg := "Error creating container"
+			ignoreMsg := regexp.MustCompile("ignore this")
+			runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+
 		}
 
-		env := map[string]string{}
-		errMsg := "Error creating container"
-		ignoreMsg := regexp.MustCompile("ignore this")
-		runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
 	}
 	if provider == "docker" {
 		logger.Printf("Deploy %v", args)
@@ -503,7 +508,7 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 		ansible_deployment_args := ""
 
 		for _, arg := range args {
-			ansible_deployment_args = ansible_deployment_args + " " + handleDeploymentKeyword(logger, arg)
+			ansible_deployment_args = ansible_deployment_args + " " + handleDeploymentKeyword(logger, "ansible_arguments", arg)
 		}
 
 		user := anydbver_common.GetUser(logger) 

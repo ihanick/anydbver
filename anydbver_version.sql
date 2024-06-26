@@ -2265,5 +2265,31 @@ INSERT INTO ansible_arguments VALUES('percona-postgresql','start-db','.*','','ex
 INSERT INTO ansible_arguments VALUES('percona-server-mongodb','start-db','.*','','extra_start_db','1',1,1);
 INSERT INTO ansible_arguments VALUES('percona-server','start-db','.*','','extra_start_db','1',1,1);
 INSERT INTO ansible_arguments VALUES('percona-postgresql','password','.*','','extra_db_password','verysecretpassword1^',1,1);
+CREATE TABLE k8s_arguments(
+  cmd TEXT,
+  subcmd TEXT,
+  version_filter TEXT,
+  arg_type TEXT,
+  arg TEXT,
+  arg_default TEXT,
+  orderno INT,
+  always_add INT
+);
+INSERT INTO k8s_arguments VALUES('percona-postgresql-operator','',NULL,'TYPE','--operator','percona-postgresql-operator',1,1);
+INSERT INTO k8s_arguments VALUES('percona-postgresql-operator','version',NULL,'VERSION','--version','2.3.1',1,1);
+INSERT INTO k8s_arguments VALUES('percona-postgresql-operator','cluster-name',NULL,'CLUSTER_NAME','--cluster-name','cluster1',1,1);
+INSERT INTO k8s_arguments VALUES('percona-postgresql-operator','namespace',NULL,'NAMESPACE','--namespace','pgo',1,1);
+INSERT INTO k8s_arguments VALUES('percona-xtradb-cluster-operator','',NULL,'TYPE','--operator','percona-xtradb-cluster-operator',1,1);
+INSERT INTO k8s_arguments VALUES('percona-xtradb-cluster-operator','version',NULL,'VERSION','--version','1.14.0',1,1);
+INSERT INTO k8s_arguments VALUES('percona-xtradb-cluster-operator','cluster-name',NULL,'CLUSTER_NAME','--cluster-name','cluster1',1,1);
+INSERT INTO k8s_arguments VALUES('percona-xtradb-cluster-operator','namespace',NULL,'NAMESPACE','--namespace','pxc',1,1);
+INSERT INTO k8s_arguments VALUES('percona-server-mongodb-operator','',NULL,'TYPE','--operator','percona-server-mongodb-operator',1,1);
+INSERT INTO k8s_arguments VALUES('percona-server-mongodb-operator','version',NULL,'VERSION','--version','1.16.1',1,1);
+INSERT INTO k8s_arguments VALUES('percona-server-mongodb-operator','cluster-name',NULL,'CLUSTER_NAME','--cluster-name','cluster1',1,1);
+INSERT INTO k8s_arguments VALUES('percona-server-mongodb-operator','namespace',NULL,'NAMESPACE','--namespace','psmdb',1,1);
+INSERT INTO k8s_arguments VALUES('percona-server-mysql-operator','',NULL,'TYPE','--operator','percona-server-mysql-operator',1,1);
+INSERT INTO k8s_arguments VALUES('percona-server-mysql-operator','version',NULL,'VERSION','--version','0.7.0',1,1);
+INSERT INTO k8s_arguments VALUES('percona-server-mysql-operator','cluster-name',NULL,'CLUSTER_NAME','--cluster-name','cluster1',1,1);
+INSERT INTO k8s_arguments VALUES('percona-server-mysql-operator','namespace',NULL,'NAMESPACE','--namespace','default',1,1);
 CREATE INDEX test_cases_test_id_idx ON test_cases(test_id);
 COMMIT;
