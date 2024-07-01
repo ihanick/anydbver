@@ -18,6 +18,7 @@ import (
 
 const (
 	ANYDBVER_VERSION_DATABASE_SQL_URL = "https://github.com/ihanick/anydbver/raw/master/anydbver_version.sql"
+	ANYDBVER_DEFAULT_PASSWORD = "verysecretpassword1^"
 )
 
 func CreateSshKeysForContainers(logger *log.Logger, namespace string) {
@@ -70,14 +71,14 @@ func GetConfigPath(logger *log.Logger) string {
 			os.MkdirAll(filepath.Join(xdgConfigHome, "anydbver"), os.ModePerm)
 			file, err := os.OpenFile(programrcPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				fmt.Println("Error opening file:", err)
+				logger.Println("Error opening file:", err)
 				return ""
 			}
 			defer file.Close()
 
 			_, err = file.WriteString("PROVIDER=docker\n")
 			if err != nil {
-				fmt.Println("Error writing config file file:", err)
+				logger.Println("Error writing config file file:", err)
 				return ""
 			}
 		}
@@ -85,7 +86,14 @@ func GetConfigPath(logger *log.Logger) string {
 
 	}
 
-	return programrcPath
+	abs_path, err := filepath.Abs(programrcPath)
+
+	if err != nil {
+		logger.Println("Error getting absolute p;ath:", err)
+		return ""
+	}
+
+	return abs_path
 }
 
 func downloadVersionDatabase(url string) (string, error) {

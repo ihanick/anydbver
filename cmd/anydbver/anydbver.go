@@ -15,6 +15,7 @@ import (
 	"unicode"
 
 	anydbver_common "github.com/ihanick/anydbver/pkg/common"
+	unmodified_docker "github.com/ihanick/anydbver/pkg/unmodified_docker"
 	"github.com/ihanick/anydbver/pkg/runtools"
 	_ "modernc.org/sqlite"
 	"github.com/spf13/cobra"
@@ -400,7 +401,40 @@ func IsDeploymentVersion(arg string) bool {
 	return false
 }
 
-func ParseDeploymentKeyword(keyword string) DeploymentKeywordData {
+
+func ResolveDevelopmentKeywordAlias(dbFile string, deployCmd string) (string, error) {
+	db, err := sql.Open("sqlite", dbFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to open database: %w", err)
+	}
+	defer db.Close()
+
+	query := `SELECT keyword FROM keyword_aliases WHERE alias = ? ORDER BY 1 LIMIT 1`
+
+	rows, err := db.Query(query, deployCmd)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute select query: %w", err)
+	}
+	defer rows.Close()
+
+	// Collect the results into a string
+	result := deployCmd
+	for rows.Next() {
+		var argVal string
+		if err := rows.Scan(&argVal); err != nil {
+			return "", fmt.Errorf("failed to scan row: %w", err)
+		}
+		result = argVal
+	}
+	if err = rows.Err(); err != nil {
+		return "", fmt.Errorf("error iterating over rows: %w", err)
+	}
+
+	// Join the results with a space
+	return result, nil
+}
+
+func ParseDeploymentKeyword(logger *log.Logger, keyword string) DeploymentKeywordData {
 	args := make(map[string]string)
 	parts := strings.SplitN(keyword, ":", 2)
 	deployCmd := parts[0]
@@ -409,6 +443,10 @@ func ParseDeploymentKeyword(keyword string) DeploymentKeywordData {
 	} else {
 		keyword = ""
 	}
+	if alias, err := ResolveDevelopmentKeywordAlias(anydbver_common.GetDatabasePath(logger), deployCmd) ; err == nil {
+		deployCmd = alias
+	}
+
 
 	pairs := strings.Split(keyword, ",")
 	for i, pair := range pairs {
@@ -438,12 +476,13 @@ func ParseDeploymentKeyword(keyword string) DeploymentKeywordData {
 
 
 func handleDeploymentKeyword(logger *log.Logger, table string, keyword string) string {
-	deployment_keyword := ParseDeploymentKeyword(keyword)
+	deployment_keyword := ParseDeploymentKeyword(logger, keyword)
 	result, err := ExecuteQueries(anydbver_common.GetDatabasePath(logger), table, deployment_keyword.Cmd, deployment_keyword.Args)
 	if err != nil {
 		logger.Fatalf("Error: %v", err)
 		return ""
 	}
+	logger.Println(result)
 	return result
 }
 
@@ -451,7 +490,14 @@ func runK8sOperator() {
 }
 
 func deployHost(provider string, logger *log.Logger, namespace string, name string, ansible_hosts_run_file string, args []string) {
-	if provider == "kubectl"  {
+	if provider == "docker-image" {
+		for _, arg := range args {
+			deployment_keyword := ParseDeploymentKeyword(logger, arg)
+			if _, ok := deployment_keyword.Args["docker-image"]; ok {
+				unmodified_docker.CreateContainer(logger, namespace, name, deployment_keyword.Cmd, deployment_keyword.Args)
+			}
+		}
+	} else if provider == "kubectl"  {
 		user := anydbver_common.GetUser(logger) 
 		cluster_name := user + "-" + name
 		clusterIp, err := getContainerIp("docker", logger, namespace, "k3d-" + cluster_name + "-" + "server-0")
@@ -493,8 +539,7 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 
 		}
 
-	}
-	if provider == "docker" {
+	} else if provider == "docker" {
 		logger.Printf("Deploy %v", args)
 		file, err := os.OpenFile(ansible_hosts_run_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -599,10 +644,13 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 			} else {
 				nodeDefinitions[currentNode] = []string{arg}
 			}
-			deployment_keyword := ParseDeploymentKeyword(arg)
+			deployment_keyword := ParseDeploymentKeyword(logger, arg)
 			if deployment_keyword.Cmd == "os" {
 				osver := strings.TrimPrefix(arg, "os:")
 				osvers = re_lastosver.ReplaceAllString(osvers, "="+osver)
+			} else if _, ok := deployment_keyword.Args["docker-image"]; ok {
+				nodeProvider[currentNode] = "docker-image"
+				osvers = re_lastosver.ReplaceAllString(osvers, "")
 			} else if deployment_keyword.Cmd == "k3d" {
 				nodeProvider[currentNode] = "kubectl"
 				osvers = re_lastosver.ReplaceAllString(osvers, "")

@@ -2291,5 +2291,17 @@ INSERT INTO k8s_arguments VALUES('percona-server-mysql-operator','',NULL,'TYPE',
 INSERT INTO k8s_arguments VALUES('percona-server-mysql-operator','version',NULL,'VERSION','--version','0.7.0',1,1);
 INSERT INTO k8s_arguments VALUES('percona-server-mysql-operator','cluster-name',NULL,'CLUSTER_NAME','--cluster-name','cluster1',1,1);
 INSERT INTO k8s_arguments VALUES('percona-server-mysql-operator','namespace',NULL,'NAMESPACE','--namespace','default',1,1);
+CREATE TABLE keyword_aliases(keyword varchar(50), alias varchar(50));
+INSERT INTO keyword_aliases VALUES('postgresql','postgres');
+INSERT INTO keyword_aliases VALUES('postgresql','pg');
+INSERT INTO keyword_aliases VALUES('percona-postgresql','percona-postgres');
+INSERT INTO keyword_aliases VALUES('percona-postgresql','ppg');
+INSERT INTO keyword_aliases VALUES('percona-postgresql-operator','k8s-pg');
+INSERT INTO keyword_aliases VALUES('percona-xtradb-cluster-operator','k8s-pxc');
+INSERT INTO keyword_aliases VALUES('percona-server-mongodb-operator','k8s-mongo');
+INSERT INTO keyword_aliases VALUES('percona-server-mysql-operator','k8s-mysql');
+INSERT INTO keyword_aliases VALUES('percona-server','ps');
+INSERT INTO keyword_aliases VALUES('percona-server','percona-server-mysql');
+INSERT INTO keyword_aliases VALUES('percona-server-mongodb','psmdb');
 CREATE INDEX test_cases_test_id_idx ON test_cases(test_id);
 COMMIT;
