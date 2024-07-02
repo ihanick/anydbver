@@ -2267,6 +2267,14 @@ INSERT INTO ansible_arguments VALUES('percona-server','start-db','.*','','extra_
 INSERT INTO ansible_arguments VALUES('percona-postgresql','password','.*','','extra_db_password','verysecretpassword1^',1,1);
 INSERT INTO ansible_arguments VALUES('pmm-client','version','.*','VERSION','extra_pmm_client_version','2',1,1);
 INSERT INTO ansible_arguments VALUES('pmm-client','server','.*','URL','extra_pmm_url','',1,NULL);
+INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','version','.*','VERSION','extra_percona_xtradb_cluster_version','8.0',1,1);
+INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','user','.*','','extra_db_user','root',1,1);
+INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','password','.*','','extra_db_password','verysecretpassword1^',1,1);
+INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','opts-file','.*','','extra_db_opts_file','mysql/pxc8-repl-gtid.cnf',1,1);
+INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','cluster','.*','','extra_cluster_name','cluster1',1,1);
+INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','master','.*','NODE','extra_master_ip','',1,NULL);
+INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','start-db','.*','','extra_start_db','1',1,1);
+INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','galera','.*',NULL,'extra_replication_type','galera',2,NULL);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
@@ -2306,5 +2314,6 @@ INSERT INTO keyword_aliases VALUES('percona-server','ps');
 INSERT INTO keyword_aliases VALUES('percona-server','percona-server-mysql');
 INSERT INTO keyword_aliases VALUES('percona-server-mongodb','psmdb');
 INSERT INTO keyword_aliases VALUES('pmm-server','pmm');
+INSERT INTO keyword_aliases VALUES('percona-xtradb-cluster','pxc');
 CREATE INDEX test_cases_test_id_idx ON test_cases(test_id);
 COMMIT;

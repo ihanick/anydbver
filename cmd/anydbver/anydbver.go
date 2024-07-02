@@ -478,6 +478,9 @@ func ParseDeploymentKeyword(logger *log.Logger, keyword string) DeploymentKeywor
 
 func handleDeploymentKeyword(logger *log.Logger, table string, keyword string) string {
 	deployment_keyword := ParseDeploymentKeyword(logger, keyword)
+	if ( table == "ansible_arguments" || table == "k8s_arguments" ) && deployment_keyword.Args["version"] == "latest" {
+		delete(deployment_keyword.Args, "version")
+	}
 	result, err := ExecuteQueries(anydbver_common.GetDatabasePath(logger), table, deployment_keyword.Cmd, deployment_keyword.Args)
 	if err != nil {
 		logger.Fatalf("Error: %v", err)
