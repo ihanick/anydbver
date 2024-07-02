@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,11 +16,11 @@ import (
 	"unicode"
 
 	anydbver_common "github.com/ihanick/anydbver/pkg/common"
-	unmodified_docker "github.com/ihanick/anydbver/pkg/unmodified_docker"
 	"github.com/ihanick/anydbver/pkg/runtools"
-	_ "modernc.org/sqlite"
+	unmodified_docker "github.com/ihanick/anydbver/pkg/unmodified_docker"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
+	_ "modernc.org/sqlite"
 )
 
 
@@ -95,7 +96,7 @@ func getNodeIp(provider string, logger *log.Logger, namespace string, name strin
 		prefix = namespace + "-"
 	}
 
-	if provider == "docker" {
+	if provider == "docker" || provider == "docker-image" {
 
 		return getContainerIp(provider, logger, namespace, prefix + user + "-" + name)
 	}
@@ -559,6 +560,24 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 		user := anydbver_common.GetUser(logger) 
 		content := user + "." + name + " ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host="+ip+" ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none' "+ ansible_deployment_args +"\n"
 
+
+		re_pmm_server := regexp.MustCompile(`(extra_pmm_url)='(node[0-9]+)'`)
+		content = re_pmm_server.ReplaceAllStringFunc(content, func(match string) string {
+			submatches := re_pmm_server.FindStringSubmatch(match)
+			if len(submatches) > 2 {
+				node := submatches[2]
+				ip, err :=getNodeIp(provider, logger, namespace, node)
+				if err != nil {
+					fmt.Println("Error getting node ip:", err)
+				}
+
+				return fmt.Sprintf("%s='https://admin:%s@%s'", submatches[1] , url.QueryEscape(anydbver_common.ANYDBVER_DEFAULT_PASSWORD), ip)
+			}
+			return match
+		})
+
+
+
 		re := regexp.MustCompile(`='(node[0-9]+)'`)
 		content = re.ReplaceAllStringFunc(content, func(match string) string {
 			submatches := re.FindStringSubmatch(match)
@@ -573,6 +592,7 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 			}
 			return match
 		})
+
 
 		_, err = file.WriteString(content)
 		if err != nil {
