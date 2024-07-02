@@ -34,7 +34,7 @@ func getNetworkName(logger *log.Logger, namespace string) string {
 
 func listContainers(logger *log.Logger, provider string, namespace string) {
 	if provider == "docker" {
-		args := []string{ "docker", "ps", "--filter", "network=" + getNetworkName(logger, namespace),}
+		args := []string{ "docker", "ps", "-a", "--filter", "network=" + getNetworkName(logger, namespace),}
 
 		env := map[string]string{}
 		errMsg := "Error docker ps"
@@ -129,7 +129,7 @@ func findK3dClusters(logger *log.Logger, namespace string) []string {
 	}
 
 	net := getNetworkName(logger, namespace)
-	args := []string{ "docker", "ps", "--filter", "network=" + net, "--format", "{{.Names}}",}
+	args := []string{ "docker", "ps", "-a", "--filter", "network=" + net, "--format", "{{.Names}}",}
 
 	env := map[string]string{}
 	errMsg := "Error docker ps"
@@ -168,7 +168,7 @@ func deleteNamespace(logger *log.Logger, provider string, namespace string) {
 		}
 
 		net := getNetworkName(logger, namespace)
-		args := []string{ "docker", "ps", "--filter", "network=" + net, "--format", "{{.ID}}",}
+		args := []string{ "docker", "ps", "-a", "--filter", "network=" + net, "--format", "{{.ID}}",}
 
 		env := map[string]string{}
 		errMsg := "Error docker ps"

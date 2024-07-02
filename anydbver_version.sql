@@ -2265,6 +2265,8 @@ INSERT INTO ansible_arguments VALUES('percona-postgresql','start-db','.*','','ex
 INSERT INTO ansible_arguments VALUES('percona-server-mongodb','start-db','.*','','extra_start_db','1',1,1);
 INSERT INTO ansible_arguments VALUES('percona-server','start-db','.*','','extra_start_db','1',1,1);
 INSERT INTO ansible_arguments VALUES('percona-postgresql','password','.*','','extra_db_password','verysecretpassword1^',1,1);
+INSERT INTO ansible_arguments VALUES('pmm-client','version','.*','VERSION','extra_pmm_client_version','2',1,1);
+INSERT INTO ansible_arguments VALUES('pmm-client','server','.*','URL','extra_pmm_url','',1,NULL);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
@@ -2303,5 +2305,6 @@ INSERT INTO keyword_aliases VALUES('percona-server-mysql-operator','k8s-mysql');
 INSERT INTO keyword_aliases VALUES('percona-server','ps');
 INSERT INTO keyword_aliases VALUES('percona-server','percona-server-mysql');
 INSERT INTO keyword_aliases VALUES('percona-server-mongodb','psmdb');
+INSERT INTO keyword_aliases VALUES('pmm-server','pmm');
 CREATE INDEX test_cases_test_id_idx ON test_cases(test_id);
 COMMIT;

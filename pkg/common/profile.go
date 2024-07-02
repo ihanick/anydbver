@@ -280,3 +280,42 @@ func GetUser(logger *log.Logger) string {
 
 	return profile
 }
+
+
+func GetToolsDirectory(logger *log.Logger, namespace string) string {
+	tools_directory := "tools"
+	if _, err := os.Stat("tools/setup_postgresql_replication_docker.sh"); os.IsNotExist(err) {
+		user := GetUser(logger) 
+		prefix := user
+		if namespace != "" {
+			prefix = namespace + "-" + prefix
+		}
+
+		tools_directory = filepath.Join(GetCacheDirectory(logger), "tools")
+
+
+		cmd_args := []string{
+			"docker", "run", "-i", "--rm",
+			"--name", prefix + "-toolscopy",
+			"-v", tools_directory + ":" + "/newtools",
+			GetDockerImageName("ansible", user),
+			"bash", "-c", "cp -r /vagrant/tools/* /newtools/",
+		}
+
+		env := map[string]string{}
+		errMsg := "Error creating container"
+		ignoreMsg := regexp.MustCompile("ignore this")
+		runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+	}
+
+
+	abs_path, err := filepath.Abs(tools_directory)
+
+	if err != nil {
+		logger.Println("Error getting absolute p;ath:", err)
+		return ""
+	}
+
+	return abs_path
+
+}
