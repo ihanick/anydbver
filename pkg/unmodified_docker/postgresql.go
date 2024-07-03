@@ -4,6 +4,7 @@ import (
 	"log"
 	"regexp"
 	"path/filepath"
+	"runtime"
 	anydbver_common "github.com/ihanick/anydbver/pkg/common"
 	"github.com/ihanick/anydbver/pkg/runtools"
 )
@@ -19,7 +20,7 @@ func CreatePostgresqlContainer(logger *log.Logger, namespace string, name string
 	cmd_args := []string{
 		"docker", "run",
 		"--name", prefix + "-" + name,
-		"--platform", "linux/amd64",
+		"--platform", "linux/" + runtime.GOARCH,
 		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
 		"-v", anydbver_common.GetCacheDirectory(logger) + "/data/nfs:/nfs",
 		"-v", tools_dir + ":/vagrant/tools",
