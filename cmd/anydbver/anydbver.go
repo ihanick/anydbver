@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -44,7 +45,8 @@ func listContainers(logger *log.Logger, provider string, namespace string) {
 		containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
 		
 		if err != nil {
-			logger.Fatalf("Can't list anydbver containers: %v", err)
+			logger.Printf("Can't list anydbver containers: %v", err)
+			runtools.HandleDockerProblem(logger, err)
 		}
 
 		fmt.Print(containers)
@@ -114,7 +116,8 @@ func listNamespaces(provider string, logger *log.Logger) {
 
 		networks, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
 		if err != nil {
-			logger.Fatalf("Can't list anydbver namespaces: %v", err)
+			logger.Printf("Can't list anydbver namespaces: %v", err)
+			runtools.HandleDockerProblem(logger, err)
 		}
 
 		user := anydbver_common.GetUser(logger)
@@ -138,7 +141,8 @@ func findK3dClusters(logger *log.Logger, namespace string) []string {
 
 	containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
 	if err != nil {
-		logger.Fatalf("Can't list anydbver containers: %v", err)
+		logger.Printf("Can't list k3d clusters: %v", err)
+		runtools.HandleDockerProblem(logger, err)
 	}
 	containers_list := slices.DeleteFunc(strings.Split(containers, "\n"), func(e string) bool {
 		return e == ""
@@ -153,6 +157,105 @@ func findK3dClusters(logger *log.Logger, namespace string) []string {
 	}
 
 	return clusters
+}
+
+
+type AnydbverTest struct {
+	id int
+	name string
+	cmd string
+}
+
+func FetchTests(logger *log.Logger, dbFile string, name string) ([]AnydbverTest, error) {
+	var tests []AnydbverTest;
+
+	if name == "all" {
+		name = "%"
+	}
+
+	db, err := sql.Open("sqlite", dbFile)
+	if err != nil {
+		return tests, fmt.Errorf("failed to open database: %w", err)
+	}
+	defer db.Close()
+
+	query := `SELECT test_id, test_name, REPLACE(cmd,'./anydbver','anydbver') as cmd FROM tests WHERE test_name LIKE ? ORDER BY 1`
+
+	rows, err := db.Query(query, name)
+	if err != nil {
+		return tests, fmt.Errorf("failed to execute select query: %w", err)
+	}
+	defer rows.Close()
+
+	// Collect the results into a string
+	for rows.Next() {
+		var test AnydbverTest;
+		if err := rows.Scan(&test.id, &test.name, &test.cmd); err != nil {
+			return tests, fmt.Errorf("failed to scan row: %w", err)
+		}
+		tests = append(tests, test)
+	}
+	if err = rows.Err(); err != nil {
+		return tests, fmt.Errorf("error iterating over rows: %w", err)
+	}
+
+	return tests, nil
+}
+
+func writeTestOutput(logger *log.Logger, test_id int, test_name string, test_output string) {
+	test_results_path := filepath.Join(anydbver_common.GetCacheDirectory(logger), "test_results")
+	err := os.MkdirAll(test_results_path, os.ModePerm)
+	if err != nil {
+		fmt.Printf("Failed to create directory: %s\n", err)
+		return
+	}
+	file, err := os.Create(filepath.Join(test_results_path, fmt.Sprintf("%d - %s.log", test_id, test_name)))
+	if err != nil {
+		logger.Printf("Failed to create or open file: %s\n", err)
+		return
+	}
+
+	defer func() {
+		if err := file.Close(); err != nil {
+			logger.Printf("Failed to close file: %s\n", err)
+		}
+	}()
+
+	_, err = file.WriteString(test_output)
+	if err != nil {
+		logger.Printf("Failed to write to file: %s\n", err)
+		return
+	}
+}
+
+func testAnydbver(logger *log.Logger, _ string, _ string, name string) error {
+	dbFile := anydbver_common.GetDatabasePath(logger)
+	// Join the results with a space
+	tests, err := FetchTests(logger, dbFile, name)
+	if err != nil {
+		return err
+	}
+
+	for _,test := range tests {
+		logger.Printf("Test %+v", test)
+		cmd_args := []string{
+			"bash", "-c", test.cmd,
+		}
+
+		env := map[string]string{}
+		errMsg := "Error running test"
+		ignoreMsg := regexp.MustCompile("ignore this")
+		out, err := runtools.RunGetOutput(logger, cmd_args, errMsg, ignoreMsg, true, env)
+		if err != nil {
+			logger.Println("FAILED")
+			writeTestOutput(logger, test.id, test.name, out)
+		} else {
+			logger.Println("OK")
+		}
+
+	}
+	return nil
+
 }
 
 func deleteNamespace(logger *log.Logger, provider string, namespace string) {
@@ -177,7 +280,7 @@ func deleteNamespace(logger *log.Logger, provider string, namespace string) {
 
 		containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
 		if err != nil {
-			logger.Fatalf("Can't list anydbver containers: %v", err)
+			logger.Fatalf("Can't list anydbver containers to delete: %v", err)
 		}
 		containers_list := slices.DeleteFunc(strings.Split(containers, "\n"), func(e string) bool {
 			return e == ""
@@ -537,9 +640,21 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 			}
 
 			env := map[string]string{}
-			errMsg := "Error creating container"
+			errMsg := "Error running kubernetes operator"
 			ignoreMsg := regexp.MustCompile("ignore this")
-			runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+			ansible_output, err := runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+			if err != nil {
+				logger.Println("Ansible failed with errors: ")
+				fatalPattern := regexp.MustCompile(`^fatal:.*$`)
+				scanner := bufio.NewScanner(strings.NewReader(ansible_output))
+				for scanner.Scan() {
+					line := scanner.Text()
+					if fatalPattern.MatchString(line) {
+						logger.Print(line)
+					}
+				}
+				os.Exit(runtools.ANYDBVER_ANSIBLE_PROBLEM)
+			}
 
 		}
 
@@ -706,9 +821,23 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 	}
 
 	env := map[string]string{}
-	errMsg := "Error creating container"
+	errMsg := "Error running Ansible"
 	ignoreMsg := regexp.MustCompile("ignore this")
-	runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+	ansible_output, err := runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+	if err != nil {
+		logger.Println("Ansible failed with errors: ")
+		fatalPattern := regexp.MustCompile(`FAILED[!]|failed=`)
+		scanner := bufio.NewScanner(strings.NewReader(ansible_output))
+		for scanner.Scan() {
+			line := scanner.Text()
+			if fatalPattern.MatchString(line) {
+				logger.Print(line)
+			}
+		}
+		os.Exit(runtools.ANYDBVER_ANSIBLE_PROBLEM)
+	}
+
+
 }
 
 func main() {
@@ -765,6 +894,16 @@ func main() {
 		},
 	}
 
+	var testCmd = &cobra.Command{
+		Use:   "test",
+		Short: "Run tests",
+		Args:  cobra.ExactArgs(1), // Expect exactly one positional argument (name)
+		Run: func(cmd *cobra.Command, args []string) {
+			testAnydbver(logger, provider, namespace, args[0])
+		},
+	}
+
+
 
 	nsCreateCmd.Flags().StringP("os", "o", "", "Operating system of containers: node0=osver,node1=osver...")
 	nsCreateCmd.Flags().StringP("privileged", "", "", "Whether the container should be privileged: node0=true,node1=true...")
@@ -774,6 +913,7 @@ func main() {
 	namespaceCmd.AddCommand(deleteNsCmd)
 	rootCmd.AddCommand(namespaceCmd)
 	rootCmd.AddCommand(destroyCmd)
+	rootCmd.AddCommand(testCmd)
 
 	var containerCmd = &cobra.Command{
 		Use:   "container",
@@ -830,6 +970,8 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&provider, "provider", "p", "", "Container provider")
 	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "", "Namespace")
 
+
+	rootCmd.AddCommand(listCmd)
 
 	containerCmd.AddCommand(listCmd)
 	containerCmd.AddCommand(createCmd)

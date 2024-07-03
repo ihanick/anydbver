@@ -13,7 +13,19 @@ import (
 	"time"
 )
 
-const COMMAND_TIMEOUT = 600
+const (
+	COMMAND_TIMEOUT = 600
+	ANYDBVER_ERROR_NOT_CONFIGURED = 2
+	ANYDBVER_ERROR_BACKEND_PROBLEM = 3
+	ANYDBVER_ANSIBLE_PROBLEM = 4
+)
+
+func HandleDockerProblem(logger *log.Logger, err error) {
+		if strings.Contains(err.Error(), "permission denied while trying to connect") {
+			logger.Println("The user is not allowed to run docker command, https://docs.docker.com/engine/install/linux-postinstall/")
+			os.Exit(ANYDBVER_ERROR_NOT_CONFIGURED)
+		}
+}
 
 func RunFatal(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp.Regexp, printCmd bool, env map[string]string) int {
 	envVars := make([]string, 0)
@@ -58,7 +70,7 @@ func RunFatal(logger *log.Logger, args []string, errMsg string, ignoreMsg *regex
 	}
 }
 
-func RunPipe(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp.Regexp, printCmd bool, env map[string]string) int {
+func RunPipe(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp.Regexp, printCmd bool, env map[string]string) (string, error) {
 	envVars := make([]string, 0)
 	for k, v := range env {
 		envVars = append(envVars, k+"="+v)
@@ -77,14 +89,17 @@ func RunPipe(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp
 
 	if err := cmd.Start(); err != nil {
 		logger.Println(err)
-		return 1
+		return "",err
 	}
 
+	full_output :=  ""
 	// Function to copy the output from the pipes to the logger
 	copyOutput := func(r io.Reader, prefix string) {
 		scanner := bufio.NewScanner(r)
 		for scanner.Scan() {
-			logger.Println(prefix, scanner.Text())
+			output_chunk := scanner.Text()
+			full_output = full_output + "\n" + output_chunk
+			logger.Println(prefix, output_chunk)
 		}
 		if err := scanner.Err(); err != nil {
 			logger.Println("Error reading from pipe:", err)
@@ -101,23 +116,16 @@ func RunPipe(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp
 	case <-time.After(COMMAND_TIMEOUT * time.Second):
 		cmd.Process.Kill()
 		logger.Println("Command timed out")
-		return 1
+		return full_output, errors.New("Command timed out")
 	case err := <-done:
 		if err != nil {
-			// Combine stdout and stderr for matching ignoreMsg
-			var out bytes.Buffer
-			io.Copy(&out, stdoutPipe)
-			io.Copy(&out, stderrPipe)
-
-			logger.Println(out.Bytes())
-
-			if ignoreMsg != nil && ignoreMsg.Match(out.Bytes()) {
-				return 0
+			if ignoreMsg != nil && ignoreMsg.Match([]byte(full_output)) {
+				return full_output,nil
 			}
-			logger.Fatalf("%s '%s'", errMsg, strings.Join(args, " "))
-			return 1
+			logger.Printf("%s '%s'", errMsg, strings.Join(args, " "))
+			return full_output, errors.New("not ignoring errors")
 		}
-		return 0
+		return full_output, nil
 	}
 }
 
@@ -157,7 +165,7 @@ func RunGetOutput(logger *log.Logger, args []string, errMsg string, ignoreMsg *r
 			if ignoreMsg != nil && ignoreMsg.Match(out.Bytes()) {
 				return out.String(), nil
 			}
-			return out.String(), errors.New("not ignoring")
+			return out.String(), errors.New("not ignoring: " + out.String())
 		}
 		return out.String(), nil
 	}
