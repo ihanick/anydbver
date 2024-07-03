@@ -2315,5 +2315,6 @@ INSERT INTO keyword_aliases VALUES('percona-server','percona-server-mysql');
 INSERT INTO keyword_aliases VALUES('percona-server-mongodb','psmdb');
 INSERT INTO keyword_aliases VALUES('pmm-server','pmm');
 INSERT INTO keyword_aliases VALUES('percona-xtradb-cluster','pxc');
+INSERT INTO keyword_aliases VALUES('percona-server-mongodb-operator','k8s-psmdb');
 CREATE INDEX test_cases_test_id_idx ON test_cases(test_id);
 COMMIT;

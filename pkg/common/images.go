@@ -1,5 +1,7 @@
 package common
 
+import "runtime"
+
 const (
 	USE_LOCAL_IMAGES = false
 	RELEASE_VERSION = "0.1.1"
@@ -7,15 +9,19 @@ const (
 )
 
 func GetDockerImageName(osver string, user string) string {
+	platform_tag := ""
+	if runtime.GOARCH == "arm64" {
+		platform_tag = "-arm64"
+	}
 	imageMap := map[string]string{
-		"el7":   IMAGE_PUBLISHER + "/centos:7-sshd-systemd-" + RELEASE_VERSION,
-		"el8":   IMAGE_PUBLISHER + "/rockylinux:8-sshd-systemd-" + RELEASE_VERSION,
-		"el9":   IMAGE_PUBLISHER + "/rockylinux:9-sshd-systemd-" + RELEASE_VERSION,
-		"jammy": IMAGE_PUBLISHER + "/ubuntu:jammy-sshd-systemd-" + RELEASE_VERSION,
-		"20.04": IMAGE_PUBLISHER + "/ubuntu:jammy-sshd-systemd-" + RELEASE_VERSION,
-		"ubuntu-20.04": IMAGE_PUBLISHER + "/ubuntu:jammy-sshd-systemd-" + RELEASE_VERSION,
-		"ubuntu20.04": IMAGE_PUBLISHER + "/ubuntu:jammy-sshd-systemd-" + RELEASE_VERSION,
-		"ansible": IMAGE_PUBLISHER + "/rockylinux:8-anydbver-ansible-" + RELEASE_VERSION,
+		"el7":   IMAGE_PUBLISHER + "/centos:7-sshd-systemd-" + RELEASE_VERSION + platform_tag,
+		"el8":   IMAGE_PUBLISHER + "/rockylinux:8-sshd-systemd-" + RELEASE_VERSION + platform_tag,
+		"el9":   IMAGE_PUBLISHER + "/rockylinux:9-sshd-systemd-" + RELEASE_VERSION + platform_tag,
+		"jammy": IMAGE_PUBLISHER + "/ubuntu:jammy-sshd-systemd-" + RELEASE_VERSION + platform_tag,
+		"20.04": IMAGE_PUBLISHER + "/ubuntu:jammy-sshd-systemd-" + RELEASE_VERSION + platform_tag,
+		"ubuntu-20.04": IMAGE_PUBLISHER + "/ubuntu:jammy-sshd-systemd-" + RELEASE_VERSION + platform_tag,
+		"ubuntu20.04": IMAGE_PUBLISHER + "/ubuntu:jammy-sshd-systemd-" + RELEASE_VERSION + platform_tag,
+		"ansible": IMAGE_PUBLISHER + "/rockylinux:8-anydbver-ansible-" + RELEASE_VERSION + platform_tag,
 	}
 
 	if USE_LOCAL_IMAGES {

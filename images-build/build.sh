@@ -2,8 +2,10 @@
 PLATFORM=linux/amd64
 IMAGE_PUBLISHER=ihanick
 IMAGE_VERSION="0.1.1"
+PLATFORM_TAG=""
 if uname -m |egrep -q 'aarch64|arm64' ; then
   PLATFORM=linux/arm64
+  PLATFORM_TAG="-arm64"
 fi
 test -f ../secret/id_rsa || ssh-keygen -t rsa -f ../secret/id_rsa -P ''
 cd centos7
@@ -24,5 +26,5 @@ git archive --format=tar HEAD  | gzip -c > images-build/ansible-anydbver/anydbve
 cd images-build/ansible-anydbver/
 docker build -t rockylinux:8-anydbver-ansible-$USER .
 for img in centos:7-sshd-systemd-$USER rockylinux:8-sshd-systemd-$USER rockylinux:9-sshd-systemd-$USER ubuntu:jammy-sshd-systemd-$USER rockylinux:8-anydbver-ansible-$USER ; do
-  docker image tag $img $IMAGE_PUBLISHER/${img/$USER/$IMAGE_VERSION}
+  docker image tag $img $IMAGE_PUBLISHER/${img/$USER/$IMAGE_VERSION}$PLATFORM_TAG
 done
