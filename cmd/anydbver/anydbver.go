@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -346,7 +347,7 @@ func createContainer(logger *log.Logger, name string, osver string, privileged b
 	args := []string{
 		"docker", "run",
 		"--name", prefix + "-" + name,
-		"--platform", "linux/amd64",
+		"--platform", "linux/" + runtime.GOARCH,
 		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
 		"-v", anydbver_common.GetCacheDirectory(logger) + "/data/nfs:/nfs",
 		"-d", "--cgroupns=host", "--tmpfs", "/tmp",
@@ -636,7 +637,7 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 				"--network", prefix + "-anydbver",
 				"--hostname", user + "-ansible",
 				anydbver_common.GetDockerImageName("ansible", user),
-				"bash", "-c", "cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 ; chmod +x yq_linux_amd64; mv yq_linux_amd64 tools/yq); sed -i -re 's/0.0.0.0:[0-9]+/" + clusterIp + ":6443/g' /root/.kube/config ;python3 tools/run_k8s_operator.py " + run_operator_args,
+				"bash", "-c", "cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); sed -i -re 's/0.0.0.0:[0-9]+/" + clusterIp + ":6443/g' /root/.kube/config ;python3 tools/run_k8s_operator.py " + run_operator_args,
 			}
 
 			env := map[string]string{}
