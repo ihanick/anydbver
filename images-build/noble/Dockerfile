@@ -1,6 +1,9 @@
 FROM         ubuntu:noble
  ENV container docker
- RUN apt update ;apt -y install openssh-server rsync python3 iproute2 openssh-client gawk; apt clean; systemctl enable ssh
+ RUN apt update ;apt -y install openssh-server rsync python3 iproute2 openssh-client gawk; \
+  if uname -m | grep x86_64 ; then curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 ; chmod +x yq_linux_amd64; mv yq_linux_amd64 /usr/local/bin/yq ; \
+  else curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_arm64 ; chmod +x yq_linux_arm64; mv yq_linux_arm64 /usr/local/bin/yq ; fi ; \
+ apt clean; systemctl enable ssh
  STOPSIGNAL SIGRTMIN+3
  EXPOSE 22
  RUN for service in\

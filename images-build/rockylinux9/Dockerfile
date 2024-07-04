@@ -1,6 +1,9 @@
 FROM         rockylinux:9
  ENV container docker
- RUN dnf -y install openssh-server rsync python3 iproute procps-ng openssh-clients; dnf clean all; systemctl enable sshd
+ RUN dnf -y install openssh-server rsync python3 iproute procps-ng openssh-clients; \
+  if uname -m | grep x86_64 ; then curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 ; chmod +x yq_linux_amd64; mv yq_linux_amd64 /usr/local/bin/yq ; \
+  else curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_arm64 ; chmod +x yq_linux_arm64; mv yq_linux_arm64 /usr/local/bin/yq ; fi ; \
+ dnf clean all; systemctl enable sshd
  STOPSIGNAL SIGRTMIN+3
  EXPOSE 22
  RUN for service in\

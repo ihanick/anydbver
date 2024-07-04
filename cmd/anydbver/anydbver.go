@@ -27,12 +27,7 @@ import (
 
 
 func getNetworkName(logger *log.Logger, namespace string) string {
-	user := anydbver_common.GetUser(logger) 
-	network := user + "-anydbver"
-	if namespace != "" {
-		network = namespace + "-" + network
-	}
-	return network
+	return anydbver_common.MakeContainerHostName(logger, namespace, "anydbver") 
 }
 
 func listContainers(logger *log.Logger, provider string, namespace string) {
@@ -54,11 +49,11 @@ func listContainers(logger *log.Logger, provider string, namespace string) {
 	}
 }
 
-func getNsFromString(input string, user string) string {
+func getNsFromString(logger *log.Logger, input string) string {
 	res := ""
 	lines := strings.Split(input, "\n")
 
-	suffix := user + "-anydbver"
+	suffix := getNetworkName(logger, "")
 
 	for _, line := range lines {
 		if strings.HasSuffix(line, suffix) {
@@ -121,9 +116,7 @@ func listNamespaces(provider string, logger *log.Logger) {
 			runtools.HandleDockerProblem(logger, err)
 		}
 
-		user := anydbver_common.GetUser(logger)
-		fmt.Print(getNsFromString(networks, user))
-
+		fmt.Print(getNsFromString(logger, networks))
 	}
 }
 
@@ -339,19 +332,15 @@ func createNamespace(logger *log.Logger, osvers map[string]string, privileged ma
 func createContainer(logger *log.Logger, name string, osver string, privileged bool, provider, namespace string) {
 	user := anydbver_common.GetUser(logger)
 	fmt.Printf("Creating container with name %s, OS %s, privileged=%t, provider=%s, namespace=%s...\n", name, osver, privileged, provider, namespace)
-	prefix := user
-	if namespace != "" {
-		prefix = namespace + "-" + prefix
-	}
 
 	args := []string{
 		"docker", "run",
-		"--name", prefix + "-" + name,
+		"--name", anydbver_common.MakeContainerHostName(logger, namespace, name),
 		"--platform", "linux/" + runtime.GOARCH,
 		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
 		"-v", anydbver_common.GetCacheDirectory(logger) + "/data/nfs:/nfs",
 		"-d", "--cgroupns=host", "--tmpfs", "/tmp",
-		"--network", prefix + "-anydbver",
+		"--network", getNetworkName(logger, namespace),
 		"--tmpfs", "/run", "--tmpfs", "/run/lock", 
 		"-v", "/sys/fs/cgroup:/sys/fs/cgroup",
 		"--hostname", name, }
@@ -370,21 +359,20 @@ func createContainer(logger *log.Logger, name string, osver string, privileged b
 
 func containerExec(logger *log.Logger, provider, namespace string, args []string) {
 	name := "node0"
-	if len(args) > 1 {
+
+	if len(args) <= 1  {
+		if len(args) == 1 && args[0] != "--" { 
+			name = args[0]
+		}
+		args = []string {"--", "/bin/sh"}
+	} else if len(args) > 1 {
 		name = args[0]
 		args = args[1:]
-	}
-
-	if namespace != "" {
-		name = namespace + "-" + name
 	}
 
 	if len(args) > 1 && args[0] == "--" {
 		args = args[1:]
 	}
-
-
-	user := anydbver_common.GetUser(logger)
 
 	if provider == "docker" {
 		docker_args := []string{
@@ -398,7 +386,7 @@ func containerExec(logger *log.Logger, provider, namespace string, args []string
 			docker_args = append(docker_args, "-i",)
 		}
 
-		docker_args = append(docker_args, user + "-" + name,)
+		docker_args = append(docker_args, anydbver_common.MakeContainerHostName(logger, namespace, name),)
 
 		docker_args = append(docker_args, args...)
 
@@ -495,6 +483,9 @@ type DeploymentKeywordData struct {
 }
 
 func IsDeploymentVersion(arg string) bool {
+	if strings.HasPrefix(arg, "node") {
+		return true
+	}
 	if strings.HasPrefix(arg, "v") {
 		arg = strings.TrimPrefix(arg, "v")
 	}
@@ -610,11 +601,6 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 		if err != nil {
 			return
 		}
-		prefix := user
-		if namespace != "" {
-			prefix = namespace + "-" + prefix
-		}
-
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			logger.Println("Error: Could not determine user's home directory")
@@ -808,19 +794,24 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 
 
 	user := anydbver_common.GetUser(logger) 
-	prefix := user
-	if namespace != "" {
-		prefix = namespace + "-" + prefix
-	}
 
+	fileInfo, err := os.Stat(ansible_hosts_run_file)
+	if os.IsNotExist(err) || (err == nil && fileInfo.Size() == 0) {
+		logger.Println("no traditional installations with systemd, skipping ansible")
+		return
+	}
+	if err != nil {
+		logger.Println("Can't stat ansible hosts file", err)
+		return
+	}
 
 	cmd_args := []string{
 		"docker", "run", "-i", "--rm",
-		"--name", prefix + "-ansible",
+		"--name", anydbver_common.MakeContainerHostName(logger, namespace, "ansible"),
 		"-v", ansible_hosts_run_file + ":/vagrant/ansible_hosts_run",
 		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
-		"--network", prefix + "-anydbver",
-		"--hostname", user + "-ansible",
+		"--network", getNetworkName(logger, namespace),
+		"--hostname", anydbver_common.MakeContainerHostName(logger, namespace, "ansible"),
 		anydbver_common.GetDockerImageName("ansible", user),
  "bash", "-c", "cd /vagrant;until ansible -m ping -i ansible_hosts_run all &>/dev/null ; do sleep 1; done ; ANSIBLE_FORCE_COLOR=True ansible-playbook -i ansible_hosts_run --forks 16 playbook.yml",
 	}

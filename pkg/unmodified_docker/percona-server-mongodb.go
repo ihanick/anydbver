@@ -8,22 +8,11 @@ import (
 	"os"
 	"net/url"
 	"runtime"
-	"strings"
 	"encoding/base64"
 	"crypto/rand"
 	anydbver_common "github.com/ihanick/anydbver/pkg/common"
 	"github.com/ihanick/anydbver/pkg/runtools"
 )
-
-func MakeContainerHostName(logger *log.Logger, namespace string, name string) string {
-	user := anydbver_common.GetUser(logger)
-	prefix := user
-	if namespace != "" {
-		prefix = namespace + "-" + prefix
-	}
-
-	return strings.ReplaceAll(prefix + "-" + name, ".","-")
-}
 
 func GenerateRandomAndEncodeBase64() (string, error) {
 	data := make([]byte, 756)
@@ -70,7 +59,7 @@ func CreatePerconaServerMongoDBContainer(logger *log.Logger, namespace string, n
 		prefix = namespace + "-" + prefix
 	}
 
-	hostname := MakeContainerHostName(logger, namespace, name)
+	hostname := anydbver_common.MakeContainerHostName(logger, namespace, name)
 
 	var mongo_args []string
 
@@ -94,7 +83,7 @@ func CreatePerconaServerMongoDBContainer(logger *log.Logger, namespace string, n
 		"-v", anydbver_common.GetCacheDirectory(logger) + "/data/nfs:/nfs",
 		"-v", tools_dir + ":/vagrant/tools",
 		"-d",
-		"--network", prefix + "-anydbver",
+		"--network", anydbver_common.MakeContainerHostName(logger, namespace, "anydbver") ,
 		"-e", "MONGO_INITDB_ROOT_USERNAME=admin",
 		"-e", "MONGO_INITDB_ROOT_PASSWORD="  + anydbver_common.ANYDBVER_DEFAULT_PASSWORD,
 		"--restart=always",
@@ -114,8 +103,8 @@ func SetupPerconaServerMongoDBContainer(logger *log.Logger, namespace string, na
 	encoded_pass :=  url.QueryEscape(anydbver_common.ANYDBVER_DEFAULT_PASSWORD)
 	if replSet, ok := args["replica-set"] ; ok {
 		if mstr, ok := args["master"] ; ok {
-			master_host := MakeContainerHostName(logger, namespace, mstr)
-			hostname := MakeContainerHostName(logger, namespace, name)
+			master_host := anydbver_common.MakeContainerHostName(logger, namespace, mstr)
+			hostname := anydbver_common.MakeContainerHostName(logger, namespace, name)
 			mongo_uri := fmt.Sprintf("mongodb://admin:%s@%s:27017/admin", encoded_pass, master_host)
 			script_js := fmt.Sprintf( `rs.add({ host:"%s"})`, hostname)
 
@@ -124,7 +113,7 @@ func SetupPerconaServerMongoDBContainer(logger *log.Logger, namespace string, na
 			runtools.ExecCommandInContainer(logger, master_host, mongo_cmd, "Can't add replica to set")
 
 		} else {
-			master_host := MakeContainerHostName(logger, namespace, name)
+			master_host := anydbver_common.MakeContainerHostName(logger, namespace, name)
 			mongo_uri := fmt.Sprintf("mongodb://admin:%s@%s:27017/admin", encoded_pass, master_host)
 			script_js := fmt.Sprintf(
 				`rs.initiate( { _id : "%s", configsvr: false, members: [ { _id: 0, host: "%s:27017" }, ] })`, 

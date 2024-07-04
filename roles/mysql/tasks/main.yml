@@ -32,8 +32,8 @@
     creates: /root/pdps-80.enabled
   register: percona_release_enabled
 
-- name: enable Percona MySQL 8.0 repo
-  when: percona_server_version.startswith('8.0') or percona_xtradb_cluster_version.startswith('8.0')
+- name: enable Percona MySQL repo
+  when: percona_server_version != '' or percona_xtradb_cluster_version != ''
   shell:
     cmd: >-
       sed -i -e 's/SUPPORTED_ARCHS="i386 noarch x86_64 sources"/SUPPORTED_ARCHS="i386 noarch x86_64 aarch64 sources"/' /usr/bin/percona-release;

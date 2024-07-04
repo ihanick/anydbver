@@ -194,6 +194,11 @@
       include_vars:
         file: common/vars/package_description.yaml
         name: os
+    - name: Repair CentOS7 repos
+      when: dist == 'el7'
+      shell:
+        warn: false
+        cmd: "sed -i -e 's/mirror.centos.org/vault.centos.org/g' -e 's/^#.*baseurl=http/baseurl=http/g' -e 's/^mirrorlist=http/#mirrorlist=http/g'   /etc/yum.repos.d/CentOS-*.repo"
     - name: vagrant compat
       package:
         name: sudo
@@ -211,7 +216,6 @@
         name: ca-certificates
         state: latest
         disable_gpg_check: yes
-
     - name: Docker Role
       when: docker != ''
       include_role:

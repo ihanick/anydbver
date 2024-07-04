@@ -1,8 +1,13 @@
+- name: copy /usr/local/bin/yq to /vagrant/tools/yq
+  copy:
+    src: /usr/local/bin/yq
+    dest: /vagrant/tools/yq
+    mode: '0755'
 - name: Apply Mongo database options from file
   when: (psmdb_version != "" or mongo_org_version != "") and db_opts_file != ''
   block:
     - name: Merge conf file part and main config
-      command:
+      shell:
         cmd: /vagrant/tools/yq -i ea '. as $item ireduce ({}; . * $item )' /etc/mongod.conf "/vagrant/configs/{{ db_opts_file }}"
         creates: "/root/{{ db_opts_file | basename }}.applied"
     - name: Avoid re-merge on next runs

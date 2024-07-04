@@ -8,20 +8,12 @@ import (
 )
 
 func CreatePMMContainer(logger *log.Logger, namespace string, name string, cmd string, args map[string]string) {
-	user := anydbver_common.GetUser(logger)
-	prefix := user
-	if namespace != "" {
-		prefix = namespace + "-" + prefix
-	}
-
-	node_name := prefix + "-" + name
-
 	cmd_args := []string{
 		"docker", "run",
-		"--name", node_name,
+		"--name", anydbver_common.MakeContainerHostName(logger, namespace, name),
 		"-d",
-		"--network", prefix + "-anydbver",
-		"--hostname", name, }
+		"--network", anydbver_common.MakeContainerHostName(logger, namespace, "anydbver"),
+		"--hostname", anydbver_common.MakeContainerHostName(logger, namespace, name), }
 	if mem, ok := args["memory"]; ok {
 		cmd_args = append(cmd_args, "--memory=" + mem,)
 	}
@@ -40,7 +32,7 @@ func CreatePMMContainer(logger *log.Logger, namespace string, name string, cmd s
 	runtools.RunFatal(logger, cmd_args, errMsg, ignoreMsg, true, env)
 
 	runtools.RunFatal(logger, []string{
-		"docker", "exec", node_name, "bash", "-c", "sleep 30;grafana-cli --config /etc/grafana/grafana.ini --homepath /usr/share/grafana --configOverrides cfg:default.paths.data=/srv/grafana admin reset-admin-password " + anydbver_common.ANYDBVER_DEFAULT_PASSWORD,
+		"docker", "exec", anydbver_common.MakeContainerHostName(logger, namespace, name), "bash", "-c", "sleep 30;grafana-cli --config /etc/grafana/grafana.ini --homepath /usr/share/grafana --configOverrides cfg:default.paths.data=/srv/grafana admin reset-admin-password " + anydbver_common.ANYDBVER_DEFAULT_PASSWORD,
 	}, "Error changing password", ignoreMsg, true, env)
 }
 

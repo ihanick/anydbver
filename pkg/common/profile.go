@@ -29,15 +29,10 @@ func CreateSshKeysForContainers(logger *log.Logger, namespace string) {
 	}
 	if _, err := os.Stat(sshKeyPath); os.IsNotExist(err) {
 		user := GetUser(logger) 
-		prefix := user
-		if namespace != "" {
-			prefix = namespace + "-" + prefix
-		}
-
 
 		cmd_args := []string{
 			"docker", "run", "-i", "--rm",
-			"--name", prefix + "-keygen",
+			"--name", MakeContainerHostName(logger, namespace, "keygen"),
 			"-v", secretDir + ":/vagrant/secret",
 			GetDockerImageName("ansible", user),
 			"bash", "-c", "cd /vagrant/secret;ssh-keygen -t rsa -f id_rsa -P ''",
@@ -233,16 +228,7 @@ func GetK3dPath(logger *log.Logger) string {
 
 
 func GetAnsibleInventory(logger *log.Logger, namespace string) string {
-	ipath := "ansible_hosts_run"
-	prefix := ""
-	if namespace != "" {
-		prefix = namespace + "-"
-	}
-
-	ipath = prefix + ipath
-	ipath = filepath.Join( GetCacheDirectory(logger), ipath)
-
-	return ipath
+	return filepath.Join( GetCacheDirectory(logger), MakeContainerHostName(logger, namespace, "ansible_hosts_run"))
 }
 
 func GetUser(logger *log.Logger) string {
@@ -286,17 +272,11 @@ func GetToolsDirectory(logger *log.Logger, namespace string) string {
 	tools_directory := "tools"
 	if _, err := os.Stat("tools/setup_postgresql_replication_docker.sh"); os.IsNotExist(err) {
 		user := GetUser(logger) 
-		prefix := user
-		if namespace != "" {
-			prefix = namespace + "-" + prefix
-		}
-
 		tools_directory = filepath.Join(GetCacheDirectory(logger), "tools")
-
 
 		cmd_args := []string{
 			"docker", "run", "-i", "--rm",
-			"--name", prefix + "-toolscopy",
+			"--name", MakeContainerHostName(logger, namespace, "toolscopy"),
 			"-v", tools_directory + ":" + "/newtools",
 			GetDockerImageName("ansible", user),
 			"bash", "-c", "cp -r /vagrant/tools/* /newtools/",
@@ -323,17 +303,11 @@ func GetToolsDirectory(logger *log.Logger, namespace string) string {
 
 func RunCommandInBaseContainer(logger *log.Logger, namespace string, cmd string, volumes []string, errMsg string) (string, error) {
 	user := GetUser(logger) 
-	prefix := user
-	if namespace != "" {
-		prefix = namespace + "-" + prefix
-	}
 
 	cmd_args := []string{
 		"docker", "run", "-i", "--rm",
-		"--name", prefix + "-ansible",
-		"--network", prefix + "-anydbver",
-		"--hostname", user + "-ansible",
-
+		"--name", MakeContainerHostName(logger, namespace, "ansible"),
+		"--network", MakeContainerHostName(logger, namespace, "anydbver"),
 	}
 
 	cmd_args = append(cmd_args, volumes...)
@@ -345,6 +319,16 @@ func RunCommandInBaseContainer(logger *log.Logger, namespace string, cmd string,
 	env := map[string]string{}
 	ignoreMsg := regexp.MustCompile("ignore this")
 	return runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+}
+
+func MakeContainerHostName(logger *log.Logger, namespace string, name string) string {
+	user := GetUser(logger)
+	prefix := user
+	if namespace != "" {
+		prefix = namespace + "-" + prefix
+	}
+
+	return strings.ReplaceAll(prefix + "-" + name, ".","-")
 }
 
 

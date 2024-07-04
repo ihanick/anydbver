@@ -2275,6 +2275,12 @@ INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','cluster','.*','',
 INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','master','.*','NODE','extra_master_ip','',1,NULL);
 INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','start-db','.*','','extra_start_db','1',1,1);
 INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','galera','.*',NULL,'extra_replication_type','galera',2,NULL);
+INSERT INTO ansible_arguments VALUES('sysbench','version','.*','VERSION','extra_sysbench_version','1.0.20-5',1,1);
+INSERT INTO ansible_arguments VALUES('sysbench','user','.*','','extra_db_user','root',1,1);
+INSERT INTO ansible_arguments VALUES('sysbench','password','.*','','extra_db_password','verysecretpassword1^',1,1);
+INSERT INTO ansible_arguments VALUES('sysbench','mysql','.*','NODE','extra_sysbench_mysql','',1,NULL);
+INSERT INTO ansible_arguments VALUES('ldap','version','.*','VERSION','extra_ldap_server','1',1,1);
+INSERT INTO ansible_arguments VALUES('ldap-master','version','.*','NODE','extra_ldap_server_ip','',1,NULL);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
