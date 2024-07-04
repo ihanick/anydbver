@@ -173,7 +173,7 @@ func FetchTests(logger *log.Logger, dbFile string, name string) ([]AnydbverTest,
 	}
 	defer db.Close()
 
-	query := `SELECT test_id, test_name, REPLACE(cmd,'./anydbver','anydbver') as cmd FROM tests WHERE test_name LIKE ? ORDER BY 1`
+	query := `SELECT test_id, test_name, REPLACE(REPLACE(cmd,'./anydbver','anydbver'), 'default', 'node0') as cmd FROM tests WHERE test_name LIKE ? ORDER BY 1`
 
 	rows, err := db.Query(query, name)
 	if err != nil {

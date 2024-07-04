@@ -197,7 +197,6 @@
     - name: Repair CentOS7 repos
       when: dist == 'el7'
       shell:
-        warn: false
         cmd: "sed -i -e 's/mirror.centos.org/vault.centos.org/g' -e 's/^#.*baseurl=http/baseurl=http/g' -e 's/^mirrorlist=http/#mirrorlist=http/g'   /etc/yum.repos.d/CentOS-*.repo"
     - name: vagrant compat
       package:
