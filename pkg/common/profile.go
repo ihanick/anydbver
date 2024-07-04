@@ -319,3 +319,32 @@ func GetToolsDirectory(logger *log.Logger, namespace string) string {
 	return abs_path
 
 }
+
+
+func RunCommandInBaseContainer(logger *log.Logger, namespace string, cmd string, volumes []string, errMsg string) (string, error) {
+	user := GetUser(logger) 
+	prefix := user
+	if namespace != "" {
+		prefix = namespace + "-" + prefix
+	}
+
+	cmd_args := []string{
+		"docker", "run", "-i", "--rm",
+		"--name", prefix + "-ansible",
+		"--network", prefix + "-anydbver",
+		"--hostname", user + "-ansible",
+
+	}
+
+	cmd_args = append(cmd_args, volumes...)
+
+	cmd_args = append(cmd_args,
+	GetDockerImageName("ansible", user),
+	"bash", "-c", cmd,)
+
+	env := map[string]string{}
+	ignoreMsg := regexp.MustCompile("ignore this")
+	return runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+}
+
+

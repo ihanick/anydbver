@@ -594,8 +594,6 @@ func handleDeploymentKeyword(logger *log.Logger, table string, keyword string) s
 	return result
 }
 
-func runK8sOperator() {
-}
 
 func deployHost(provider string, logger *log.Logger, namespace string, name string, ansible_hosts_run_file string, args []string) {
 	if provider == "docker-image" {
@@ -627,23 +625,17 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 
 		for _, arg := range args {
 			run_operator_args = run_operator_args + " " + handleDeploymentKeyword(logger, "k8s_arguments", arg)
-			cmd_args := []string{
-				"docker", "run", "-i", "--rm",
-				"--name", prefix + "-ansible",
+			volumes := []string{
 				"-v", ansible_hosts_run_file + ":/vagrant/ansible_hosts_run",
 				"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
 				"-v", filepath.Join(homeDir, ".kube", "config") + ":/vagrant/secret/.kube/config:ro",
 				"-v", filepath.Join(anydbver_common.GetCacheDirectory(logger), "data") + ":/vagrant/data",
-				"--network", prefix + "-anydbver",
-				"--hostname", user + "-ansible",
-				anydbver_common.GetDockerImageName("ansible", user),
-				"bash", "-c", "cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); sed -i -re 's/0.0.0.0:[0-9]+/" + clusterIp + ":6443/g' /root/.kube/config ;python3 tools/run_k8s_operator.py " + run_operator_args,
 			}
-
-			env := map[string]string{}
-			errMsg := "Error running kubernetes operator"
-			ignoreMsg := regexp.MustCompile("ignore this")
-			ansible_output, err := runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+			ansible_output, err := anydbver_common.RunCommandInBaseContainer(
+				logger, namespace,
+				"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); sed -i -re 's/0.0.0.0:[0-9]+/" + clusterIp + ":6443/g' /root/.kube/config ;python3 tools/run_k8s_operator.py " + run_operator_args,
+				volumes,
+				"Error running kubernetes operator")
 			if err != nil {
 				logger.Println("Ansible failed with errors: ")
 				fatalPattern := regexp.MustCompile(`^fatal:.*$`)
@@ -802,6 +794,18 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 	for nodeName, nodeDef := range nodeDefinitions {
 		deployHost(nodeProvider[nodeName], logger, namespace, nodeName, ansible_hosts_run_file, nodeDef)
 	}
+
+	for nodeName, nodeDef := range nodeDefinitions {
+		if nodeProvider[nodeName] == "docker-image" {
+			for _, arg := range nodeDef {
+				deployment_keyword := ParseDeploymentKeyword(logger, arg)
+				if _, ok := deployment_keyword.Args["docker-image"]; ok {
+					unmodified_docker.SetupContainer(logger, namespace, nodeName, deployment_keyword.Cmd, deployment_keyword.Args)
+				}
+			}
+		}
+	}
+
 
 	user := anydbver_common.GetUser(logger) 
 	prefix := user

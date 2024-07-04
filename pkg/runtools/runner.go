@@ -170,3 +170,13 @@ func RunGetOutput(logger *log.Logger, args []string, errMsg string, ignoreMsg *r
 		return out.String(), nil
 	}
 }
+
+
+func ExecCommandInContainer(logger *log.Logger, full_name string, cmd string, errMsg string) (string, error) {
+	cmd_args := []string{ "docker", "exec", "-i", full_name, "sh", "-c", cmd,}
+
+	env := map[string]string{}
+	ignoreMsg := regexp.MustCompile("ignore this")
+	return RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+}
+
