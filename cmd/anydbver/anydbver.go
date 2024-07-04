@@ -195,6 +195,38 @@ func FetchTests(logger *log.Logger, dbFile string, name string) ([]AnydbverTest,
 
 	return tests, nil
 }
+func FetchTestCases(logger *log.Logger, dbFile string, test_id int) ([]AnydbverTest, error) {
+	var tests []AnydbverTest;
+
+	db, err := sql.Open("sqlite", dbFile)
+	if err != nil {
+		return tests, fmt.Errorf("failed to open database: %w", err)
+	}
+	defer db.Close()
+
+	query := `SELECT test_id, REPLACE(REPLACE(REPLACE(cmd,'./anydbver','anydbver'), 'default', 'node0'), 'anydbver ssh', 'anydbver exec') as cmd FROM test_cases WHERE test_id = ? ORDER BY 1,2`
+
+	rows, err := db.Query(query, test_id)
+	if err != nil {
+		return tests, fmt.Errorf("failed to execute select query: %w", err)
+	}
+	defer rows.Close()
+
+	// Collect the results into a string
+	for rows.Next() {
+		var test AnydbverTest;
+		if err := rows.Scan(&test.id, &test.cmd); err != nil {
+			return tests, fmt.Errorf("failed to scan row: %w", err)
+		}
+		tests = append(tests, test)
+	}
+	if err = rows.Err(); err != nil {
+		return tests, fmt.Errorf("error iterating over rows: %w", err)
+	}
+
+	return tests, nil
+}
+
 
 func writeTestOutput(logger *log.Logger, test_id int, test_name string, test_output string) {
 	test_results_path := filepath.Join(anydbver_common.GetCacheDirectory(logger), "test_results")
@@ -244,6 +276,30 @@ func testAnydbver(logger *log.Logger, _ string, _ string, name string) error {
 			logger.Println("FAILED")
 			writeTestOutput(logger, test.id, test.name, out)
 		} else {
+			test_cases, err := FetchTestCases(logger, dbFile, test.id)
+			if err != nil {
+				return err
+			}
+
+			for test_case_no,test_case := range test_cases {
+				logger.Printf("Test case: %s", test_case.cmd)
+				cmd_args := []string{
+					"bash", "-c", test.cmd,
+				}
+
+				errMsg := "Error running test"
+				ignoreMsg := regexp.MustCompile("ignore this")
+				out, err := runtools.RunGetOutput(logger, cmd_args, errMsg, ignoreMsg, true, env)
+				if err != nil {
+					logger.Println("test case FAILED")
+					writeTestOutput(logger, test.id, test.name + " - " + fmt.Sprint(test_case_no), out)
+				} else {
+					logger.Println("PASSED")
+				}
+
+
+			}
+
 			logger.Println("OK")
 		}
 
