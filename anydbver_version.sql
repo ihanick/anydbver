@@ -2281,6 +2281,7 @@ INSERT INTO ansible_arguments VALUES('sysbench','password','.*','','extra_db_pas
 INSERT INTO ansible_arguments VALUES('sysbench','mysql','.*','NODE','extra_sysbench_mysql','',1,NULL);
 INSERT INTO ansible_arguments VALUES('ldap','version','.*','VERSION','extra_ldap_server','1',1,1);
 INSERT INTO ansible_arguments VALUES('ldap-master','version','.*','NODE','extra_ldap_server_ip','',1,NULL);
+INSERT INTO ansible_arguments VALUES('repmgr','version','.*','VERSION','extra_repmgr_version','1',1,1);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
