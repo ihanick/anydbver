@@ -1415,7 +1415,7 @@ INSERT INTO tests VALUES(1,'single pg12 el7','./anydbver deploy os:el7 pg:12.17'
 INSERT INTO tests VALUES(2,'single pg12 el8','./anydbver deploy os:el8 pg:12.17');
 INSERT INTO tests VALUES(3,'single ppg13 el7','./anydbver deploy os:el7 ppg:13.5');
 INSERT INTO tests VALUES(4,'single ppg13 el8','./anydbver deploy os:el8 ppg:13.5');
-INSERT INTO tests VALUES(5,'k8s-ps 0.5.0 mysql ready','./anydbver deploy k3d k8s-ps:0.5.0');
+INSERT INTO tests VALUES(5,'k8s-ps 0.7.0','./anydbver deploy k3d k8s-ps:0.7.0');
 INSERT INTO tests VALUES(6,'latest psmdb sharded cluster','./anydbver deploy node0 psmdb:latest,replica-set=rs0,role=shard pbm node1 psmdb:latest,replica-set=rs0,role=shard,master=node0 pbm node2 psmdb:latest,replica-set=rs0,role=shard,master=node0 pbm node3 psmdb:latest,replica-set=rs1,role=shard pbm node4 psmdb:latest,replica-set=rs1,role=shard,master=node3 pbm node5 psmdb:latest,replica-set=rs1,role=shard,master=node3 pbm node6 psmdb:latest,replica-set=cfg0,role=cfg pbm node7 psmdb:latest,replica-set=cfg0,role=cfg,master=node6 pbm node8 psmdb:latest,replica-set=cfg0,role=cfg,master=node6 pbm node9 psmdb:latest mongos-cfg:cfg0/node6,node7,node8 mongos-shard:rs0/node0,node1,node2,rs1/node3,node4,node5');
 INSERT INTO tests VALUES(7,'psmdb:4.2 sharded cluster','./anydbver deploy psmdb:4.2,replica-set=rs0,role=shard node1 psmdb:4.2,replica-set=rs0,role=shard,master=node0 node2 psmdb:4.2,replica-set=rs0,role=shard,master=node0 node3 psmdb:4.2,replica-set=rs1,role=shard node4 psmdb:4.2,replica-set=rs1,role=shard,master=node3 node5 psmdb:4.2,replica-set=rs1,role=shard,master=node3 node6 psmdb:4.2,replica-set=cfg0,role=cfg node7 psmdb:4.2,replica-set=cfg0,role=cfg,master=node6 node8 psmdb:4.2,replica-set=cfg0,role=cfg,master=node6 node9 psmdb:4.2 mongos-cfg:cfg0/node6,node7,node8 mongos-shard:rs0/node0,node1,node2,rs1/node3,node4,node5');
 INSERT INTO tests VALUES(8,'psmdb:5.0 ldap','./anydbver deploy ldap node1 ldap-master:default psmdb:5.0');
@@ -2323,5 +2323,6 @@ INSERT INTO keyword_aliases VALUES('percona-server-mongodb','psmdb');
 INSERT INTO keyword_aliases VALUES('pmm-server','pmm');
 INSERT INTO keyword_aliases VALUES('percona-xtradb-cluster','pxc');
 INSERT INTO keyword_aliases VALUES('percona-server-mongodb-operator','k8s-psmdb');
+INSERT INTO keyword_aliases VALUES('percona-server-mysql-operator','k8s-ps');
 CREATE INDEX test_cases_test_id_idx ON test_cases(test_id);
 COMMIT;
