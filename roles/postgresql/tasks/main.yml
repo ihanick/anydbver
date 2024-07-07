@@ -108,6 +108,13 @@
     force: yes
   with_items: "{{pkg[dist].install_packages}}"
 
+
+- name: install Repmgr
+  when: repmgr_version != '' and postgresql_version != ''
+  package:
+    name: "repmgr_{{maj}}"
+    state: present
+
 - name: install pg_stat_monitor for Percona Distribution for PostgreSQL
   when: pmm_client_version != '' and (percona_postgresql_version.startswith('11.') or percona_postgresql_version.startswith('12.') or percona_postgresql_version.startswith('13.') )
   package:

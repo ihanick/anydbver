@@ -33,6 +33,7 @@
           echo {{ db_password }} > /tmp/root-pw.txt;
           echo export PGUSER=postgres PGHOSTADDR=$(node_ip.sh) PGHOST=$(node_ip.sh) >> /root/.bash_profile;
           PGSETUP_INITDB_OPTIONS="--pwfile=/tmp/root-pw.txt {{ '' if pmm_url == '' else '-A md5' }}" /usr/pgsql-{{maj}}/bin/postgresql{{'95' if postgresql_version.startswith('9.5') else '96' if postgresql_version.startswith('9.6') else '-'+maj}}-setup initdb;
+          sed -r -i -e 's/local\s+all\s+all\s+peer/local   all             all                                     peer\nlocal   all             repmgr                                  md5/' {{pg_conf_dir}}/pg_hba.conf ;
           echo "listen_addresses = '*'" >> {{pg_conf_dir}}/postgresql.conf;
           echo 'host    all             all             0.0.0.0/0            {{'md5' if ldap_server_ip == '' else 'ldap ldapurl="ldap://'+ldap_server_ip+':389/dc=percona,dc=local?uid?sub"' }}' >> {{pg_conf_dir}}/pg_hba.conf;
           echo 'host    replication     all             0.0.0.0/0            md5' >> {{pg_conf_dir}}/pg_hba.conf;
@@ -60,8 +61,8 @@
         cmd: /bin/bash /vagrant/tools/setup_pg_kerberos.sh "{{db_user}}" "{{db_password}}"
         creates: /etc/sysconfig/pgsql/krb5.keytab
 
-    - name: Start database with systemd (logical replication)
-      when: replication_type == 'logical'
+    - name: Start database with systemd (logical replication or master)
+      when: replication_type == 'logical' or master_ip == ''
       command:
         cmd: systemctl start "{{package_info['systemd_service']}}"
 
@@ -255,14 +256,13 @@
     s3_sql: "{{ s3sql }}"
     client: psql -U postgres -h 127.0.0.1
 
-- name: setup Repmgr
-  when: repmgr_version != '' and postgresql_version != ''
+- name: setup Repmgr master
+  when: repmgr_version != '' and postgresql_version != '' and master_ip == ''
   shell:
     cmd: |
       until sudo -iu postgres /usr/pgsql-{{maj}}/bin/pg_isready ; do sleep 1 ; done
-      yum install -y repmgr_{{maj}}
       cat >> /etc/repmgr/{{maj}}/repmgr.conf <<EOF
-      node_id= $(( 10 + $(hostname | sed -e 's/node//' -e 's/default/0/') ))
+      node_id=$(( 10 + $(hostname | sed -e 's/.*node//' -e 's/default/0/') ))
       node_name=$(hostname)
       conninfo='host=$(hostname) user=repmgr dbname=repmgr connect_timeout=2'
       data_directory='/var/lib/pgsql/{{maj}}/data/'
@@ -286,10 +286,9 @@
       EOF
       chmod 0600 /var/lib/pgsql/.pgpass
       chown postgres:postgres /var/lib/pgsql/.pgpass
-      if [[ '{{master_ip}}' == '' ]] ; then
-        sudo -iu postgres createuser --replication --createdb --createrole --superuser repmgr
-        sudo -iu postgres createdb repmgr --owner=repmgr
-        sudo -iu postgres psql -c "ALTER USER repmgr WITH PASSWORD '{{db_password}}';"
+      sudo -iu postgres createuser --replication --createdb --createrole --superuser repmgr
+      sudo -iu postgres createdb repmgr --owner=repmgr
+      sudo -iu postgres psql -c "ALTER USER repmgr WITH PASSWORD '{{db_password}}';"
       cat >> /var/lib/pgsql/{{maj}}/data/postgresql.conf <<EOF
       hot_standby = on
       shared_preload_libraries = 'repmgr'
@@ -297,15 +296,52 @@
         /usr/bin/systemctl restart postgresql-{{maj}}
         until sudo -iu postgres /usr/pgsql-{{maj}}/bin/pg_isready ; do sleep 1 ; done
         until sudo -iu postgres /usr/pgsql-{{maj}}/bin/repmgr primary register ; do sleep 1 ; done
-      else
+
+      systemctl daemon-reload
+      systemctl enable repmgr-{{maj}}
+      systemctl start repmgr-{{maj}}
+
+
+- name: setup Repmgr replica
+  when: repmgr_version != '' and postgresql_version != '' and master_ip != ''
+  shell:
+    cmd: |
+      cat >>  /var/lib/pgsql/.pgpass <<EOF
+      *:*:*:*:{{db_password}}
+      EOF
+      chmod 0600 /var/lib/pgsql/.pgpass
+      chown postgres:postgres /var/lib/pgsql/.pgpass
+
+      until sudo -iu postgres /usr/pgsql-{{maj}}/bin/pg_isready -U repmgr -d repmgr &>/dev/null ; do sleep 1 ; done
+      cat >> /etc/repmgr/{{maj}}/repmgr.conf <<EOF
+      node_id= $(( 10 + $(hostname | sed -e 's/.*node//' -e 's/default/0/') ))
+      node_name=$(hostname)
+      conninfo='host=$(hostname) user=repmgr dbname=repmgr connect_timeout=2'
+      data_directory='/var/lib/pgsql/{{maj}}/data/'
+      failover=automatic
+      promote_command='/usr/pgsql-{{maj}}/bin/repmgr standby promote -f /etc/repmgr/{{maj}}/repmgr.conf --log-to-file'
+      follow_command='/usr/pgsql-{{maj}}/bin/repmgr standby follow -f /etc/repmgr/{{maj}}/repmgr.conf --log-to-file --upstream-node-id=%n'
+      service_start_command = 'sudo /usr/bin/systemctl start postgresql-{{maj}}'
+      service_stop_command = 'sudo /usr/bin/systemctl stop postgresql-{{maj}}'
+      service_restart_command = 'sudo /usr/bin/systemctl restart postgresql-{{maj}}'
+      service_reload_command = 'sudo /usr/bin/systemctl reload postgresql-{{maj}}'
+      service_promote_command = '/usr/pgsql-{{maj}}/bin/pg_ctl -D /var/lib/pgsql/{{maj}}/data promote'
+      EOF
+      cat >> /etc/sudoers <<EOF
+      postgres ALL = NOPASSWD: /usr/bin/systemctl start postgresql-{{maj}}
+      postgres ALL = NOPASSWD: /usr/bin/systemctl restart postgresql-{{maj}}
+      postgres ALL = NOPASSWD: /usr/bin/systemctl reload postgresql-{{maj}}
+      postgres ALL = NOPASSWD: /usr/bin/systemctl stop postgresql-{{maj}}
+      EOF
         until sudo -iu postgres /usr/pgsql-{{maj}}/bin/pg_isready -h {{master_ip}} -U repmgr -d repmgr ; do sleep 1 ; done
         /usr/bin/systemctl stop postgresql-{{maj}}
         sudo -iu postgres /usr/pgsql-{{maj}}/bin/repmgr -h {{master_ip}} -U repmgr -d repmgr standby clone --force --fast-checkpoint
         /usr/bin/systemctl start postgresql-{{maj}}
         until sudo -iu postgres /usr/pgsql-{{maj}}/bin/pg_isready ; do sleep 1 ; done
-        until sudo -iu postgres /usr/pgsql-{{maj}}/bin/repmgr standby register ; do sleep 1 ; done
-      fi
+        until sudo -iu postgres /usr/pgsql-{{maj}}/bin/repmgr standby register -F ; do sleep 1 ; done
       systemctl daemon-reload
       systemctl enable repmgr-{{maj}}
-      systemctl start repmgr-{{maj}}
+      until sudo -iu postgres /usr/pgsql-{{maj}}/bin/pg_isready -U repmgr -d repmgr &>/dev/null ; do sleep 1 ; done
+      for i in 1 2 3 4 5 6 7 8 9 10 ; do systemctl start repmgr-{{maj}} && break || sleep 3; done
 
+      

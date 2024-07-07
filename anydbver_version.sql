@@ -1437,10 +1437,10 @@ CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
 );
-INSERT INTO test_cases VALUES(1,'echo "psql -c \"select version()\"|grep -q \"PostgreSQL 12.17\"" | ./anydbver ssh node0');
-INSERT INTO test_cases VALUES(2,'echo "psql -c \"select version()\"|grep -q \"PostgreSQL 12.17\"" | ./anydbver ssh node0');
-INSERT INTO test_cases VALUES(3,'echo "psql -c \"select version();\"|grep -q \"PostgreSQL 13.5\"" | ./anydbver ssh node0');
-INSERT INTO test_cases VALUES(4,'echo "psql -c \"select version();\"|grep -q \"PostgreSQL 13.5\"" | ./anydbver ssh node0');
+INSERT INTO test_cases VALUES(1,'echo "sudo -u postgres psql -c \"select version()\"|grep -q \"PostgreSQL 12.17\"" | ./anydbver ssh node0');
+INSERT INTO test_cases VALUES(2,'echo "sudo -u postgres psql -c \"select version()\"|grep -q \"PostgreSQL 12.17\"" | ./anydbver ssh node0');
+INSERT INTO test_cases VALUES(3,'echo "sudo -u postgres psql -c \"select version();\"|grep -q \"PostgreSQL 13.5\"" | ./anydbver ssh node0');
+INSERT INTO test_cases VALUES(4,'echo "sudo -u postgres psql -c \"select version();\"|grep -q \"PostgreSQL 13.5\"" | ./anydbver ssh node0');
 INSERT INTO test_cases VALUES(5,'kubectl wait --for=condition=ready pod  -l statefulset.kubernetes.io/pod-name=cluster1-mysql-0');
 INSERT INTO test_cases VALUES(6,'echo "mongosh -u dba -p secret --eval \"sh.status()\"|grep rs1" | ./anydbver ssh node9');
 INSERT INTO test_cases VALUES(7,'echo "mongo -u dba -p secret --eval \"sh.status()\"|grep rs1" | ./anydbver ssh node9');
@@ -1448,8 +1448,8 @@ INSERT INTO test_cases VALUES(9,'kubectl -n pgo get pods | grep Running');
 INSERT INTO test_cases VALUES(10,'echo "mysql --port 6446 --protocol=tcp -e \"select * from performance_schema.replication_group_members;\"|grep -q ONLINE" | ./anydbver ssh node2');
 INSERT INTO test_cases VALUES(11,'echo "orchestrator-client -c topology -i \$(orchestrator-client -c clusters)|grep -q ok" | ./anydbver ssh node3');
 INSERT INTO test_cases VALUES(12,'echo "mysql -e \"SHOW STATUS\" |grep wsrep_cluster_size|grep -q 3" | ./anydbver ssh node1');
-INSERT INTO test_cases VALUES(13,'echo "grep wal_level /var/lib/pgsql/*/data/postgresql.conf|grep -q logical && echo select \\* from pg_stat_replication | psql -U postgres |grep -q walreceiver" |./anydbver ssh');
-INSERT INTO test_cases VALUES(14,'echo "grep wal_level /var/lib/pgsql/*/data/postgresql.conf|grep -q logical && echo select \\* from pg_stat_replication | psql -U postgres |grep -q walreceiver" |./anydbver ssh');
+INSERT INTO test_cases VALUES(13,'echo "grep wal_level /var/lib/pgsql/*/data/postgresql.conf|grep -q logical && echo select \\* from pg_stat_replication | sudo -u postgres psql -U postgres |grep -q walreceiver" |./anydbver ssh');
+INSERT INTO test_cases VALUES(14,'echo "grep wal_level /var/lib/pgsql/*/data/postgresql.conf|grep -q logical && echo select \\* from pg_stat_replication | sudo -u postgres psql -U postgres |grep -q walreceiver" |./anydbver ssh');
 INSERT INTO test_cases VALUES(15,'echo "pbm version |grep -q Version" |./anydbver ssh');
 INSERT INTO test_cases VALUES(16,'kubectl -n pxc get pods | grep Running');
 INSERT INTO test_cases VALUES(17,'kubectl -n pgo get pods | grep Running');

@@ -88,15 +88,9 @@ func getContainerIp(provider string, logger *log.Logger, namespace string, conta
 
 
 func getNodeIp(provider string, logger *log.Logger, namespace string, name string) (string,error) {
-	user := anydbver_common.GetUser(logger)
-	prefix := ""
-	if namespace != "" {
-		prefix = namespace + "-"
-	}
-
 	if provider == "docker" || provider == "docker-image" {
 
-		return getContainerIp(provider, logger, namespace, prefix + user + "-" + name)
+		return getContainerIp(provider, logger, namespace, anydbver_common.MakeContainerHostName(logger, namespace, name))
 	}
 	return "", errors.New("node ip is not found")
 }
@@ -284,7 +278,7 @@ func testAnydbver(logger *log.Logger, _ string, _ string, name string) error {
 			for test_case_no,test_case := range test_cases {
 				logger.Printf("Test case: %s", test_case.cmd)
 				cmd_args := []string{
-					"bash", "-c", test.cmd,
+					"bash", "-c", test_case.cmd,
 				}
 
 				errMsg := "Error running test"
@@ -710,8 +704,7 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 			ansible_deployment_args = ansible_deployment_args + " " + handleDeploymentKeyword(logger, "ansible_arguments", arg)
 		}
 
-		user := anydbver_common.GetUser(logger) 
-		content := user + "." + name + " ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host="+ip+" ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -o GSSAPIDelegateCredentials=no -o GSSAPIKeyExchange=no -o GSSAPITrustDNS=no -o ProxyCommand=none' "+ ansible_deployment_args +"\n"
+		content := anydbver_common.MakeContainerHostName(logger, namespace, name) + " ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host="+ip+" ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no ' "+ ansible_deployment_args +"\n"
 
 
 		re_pmm_server := regexp.MustCompile(`(extra_pmm_url)='(node[0-9]+)'`)
