@@ -499,12 +499,13 @@ func ExecuteQueries(dbFile string, table string, deployCmd string, values map[st
 		SELECT aa.arg || "='" || COALESCE(NULLIF(ps.val,''),aa.arg_default) ||"'" as arg_val
 		FROM ` + table +` aa
 		LEFT JOIN provided_subcmd ps ON aa.subcmd = ps.subcmd
-		WHERE aa.cmd=? AND (always_add OR aa.subcmd = ps.subcmd)
+		WHERE aa.cmd=? AND (always_add OR aa.subcmd = ps.subcmd) AND (ps.val is null OR ps.val LIKE aa.version_filter )
 		GROUP BY arg
 		HAVING orderno = max(orderno);
 	`
 
-	rows, err := db.Query(query, deployCmd)
+	rows, err := db.Query(query, deployCmd, values["version"])
+
 	if err != nil {
 		return "", fmt.Errorf("failed to execute select query: %w", err)
 	}
@@ -593,10 +594,17 @@ func ParseDeploymentKeyword(logger *log.Logger, keyword string) DeploymentKeywor
 		deployCmd = alias
 	}
 
+	if deployCmd == "mongos-shard" || deployCmd == "mongos-cfg" {
+		args["version"] = keyword
+		return DeploymentKeywordData{
+			Cmd: deployCmd,
+		     Args: args,
+			}
+	}
 
 	pairs := strings.Split(keyword, ",")
 	for i, pair := range pairs {
-		if i == 0 && IsDeploymentVersion(pair) {
+		if i == 0 && IsDeploymentVersion(pair)  {
 			args["version"] = pair
 		} else if i == 0 {
 			args["version"] = "latest"
@@ -627,6 +635,7 @@ func handleDeploymentKeyword(logger *log.Logger, table string, keyword string) s
 		delete(deployment_keyword.Args, "version")
 	}
 	result, err := ExecuteQueries(anydbver_common.GetDatabasePath(logger), table, deployment_keyword.Cmd, deployment_keyword.Args)
+
 	if err != nil {
 		logger.Fatalf("Error: %v", err)
 		return ""
@@ -705,6 +714,27 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 		}
 
 		content := anydbver_common.MakeContainerHostName(logger, namespace, name) + " ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host="+ip+" ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no ' "+ ansible_deployment_args +"\n"
+
+		for {
+			re_mongo_shard_hosts := regexp.MustCompile(`(extra_mongos_shard|extra_mongos_cfg)='([^']*)(node[0-9]+)([^']*)'`)
+			content_with_ip := re_mongo_shard_hosts.ReplaceAllStringFunc(content, func(match string) string {
+				submatches := re_mongo_shard_hosts.FindStringSubmatch(match)
+				if len(submatches) > 4 {
+					node := submatches[3]
+					ip, err :=getNodeIp(provider, logger, namespace, node)
+					if err != nil {
+						fmt.Println("Error getting node ip:", err)
+					}
+
+					return fmt.Sprintf("%s='%s%s%s'", submatches[1], submatches[2], ip, submatches[4])
+				}
+				return match
+			})
+			if content_with_ip == content {
+				break
+			}
+			content = content_with_ip
+		}
 
 
 		re_pmm_server := regexp.MustCompile(`(extra_pmm_url)='(node[0-9]+)'`)
