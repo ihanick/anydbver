@@ -1433,6 +1433,7 @@ INSERT INTO tests VALUES(19,'proxysql ps57','./anydbver deploy ps:5.7 node1 ps:5
 INSERT INTO tests VALUES(20,'sysbench ps57','./anydbver deploy ps:5.7 node1 sysbench:latest,mysql=node0');
 INSERT INTO tests VALUES(21,'repmgr pg16','./anydbver deploy pg:16 repmgr node1 pg:16,master=node0 repmgr node2 pg:16,master=node0 repmgr');
 INSERT INTO tests VALUES(22,'valkey','./anydbver deploy valkey:unstable,docker-image node1 valkey:unstable,docker-image,master=node0 node2 valkey:unstable,docker-image,master=node0');
+INSERT INTO tests VALUES(23,'patroni','./anydbver deploy pg patroni node1 pg:master=node0 patroni:master=node0 node2 pg:master=node0 patroni:master=node0');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
@@ -1458,6 +1459,7 @@ INSERT INTO test_cases VALUES(19,'echo proxysql --version version | ./anydbver s
 INSERT INTO test_cases VALUES(20,'echo sysbench --version | ./anydbver ssh node1 | grep -iq sysbench');
 INSERT INTO test_cases VALUES(21,'echo sudo -iu postgres /usr/pgsql-*/bin/repmgr cluster show|./anydbver ssh node0 | grep -c running|grep -Fq 3');
 INSERT INTO test_cases VALUES(22,'echo "echo \"AUTH verysecretpassword1^\\nSET THISISAKEY 5\"|valkey-cli" | ./anydbver exec node0;sleep 10; echo "echo \"AUTH verysecretpassword1^\\nKEYS *\"|valkey-cli" | ./anydbver exec node1 | grep -q THISISAKEY');
+INSERT INTO test_cases VALUES(23,'echo patronictl list | ./anydbver ssh |grep -q running');
 CREATE TABLE mariadb_version(
   version varchar(20),
   os varchar(20),

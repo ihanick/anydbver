@@ -1,7 +1,15 @@
-- name: Setup etcd
+- name: Setup etcd first node
   command:
     cmd: /bin/bash /vagrant/tools/setup_etcd.sh "{{ cluster_name }}" "{{ db_password }}" "{{ etcd_ip }}"
     creates: /etc/etcd/etcd.conf.bak
+  when: master_ip == ''
+
+- name: Setup etcd
+  throttle: 1
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_etcd.sh "{{ cluster_name }}" "{{ db_password }}" "{{ etcd_ip }}"
+    creates: /etc/etcd/etcd.conf.bak
+  when: master_ip != ''
 
 - name: Start etcd with systemd
   when:  start_db == '1'
