@@ -129,7 +129,7 @@ EOF
 chown postgres:postgres -R /home/postgres/archived /etc/patroni/${ETCD_NAME}.yml
 chmod 0600 -R /home/postgres/archived /etc/patroni/${ETCD_NAME}.yml
 
-echo "export PATRONICTL_CONFIG_FILE=/etc/patroni/${ETCD_NAME}.yml" >> ~/.bashrc
+echo "export PATRONICTL_CONFIG_FILE=/etc/patroni/${ETCD_NAME}.yml" >> /etc/profile
 
 
 

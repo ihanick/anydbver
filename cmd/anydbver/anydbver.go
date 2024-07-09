@@ -38,7 +38,7 @@ func listContainers(logger *log.Logger, provider string, namespace string) {
 		errMsg := "Error docker ps"
 		ignoreMsg := regexp.MustCompile("ignore this")
 
-		containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
+		containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env, runtools.COMMAND_TIMEOUT)
 		
 		if err != nil {
 			logger.Printf("Can't list anydbver containers: %v", err)
@@ -78,7 +78,7 @@ func getContainerIp(provider string, logger *log.Logger, namespace string, conta
 		errMsg := "Error getting docker container ip"
 		ignoreMsg := regexp.MustCompile("ignore this")
 
-		ip, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
+		ip, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env, runtools.COMMAND_TIMEOUT)
 		return strings.TrimSuffix(ip, "\n"), err
 	}
 	return "", errors.New("node ip is not found")
@@ -104,7 +104,7 @@ func listNamespaces(provider string, logger *log.Logger) {
 		errMsg := "Error docker network"
 		ignoreMsg := regexp.MustCompile("ignore this")
 
-		networks, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
+		networks, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env, runtools.COMMAND_TIMEOUT)
 		if err != nil {
 			logger.Printf("Can't list anydbver namespaces: %v", err)
 			runtools.HandleDockerProblem(logger, err)
@@ -127,7 +127,7 @@ func findK3dClusters(logger *log.Logger, namespace string) []string {
 	errMsg := "Error docker ps"
 	ignoreMsg := regexp.MustCompile("not found|No such")
 
-	containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
+	containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env, runtools.COMMAND_TIMEOUT)
 	if err != nil {
 		logger.Printf("Can't list k3d clusters: %v", err)
 		runtools.HandleDockerProblem(logger, err)
@@ -265,11 +265,12 @@ func testAnydbver(logger *log.Logger, _ string, _ string, name string) error {
 		env := map[string]string{}
 		errMsg := "Error running test"
 		ignoreMsg := regexp.MustCompile("ignore this")
-		out, err := runtools.RunGetOutput(logger, cmd_args, errMsg, ignoreMsg, true, env)
+		out, err := runtools.RunGetOutput(logger, cmd_args, errMsg, ignoreMsg, true, env, runtools.COMMAND_TIMEOUT * 2)
 		if err != nil {
 			logger.Println("FAILED")
 			writeTestOutput(logger, test.id, test.name, out)
 		} else {
+			logger.Println("DEPLOYED")
 			test_cases, err := FetchTestCases(logger, dbFile, test.id)
 			if err != nil {
 				return err
@@ -283,7 +284,7 @@ func testAnydbver(logger *log.Logger, _ string, _ string, name string) error {
 
 				errMsg := "Error running test"
 				ignoreMsg := regexp.MustCompile("ignore this")
-				out, err := runtools.RunGetOutput(logger, cmd_args, errMsg, ignoreMsg, true, env)
+				out, err := runtools.RunGetOutput(logger, cmd_args, errMsg, ignoreMsg, true, env, runtools.COMMAND_TIMEOUT)
 				if err != nil {
 					logger.Println("test case FAILED")
 					writeTestOutput(logger, test.id, test.name + " - " + fmt.Sprint(test_case_no), out)
@@ -293,8 +294,6 @@ func testAnydbver(logger *log.Logger, _ string, _ string, name string) error {
 
 
 			}
-
-			logger.Println("OK")
 		}
 
 	}
@@ -322,7 +321,7 @@ func deleteNamespace(logger *log.Logger, provider string, namespace string) {
 		errMsg := "Error docker ps"
 		ignoreMsg := regexp.MustCompile("not found|No such")
 
-		containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env)
+		containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env, runtools.COMMAND_TIMEOUT)
 		if err != nil {
 			logger.Fatalf("Can't list anydbver containers to delete: %v", err)
 		}
@@ -411,10 +410,10 @@ func containerExec(logger *log.Logger, provider, namespace string, args []string
 	name := "node0"
 
 	if len(args) <= 1  {
-		if len(args) == 1 && args[0] != "--" { 
+		if len(args) == 1 && args[0] != "--" {
 			name = args[0]
 		}
-		args = []string {"--", "/bin/sh"}
+		args = []string {"--", "/bin/sh", "--login"}
 	} else if len(args) > 1 {
 		name = args[0]
 		args = args[1:]

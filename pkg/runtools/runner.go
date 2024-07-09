@@ -130,7 +130,7 @@ func RunPipe(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp
 }
 
 
-func RunGetOutput(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp.Regexp, printCmd bool, env map[string]string) (string, error) {
+func RunGetOutput(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp.Regexp, printCmd bool, env map[string]string, timeout int) (string, error) {
 	envVars := make([]string, 0)
 	for k, v := range env {
 		envVars = append(envVars, k+"="+v)
@@ -156,7 +156,7 @@ func RunGetOutput(logger *log.Logger, args []string, errMsg string, ignoreMsg *r
 	go func() { done <- cmd.Wait() }()
 
 	select {
-	case <-time.After(COMMAND_TIMEOUT * time.Second):
+	case <-time.After( time.Duration(timeout) * time.Second):
 		cmd.Process.Kill()
 		logger.Println("Command timed out")
 		return out.String(), errors.New("timeout")
