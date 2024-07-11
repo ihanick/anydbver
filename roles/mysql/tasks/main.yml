@@ -94,6 +94,11 @@
     src: roles/mysql/templates/proxysql.repo.j2
     dest: /etc/yum.repos.d/proxysql.repo
 
+- name: Enable Percona ProxySQL repo
+  when: percona_proxysql_version != ''
+  command:
+    cmd: /usr/bin/percona-release enable proxysql
+
 - name: Enable local repo.* caching
   include_tasks: common/tasks/repo_cache.yaml
 
