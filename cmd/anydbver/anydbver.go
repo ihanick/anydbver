@@ -628,6 +628,12 @@ func ParseDeploymentKeyword(logger *log.Logger, keyword string) DeploymentKeywor
 }
 
 
+func handleDBPreReq(logger *log.Logger, namespace string, name string, cmd string, args map[string]string) {
+	if cmd == "percona-server-mongodb" {
+		unmodified_docker.SetupMongoKeyFiles(logger, namespace, anydbver_common.MakeContainerHostName(logger, namespace, name), args)
+	}
+}
+
 func handleDeploymentKeyword(logger *log.Logger, table string, keyword string) string {
 	deployment_keyword := ParseDeploymentKeyword(logger, keyword)
 	if ( table == "ansible_arguments" || table == "k8s_arguments" ) && deployment_keyword.Args["version"] == "latest" {
@@ -709,6 +715,8 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 		ansible_deployment_args := ""
 
 		for _, arg := range args {
+			deployment_keyword := ParseDeploymentKeyword(logger, arg)
+			handleDBPreReq(logger, namespace, name, deployment_keyword.Cmd, deployment_keyword.Args)
 			ansible_deployment_args = ansible_deployment_args + " " + handleDeploymentKeyword(logger, "ansible_arguments", arg)
 		}
 
@@ -734,6 +742,7 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 			}
 			content = content_with_ip
 		}
+
 
 
 		re_pmm_server := regexp.MustCompile(`(extra_pmm_url)='(node[0-9]+)'`)

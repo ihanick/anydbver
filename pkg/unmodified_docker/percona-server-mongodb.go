@@ -51,6 +51,31 @@ func GenerateMonoDBKeyFile(logger *log.Logger, replSet string) {
 		}
 }
 
+func SetupMongoKeyFiles(logger *log.Logger, namespace string, hostname string, args map[string]string) []string {
+
+	var mongo_args []string
+
+
+
+	if _, ok := args["cluster"] ; !ok {
+		args["cluster"] = "cluster1"
+	}
+
+	if replSet, ok := args["replica-set"] ; ok {
+		GenerateMonoDBKeyFile(logger, args["cluster"])
+		
+		mongo_args = append(
+			mongo_args,
+			"--replSet", replSet, "--keyFile", fmt.Sprintf("/vagrant/secret/%s-keyfile-docker", replSet),
+			"--bind_ip", "localhost," + hostname)
+		create_repl_set_key_cmd := fmt.Sprintf("cp /vagrant/secret/%s-keyfile /vagrant/secret/%s-keyfile;cp /vagrant/secret/%s-keyfile /vagrant/secret/%s-keyfile-docker;chown 1001 /vagrant/secret/%s-keyfile-docker;chmod 0600 /vagrant/secret/%s-keyfile-docker", args["cluster"], replSet, args["cluster"], replSet, replSet, replSet)
+		volumes := []string{"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret"}
+		anydbver_common.RunCommandInBaseContainer(logger, namespace, create_repl_set_key_cmd,volumes, "Can't copy mongodb keyfile")
+	}
+
+	return mongo_args
+}
+
 func CreatePerconaServerMongoDBContainer(logger *log.Logger, namespace string, name string, cmd string, args map[string]string) {
 	user := anydbver_common.GetUser(logger)
 	tools_dir := anydbver_common.GetToolsDirectory(logger, namespace) 
@@ -61,20 +86,7 @@ func CreatePerconaServerMongoDBContainer(logger *log.Logger, namespace string, n
 
 	hostname := anydbver_common.MakeContainerHostName(logger, namespace, name)
 
-	var mongo_args []string
-
-	if replSet, ok := args["replica-set"] ; ok {
-		GenerateMonoDBKeyFile(logger, replSet)
-		
-		mongo_args = append(
-			mongo_args,
-			"--replSet", replSet, "--keyFile", fmt.Sprintf("/vagrant/secret/%s-keyfile-docker", replSet),
-			"--bind_ip", "localhost," + hostname)
-		create_repl_set_key_cmd := fmt.Sprintf("cp /vagrant/secret/%s-keyfile /vagrant/secret/%s-keyfile-docker;chown 1001 /vagrant/secret/%s-keyfile-docker;chmod 0600 /vagrant/secret/%s-keyfile-docker", replSet, replSet, replSet, replSet)
-		volumes := []string{"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret"}
-		anydbver_common.RunCommandInBaseContainer(logger, namespace, create_repl_set_key_cmd,volumes, "Can't copy mongodb keyfile")
-	}
-
+	mongo_args := SetupMongoKeyFiles(logger, namespace, hostname, args)
 	cmd_args := []string{
 		"docker", "run",
 		"--name", hostname,
