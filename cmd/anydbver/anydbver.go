@@ -631,6 +631,8 @@ func ParseDeploymentKeyword(logger *log.Logger, keyword string) DeploymentKeywor
 func handleDBPreReq(logger *log.Logger, namespace string, name string, cmd string, args map[string]string) {
 	if cmd == "percona-server-mongodb" {
 		unmodified_docker.SetupMongoKeyFiles(logger, namespace, anydbver_common.MakeContainerHostName(logger, namespace, name), args)
+	} else if cmd == "percona-xtradb-cluster" {
+
 	}
 }
 
@@ -784,6 +786,41 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 			return
 		}
 	}
+}
+
+func fetchDeployCompletions(logger *log.Logger) []string {
+	var keywords []string;
+
+	db, err := sql.Open("sqlite", anydbver_common.GetDatabasePath(logger))
+	if err != nil {
+		logger.Printf("failed to open database: %w", err)
+		return keywords
+	}
+	defer db.Close()
+
+	query := `select distinct keyword from (select keyword from keyword_aliases union select alias as keyword from keyword_aliases) a order by keyword`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		logger.Printf("failed to execute select query: %w", err)
+		return keywords
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var keyword string;
+		if err := rows.Scan(&keyword); err != nil {
+			logger.Printf("failed to scan row: %w", err)
+			return keywords
+		}
+		keywords = append(keywords, keyword)
+	}
+	if err = rows.Err(); err != nil {
+		logger.Printf("error iterating over rows: %w", err)
+		return keywords
+	}
+
+	return keywords
 }
 
 func createK3dCluster(logger *log.Logger, namespace string, name string, args map[string]string) {
@@ -1037,6 +1074,7 @@ func main() {
 	}
 	deployCmd.Flags().BoolP("keep", "", false, "do not remove existing containers and network")
 
+	deployCmd.ValidArgsFunction = cobra.FixedCompletions(fetchDeployCompletions(logger), cobra.ShellCompDirectiveNoSpace)
 	rootCmd.AddCommand(deployCmd)
 
 	var execCmd = &cobra.Command{
