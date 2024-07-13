@@ -248,7 +248,7 @@ func writeTestOutput(logger *log.Logger, test_id int, test_name string, test_out
 	}
 }
 
-func testAnydbver(logger *log.Logger, _ string, _ string, name string) error {
+func testAnydbver(logger *log.Logger, _ string, _ string, name string, skip_os []string) error {
 	dbFile := anydbver_common.GetDatabasePath(logger)
 	// Join the results with a space
 	tests, err := FetchTests(logger, dbFile, name)
@@ -256,10 +256,18 @@ func testAnydbver(logger *log.Logger, _ string, _ string, name string) error {
 		return err
 	}
 
+	outer:
 	for _,test := range tests {
 		logger.Printf("Test %+v", test)
 		cmd_args := []string{
 			"bash", "-c", test.cmd,
+		}
+
+		for _, os_name := range skip_os {
+			if strings.Contains(test.name, os_name) {
+				logger.Println("SKIPPED")
+				continue outer
+			}
 		}
 
 		env := map[string]string{}
@@ -1019,9 +1027,15 @@ func main() {
 		Short: "Run tests",
 		Args:  cobra.ExactArgs(1), // Expect exactly one positional argument (name)
 		Run: func(cmd *cobra.Command, args []string) {
-			testAnydbver(logger, provider, namespace, args[0])
+			skip_os, _ := cmd.Flags().GetString("skip-os")
+			var skip_os_list []string;
+			if skip_os != "" {
+				skip_os_list = strings.Split(skip_os,",")
+			}
+			testAnydbver(logger, provider, namespace, args[0], skip_os_list)
 		},
 	}
+	testCmd.Flags().StringP("skip-os", "", "", "Skip tests with specific OS")
 
 
 

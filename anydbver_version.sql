@@ -2295,6 +2295,7 @@ INSERT INTO ansible_arguments VALUES('percona-proxysql','version','%','VERSION',
 INSERT INTO ansible_arguments VALUES('percona-proxysql','master','%','NODE','extra_master_ip','',1,NULL);
 INSERT INTO ansible_arguments VALUES('percona-proxysql','user','%','','extra_db_user','root',1,1);
 INSERT INTO ansible_arguments VALUES('percona-proxysql','password','%','','extra_db_password','verysecretpassword1^',1,1);
+INSERT INTO ansible_arguments VALUES('percona-server','mysql-router','%','','extra_mysql_router_version','percona-server',1,NULL);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
