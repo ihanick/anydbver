@@ -421,7 +421,7 @@ func containerExec(logger *log.Logger, provider, namespace string, args []string
 		if len(args) == 1 && args[0] != "--" {
 			name = args[0]
 		}
-		args = []string {"--", "/bin/sh", "--login"}
+		args = []string {"--", "/bin/bash", "--login"}
 	} else if len(args) > 1 {
 		name = args[0]
 		args = args[1:]

@@ -20,6 +20,11 @@ func CreateContainer(logger *log.Logger, namespace string, name string, cmd stri
 			args["docker-image"] = "percona/percona-server-mongodb"
 		}
 		CreatePerconaServerMongoDBContainer(logger, namespace, name, cmd, args)
+	} else if cmd == "valkey" {
+		if args["docker-image"] == "" {
+			args["docker-image"] = "valkey/valkey"
+		}
+		CreateValKeyContainer(logger, namespace, name, cmd, args)
 	}
 }
 

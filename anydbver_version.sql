@@ -1458,7 +1458,7 @@ INSERT INTO test_cases VALUES(18,'echo "sudo -u postgres pgbackrest backup --sta
 INSERT INTO test_cases VALUES(19,'echo proxysql --version version | ./anydbver ssh node2 | grep -q ProxySQL');
 INSERT INTO test_cases VALUES(20,'echo sysbench --version | ./anydbver ssh node1 | grep -iq sysbench');
 INSERT INTO test_cases VALUES(21,'echo sudo -iu postgres /usr/pgsql-*/bin/repmgr cluster show|./anydbver ssh node0 | grep -c running|grep -Fq 3');
-INSERT INTO test_cases VALUES(22,'echo "echo \"AUTH verysecretpassword1^\\nSET THISISAKEY 5\"|valkey-cli" | ./anydbver exec node0;sleep 10; echo "echo \"AUTH verysecretpassword1^\\nKEYS *\"|valkey-cli" | ./anydbver exec node1 | grep -q THISISAKEY');
+INSERT INTO test_cases VALUES(22,'echo "echo -e \"AUTH verysecretpassword1^\\nSET THISISAKEY 5\"|valkey-cli" | ./anydbver exec node0 -- bash;sleep 10; echo "echo -e \"AUTH verysecretpassword1^\\nKEYS *\"|valkey-cli" | ./anydbver exec node1 -- bash | grep -q THISISAKEY');
 INSERT INTO test_cases VALUES(23,'echo patronictl list | ./anydbver ssh |grep -q running');
 CREATE TABLE mariadb_version(
   version varchar(20),
@@ -2300,6 +2300,11 @@ INSERT INTO ansible_arguments VALUES('percona-orchestrator','version','%','VERSI
 INSERT INTO ansible_arguments VALUES('percona-orchestrator','master','%','NODE','extra_master_ip','',1,NULL);
 INSERT INTO ansible_arguments VALUES('percona-orchestrator','user','%','','extra_db_user','root',1,1);
 INSERT INTO ansible_arguments VALUES('percona-orchestrator','password','%','','extra_db_password','verysecretpassword1^',1,1);
+INSERT INTO ansible_arguments VALUES('valkey','version','%','VERSION','extra_valkey_version','latest',1,1);
+INSERT INTO ansible_arguments VALUES('valkey','password','%','','extra_db_password','verysecretpassword1^',1,1);
+INSERT INTO ansible_arguments VALUES('valkey','master','%','NODE','extra_master_ip','',1,NULL);
+INSERT INTO ansible_arguments VALUES('valkey','sentinel','%',NULL,'extra_sentinel','1',1,NULL);
+INSERT INTO ansible_arguments VALUES('valkey','cluster','%','','extra_cluster_name','cluster1',1,NULL);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
