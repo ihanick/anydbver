@@ -503,7 +503,7 @@ func ExecuteQueries(dbFile string, table string, deployCmd string, values map[st
 
 	// Execute the select query
 	query := `
-		SELECT aa.arg || "='" || COALESCE(NULLIF(ps.val,''),aa.arg_default) ||"'" as arg_val
+		SELECT aa.arg || CASE COALESCE(NULLIF(ps.val,''),aa.arg_default)  WHEN '' THEN '' ELSE "='" || COALESCE(NULLIF(ps.val,''),aa.arg_default)  ||"'" END as arg_val
 		FROM ` + table +` aa
 		LEFT JOIN provided_subcmd ps ON aa.subcmd = ps.subcmd
 		WHERE aa.cmd=? AND (always_add OR aa.subcmd = ps.subcmd) AND (ps.val is null OR ps.val LIKE aa.version_filter )

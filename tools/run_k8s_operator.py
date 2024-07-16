@@ -161,7 +161,7 @@ def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, 
     set_yaml('.spec.postgresVersion={dbver}'.format(dbver=db_ver),"change PG major version")
   if tls and op_ver.startswith("1"):
     set_yaml('.spec.tlsOnly=true \
-        | .spec.sslCA="{name}-ssl-ca" \
+        | .+opspec.sslCA="{name}-ssl-ca" \
         | .spec.sslSecretName="{name}-ssl-keypair" \
         | .spec.sslReplicationSecretName="{name}-ssl-keypair"'.format(name=cluster_name),
              "enable TLS encryption")
@@ -197,6 +197,10 @@ def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, 
     raise Exception("cluster is not starting")
 
 def op_labels(op, op_ver):
+  if (op in ("percona-postgresql-operator", "postgres-operator")
+      and (StrictVersion(op_ver) > StrictVersion("2.3.99") ) ):
+    return "app.kubernetes.io/name=pg-operator"
+
   if (op in ("percona-xtradb-cluster-operator", "pxc-operator")
       and (not re.match(r'^[0-9\.]*$', op_ver)
            or StrictVersion(op_ver) > StrictVersion("1.6.0") ) ):
@@ -260,7 +264,7 @@ def run_cert_manager(ver):
     [
       "kubectl", "run", "-i", "--rm", "--restart=Never", "cert-manager-webook-test", "--image=curlimages/curl", "--",
       "curl", "-ks", "https://cert-manager-webhook.cert-manager.svc:443/mutate"],
-      "call cert-manager webhook", r"Bad Request")
+      "call cert-manager webhook", r"Bad Request|resource list for metrics.k8s.io")
   logger.info("cert-manager webhook returns: {}".format(msg))
 
 
@@ -976,7 +980,10 @@ def setup_operator_helm(args):
       pg_helm_install_cmd.extend(["-f", args.helm_values])
     run_helm(args.helm_path, pg_helm_install_cmd, "Can't start Postgresql with helm")
     args.cluster_name="{}-pg-db".format(args.cluster_name)
-    if not k8s_wait_for_ready(args.namespace, "name={}".format(args.cluster_name)):
+    pg_instance_labels = "name={}".format(args.cluster_name)
+    if StrictVersion(args.operator_version) > StrictVersion("2.3.99"):
+      pg_instance_labels = "app.kubernetes.io/component=pg,app.kubernetes.io/instance={}".format(args.cluster_name)
+    if not k8s_wait_for_ready(args.namespace, pg_instance_labels):
       raise Exception("cluster is not starting")
   if args.operator_name == "percona-server-mongodb-operator":
     run_helm(args.helm_path, ["helm", "repo", "add", "percona", "https://percona.github.io/percona-helm-charts/"], "helm repo add problem")
