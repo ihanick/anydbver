@@ -1473,6 +1473,7 @@ INSERT INTO test_cases VALUES(20,'echo sysbench --version | ./anydbver ssh node1
 INSERT INTO test_cases VALUES(21,'echo sudo -iu postgres /usr/pgsql-*/bin/repmgr cluster show|./anydbver ssh node0 | grep -c running|grep -Fq 3');
 INSERT INTO test_cases VALUES(22,'echo "echo -e \"AUTH verysecretpassword1^\\nSET THISISAKEY 5\"|valkey-cli" | ./anydbver exec node0 -- bash;sleep 10; echo "echo -e \"AUTH verysecretpassword1^\\nKEYS *\"|valkey-cli" | ./anydbver exec node1 -- bash | grep -q THISISAKEY');
 INSERT INTO test_cases VALUES(23,'echo patronictl list | ./anydbver ssh |grep -q running');
+INSERT INTO test_cases VALUES(26,'echo "select * from performance_schema.replication_group_members" | anydbver exec node1 -- mysql -u root -pverysecretpassword1^ |grep -c ONLINE | grep -q 3');
 CREATE TABLE mariadb_version(
   version varchar(20),
   os varchar(20),
