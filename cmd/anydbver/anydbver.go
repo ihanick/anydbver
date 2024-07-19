@@ -157,7 +157,7 @@ type AnydbverTest struct {
 func FetchTests(logger *log.Logger, dbFile string, name string) ([]AnydbverTest, error) {
 	var tests []AnydbverTest;
 
-	if name == "all" {
+	if name == "all" || name == "list" {
 		name = "%"
 	}
 
@@ -267,6 +267,9 @@ func testAnydbver(logger *log.Logger, _ string, _ string, name string, skip_os [
 			}
 		}
 		logger.Printf("Test %+v", test)
+		if name == "list" {
+			continue
+		}
 		cmd_args := []string{
 			"bash", "-c", test.cmd,
 		}
@@ -974,7 +977,7 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 		"--network", getNetworkName(logger, namespace),
 		"--hostname", anydbver_common.MakeContainerHostName(logger, namespace, "ansible"),
 		anydbver_common.GetDockerImageName("ansible", user),
- "bash", "-c", "cd /vagrant;until ansible -m ping -i ansible_hosts_run all &>/dev/null ; do sleep 1; done ; ANSIBLE_FORCE_COLOR=True ansible-playbook -i ansible_hosts_run --forks 16 playbook.yml",
+ "bash", "-c", "cd /vagrant;until ansible -m ping -i ansible_hosts_run all &>/dev/null ; do sleep 1; done ; ANSIBLE_FORCE_COLOR=True ANSIBLE_DISPLAY_SKIPPED_HOSTS=False ansible-playbook -i ansible_hosts_run --forks 16 playbook.yml",
 	}
 
 	env := map[string]string{}

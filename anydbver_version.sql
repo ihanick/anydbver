@@ -1446,6 +1446,7 @@ INSERT INTO tests VALUES(22,'valkey','./anydbver deploy valkey:unstable,docker-i
 INSERT INTO tests VALUES(23,'patroni','./anydbver deploy pg patroni node1 pg:master=node0 patroni:master=node0 node2 pg:master=node0 patroni:master=node0');
 INSERT INTO tests VALUES(24,'mongo kubernetes 1.14.0','anydbver deploy k3d:v1.25.16-k3s4,cluster-domain=percona.local cert-manager:1.14.2 k8s-mongo:1.14.0,cluster-name=db1');
 INSERT INTO tests VALUES(25,'pg operator 2.4.0 helm','anydbver deploy k3d:v1.25.16-k3s4,cluster-domain=percona.local cert-manager:1.14.2 k8s-pg:2.4.0,cluster-name=db1,helm');
+INSERT INTO tests VALUES(26,'ps group pmm','anydbver deploy pmm:2.42.0,docker-image,port=12443 node1 ps:latest,group-replication pmm-client:2.42.0-6,server=node0 node1 ps:latest,group-replication,master=node1 pmm-client:2.42.0-6,server=node0 node2 ps:latest,group-replication,master=node1 pmm-client:2.42.0-6,server=node0');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
