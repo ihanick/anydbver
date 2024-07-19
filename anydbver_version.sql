@@ -1447,6 +1447,7 @@ INSERT INTO tests VALUES(23,'patroni','./anydbver deploy pg patroni node1 pg:mas
 INSERT INTO tests VALUES(24,'mongo kubernetes 1.14.0','anydbver deploy k3d:v1.25.16-k3s4,cluster-domain=percona.local cert-manager:1.14.2 k8s-mongo:1.14.0,cluster-name=db1');
 INSERT INTO tests VALUES(25,'pg operator 2.4.0 helm','anydbver deploy k3d:v1.25.16-k3s4,cluster-domain=percona.local cert-manager:1.14.2 k8s-pg:2.4.0,cluster-name=db1,helm');
 INSERT INTO tests VALUES(26,'ps group pmm','anydbver deploy pmm:2.42.0,docker-image,port=12443 node1 ps:latest,group-replication pmm-client:2.42.0-6,server=node0 node2 ps:latest,group-replication,master=node1 pmm-client:2.42.0-6,server=node0 node3 ps:latest,group-replication,master=node1 pmm-client:2.42.0-6,server=node0');
+INSERT INTO tests VALUES(27,'mysql 5.7 async','anydbver deploy mysql:5.7.35 os:el7 node1 mysql:5.7.35,master=node0 os:el7');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
@@ -1474,6 +1475,7 @@ INSERT INTO test_cases VALUES(21,'echo sudo -iu postgres /usr/pgsql-*/bin/repmgr
 INSERT INTO test_cases VALUES(22,'echo "echo -e \"AUTH verysecretpassword1^\\nSET THISISAKEY 5\"|valkey-cli" | ./anydbver exec node0 -- bash;sleep 10; echo "echo -e \"AUTH verysecretpassword1^\\nKEYS *\"|valkey-cli" | ./anydbver exec node1 -- bash | grep -q THISISAKEY');
 INSERT INTO test_cases VALUES(23,'echo patronictl list | ./anydbver ssh |grep -q running');
 INSERT INTO test_cases VALUES(26,'echo "select * from performance_schema.replication_group_members" | anydbver exec node1 -- mysql -u root -pverysecretpassword1^ |grep -c ONLINE | grep -q 3');
+INSERT INTO test_cases VALUES(27,'echo "show slave status"|anydbver exec node1 -- mysql -E -uroot|grep -q "Slave_SQL_Running: Yes"');
 CREATE TABLE mariadb_version(
   version varchar(20),
   os varchar(20),
@@ -2324,6 +2326,16 @@ INSERT INTO ansible_arguments VALUES('valkey','password','%','','extra_db_passwo
 INSERT INTO ansible_arguments VALUES('valkey','master','%','NODE','extra_master_ip','',1,NULL);
 INSERT INTO ansible_arguments VALUES('valkey','sentinel','%',NULL,'extra_sentinel','1',1,NULL);
 INSERT INTO ansible_arguments VALUES('valkey','cluster','%','','extra_cluster_name','cluster1',1,NULL);
+INSERT INTO ansible_arguments VALUES('mysql','version','%','VERSION','extra_mysql_version','8.0',1,1);
+INSERT INTO ansible_arguments VALUES('mysql','user','%','','extra_db_user','root',1,1);
+INSERT INTO ansible_arguments VALUES('mysql','password','%','','extra_db_password','verysecretpassword1^',1,1);
+INSERT INTO ansible_arguments VALUES('mysql','opts-file','%','','extra_db_opts_file','mysql/async-repl-gtid.cnf',1,1);
+INSERT INTO ansible_arguments VALUES('mysql','cluster','%','','extra_cluster_name','cluster1',1,1);
+INSERT INTO ansible_arguments VALUES('mysql','group-replication','%','','extra_replication_type','group',1,NULL);
+INSERT INTO ansible_arguments VALUES('mysql','group-replication','%','','extra_db_opts_file','mysql/gr.cnf',2,NULL);
+INSERT INTO ansible_arguments VALUES('mysql','master','%','NODE','extra_master_ip','',1,NULL);
+INSERT INTO ansible_arguments VALUES('mysql','start-db','%','','extra_start_db','1',1,1);
+INSERT INTO ansible_arguments VALUES('mysql','mysql-router','%','','extra_mysql_router_version','mysql-server',1,NULL);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
