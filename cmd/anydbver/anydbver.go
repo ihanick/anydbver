@@ -248,7 +248,7 @@ func writeTestOutput(logger *log.Logger, test_id int, test_name string, test_out
 	}
 }
 
-func testAnydbver(logger *log.Logger, _ string, _ string, name string, skip_os []string) error {
+func testAnydbver(logger *log.Logger, _ string, _ string, name string, skip_os []string, registry_cache string) error {
 	dbFile := anydbver_common.GetDatabasePath(logger)
 	// Join the results with a space
 	tests, err := FetchTests(logger, dbFile, name)
@@ -258,6 +258,14 @@ func testAnydbver(logger *log.Logger, _ string, _ string, name string, skip_os [
 
 	outer:
 	for _,test := range tests {
+		if registry_cache != "" {
+			re := regexp.MustCompile(`^(.*\s*k3d)(:\S+)?(\s.*|)$`)
+			if strings.Contains(test.cmd, "k3d:") {
+				test.cmd = re.ReplaceAllString(test.cmd, "$1$2,registry-cache="+registry_cache+"$3")
+			} else {
+				test.cmd = re.ReplaceAllString(test.cmd, "$1$2:latest,registry-cache="+registry_cache+"$3")
+			}
+		}
 		logger.Printf("Test %+v", test)
 		cmd_args := []string{
 			"bash", "-c", test.cmd,
@@ -846,6 +854,7 @@ func createK3dCluster(logger *log.Logger, namespace string, name string, args ma
 			}
 		}
 	}
+
 	k3d_path := anydbver_common.GetK3dPath(logger)
 
 	k3d_create_cmd := []string{
@@ -860,6 +869,26 @@ func createK3dCluster(logger *log.Logger, namespace string, name string, args ma
             "--k3s-arg", "--kubelet-arg=eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%@server:*",
             "--k3s-arg", "--kubelet-arg=eviction-hard=imagefs.available<1%,nodefs.available<1%@agent:*",
             "--k3s-arg", "--kubelet-arg=eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%@agent:*", }...)
+
+	if registry_cache, ok := args["registry-cache"]; ok {
+		registry_cache_config := fmt.Sprintf(`
+mirrors:
+  docker.io:
+    endpoint:
+    - "%s"
+`, registry_cache)
+		registry_cache_file := filepath.Join(anydbver_common.GetCacheDirectory(logger), "registry-mirror.yaml")
+		file, err := os.OpenFile(registry_cache_file, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			fmt.Println("Error opening file:", err)
+			return
+		}
+		defer file.Close()
+		file.WriteString(registry_cache_config)
+		k3d_create_cmd = append(k3d_create_cmd, "--registry-config", registry_cache_file)
+	}
+
+
 
 	env := map[string]string{}
 	errMsg := "Error creating k3d cluster"
@@ -1032,10 +1061,12 @@ func main() {
 			if skip_os != "" {
 				skip_os_list = strings.Split(skip_os,",")
 			}
-			testAnydbver(logger, provider, namespace, args[0], skip_os_list)
+			registry_cache, _ := cmd.Flags().GetString("registry-cache")
+			testAnydbver(logger, provider, namespace, args[0], skip_os_list, registry_cache)
 		},
 	}
 	testCmd.Flags().StringP("skip-os", "", "", "Skip tests with specific OS")
+	testCmd.Flags().StringP("registry-cache", "", "", "Add a docker registry mirror to all k3d calls")
 
 
 
