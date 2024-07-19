@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"runtime"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -941,7 +942,18 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 	}
 	anydbver_common.CreateSshKeysForContainers(logger, namespace)
 	createNamespace(logger, ConvertStringToMap(osvers), ConvertStringToMap(privileged), provider, namespace)
-	for nodeName, nodeDef := range nodeDefinitions {
+	var nodeIdxs []int;
+	for k := range nodeDefinitions {
+		kStr, _ := strings.CutPrefix(k, "node")
+		if nodeNum, err := strconv.Atoi(kStr); err == nil {
+			nodeIdxs = append(nodeIdxs, nodeNum)
+		}
+
+	}
+	sort.Ints(nodeIdxs)
+	for _,k := range nodeIdxs {
+		nodeName := fmt.Sprintf("node%d", k)
+		nodeDef := nodeDefinitions[nodeName]
 		deployHost(nodeProvider[nodeName], logger, namespace, nodeName, ansible_hosts_run_file, nodeDef)
 	}
 
