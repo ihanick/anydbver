@@ -681,8 +681,7 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 			}
 		}
 	} else if provider == "kubectl"  {
-		user := anydbver_common.GetUser(logger) 
-		cluster_name := user + "-" + name
+		cluster_name := anydbver_common.MakeContainerHostName(logger,namespace,name)
 		clusterIp, err := getContainerIp("docker", logger, namespace, "k3d-" + cluster_name + "-" + "server-0")
 		if err != nil {
 			return
@@ -844,11 +843,7 @@ func fetchDeployCompletions(logger *log.Logger) []string {
 }
 
 func createK3dCluster(logger *log.Logger, namespace string, name string, args map[string]string) {
-	user := anydbver_common.GetUser(logger) 
-	cluster_name := user + "-" + name
-	if namespace != "" {
-		cluster_name = namespace + "-" + cluster_name
-	}
+	cluster_name := anydbver_common.MakeContainerHostName(logger,namespace,name)
 	k3d_agents := 2
 	if nodes, ok := args["nodes"]; ok {
 		if nodes_num, err := strconv.Atoi(nodes); err == nil {
@@ -874,6 +869,11 @@ func createK3dCluster(logger *log.Logger, namespace string, name string, args ma
             "--k3s-arg", "--kubelet-arg=eviction-hard=imagefs.available<1%,nodefs.available<1%@agent:*",
             "--k3s-arg", "--kubelet-arg=eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%@agent:*", }...)
 
+	if dir, ok := args["storage-path"]; ok {
+		k3d_create_cmd = append(k3d_create_cmd, []string{
+			"--volume",
+			dir + ":/var/lib/rancher/k3s/storage@all",}...)
+	}
 	if registry_cache, ok := args["registry-cache"]; ok {
 		registry_cache_config := fmt.Sprintf(`
 mirrors:
