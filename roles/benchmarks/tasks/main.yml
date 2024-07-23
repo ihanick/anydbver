@@ -1,5 +1,14 @@
 ---
 # tasks file for benchmarks
+- name: enable Percona release sysbench repo
+  when: sysbench_version != ''
+  shell:
+    cmd: >-
+      sed -i -e 's/SUPPORTED_ARCHS="i386 noarch x86_64 sources"/SUPPORTED_ARCHS="i386 noarch x86_64 aarch64 sources"/' /usr/bin/percona-release;
+      /usr/bin/percona-release enable sysbench;
+      touch /root/sysbench.enabled
+    creates: /root/sysbench.enabled
+
 - name: install apt db packages (pkg name)
   when: >
     sysbench_version != '' and

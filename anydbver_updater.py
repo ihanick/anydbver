@@ -1071,12 +1071,12 @@ def update_versions():
     for osver in ("el7","el8","el9"):
       save_general_version_for_program_from_url(osver, 'x86_64', 'percona-proxysql', 
         [
-          {"url": "https://repo.percona.com/percona/yum/release/{osver}/RPMS/{arch}/".format(osver=osver.replace("el",""), arch=arch),
+          {"url": "https://repo.percona.com/proxysql/yum/release/{osver}/RPMS/{arch}/".format(osver=osver.replace("el",""), arch=arch),
            "pattern": r"proxysql[0-9]*-([0-9.-]*).{osver}.{arch}.rpm".format(osver=osver, arch=arch)}
         ]) 
       save_general_version_for_program_from_url(osver, 'x86_64', 'sysbench', 
         [
-          {"url": "https://repo.percona.com/percona/yum/release/{osver}/RPMS/{arch}/".format(osver=osver.replace("el",""), arch=arch),
+          {"url": "https://repo.percona.com/sysbench/yum/release/{osver}/RPMS/{arch}/".format(osver=osver.replace("el",""), arch=arch),
            "pattern": r"sysbench-([0-9.-]*).{osver}.{arch}.rpm".format(osver=osver, arch=arch)}
         ]) 
 
