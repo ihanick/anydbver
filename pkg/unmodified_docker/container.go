@@ -15,6 +15,11 @@ func CreateContainer(logger *log.Logger, namespace string, name string, cmd stri
 			args["docker-image"] = "percona/pmm-server"
 		}
 		CreatePMMContainer(logger, namespace, name, cmd, args)
+	} else if cmd == "mysql" {
+		if args["docker-image"] == "" {
+			args["docker-image"] = "container-registry.oracle.com/mysql/community-server"
+		}
+		CreateMySqlContainer(logger, namespace, name, cmd, args)
 	} else if cmd == "percona-server-mongodb" {
 		if args["docker-image"] == "" {
 			args["docker-image"] = "percona/percona-server-mongodb"
