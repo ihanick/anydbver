@@ -737,6 +737,10 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 
 		for _, arg := range args {
 			deployment_keyword := ParseDeploymentKeyword(logger, arg)
+			if mstr, ok := deployment_keyword.Args["master"]; ok && mstr == name {
+				logger.Printf("A master can't lead itself: %s: %s", name, arg)
+				delete(deployment_keyword.Args, "master")
+			}
 			handleDBPreReq(logger, namespace, name, deployment_keyword.Cmd, deployment_keyword.Args)
 			ansible_deployment_args = ansible_deployment_args + " " + handleDeploymentKeyword(logger, "ansible_arguments", arg)
 		}
@@ -812,7 +816,7 @@ func fetchDeployCompletions(logger *log.Logger) []string {
 
 	db, err := sql.Open("sqlite", anydbver_common.GetDatabasePath(logger))
 	if err != nil {
-		logger.Printf("failed to open database: %w", err)
+		logger.Println("failed to open database:", err)
 		return keywords
 	}
 	defer db.Close()
@@ -821,7 +825,7 @@ func fetchDeployCompletions(logger *log.Logger) []string {
 
 	rows, err := db.Query(query)
 	if err != nil {
-		logger.Printf("failed to execute select query: %w", err)
+		logger.Println("failed to execute select query:", err)
 		return keywords
 	}
 	defer rows.Close()
@@ -829,13 +833,13 @@ func fetchDeployCompletions(logger *log.Logger) []string {
 	for rows.Next() {
 		var keyword string;
 		if err := rows.Scan(&keyword); err != nil {
-			logger.Printf("failed to scan row: %w", err)
+			logger.Println("failed to scan row:", err)
 			return keywords
 		}
 		keywords = append(keywords, keyword)
 	}
 	if err = rows.Err(); err != nil {
-		logger.Printf("error iterating over rows: %w", err)
+		logger.Println("error iterating over rows:", err)
 		return keywords
 	}
 
