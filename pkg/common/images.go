@@ -4,7 +4,7 @@ import "runtime"
 
 const (
 	USE_LOCAL_IMAGES = false
-	RELEASE_VERSION = "0.1.4"
+	RELEASE_VERSION = "0.1.5"
 	IMAGE_PUBLISHER = "ihanick"
 )
 

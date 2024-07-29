@@ -568,14 +568,14 @@ func IsDeploymentVersion(arg string) bool {
 }
 
 
-func ResolveDevelopmentKeywordAlias(dbFile string, deployCmd string) (string, error) {
+func ResolveAlias(tbl string, dbFile string, deployCmd string) (string, error) {
 	db, err := sql.Open("sqlite", dbFile)
 	if err != nil {
 		return "", fmt.Errorf("failed to open database: %w", err)
 	}
 	defer db.Close()
 
-	query := `SELECT keyword FROM keyword_aliases WHERE alias = ? ORDER BY 1 LIMIT 1`
+	query := `SELECT keyword FROM ` + tbl + ` WHERE alias = ? ORDER BY 1 LIMIT 1`
 
 	rows, err := db.Query(query, deployCmd)
 	if err != nil {
@@ -609,7 +609,7 @@ func ParseDeploymentKeyword(logger *log.Logger, keyword string) DeploymentKeywor
 	} else {
 		keyword = ""
 	}
-	if alias, err := ResolveDevelopmentKeywordAlias(anydbver_common.GetDatabasePath(logger), deployCmd) ; err == nil {
+	if alias, err := ResolveAlias("keyword_aliases", anydbver_common.GetDatabasePath(logger), deployCmd) ; err == nil {
 		deployCmd = alias
 	}
 
@@ -629,7 +629,12 @@ func ParseDeploymentKeyword(logger *log.Logger, keyword string) DeploymentKeywor
 			args["version"] = "latest"
 		}
 
-		keyValue := strings.Split(pair, "=")
+		keyValue := strings.SplitN(pair, "=", 2)
+
+    if alias, err := ResolveAlias("subcmd_aliases", anydbver_common.GetDatabasePath(logger), keyValue[0]) ; err == nil {
+      keyValue[0]= alias
+    }
+
 		if len(keyValue) == 1 {
 			key := keyValue[0]
 			args[key] = "" 
@@ -989,6 +994,7 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 		"docker", "run", "-i", "--rm",
 		"--name", anydbver_common.MakeContainerHostName(logger, namespace, "ansible"),
 		"-v", ansible_hosts_run_file + ":/vagrant/ansible_hosts_run",
+    "-v", anydbver_common.GetDatabasePath(logger) + ":/vagrant/anydbver_version.db",
 		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
 		"--network", getNetworkName(logger, namespace),
 		"--hostname", anydbver_common.MakeContainerHostName(logger, namespace, "ansible"),
