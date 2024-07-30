@@ -40,6 +40,12 @@
       /usr/bin/percona-release enable "{{package_info['repo_enable_str'] if package_info else os[dist][soft].repo_enable_str }}"
     creates: "{{ package_info['repo_file'] if package_info else os[dist][soft].repo_file }}"
   register: percona_release_enabled
+
+- name: Enable PXB 2.4 for PXC 5.7
+  when: percona_xtradb_cluster_version.startswith("5.7")
+  shell:
+    cmd: >-
+      percona-release enable pxb-24;
   
 - name: MySQL repo
   when: mysql_version != '' or mysql_router_version != '' or mysql_ndb_data_version != '' or mysql_ndb_sql_version != '' or mysql_ndb_management_version != ''
