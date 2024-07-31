@@ -22,7 +22,7 @@ jobs:
       run: go mod tidy
     - name: Build
         #run: go build -v ./...
-      run:  go build -ldflags=-X\ main.Version=$(git log --no-walk --tags --pretty="%H %d" --decorate=short | head -n1 | awk  -F'[, )]' '{ print $4; }')\ -X\ main.GoVersion=$(go version | cut -d " " -f3)\ -X\ main.Commit=$(git rev-list -1 HEAD)\ -X\ main.Build=$(date +%FT%T%z) -o tools/anydbver cmd/anydbver/anydbver.go
+      run:  go build -ldflags=-X\ main.Version=$(git log --no-walk --tags --pretty="%H %d" --decorate=short | head -n1 | awk  -F'[, )]' '{ print $4; }')\ -X\ main.GoVersion=$(go version | cut -d " " -f3)\ -X\ main.Commit=$(git rev-list -1 HEAD)\ -X\ main.Build=$(date +%FT%T%z) cmd/anydbver/anydbver.go
 
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v5
