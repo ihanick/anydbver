@@ -2200,7 +2200,7 @@ INSERT INTO general_version VALUES('2.5.5-1.1','el9','x86_64','percona-proxysql'
 INSERT INTO general_version VALUES('2.5.5-1.2','el9','x86_64','percona-proxysql');
 INSERT INTO general_version VALUES('2.6.2-1.1','el9','x86_64','percona-proxysql');
 INSERT INTO general_version VALUES('2.6.3-1.1','el9','x86_64','percona-proxysql');
-INSERT INTO general_version VALUES('v0.1.6','','','anydbver');
+INSERT INTO general_version VALUES('0.1.6','','','anydbver');
 CREATE TABLE percona_backup_mongodb_version(
   version varchar(20),
   os varchar(20),

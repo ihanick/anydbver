@@ -1109,7 +1109,7 @@ func main() {
 			}
 
       dbFile := anydbver_common.GetDatabasePath(logger)
-      if ver, _ := ReadDatabaseVersion(dbFile); ver != Version {
+      if ver, _ := ReadDatabaseVersion(dbFile); ver != strings.TrimPrefix(Version,"v") {
         logger.Println("Version database update is available for", dbFile, ". Run anydbver update to see latest versions")
         
       }
