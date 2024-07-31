@@ -1,6 +1,31 @@
 # anydbver
 Configuring MySQL, Percona MySQL/Postgresql/Mongo, MongoDB with ansible scripts.
-Running multi-node replication clusters in Docker, LXD and Kubernetes.
+Running multi-node replication clusters in Docker and Kubernetes.
+
+
+# Installation
+1. Setup Docker, make sure that your user added to the docker group:
+2. Download anydbver binary for Linux (use Darvin for OSX (experimental))
+```
+mkdir -p ~/.local/bin
+cd ~/.local/bin
+wget -O - https://github.com/ihanick/anydbver/releases/download/v0.1.6/anydbver_Linux_x86_64.tar.gz | tar xz anydbver
+```
+3. Usually Linux distributions adding ~/.local/bin to the path and it's enough to login/logout. If not, please put anydbver program to the path
+
+# Upgrades
+1. Download a new version from releases page
+2. Execute `anydbver update` to update the version database using the sql file from the head
+
+# Getting examples
+Anydbver includes a test suite, you may list all deployment commands and run it/modify as you need:
+```
+anydbver test list
+```
+
+
+# Previous version, written in python
+Following instruction is applicable to the python version. There is no need to do following steps for the golang version.
 
 ## Non-linux/Easy setup
 Vagrant allows to setup a virtual machine and run all required preparation steps.
