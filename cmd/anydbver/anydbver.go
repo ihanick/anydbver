@@ -29,10 +29,14 @@ import (
 )
 
 var (
-	Build     string //nolint
-	GoVersion string //nolint
-	Version   string //nolint
-	Commit    string //nolint
+	Build     = "unknown"
+	GoVersion = "unknown"
+	Version   = "unknown"
+	Commit    = "unknown"
+  // goreleaser
+  version = "dev"
+  commit  = "none"
+  date    = "unknown"
 )
 
 
@@ -1050,6 +1054,12 @@ func main() {
 	var provider string
 	var namespace string
   var verbose bool
+
+  if Version == "unknown" {
+    Version = version
+    Commit = commit
+    Build = date
+  }
 
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
