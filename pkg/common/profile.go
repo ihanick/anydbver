@@ -142,23 +142,27 @@ func createAndPopulateDatabase(dbpath string, sqlpath string, logger *log.Logger
 	return nil
 }
 
-func GetDatabasePath(logger *log.Logger) string {
-	dbpath := "anydbver_version.db"
-	dbpath = filepath.Join( filepath.Dir(GetConfigPath(logger)), dbpath)
-	if _, err := os.Stat(dbpath); os.IsNotExist(err) {
+func UpdateSqliteDatabase(logger *log.Logger, dbpath string) {
 		sqlpath, err := downloadVersionDatabase(ANYDBVER_VERSION_DATABASE_SQL_URL)
 		if err != nil {
 			logger.Printf("Failed to download version database SQL script: %v\n", err)
-			return dbpath
+			return
 		}
 
 		err = createAndPopulateDatabase(dbpath, sqlpath, logger)
 		if err != nil {
 			logger.Fatal("Copy anydbver_version.db to", dbpath)
-			return dbpath
+			return
 		}
 
 		os.Remove(sqlpath)
+}
+
+func GetDatabasePath(logger *log.Logger) string {
+	dbpath := "anydbver_version.db"
+	dbpath = filepath.Join( filepath.Dir(GetConfigPath(logger)), dbpath)
+	if _, err := os.Stat(dbpath); os.IsNotExist(err) {
+    UpdateSqliteDatabase(logger, dbpath)
 	}
 
 	return dbpath

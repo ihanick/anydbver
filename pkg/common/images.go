@@ -4,9 +4,13 @@ import "runtime"
 
 const (
 	USE_LOCAL_IMAGES = false
-	RELEASE_VERSION = "0.1.5"
 	IMAGE_PUBLISHER = "ihanick"
 )
+
+var (
+  RELEASE_VERSION = "0.1.5"
+)
+
 
 func GetDockerImageName(osver string, user string) string {
 	platform_tag := ""

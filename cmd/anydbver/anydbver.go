@@ -580,6 +580,38 @@ func IsDeploymentVersion(arg string) bool {
 	return false
 }
 
+func ReadDatabaseVersion(dbFile string) (string, error) {
+	db, err := sql.Open("sqlite", dbFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to open database: %w", err)
+	}
+	defer db.Close()
+
+	query := `select version from general_version where program='anydbver' order by version desc LIMIT 1`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute select query: %w", err)
+	}
+	defer rows.Close()
+
+	// Collect the results into a string
+	result := ""
+	for rows.Next() {
+		var argVal string
+		if err := rows.Scan(&argVal); err != nil {
+			return "", fmt.Errorf("failed to scan row: %w", err)
+		}
+		result = argVal
+	}
+	if err = rows.Err(); err != nil {
+		return "", fmt.Errorf("error iterating over rows: %w", err)
+	}
+
+	// Join the results with a space
+	return result, nil
+}
+
 
 func ResolveAlias(tbl string, dbFile string, deployCmd string) (string, error) {
 	db, err := sql.Open("sqlite", dbFile)
@@ -1061,6 +1093,10 @@ func main() {
     Build = date
   }
 
+  if Version != "unknown" {
+    anydbver_common.RELEASE_VERSION = strings.TrimPrefix(Version, "v")
+  }
+
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
@@ -1071,8 +1107,14 @@ func main() {
 			if provider == "" {
 				provider = "docker"
 			}
+
+      dbFile := anydbver_common.GetDatabasePath(logger)
+      if ver, _ := ReadDatabaseVersion(dbFile); ver != Version {
+        logger.Println("Version database update is available for", dbFile, ". Run anydbver update to see latest versions")
+        
+      }
 		},
-    Version: fmt.Sprintf("anydbver\nVersion: %s\nBuild: %s using %s\nCommit: %s", Version, Build, GoVersion, Commit),
+    Version: fmt.Sprintf("\nVersion: %s\nBuild: %s using %s\nCommit: %s", Version, Build, GoVersion, Commit),
 	}
 	var namespaceCmd = &cobra.Command{
 		Use:   "namespace",
@@ -1111,6 +1153,15 @@ func main() {
 			deleteNamespace(logger, provider, namespace)
 		},
 	}
+	var updateCmd = &cobra.Command{
+		Use:   "update",
+		Short: "Deletes current version information database and downloads latest one from https://github.com/ihanick/anydbver/blob/master/anydbver_version.sql",
+		Run: func(cmd *cobra.Command, args []string) {
+      dbFile := anydbver_common.GetDatabasePath(logger)
+      os.Remove(dbFile)
+      anydbver_common.UpdateSqliteDatabase(logger, dbFile)
+		},
+	}
 
 	var testCmd = &cobra.Command{
 		Use:   "test",
@@ -1139,6 +1190,7 @@ func main() {
 	namespaceCmd.AddCommand(deleteNsCmd)
 	rootCmd.AddCommand(namespaceCmd)
 	rootCmd.AddCommand(destroyCmd)
+	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(testCmd)
 
 	var containerCmd = &cobra.Command{
