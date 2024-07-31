@@ -1459,6 +1459,7 @@ INSERT INTO tests VALUES(24,'mongo kubernetes 1.14.0','anydbver deploy k3d:v1.25
 INSERT INTO tests VALUES(25,'pg operator 2.4.0 helm','anydbver deploy k3d:v1.25.16-k3s4,cluster-domain=percona.local cert-manager:1.14.2 k8s-pg:2.4.0,cluster-name=db1,helm');
 INSERT INTO tests VALUES(26,'ps group pmm','anydbver deploy pmm:2.42.0,docker-image,port=12443 node1 ps:latest,group-replication pmm-client:2.42.0-6,server=node0 node2 ps:latest,group-replication,master=node1 pmm-client:2.42.0-6,server=node0 node3 ps:latest,group-replication,master=node1 pmm-client:2.42.0-6,server=node0');
 INSERT INTO tests VALUES(27,'mysql 5.7 async','anydbver deploy mysql:5.7.35 os:el7 node1 mysql:5.7.35,master=node0 os:el7');
+INSERT INTO tests VALUES(28,'pxc 5.7 async replica','anydbver deploy pxc:5.7 node1 pxc:5.7,master=node0 node2 pxc:5.7,master=node1,galera node3 pxc:5.7,master=node1,galera');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
@@ -1487,6 +1488,8 @@ INSERT INTO test_cases VALUES(22,'echo "echo -e \"AUTH verysecretpassword1^\\nSE
 INSERT INTO test_cases VALUES(23,'echo patronictl list | ./anydbver ssh |grep -q running');
 INSERT INTO test_cases VALUES(26,'echo "select * from performance_schema.replication_group_members" | anydbver exec node1 -- mysql -u root -pverysecretpassword1^ |grep -c ONLINE | grep -q 3');
 INSERT INTO test_cases VALUES(27,'echo "show slave status"|anydbver exec node1 -- mysql -E -uroot|grep -q "Slave_SQL_Running: Yes"');
+INSERT INTO test_cases VALUES(28,'anydbver exec node0 -- mysql -e "show slave hosts;"|grep -q 3306');
+INSERT INTO test_cases VALUES(28,'anydbver exec node1 -- mysql -e "show status"|grep wsrep_cluster_size | grep -q 3');
 CREATE TABLE mariadb_version(
   version varchar(20),
   os varchar(20),
@@ -2197,6 +2200,7 @@ INSERT INTO general_version VALUES('2.5.5-1.1','el9','x86_64','percona-proxysql'
 INSERT INTO general_version VALUES('2.5.5-1.2','el9','x86_64','percona-proxysql');
 INSERT INTO general_version VALUES('2.6.2-1.1','el9','x86_64','percona-proxysql');
 INSERT INTO general_version VALUES('2.6.3-1.1','el9','x86_64','percona-proxysql');
+INSERT INTO general_version VALUES('v0.1.6','','','anydbver');
 CREATE TABLE percona_backup_mongodb_version(
   version varchar(20),
   os varchar(20),
@@ -2350,6 +2354,7 @@ INSERT INTO ansible_arguments VALUES('mysql','group-replication','%','','extra_d
 INSERT INTO ansible_arguments VALUES('mysql','master','%','NODE','extra_master_ip','',1,NULL);
 INSERT INTO ansible_arguments VALUES('mysql','start-db','%','','extra_start_db','1',1,1);
 INSERT INTO ansible_arguments VALUES('mysql','mysql-router','%','','extra_mysql_router_version','mysql-server',1,NULL);
+INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','opts-file','5.7%','','extra_db_opts_file','mysql/pxc5657.cnf',2,1);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,

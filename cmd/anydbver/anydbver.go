@@ -1,5 +1,7 @@
 package main
 
+// build with:  go build -ldflags=-X\ main.Version=$(git log --no-walk --tags --pretty="%H %d" --decorate=short | head -n1 | awk  -F'[, )]' '{ print $4; }')\ -X\ main.GoVersion=$(go version | cut -d " " -f3)\ -X\ main.Commit=$(git rev-list -1 HEAD)\ -X\ main.Build=$(date +%FT%T%z) -o tools/anydbver cmd/anydbver/anydbver.go
+
 import (
 	"bufio"
 	"database/sql"
@@ -24,6 +26,13 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 	_ "modernc.org/sqlite"
+)
+
+var (
+	Build     string //nolint
+	GoVersion string //nolint
+	Version   string //nolint
+	Commit    string //nolint
 )
 
 
@@ -910,7 +919,7 @@ mirrors:
 }
 
 
-func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider string, namespace string, args []string) {
+func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider string, namespace string, args []string, verbose bool) {
 	privileged := ""
 	re_lastosver := regexp.MustCompile(`=[^=]+$`)
 	osvers := "node0=el8"
@@ -999,8 +1008,16 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 		"--network", getNetworkName(logger, namespace),
 		"--hostname", anydbver_common.MakeContainerHostName(logger, namespace, "ansible"),
 		anydbver_common.GetDockerImageName("ansible", user),
- "bash", "-c", "cd /vagrant;until ansible -m ping -i ansible_hosts_run all &>/dev/null ; do sleep 1; done ; ANSIBLE_FORCE_COLOR=True ANSIBLE_DISPLAY_SKIPPED_HOSTS=False ansible-playbook -i ansible_hosts_run --forks 16 playbook.yml",
+ "bash", "-c",
 	}
+
+  ansible_command := "cd /vagrant;until ansible -m ping -i ansible_hosts_run all &>/dev/null ; do sleep 1; done ; ANSIBLE_FORCE_COLOR=True ANSIBLE_DISPLAY_SKIPPED_HOSTS=False ansible-playbook -i ansible_hosts_run --forks 16 playbook.yml"
+
+  if verbose {
+    ansible_command += " -vvv"
+  }
+
+  cmd_args = append(cmd_args, ansible_command)
 
 	env := map[string]string{}
 	errMsg := "Error running Ansible"
@@ -1022,9 +1039,17 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 
 }
 
+func printVersion() {
+		fmt.Println("anydbver")
+		fmt.Printf("Version %s\n", Version)
+		fmt.Printf("Build: %s using %s\n", Build, GoVersion)
+		fmt.Printf("Commit: %s\n", Commit)
+}
+
 func main() {
 	var provider string
 	var namespace string
+  var verbose bool
 
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
@@ -1037,6 +1062,7 @@ func main() {
 				provider = "docker"
 			}
 		},
+    Version: fmt.Sprintf("anydbver\nVersion: %s\nBuild: %s using %s\nCommit: %s", Version, Build, GoVersion, Commit),
 	}
 	var namespaceCmd = &cobra.Command{
 		Use:   "namespace",
@@ -1139,7 +1165,7 @@ func main() {
 			if ! keep {
 				deleteNamespace(logger, provider, namespace)
 			}
-			deployHosts(logger, anydbver_common.GetAnsibleInventory(logger, namespace), provider, namespace, args)
+			deployHosts(logger, anydbver_common.GetAnsibleInventory(logger, namespace), provider, namespace, args, verbose)
 		},
 	}
 	deployCmd.Flags().BoolP("keep", "", false, "do not remove existing containers and network")
@@ -1160,6 +1186,7 @@ func main() {
 
 	rootCmd.PersistentFlags().StringVarP(&provider, "provider", "p", "", "Container provider")
 	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "", "Namespace")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "Verbose ansible output")
 
 
 	rootCmd.AddCommand(listCmd)
