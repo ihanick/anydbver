@@ -1082,6 +1082,67 @@ func printVersion() {
 		fmt.Printf("Commit: %s\n", Commit)
 }
 
+func Contains(slice []string, item string) bool {
+    for _, v := range slice {
+        if v == item {
+            return true
+        }
+    }
+    return false
+}
+
+func helpDeployCommands(logger *log.Logger, provider string, args []string) {
+  logger.Println("Help on deployment commands: anydbver help or anydbver help keyword")
+  all_commands := false
+  var filter_commands []string;
+  if len(args) == 1 && args[0] == "help" {
+    logger.Println("Help for all deployment keywords")
+    all_commands = true
+  }
+  fmt.Println(args)
+  for _, arg := range args {
+    deployment_keyword := ParseDeploymentKeyword(logger, arg)
+    fmt.Println(deployment_keyword.Cmd)
+    filter_commands = append(filter_commands, deployment_keyword.Cmd)
+    for subcmd, _ := range deployment_keyword.Args {
+      if subcmd != "version" && subcmd != "help" {
+        fmt.Println(subcmd)
+      }
+    }
+  }
+
+	db, err := sql.Open("sqlite", anydbver_common.GetDatabasePath(logger))
+	if err != nil {
+		logger.Printf("failed to open database: %v", err)
+    return
+	}
+	defer db.Close()
+
+	query := `SELECT cmd, deploy FROM help_examples ORDER BY cmd`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		logger.Printf("failed to execute select query: %v", err)
+    return
+	}
+	defer rows.Close()
+
+	// Collect the results into a string
+	for rows.Next() {
+		var keyword string;
+		var deploy_cmd string;
+		if err := rows.Scan(&keyword, &deploy_cmd); err != nil {
+      logger.Printf("failed to scan row: %v", err)
+		}
+		if all_commands || Contains(filter_commands, keyword) {
+      fmt.Println(deploy_cmd)
+    }
+	}
+	if err = rows.Err(); err != nil {
+    logger.Printf("failed to scan row: %v", err)
+	}
+}
+
 func main() {
 	var provider string
 	var namespace string
@@ -1224,6 +1285,11 @@ func main() {
 		Short: "deploy hosts",
 		Run: func(cmd *cobra.Command, args []string) {
 			keep, _ := cmd.Flags().GetBool("keep")
+      if (len(args) > 0 && args[0] == "help") {
+        helpDeployCommands(logger, provider, args)
+        os.Exit(0)
+      }
+
 			if ! keep {
 				deleteNamespace(logger, provider, namespace)
 			}

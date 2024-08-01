@@ -2407,5 +2407,10 @@ INSERT INTO keyword_aliases VALUES('percona-server-mongodb-operator','k8s-psmdb'
 INSERT INTO keyword_aliases VALUES('percona-server-mysql-operator','k8s-ps');
 CREATE TABLE subcmd_aliases(keyword TEXT,alias TEXT);
 INSERT INTO subcmd_aliases VALUES('master','primary');
+CREATE TABLE help_examples(cmd varchar(100), deploy varchar(1000));
+INSERT INTO help_examples VALUES('percona-server','anydbver deploy ps:5.7.35 node1 ps:5.7.35,master=node0');
+INSERT INTO help_examples VALUES('percona-server','anydbver deploy ps:8.0,gtid=0 node1 ps:8.0,gtid=0,master=node0');
+INSERT INTO help_examples VALUES('percona-server','anydbver deploy ps:8.0,rocksdb,sql=http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql percona-xtrabackup:8.0');
+INSERT INTO help_examples VALUES('percona-orchestrator','anydbver deploy ps:5.7 node1 ps:5.7,master=node0 node2 ps:5.7,master=node1 node3 percona-orchestrator:latest,master=node0');
 CREATE INDEX test_cases_test_id_idx ON test_cases(test_id);
 COMMIT;
