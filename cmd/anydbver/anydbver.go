@@ -289,7 +289,7 @@ func testAnydbver(logger *log.Logger, _ string, _ string, name string, skip_os [
 		}
 
 		for _, os_name := range skip_os {
-			if strings.Contains(test.name, os_name) {
+      if strings.Contains(test.name, os_name) || strings.Contains(test.cmd, "os:"+os_name) {
 				logger.Println("SKIPPED")
 				continue outer
 			}
