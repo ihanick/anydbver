@@ -871,7 +871,7 @@ func fetchDeployCompletions(logger *log.Logger) []string {
 	}
 	defer db.Close()
 
-	query := `select distinct keyword from (select keyword from keyword_aliases union select alias as keyword from keyword_aliases) a order by keyword`
+	query := `select distinct keyword from (select keyword from keyword_aliases union select alias as keyword from keyword_aliases union select cmd from ansible_arguments union select cmd from k8s_arguments) a order by keyword`
 
 	rows, err := db.Query(query)
 	if err != nil {

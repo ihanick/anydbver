@@ -1460,6 +1460,9 @@ INSERT INTO tests VALUES(25,'pg operator 2.4.0 helm','anydbver deploy k3d:v1.25.
 INSERT INTO tests VALUES(26,'ps group pmm','anydbver deploy pmm:2.42.0,docker-image,port=12443 node1 ps:latest,group-replication pmm-client:2.42.0-6,server=node0 node2 ps:latest,group-replication,master=node1 pmm-client:2.42.0-6,server=node0 node3 ps:latest,group-replication,master=node1 pmm-client:2.42.0-6,server=node0');
 INSERT INTO tests VALUES(27,'mysql 5.7 async','anydbver deploy mysql:5.7.35 os:el7 node1 mysql:5.7.35,master=node0 os:el7');
 INSERT INTO tests VALUES(28,'pxc 5.7 async replica','anydbver deploy pxc:5.7 node1 pxc:5.7,master=node0 node2 pxc:5.7,master=node1,galera node3 pxc:5.7,master=node1,galera');
+INSERT INTO tests VALUES(29,'ps 5.7.35','anydbver deploy ps:5.7.35 node1 ps:5.7.35,master=node0');
+INSERT INTO tests VALUES(30,'latest ps no gtid','anydbver deploy ps:8.0,nogtid node1 ps:8.0,nogtid,master=node0');
+INSERT INTO tests VALUES(31,'ppg pgbackrest','anydbver deploy ppg:latest pgbackrest');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
@@ -1490,6 +1493,9 @@ INSERT INTO test_cases VALUES(26,'echo "select * from performance_schema.replica
 INSERT INTO test_cases VALUES(27,'echo "show slave status"|anydbver exec node1 -- mysql -E -uroot|grep -q "Slave_SQL_Running: Yes"');
 INSERT INTO test_cases VALUES(28,'anydbver exec node0 -- mysql -e "show slave hosts;"|grep -q 3306');
 INSERT INTO test_cases VALUES(28,'anydbver exec node1 -- mysql -e "show status"|grep wsrep_cluster_size | grep -q 3');
+INSERT INTO test_cases VALUES(29,'sleep 10;echo show slave hosts|anydbver exec node0 -- mysql|grep -q 3306 ');
+INSERT INTO test_cases VALUES(30,'echo show variables | anydbver exec node1 -- mysql|grep gtid_mode|grep -q OFF');
+INSERT INTO test_cases VALUES(31,'anydbver exec node0 -- sudo -u postgres pgbackrest --stanza=db backup ; anydbver exec node0 -- sudo -u postgres pgbackrest info |grep status:|grep -q ok');
 CREATE TABLE mariadb_version(
   version varchar(20),
   os varchar(20),
@@ -2355,6 +2361,9 @@ INSERT INTO ansible_arguments VALUES('mysql','master','%','NODE','extra_master_i
 INSERT INTO ansible_arguments VALUES('mysql','start-db','%','','extra_start_db','1',1,1);
 INSERT INTO ansible_arguments VALUES('mysql','mysql-router','%','','extra_mysql_router_version','mysql-server',1,NULL);
 INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','opts-file','5.7%','','extra_db_opts_file','mysql/pxc5657.cnf',2,1);
+INSERT INTO ansible_arguments VALUES('percona-server','nogtid','%','','extra_replication_type','nogtid',2,NULL);
+INSERT INTO ansible_arguments VALUES('percona-server','nogtid','%','','extra_db_opts_file','mysql/async-repl-nogtid.cnf',2,NULL);
+INSERT INTO ansible_arguments VALUES('pgbackrest','version','%','VERSION','extra_pgbackrest_version','1',1,1);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
@@ -2409,8 +2418,10 @@ CREATE TABLE subcmd_aliases(keyword TEXT,alias TEXT);
 INSERT INTO subcmd_aliases VALUES('master','primary');
 CREATE TABLE help_examples(cmd varchar(100), deploy varchar(1000));
 INSERT INTO help_examples VALUES('percona-server','anydbver deploy ps:5.7.35 node1 ps:5.7.35,master=node0');
-INSERT INTO help_examples VALUES('percona-server','anydbver deploy ps:8.0,gtid=0 node1 ps:8.0,gtid=0,master=node0');
+INSERT INTO help_examples VALUES('percona-server','anydbver deploy ps:8.0,nogtid node1 ps:8.0,nogtid,master=node0');
 INSERT INTO help_examples VALUES('percona-server','anydbver deploy ps:8.0,rocksdb,sql=http://UIdgE4sXPBTcBB4eEawU:7UdlDzBF769dbIOMVILV@172.17.0.1:9000/sampledb/world.sql percona-xtrabackup:8.0');
 INSERT INTO help_examples VALUES('percona-orchestrator','anydbver deploy ps:5.7 node1 ps:5.7,master=node0 node2 ps:5.7,master=node1 node3 percona-orchestrator:latest,master=node0');
+INSERT INTO help_examples VALUES('percona-postgresql','anydbver deploy node0 ppg:latest pgbackrest');
+INSERT INTO help_examples VALUES('pgbackrest','anydbver deploy node0 ppg:latest pgbackrest');
 CREATE INDEX test_cases_test_id_idx ON test_cases(test_id);
 COMMIT;
