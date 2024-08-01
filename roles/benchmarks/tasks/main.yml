@@ -33,5 +33,5 @@
     ) and db_password != '' and
     ('sysbench_oltp_read_write' in db_features.split(','))
   command:
-    cmd: /bin/bash /vagrant/tools/setup_sysbench.sh "{{ 'pg' if sysbench_pg != '' else 'mysql'}}" "{{sysbench_pg if sysbench_pg != '' else sysbench_mysql if sysbench_mysql != '' else ''}}" "{{ db_password }}"
+    cmd: /bin/bash /vagrant/tools/setup_sysbench.sh "{{ 'pg' if sysbench_pg != '' else 'mysql'}}" "{{sysbench_pg if sysbench_pg != '' else sysbench_mysql if sysbench_mysql != '' else ''}}" "{{ db_password }}" "{{ sysbench_port }}"
     creates: /usr/local/bin/run_sysbench.sh

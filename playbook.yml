@@ -112,6 +112,7 @@
     sysbench_version: "{{ lookup('vars', 'extra_sysbench_version', default=lookup('env','SYSBENCH',default='') ) }}"
     sysbench_pg: "{{ lookup('vars', 'extra_sysbench_pg', default=lookup('env','SYSBENCH_PG',default='') ) }}"
     sysbench_mysql: "{{ lookup('vars', 'extra_sysbench_mysql', default=lookup('env','SYSBENCH_MYSQL',default='') ) }}"
+    sysbench_port: "{{ lookup('vars', 'extra_sysbench_port', default=lookup('env','SYSBENCH_PORT',default='') ) }}"
     mysql_random_data_load_version: "{{ lookup('vars', 'extra_mysql_random_data_load_version', default=lookup('env','MYSQL_RANDOM_DATA',default='') ) }}"
     mysql_connector_java_version: "{{ lookup('vars', 'extra_mysql_connector_java_version', default=lookup('env','MYSQL_JAVA',default='') ) }}"
     mysql_dot_net: "{{ lookup('vars', 'extra_mysql_dot_net', default=lookup('env','MYSQL_DOTNET',default='') ) }}"

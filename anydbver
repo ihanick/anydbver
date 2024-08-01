@@ -922,6 +922,8 @@ def apply_node_actions(ns, _, actions, user, provider):
     if "mysql" in params:
       extra_vars["extra_sysbench_mysql"] = resolve_hostname(ns, params["mysql"], user, provider)
       extra_vars["extra_db_user"] = "root"
+      if "port" in params:
+        extra_vars["extra_sysbench_port"] = params["port"]
     if "postgresql" in params:
       extra_vars["extra_sysbench_pg"] = resolve_hostname(ns, params["postgresql"], user, provider)
       extra_vars["extra_db_user"] = "root"

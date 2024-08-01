@@ -1463,6 +1463,7 @@ INSERT INTO tests VALUES(28,'pxc 5.7 async replica','anydbver deploy pxc:5.7 nod
 INSERT INTO tests VALUES(29,'ps 5.7.35','anydbver deploy ps:5.7.35 node1 ps:5.7.35,master=node0');
 INSERT INTO tests VALUES(30,'latest ps no gtid','anydbver deploy ps:8.0,nogtid node1 ps:8.0,nogtid,master=node0');
 INSERT INTO tests VALUES(31,'ppg pgbackrest','anydbver deploy ppg:latest pgbackrest');
+INSERT INTO tests VALUES(32,'ps innodb cluster sysbench','anydbver deploy node0 ps:8.0,group-replication node1 ps:8.0,group-replication,master=node0 node2 ps:8.0,mysql-router,master=node0 node3 ps:8.0 sysbench:latest,mysql=node2,port=6446,oltprw');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
@@ -1496,6 +1497,7 @@ INSERT INTO test_cases VALUES(28,'anydbver exec node1 -- mysql -e "show status"|
 INSERT INTO test_cases VALUES(29,'sleep 10;echo show slave hosts|anydbver exec node0 -- mysql|grep -q 3306 ');
 INSERT INTO test_cases VALUES(30,'echo show variables | anydbver exec node1 -- mysql|grep gtid_mode|grep -q OFF');
 INSERT INTO test_cases VALUES(31,'anydbver exec node0 -- sudo -u postgres pgbackrest --stanza=db backup ; anydbver exec node0 -- sudo -u postgres pgbackrest info |grep status:|grep -q ok');
+INSERT INTO test_cases VALUES(32,'anydbver exec node3 -- /usr/local/bin/run_sysbench.sh | grep -q transactions');
 CREATE TABLE mariadb_version(
   version varchar(20),
   os varchar(20),
@@ -2364,6 +2366,8 @@ INSERT INTO ansible_arguments VALUES('percona-xtradb-cluster','opts-file','5.7%'
 INSERT INTO ansible_arguments VALUES('percona-server','nogtid','%','','extra_replication_type','nogtid',2,NULL);
 INSERT INTO ansible_arguments VALUES('percona-server','nogtid','%','','extra_db_opts_file','mysql/async-repl-nogtid.cnf',2,NULL);
 INSERT INTO ansible_arguments VALUES('pgbackrest','version','%','VERSION','extra_pgbackrest_version','1',1,1);
+INSERT INTO ansible_arguments VALUES('sysbench','port','%','','extra_sysbench_port','',1,NULL);
+INSERT INTO ansible_arguments VALUES('sysbench','oltprw','%','','extra_db_features','sysbench_oltp_read_write',1,NULL);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
@@ -2423,5 +2427,6 @@ INSERT INTO help_examples VALUES('percona-server','anydbver deploy ps:8.0,rocksd
 INSERT INTO help_examples VALUES('percona-orchestrator','anydbver deploy ps:5.7 node1 ps:5.7,master=node0 node2 ps:5.7,master=node1 node3 percona-orchestrator:latest,master=node0');
 INSERT INTO help_examples VALUES('percona-postgresql','anydbver deploy node0 ppg:latest pgbackrest');
 INSERT INTO help_examples VALUES('pgbackrest','anydbver deploy node0 ppg:latest pgbackrest');
+INSERT INTO help_examples VALUES('sysbench','anydbver deploy node0 ps:8.0,group-replication node1 ps:8.0,group-replication,master=node0 node2 ps:8.0,mysql-router,master=node0 node3 ps:8.0 sysbench:latest,mysql=node2,port=6446,oltprw');
 CREATE INDEX test_cases_test_id_idx ON test_cases(test_id);
 COMMIT;
