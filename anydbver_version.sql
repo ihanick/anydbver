@@ -2431,5 +2431,6 @@ INSERT INTO help_examples VALUES('percona-postgresql','anydbver deploy node0 ppg
 INSERT INTO help_examples VALUES('pgbackrest','anydbver deploy node0 ppg:latest pgbackrest');
 INSERT INTO help_examples VALUES('sysbench','anydbver deploy node0 ps:8.0,group-replication node1 ps:8.0,group-replication,master=node0 node2 ps:8.0,mysql-router,master=node0 node3 ps:8.0 sysbench:latest,mysql=node2,port=6446,oltprw');
 INSERT INTO help_examples VALUES('pmm-server','anydbver deploy pmm:docker-image=perconalab/pmm-server:dev-latest,port=12443 node1 mysql:latest,docker-image node2 pmm-client:docker-image=perconalab/pmm-client:dev-latest,server=node0,mysql=node1');
+INSERT INTO help_examples VALUES('percona-server','anydbver deploy ps:latest,expose=3306');
 CREATE INDEX test_cases_test_id_idx ON test_cases(test_id);
 COMMIT;

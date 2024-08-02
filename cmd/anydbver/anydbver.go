@@ -381,7 +381,7 @@ func ConvertStringToMap(input string) map[string]string {
 	return result
 }
 
-func createNamespace(logger *log.Logger, osvers map[string]string, privileged map[string]string, provider, namespace string) {
+func createNamespace(logger *log.Logger, osvers map[string]string, privileged map[string]string, expose_ports map[string]string, provider string, namespace string) {
 	network := getNetworkName(logger, namespace)
 	if provider == "docker" {
 		args := []string{"docker", "network", "create", network}
@@ -397,11 +397,15 @@ func createNamespace(logger *log.Logger, osvers map[string]string, privileged ma
 				privileged_container = priv
 			}
 		}
-		createContainer(logger, node, value, privileged_container, provider, namespace)
+		expose_port := ""
+		if ep, ok := expose_ports[node]; ok {
+			expose_port = ep
+		}
+		createContainer(logger, node, value, privileged_container, expose_port, provider, namespace)
 	}
 }
 
-func createContainer(logger *log.Logger, name string, osver string, privileged bool, provider, namespace string) {
+func createContainer(logger *log.Logger, name string, osver string, privileged bool, expose_port string, provider string, namespace string) {
 	user := anydbver_common.GetUser(logger)
 	fmt.Printf("Creating container with name %s, OS %s, privileged=%t, provider=%s, namespace=%s...\n", name, osver, privileged, provider, namespace)
 
@@ -422,6 +426,10 @@ func createContainer(logger *log.Logger, name string, osver string, privileged b
 			"--cap-add", "SYS_PTRACE",
 			"--security-opt", "seccomp=unconfined"}...)
 	}
+	if len(expose_port) > 0 {
+		args = append(args, []string{"-p", expose_port}...)
+	}
+
 	args = append(args, anydbver_common.GetDockerImageName(osver, user))
 	env := map[string]string{}
 	errMsg := "Error creating container"
@@ -938,6 +946,7 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 	osvers := "node0=el8"
 	nodeDefinitions := make(map[string][]string)
 	nodeProvider := make(map[string]string)
+	expose_ports := make(map[string]string)
 	currentNode := "node0"
 
 	nodeProvider[currentNode] = provider
@@ -964,6 +973,8 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 			} else if _, ok := deployment_keyword.Args["docker-image"]; ok {
 				nodeProvider[currentNode] = "docker-image"
 				osvers = re_lastosver.ReplaceAllString(osvers, "")
+			} else if port_to_expose, ok := deployment_keyword.Args["expose"]; ok {
+				expose_ports[currentNode] = port_to_expose
 			} else if deployment_keyword.Cmd == "k3d" {
 				nodeProvider[currentNode] = "kubectl"
 				osvers = re_lastosver.ReplaceAllString(osvers, "")
@@ -972,7 +983,7 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 		}
 	}
 	anydbver_common.CreateSshKeysForContainers(logger, namespace)
-	createNamespace(logger, ConvertStringToMap(osvers), ConvertStringToMap(privileged), provider, namespace)
+	createNamespace(logger, ConvertStringToMap(osvers), ConvertStringToMap(privileged), expose_ports, provider, namespace)
 	var nodeIdxs []int
 	for k := range nodeDefinitions {
 		kStr, _ := strings.CutPrefix(k, "node")
@@ -1162,8 +1173,9 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
 			os, _ := cmd.Flags().GetString("os")
+			expose_ports, _ := cmd.Flags().GetString("expose")
 			privileged, _ := cmd.Flags().GetString("privileged")
-			createNamespace(logger, ConvertStringToMap(os), ConvertStringToMap(privileged), provider, name)
+			createNamespace(logger, ConvertStringToMap(os), ConvertStringToMap(privileged), ConvertStringToMap(expose_ports), provider, name)
 		},
 	}
 	var listNsCmd = &cobra.Command{
@@ -1244,12 +1256,14 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
 			os, _ := cmd.Flags().GetString("os")
+			expose_port, _ := cmd.Flags().GetString("expose")
 			privileged, _ := cmd.Flags().GetBool("privileged")
-			createContainer(logger, name, os, privileged, provider, namespace)
+			createContainer(logger, name, os, privileged, expose_port, provider, namespace)
 		},
 	}
 
 	createCmd.Flags().StringP("os", "o", "", "Operating system of the container")
+	createCmd.Flags().StringP("expose", "p", "", "Expose port, docker -p")
 	createCmd.Flags().BoolP("privileged", "", true, "Whether the container should be privileged")
 
 	var deployCmd = &cobra.Command{
