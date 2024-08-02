@@ -1,18 +1,18 @@
 package unmodifieddocker
 
 import (
+	"fmt"
 	"log"
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"fmt"
 
 	anydbver_common "github.com/ihanick/anydbver/pkg/common"
 	"github.com/ihanick/anydbver/pkg/runtools"
 )
 
 func CreateValKeyContainer(logger *log.Logger, namespace string, name string, cmd string, args map[string]string) {
-	tools_dir := anydbver_common.GetToolsDirectory(logger, namespace) 
+	tools_dir := anydbver_common.GetToolsDirectory(logger, namespace)
 
 	master_hostname := anydbver_common.MakeContainerHostName(logger, namespace, name)
 
@@ -25,10 +25,10 @@ func CreateValKeyContainer(logger *log.Logger, namespace string, name string, cm
 		"-v", tools_dir + ":/vagrant/tools",
 		"-d", "--tmpfs", "/tmp",
 		"--network", anydbver_common.MakeContainerHostName(logger, namespace, "anydbver"),
-		"--hostname", name, }
+		"--hostname", name}
 
 	if mem, ok := args["memory"]; ok {
-		cmd_args = append(cmd_args, "--memory=" + mem)
+		cmd_args = append(cmd_args, "--memory="+mem)
 	}
 
 	password := anydbver_common.ANYDBVER_DEFAULT_PASSWORD
@@ -62,13 +62,9 @@ sentinel down-after-milliseconds mymaster 10000
 EOF
 valkey-sentinel /data/sentinel.conf &
 `,
-		master_hostname, password)
+			master_hostname, password)
 
 	}
-
-
-
-
 
 	args["entrypoint"] = fmt.Sprintf(`[ -f /data/valkey.conf ] || cat > /data/valkey.conf <<EOF
 requirepass %s
@@ -82,13 +78,14 @@ exec valkey-server /data/valkey.conf
 		password, password, repl_conf, cluster_conf, sentinel_conf)
 
 	if _, ok := args["entrypoint"]; ok {
-		cmd_args = append(cmd_args, "--entrypoint=/bin/sh",)
+		cmd_args = append(cmd_args, "--entrypoint=/bin/sh")
 	}
 
-	cmd_args = append(cmd_args, args["docker-image"] + ":" + args["version"],)
+	cmd_args = anydbver_common.AppendExposeParams(cmd_args, args)
+	cmd_args = append(cmd_args, args["docker-image"]+":"+args["version"])
 
 	if ent, ok := args["entrypoint"]; ok {
-		cmd_args = append(cmd_args, "-c", ent,)
+		cmd_args = append(cmd_args, "-c", ent)
 	}
 	env := map[string]string{}
 	errMsg := "Error creating container"
@@ -96,4 +93,3 @@ exec valkey-server /data/valkey.conf
 	runtools.RunFatal(logger, cmd_args, errMsg, ignoreMsg, true, env)
 
 }
-

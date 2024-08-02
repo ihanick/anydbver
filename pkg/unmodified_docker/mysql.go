@@ -1,16 +1,16 @@
-package unmodifieddocker;
+package unmodifieddocker
 
 import (
-	"log"
-	"regexp"
-	"path/filepath"
-	"runtime"
 	anydbver_common "github.com/ihanick/anydbver/pkg/common"
 	"github.com/ihanick/anydbver/pkg/runtools"
+	"log"
+	"path/filepath"
+	"regexp"
+	"runtime"
 )
 
 func CreateMySqlContainer(logger *log.Logger, namespace string, name string, cmd string, args map[string]string) {
-	tools_dir := anydbver_common.GetToolsDirectory(logger, namespace) 
+	tools_dir := anydbver_common.GetToolsDirectory(logger, namespace)
 
 	cmd_args := []string{
 		"docker", "run",
@@ -23,16 +23,17 @@ func CreateMySqlContainer(logger *log.Logger, namespace string, name string, cmd
 		"--network", anydbver_common.MakeContainerHostName(logger, namespace, "anydbver"),
 		"-e", "MYSQL_ROOT_PASSWORD=" + anydbver_common.ANYDBVER_DEFAULT_PASSWORD,
 		"-e", "MYSQL_ROOT_HOST=%",
-		"--hostname", name, }
+		"--hostname", name}
 
 	if _, ok := args["entrypoint"]; ok {
-		cmd_args = append(cmd_args, "--entrypoint=/bin/sh",)
+		cmd_args = append(cmd_args, "--entrypoint=/bin/sh")
 	}
 
-	cmd_args = append(cmd_args, args["docker-image"] + ":" + args["version"],)
+	cmd_args = anydbver_common.AppendExposeParams(cmd_args, args)
+	cmd_args = append(cmd_args, args["docker-image"]+":"+args["version"])
 
 	if ent, ok := args["entrypoint"]; ok {
-		cmd_args = append(cmd_args, "-c", anydbver_common.ReadWholeFile(logger, ent),)
+		cmd_args = append(cmd_args, "-c", anydbver_common.ReadWholeFile(logger, ent))
 	}
 	env := map[string]string{}
 	errMsg := "Error creating container"

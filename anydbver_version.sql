@@ -2370,6 +2370,18 @@ INSERT INTO ansible_arguments VALUES('percona-server','nogtid','%','','extra_db_
 INSERT INTO ansible_arguments VALUES('pgbackrest','version','%','VERSION','extra_pgbackrest_version','1',1,1);
 INSERT INTO ansible_arguments VALUES('sysbench','port','%','','extra_sysbench_port','',1,NULL);
 INSERT INTO ansible_arguments VALUES('sysbench','oltprw','%','','extra_db_features','sysbench_oltp_read_write',1,NULL);
+INSERT INTO ansible_arguments VALUES('mariadb','version','%','VERSION','extra_mariadb_version','11.4.2',1,1);
+INSERT INTO ansible_arguments VALUES('mariadb','user','%','','extra_db_user','root',1,1);
+INSERT INTO ansible_arguments VALUES('mariadb','password','%','','extra_db_password','verysecretpassword1^',1,1);
+INSERT INTO ansible_arguments VALUES('mariadb','opts-file','%','','extra_db_opts_file','mysql/async-repl-gtid.cnf',1,1);
+INSERT INTO ansible_arguments VALUES('mariadb','cluster','%','','extra_cluster_name','cluster1',1,1);
+INSERT INTO ansible_arguments VALUES('mariadb','group-replication','%','','extra_replication_type','group',1,NULL);
+INSERT INTO ansible_arguments VALUES('mariadb','group-replication','%','','extra_db_opts_file','mysql/gr.cnf',2,NULL);
+INSERT INTO ansible_arguments VALUES('mariadb','master','%','NODE','extra_master_ip','',1,NULL);
+INSERT INTO ansible_arguments VALUES('mariadb','start-db','%','','extra_start_db','1',1,1);
+INSERT INTO ansible_arguments VALUES('mariadb','mysql-router','%','','extra_mysql_router_version','percona-server',1,NULL);
+INSERT INTO ansible_arguments VALUES('mariadb','nogtid','%','','extra_replication_type','nogtid',2,NULL);
+INSERT INTO ansible_arguments VALUES('mariadb','nogtid','%','','extra_db_opts_file','mysql/async-repl-nogtid.cnf',2,NULL);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,

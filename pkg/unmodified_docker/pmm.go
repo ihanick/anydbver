@@ -3,7 +3,6 @@ package unmodifieddocker
 import (
 	"log"
 	"regexp"
-	"strings"
 
 	anydbver_common "github.com/ihanick/anydbver/pkg/common"
 	"github.com/ihanick/anydbver/pkg/runtools"
@@ -20,17 +19,15 @@ func CreatePMMContainer(logger *log.Logger, namespace string, name string, cmd s
 		cmd_args = append(cmd_args, "--memory="+mem)
 	}
 
-	if port, ok := args["port"]; ok {
+	if _, ok := args["expose"]; ok {
+		cmd_args = anydbver_common.AppendExposeParams(cmd_args, args)
+	} else if port, ok := args["port"]; ok {
 		cmd_args = append(cmd_args, "-p", port+":443")
 	} else {
 		cmd_args = append(cmd_args, "-p", ":443")
 	}
 
-	if strings.Contains(args["docker-image"], ":") {
-		cmd_args = append(cmd_args, args["docker-image"])
-	} else {
-		cmd_args = append(cmd_args, args["docker-image"]+":"+args["version"])
-	}
+	cmd_args = append(cmd_args, args["docker-image"]+":"+args["version"])
 
 	env := map[string]string{}
 	errMsg := "Error creating container"

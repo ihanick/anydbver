@@ -6,7 +6,6 @@ import (
 	"github.com/ihanick/anydbver/pkg/runtools"
 	"log"
 	"regexp"
-	"strings"
 )
 
 func CreatePMMClientContainer(logger *log.Logger, namespace string, name string, cmd string, args map[string]string) {
@@ -37,11 +36,8 @@ func CreatePMMClientContainer(logger *log.Logger, namespace string, name string,
 		cmd_args = append(cmd_args, pmm_server_args...)
 	}
 
-	if strings.Contains(args["docker-image"], ":") {
-		cmd_args = append(cmd_args, args["docker-image"])
-	} else {
-		cmd_args = append(cmd_args, args["docker-image"]+":"+args["version"])
-	}
+	cmd_args = anydbver_common.AppendExposeParams(cmd_args, args)
+	cmd_args = append(cmd_args, args["docker-image"]+":"+args["version"])
 
 	env := map[string]string{}
 	errMsg := "Error creating container"

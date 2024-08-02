@@ -349,3 +349,10 @@ func ResolveNodeIp(provider string, logger *log.Logger, namespace string, name s
 	}
 	return "", errors.New("node ip is not found")
 }
+
+func AppendExposeParams(cmd []string, args map[string]string) []string {
+	if expose_port, ok := args["expose"]; ok {
+		return append(cmd, []string{"-p", expose_port}...)
+	}
+	return cmd
+}
