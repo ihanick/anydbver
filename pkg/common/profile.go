@@ -1,24 +1,25 @@
 package common
 
 import (
-    "bufio"
-    "database/sql"
-    "os/exec"
-    "log"
-    "io"
-    "os"
-    "fmt"
-    "net/http"
-    "path/filepath"
-    "strings"
-    "regexp"
-    _ "modernc.org/sqlite"
-    "github.com/ihanick/anydbver/pkg/runtools"
+	"bufio"
+	"database/sql"
+	"errors"
+	"fmt"
+	"github.com/ihanick/anydbver/pkg/runtools"
+	"io"
+	"log"
+	_ "modernc.org/sqlite"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strings"
 )
 
 const (
 	ANYDBVER_VERSION_DATABASE_SQL_URL = "https://github.com/ihanick/anydbver/raw/master/anydbver_version.sql"
-	ANYDBVER_DEFAULT_PASSWORD = "verysecretpassword1^"
+	ANYDBVER_DEFAULT_PASSWORD         = "verysecretpassword1^"
 )
 
 func CreateSshKeysForContainers(logger *log.Logger, namespace string) {
@@ -28,7 +29,7 @@ func CreateSshKeysForContainers(logger *log.Logger, namespace string) {
 		os.MkdirAll(secretDir, os.ModePerm)
 	}
 	if _, err := os.Stat(sshKeyPath); os.IsNotExist(err) {
-		user := GetUser(logger) 
+		user := GetUser(logger)
 
 		cmd_args := []string{
 			"docker", "run", "-i", "--rm",
@@ -44,8 +45,6 @@ func CreateSshKeysForContainers(logger *log.Logger, namespace string) {
 		runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
 	}
 }
-
-
 
 func GetConfigPath(logger *log.Logger) string {
 	programrcPath := ".anydbver"
@@ -77,7 +76,6 @@ func GetConfigPath(logger *log.Logger) string {
 				return ""
 			}
 		}
-
 
 	}
 
@@ -143,26 +141,26 @@ func createAndPopulateDatabase(dbpath string, sqlpath string, logger *log.Logger
 }
 
 func UpdateSqliteDatabase(logger *log.Logger, dbpath string) {
-		sqlpath, err := downloadVersionDatabase(ANYDBVER_VERSION_DATABASE_SQL_URL)
-		if err != nil {
-			logger.Printf("Failed to download version database SQL script: %v\n", err)
-			return
-		}
+	sqlpath, err := downloadVersionDatabase(ANYDBVER_VERSION_DATABASE_SQL_URL)
+	if err != nil {
+		logger.Printf("Failed to download version database SQL script: %v\n", err)
+		return
+	}
 
-		err = createAndPopulateDatabase(dbpath, sqlpath, logger)
-		if err != nil {
-			logger.Fatal("Copy anydbver_version.db to", dbpath)
-			return
-		}
+	err = createAndPopulateDatabase(dbpath, sqlpath, logger)
+	if err != nil {
+		logger.Fatal("Copy anydbver_version.db to", dbpath)
+		return
+	}
 
-		os.Remove(sqlpath)
+	os.Remove(sqlpath)
 }
 
 func GetDatabasePath(logger *log.Logger) string {
 	dbpath := "anydbver_version.db"
-	dbpath = filepath.Join( filepath.Dir(GetConfigPath(logger)), dbpath)
+	dbpath = filepath.Join(filepath.Dir(GetConfigPath(logger)), dbpath)
 	if _, err := os.Stat(dbpath); os.IsNotExist(err) {
-    UpdateSqliteDatabase(logger, dbpath)
+		UpdateSqliteDatabase(logger, dbpath)
 	}
 
 	return dbpath
@@ -186,15 +184,13 @@ func GetCacheDirectory(logger *log.Logger) string {
 			os.MkdirAll(cache_dir, os.ModePerm)
 		}
 
-
 	}
 	return cache_dir
 
 }
 
-
 func GetK3dPath(logger *log.Logger) string {
-	k3d_path, err  := exec.LookPath("k3d")
+	k3d_path, err := exec.LookPath("k3d")
 	if err == nil {
 		return k3d_path
 	}
@@ -204,8 +200,8 @@ func GetK3dPath(logger *log.Logger) string {
 		return k3d_path
 	}
 
-	k3d_path= filepath.Join(GetCacheDirectory(logger), "k3d")
-	_, err = os.Stat(k3d_path) 
+	k3d_path = filepath.Join(GetCacheDirectory(logger), "k3d")
+	_, err = os.Stat(k3d_path)
 	if err == nil {
 		return k3d_path
 	}
@@ -213,10 +209,10 @@ func GetK3dPath(logger *log.Logger) string {
 	k3d_create_cmd := []string{
 		"bash", "-c",
 		"curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | PATH=$PATH:" +
-		GetCacheDirectory(logger)+
-		" K3D_INSTALL_DIR="+
-		GetCacheDirectory(logger)+
-		" USE_SUDO=false bash", }
+			GetCacheDirectory(logger) +
+			" K3D_INSTALL_DIR=" +
+			GetCacheDirectory(logger) +
+			" USE_SUDO=false bash"}
 
 	env := map[string]string{}
 	errMsg := "Can't install k3d"
@@ -230,9 +226,8 @@ func GetK3dPath(logger *log.Logger) string {
 	return ""
 }
 
-
 func GetAnsibleInventory(logger *log.Logger, namespace string) string {
-	return filepath.Join( GetCacheDirectory(logger), MakeContainerHostName(logger, namespace, "ansible_hosts_run"))
+	return filepath.Join(GetCacheDirectory(logger), MakeContainerHostName(logger, namespace, "ansible_hosts_run"))
 }
 
 func GetUser(logger *log.Logger) string {
@@ -271,11 +266,10 @@ func GetUser(logger *log.Logger) string {
 	return profile
 }
 
-
 func GetToolsDirectory(logger *log.Logger, namespace string) string {
 	tools_directory := "tools"
 	if _, err := os.Stat("tools/setup_postgresql_replication_docker.sh"); os.IsNotExist(err) {
-		user := GetUser(logger) 
+		user := GetUser(logger)
 		tools_directory = filepath.Join(GetCacheDirectory(logger), "tools")
 
 		cmd_args := []string{
@@ -292,7 +286,6 @@ func GetToolsDirectory(logger *log.Logger, namespace string) string {
 		runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
 	}
 
-
 	abs_path, err := filepath.Abs(tools_directory)
 
 	if err != nil {
@@ -304,9 +297,8 @@ func GetToolsDirectory(logger *log.Logger, namespace string) string {
 
 }
 
-
 func RunCommandInBaseContainer(logger *log.Logger, namespace string, cmd string, volumes []string, errMsg string) (string, error) {
-	user := GetUser(logger) 
+	user := GetUser(logger)
 
 	cmd_args := []string{
 		"docker", "run", "-i", "--rm",
@@ -317,8 +309,8 @@ func RunCommandInBaseContainer(logger *log.Logger, namespace string, cmd string,
 	cmd_args = append(cmd_args, volumes...)
 
 	cmd_args = append(cmd_args,
-	GetDockerImageName("ansible", user),
-	"bash", "-c", cmd,)
+		GetDockerImageName("ansible", user),
+		"bash", "-c", cmd)
 
 	env := map[string]string{}
 	ignoreMsg := regexp.MustCompile("ignore this")
@@ -332,7 +324,28 @@ func MakeContainerHostName(logger *log.Logger, namespace string, name string) st
 		prefix = namespace + "-" + prefix
 	}
 
-	return strings.ReplaceAll(prefix + "-" + name, ".","-")
+	return strings.ReplaceAll(prefix+"-"+name, ".", "-")
 }
 
+func getContainerIp(provider string, logger *log.Logger, namespace string, containerName string) (string, error) {
+	network := MakeContainerHostName(logger, namespace, "anydbver")
+	if provider == "docker" {
+		args := []string{"docker", "inspect", containerName, "--format", "{{ index .NetworkSettings.Networks \"" + network + "\" \"IPAddress\" }}"}
 
+		env := map[string]string{}
+		errMsg := "Error getting docker container ip"
+		ignoreMsg := regexp.MustCompile("ignore this")
+
+		ip, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env, runtools.COMMAND_TIMEOUT)
+		return strings.TrimSuffix(ip, "\n"), err
+	}
+	return "", errors.New("node ip is not found")
+}
+
+func ResolveNodeIp(provider string, logger *log.Logger, namespace string, name string) (string, error) {
+	if provider == "docker" || provider == "docker-image" {
+
+		return getContainerIp(provider, logger, namespace, MakeContainerHostName(logger, namespace, name))
+	}
+	return "", errors.New("node ip is not found")
+}
