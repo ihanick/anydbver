@@ -51,6 +51,11 @@ func CreateContainer(logger *log.Logger, namespace string, name string, cmd stri
 			args["docker-image"] = "valkey/valkey"
 		}
 		CreateValKeyContainer(logger, namespace, name, cmd, args)
+	} else if cmd == "minio" {
+		if args["docker-image"] == "" {
+			args["docker-image"] = "minio/minio"
+		}
+		CreateMinIOContainer(logger, namespace, name, cmd, args)
 	}
 }
 
