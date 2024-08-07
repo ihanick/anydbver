@@ -826,6 +826,24 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 			return match
 		})
 
+		re_s3_server := regexp.MustCompile(`extra_minio_url='(node[0-9]+)'`)
+		content = re_s3_server.ReplaceAllStringFunc(content, func(match string) string {
+			submatches := re_s3_server.FindStringSubmatch(match)
+			if len(submatches) > 1 {
+				node := submatches[1]
+				ip, err := getNodeIp(provider, logger, namespace, node)
+				if err != nil {
+					fmt.Println("Error getting node ip:", err)
+				}
+				return fmt.Sprintf("extra_minio_url='https://%s:%s@%s:9000'",
+					url.QueryEscape(anydbver_common.ANYDBVER_MINIO_USER),
+					url.QueryEscape(anydbver_common.ANYDBVER_MINIO_PASS),
+					ip)
+
+			}
+			return match
+		})
+
 		re := regexp.MustCompile(`='(node[0-9]+)'`)
 		content = re.ReplaceAllStringFunc(content, func(match string) string {
 			submatches := re.FindStringSubmatch(match)

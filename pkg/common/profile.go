@@ -20,6 +20,9 @@ import (
 const (
 	ANYDBVER_VERSION_DATABASE_SQL_URL = "https://github.com/ihanick/anydbver/raw/master/anydbver_version.sql"
 	ANYDBVER_DEFAULT_PASSWORD         = "verysecretpassword1^"
+	ANYDBVER_MINIO_USER               = "UIdgE4sXPBTcBB4eEawU"
+	ANYDBVER_MINIO_PASS               = "7UdlDzBF769dbIOMVILV"
+	ANYDBVER_MINIO_BUCKET             = "backup"
 )
 
 func CreateSshKeysForContainers(logger *log.Logger, namespace string) {

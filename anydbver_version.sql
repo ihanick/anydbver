@@ -1465,6 +1465,7 @@ INSERT INTO tests VALUES(30,'latest ps no gtid','anydbver deploy ps:8.0,nogtid n
 INSERT INTO tests VALUES(31,'ppg pgbackrest','anydbver deploy ppg:latest pgbackrest');
 INSERT INTO tests VALUES(32,'ps innodb cluster sysbench','anydbver deploy node0 ps:8.0,group-replication node1 ps:8.0,group-replication,master=node0 node2 ps:8.0,mysql-router,master=node0 node3 ps:8.0 sysbench:latest,mysql=node2,port=6446,oltprw');
 INSERT INTO tests VALUES(33,'pmm server and client docker-image','anydbver deploy pmm:docker-image=perconalab/pmm-server:dev-latest,port=12443 node1 mysql:latest,docker-image node2 pmm-client:docker-image=perconalab/pmm-client:dev-latest,server=node0,mysql=node1');
+INSERT INTO tests VALUES(34,'pgbackrest minio pgdg','anydbver deploy minio:docker-image node1 pg pgbackrest:s3=node0');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
@@ -1500,6 +1501,7 @@ INSERT INTO test_cases VALUES(30,'echo show variables | anydbver exec node1 -- m
 INSERT INTO test_cases VALUES(31,'anydbver exec node0 -- sudo -u postgres pgbackrest --stanza=db backup ; anydbver exec node0 -- sudo -u postgres pgbackrest info |grep status:|grep -q ok');
 INSERT INTO test_cases VALUES(32,'anydbver exec node3 -- /usr/local/bin/run_sysbench.sh | grep -q transactions');
 INSERT INTO test_cases VALUES(33,'anydbver exec node2 -- pmm-admin list|grep -q mysql');
+INSERT INTO test_cases VALUES(34,'echo "pgbackrest --stanza=db backup && pgbackrest info" | anydbver exec node1 | grep status | grep -q ok');
 CREATE TABLE mariadb_version(
   version varchar(20),
   os varchar(20),
@@ -2382,6 +2384,7 @@ INSERT INTO ansible_arguments VALUES('mariadb','start-db','%','','extra_start_db
 INSERT INTO ansible_arguments VALUES('mariadb','mysql-router','%','','extra_mysql_router_version','percona-server',1,NULL);
 INSERT INTO ansible_arguments VALUES('mariadb','nogtid','%','','extra_replication_type','nogtid',2,NULL);
 INSERT INTO ansible_arguments VALUES('mariadb','nogtid','%','','extra_db_opts_file','mysql/async-repl-nogtid.cnf',2,NULL);
+INSERT INTO ansible_arguments VALUES('pgbackrest','s3','%','','extra_minio_url','',1,NULL);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
@@ -2444,5 +2447,6 @@ INSERT INTO help_examples VALUES('pgbackrest','anydbver deploy node0 ppg:latest 
 INSERT INTO help_examples VALUES('sysbench','anydbver deploy node0 ps:8.0,group-replication node1 ps:8.0,group-replication,master=node0 node2 ps:8.0,mysql-router,master=node0 node3 ps:8.0 sysbench:latest,mysql=node2,port=6446,oltprw');
 INSERT INTO help_examples VALUES('pmm-server','anydbver deploy pmm:docker-image=perconalab/pmm-server:dev-latest,port=12443 node1 mysql:latest,docker-image node2 pmm-client:docker-image=perconalab/pmm-client:dev-latest,server=node0,mysql=node1');
 INSERT INTO help_examples VALUES('percona-server','anydbver deploy ps:latest,expose=3306');
+INSERT INTO help_examples VALUES('pgbackrest','anydbver deploy minio:docker-image,admin-port=9091:9090 node1 pg pgbackrest:s3=node0');
 CREATE INDEX test_cases_test_id_idx ON test_cases(test_id);
 COMMIT;
