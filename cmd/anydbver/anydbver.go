@@ -727,7 +727,7 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 		cluster_name := anydbver_common.MakeContainerHostName(logger, namespace, name)
 		clusterIp, err := getContainerIp("docker", logger, namespace, "k3d-"+cluster_name+"-"+"server-0")
 		if err != nil {
-			return
+			clusterIp = ""
 		}
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
@@ -740,14 +740,18 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 		for _, arg := range args {
 			run_operator_args = run_operator_args + " " + handleDeploymentKeyword(logger, "k8s_arguments", arg)
 			volumes := []string{
-				"-v", ansible_hosts_run_file + ":/vagrant/ansible_hosts_run",
 				"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
 				"-v", filepath.Join(homeDir, ".kube", "config") + ":/vagrant/secret/.kube/config:ro",
 				"-v", filepath.Join(anydbver_common.GetCacheDirectory(logger), "data") + ":/vagrant/data",
 			}
+			fix_k3d_config := ""
+			if clusterIp != "" {
+				fix_k3d_config = "sed -i -re 's/0.0.0.0:[0-9]+/" + clusterIp + ":6443/g' /root/.kube/config ;"
+			}
+
 			ansible_output, err := anydbver_common.RunCommandInBaseContainer(
 				logger, namespace,
-				"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); sed -i -re 's/0.0.0.0:[0-9]+/"+clusterIp+":6443/g' /root/.kube/config ;python3 tools/run_k8s_operator.py "+run_operator_args,
+				"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f /vagrant/tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); "+fix_k3d_config+"python3 tools/run_k8s_operator.py "+run_operator_args,
 				volumes,
 				"Error running kubernetes operator")
 			if err != nil {
@@ -997,6 +1001,9 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 				nodeProvider[currentNode] = "kubectl"
 				osvers = re_lastosver.ReplaceAllString(osvers, "")
 				createK3dCluster(logger, namespace, currentNode, deployment_keyword.Args)
+			} else if arg == "provider:kubectl" {
+				nodeProvider[currentNode] = "kubectl"
+				osvers = re_lastosver.ReplaceAllString(osvers, "")
 			}
 		}
 	}
