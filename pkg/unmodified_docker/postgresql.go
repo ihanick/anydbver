@@ -21,8 +21,6 @@ func CreatePostgresqlContainer(logger *log.Logger, namespace string, name string
 		"-v", tools_dir + ":/vagrant/tools",
 		"-d", "--cgroupns=host", "--tmpfs", "/tmp",
 		"--network", anydbver_common.MakeContainerHostName(logger, namespace, "anydbver"),
-		"--tmpfs", "/run", "--tmpfs", "/run/lock",
-		"-v", "/sys/fs/cgroup:/sys/fs/cgroup",
 		"-e", "POSTGRES_PASSWORD=" + anydbver_common.ANYDBVER_DEFAULT_PASSWORD,
 		"--hostname", name}
 	if mstr, ok := args["master"]; ok {
