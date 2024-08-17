@@ -724,10 +724,13 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 			}
 		}
 	} else if provider == "kubectl" {
+		cluster_context := ""
 		cluster_name := anydbver_common.MakeContainerHostName(logger, namespace, name)
 		clusterIp, err := getContainerIp("docker", logger, namespace, "k3d-"+cluster_name+"-"+"server-0")
 		if err != nil {
 			clusterIp = ""
+		} else {
+			cluster_context = "k3d-" + cluster_name
 		}
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
@@ -747,6 +750,7 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 			fix_k3d_config := ""
 			if clusterIp != "" {
 				fix_k3d_config = "sed -i -re 's/0.0.0.0:[0-9]+/" + clusterIp + ":6443/g' /root/.kube/config ;"
+				fix_k3d_config += "kubectl config use-context " + cluster_context + ";"
 			}
 
 			ansible_output, err := anydbver_common.RunCommandInBaseContainer(
