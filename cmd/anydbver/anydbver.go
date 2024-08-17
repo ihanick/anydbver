@@ -424,6 +424,9 @@ func createContainer(logger *log.Logger, name string, osver string, privileged b
 		args = append(args, []string{
 			"--cap-add", "NET_ADMIN",
 			"--cap-add", "SYS_PTRACE",
+			"--cap-add", "IPC_LOCK",
+			"--cap-add", "DAC_OVERRIDE",
+			"--cap-add", "AUDIT_WRITE",
 			"--security-opt", "seccomp=unconfined"}...)
 	}
 	if len(expose_port) > 0 {
@@ -910,6 +913,84 @@ func fetchDeployCompletions(logger *log.Logger) []string {
 	return keywords
 }
 
+func runPlaybook(logger *log.Logger, namespace string, ansible_hosts_run_file string, verbose bool) {
+	user := anydbver_common.GetUser(logger)
+
+	fileInfo, err := os.Stat(ansible_hosts_run_file)
+	if os.IsNotExist(err) || (err == nil && fileInfo.Size() == 0) {
+		logger.Println("no traditional installations with systemd, skipping ansible")
+		return
+	}
+	if err != nil {
+		logger.Println("Can't stat ansible hosts file", err)
+		return
+	}
+
+	volumes := []string{
+		"-v", ansible_hosts_run_file + ":/vagrant/ansible_hosts_run",
+		"-v", anydbver_common.GetDatabasePath(logger) + ":/vagrant/anydbver_version.db",
+		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
+	}
+
+	if dirInfo, err := os.Stat("roles"); err == nil && dirInfo.IsDir() {
+		realPath, err := filepath.Abs("roles")
+		if err == nil {
+			volumes = append(volumes, []string{
+				"-v",
+				realPath + ":/vagrant/roles",
+			}...)
+		}
+	}
+	if fileInfo, err := os.Stat("playbook.yml"); err == nil && !fileInfo.IsDir() {
+		realPath, err := filepath.Abs("playbook.yml")
+		if err == nil {
+			volumes = append(volumes, []string{
+				"-v",
+				realPath + ":/vagrant/playbook.yml",
+			}...)
+		}
+	}
+
+	cmd_args := []string{
+		"docker", "run", "-i", "--rm",
+		"--name", anydbver_common.MakeContainerHostName(logger, namespace, "ansible"),
+		"--network", getNetworkName(logger, namespace),
+		"--hostname", anydbver_common.MakeContainerHostName(logger, namespace, "ansible"),
+	}
+
+	cmd_args = append(cmd_args, volumes...)
+	cmd_args = append(cmd_args, []string{
+		anydbver_common.GetDockerImageName("ansible", user),
+		"bash", "-c",
+	}...)
+
+	ansible_command := "cd /vagrant;until ansible -m ping -i ansible_hosts_run all &>/dev/null ; do sleep 1; done ; ANSIBLE_FORCE_COLOR=True ANSIBLE_DISPLAY_SKIPPED_HOSTS=False ansible-playbook -i ansible_hosts_run --forks 16 playbook.yml"
+
+	if verbose {
+		ansible_command += " -vvv"
+	}
+
+	cmd_args = append(cmd_args, ansible_command)
+
+	env := map[string]string{}
+	errMsg := "Error running Ansible"
+	ignoreMsg := regexp.MustCompile("ignore this")
+	ansible_output, err := runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+	if err != nil {
+		logger.Println("Ansible failed with errors: ")
+		fatalPattern := regexp.MustCompile(`FAILED[!]|failed=`)
+		scanner := bufio.NewScanner(strings.NewReader(ansible_output))
+		for scanner.Scan() {
+			line := scanner.Text()
+			if fatalPattern.MatchString(line) {
+				logger.Print(line)
+			}
+		}
+		os.Exit(runtools.ANYDBVER_ANSIBLE_PROBLEM)
+	}
+
+}
+
 func createK3dCluster(logger *log.Logger, namespace string, name string, args map[string]string) {
 	cluster_name := anydbver_common.MakeContainerHostName(logger, namespace, name)
 	k3d_agents := 2
@@ -1039,55 +1120,7 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 		}
 	}
 
-	user := anydbver_common.GetUser(logger)
-
-	fileInfo, err := os.Stat(ansible_hosts_run_file)
-	if os.IsNotExist(err) || (err == nil && fileInfo.Size() == 0) {
-		logger.Println("no traditional installations with systemd, skipping ansible")
-		return
-	}
-	if err != nil {
-		logger.Println("Can't stat ansible hosts file", err)
-		return
-	}
-
-	cmd_args := []string{
-		"docker", "run", "-i", "--rm",
-		"--name", anydbver_common.MakeContainerHostName(logger, namespace, "ansible"),
-		"-v", ansible_hosts_run_file + ":/vagrant/ansible_hosts_run",
-		"-v", anydbver_common.GetDatabasePath(logger) + ":/vagrant/anydbver_version.db",
-		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
-		"--network", getNetworkName(logger, namespace),
-		"--hostname", anydbver_common.MakeContainerHostName(logger, namespace, "ansible"),
-		anydbver_common.GetDockerImageName("ansible", user),
-		"bash", "-c",
-	}
-
-	ansible_command := "cd /vagrant;until ansible -m ping -i ansible_hosts_run all &>/dev/null ; do sleep 1; done ; ANSIBLE_FORCE_COLOR=True ANSIBLE_DISPLAY_SKIPPED_HOSTS=False ansible-playbook -i ansible_hosts_run --forks 16 playbook.yml"
-
-	if verbose {
-		ansible_command += " -vvv"
-	}
-
-	cmd_args = append(cmd_args, ansible_command)
-
-	env := map[string]string{}
-	errMsg := "Error running Ansible"
-	ignoreMsg := regexp.MustCompile("ignore this")
-	ansible_output, err := runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
-	if err != nil {
-		logger.Println("Ansible failed with errors: ")
-		fatalPattern := regexp.MustCompile(`FAILED[!]|failed=`)
-		scanner := bufio.NewScanner(strings.NewReader(ansible_output))
-		for scanner.Scan() {
-			line := scanner.Text()
-			if fatalPattern.MatchString(line) {
-				logger.Print(line)
-			}
-		}
-		os.Exit(runtools.ANYDBVER_ANSIBLE_PROBLEM)
-	}
-
+	runPlaybook(logger, namespace, ansible_hosts_run_file, verbose)
 }
 
 func printVersion() {
@@ -1238,6 +1271,13 @@ func main() {
 			anydbver_common.UpdateSqliteDatabase(logger, dbFile)
 		},
 	}
+	var playbookCmd = &cobra.Command{
+		Use:   "playbook",
+		Short: "Run ansible playbook",
+		Run: func(cmd *cobra.Command, args []string) {
+			runPlaybook(logger, namespace, anydbver_common.GetAnsibleInventory(logger, namespace), verbose)
+		},
+	}
 
 	var testCmd = &cobra.Command{
 		Use:   "test",
@@ -1266,6 +1306,7 @@ func main() {
 	rootCmd.AddCommand(destroyCmd)
 	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(testCmd)
+	rootCmd.AddCommand(playbookCmd)
 
 	var containerCmd = &cobra.Command{
 		Use:   "container",
