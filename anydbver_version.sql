@@ -1495,6 +1495,7 @@ INSERT INTO tests VALUES(31,'ppg pgbackrest','anydbver deploy ppg:latest pgbackr
 INSERT INTO tests VALUES(32,'ps innodb cluster sysbench','anydbver deploy node0 ps:8.0,group-replication node1 ps:8.0,group-replication,master=node0 node2 ps:8.0,mysql-router,master=node0 node3 ps:8.0 sysbench:latest,mysql=node2,port=6446,oltprw');
 INSERT INTO tests VALUES(33,'pmm server and client docker-image','anydbver deploy pmm:docker-image=perconalab/pmm-server:dev-latest,port=12443 node1 mysql:latest,docker-image node2 pmm-client:docker-image=perconalab/pmm-client:dev-latest,server=node0,mysql=node1');
 INSERT INTO tests VALUES(34,'pgbackrest minio pgdg','anydbver deploy minio:docker-image node1 pg pgbackrest:s3=node0');
+INSERT INTO tests VALUES(35,'two kubernetes clusters','anydbver deploy node0 k3d k8s-pg:2.4.1 node1 k3d k8s-pg:2.4.1');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
