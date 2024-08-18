@@ -1497,6 +1497,7 @@ INSERT INTO tests VALUES(33,'pmm server and client docker-image','anydbver deplo
 INSERT INTO tests VALUES(34,'pgbackrest minio pgdg','anydbver deploy minio:docker-image node1 pg pgbackrest:s3=node0');
 INSERT INTO tests VALUES(35,'two kubernetes clusters','anydbver deploy node0 k3d k8s-pg:2.4.1 node1 k3d k8s-pg:2.4.1');
 INSERT INTO tests VALUES(36,'latest mariadb','anydbver deploy mariadb');
+INSERT INTO tests VALUES(37,'mariadb galera cluster','anydbver deploy mariadb:latest,galera node1 mariadb:latest,master=node0,galera node2 mariadb:latest,master=node0,galera');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
@@ -2440,6 +2441,8 @@ INSERT INTO ansible_arguments VALUES('mariadb','mysql-router','%','','extra_mysq
 INSERT INTO ansible_arguments VALUES('mariadb','nogtid','%','','extra_replication_type','nogtid',2,NULL);
 INSERT INTO ansible_arguments VALUES('mariadb','nogtid','%','','extra_db_opts_file','mysql/async-repl-nogtid.cnf',2,NULL);
 INSERT INTO ansible_arguments VALUES('pgbackrest','s3','%','','extra_minio_url','',1,NULL);
+INSERT INTO ansible_arguments VALUES('mariadb','galera','%','','extra_replication_type','galera',2,'');
+INSERT INTO ansible_arguments VALUES('mariadb','galera','%','','extra_db_opts_file','mariadb/galera.cnf',2,'');
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
