@@ -1433,6 +1433,7 @@ def deploy_ingress_nginxinc(args):
              "https://helm.nginx.com/stable"], "helm repo add problem")
     nginx_helm_install_cmd = ["helm", "install", "nginx-ingress", "nginx-stable/nginx-ingress",
                               "--create-namespace", "--namespace", "ingress-nginx",
+                              "--set", "controller.enableTLSPassthrough=true",
                               "--set", "controller.service.httpsPort.port={}".format(args.ingress_port)]
     if args.cert_manager:
         gen_wildcard_ns_self_signed_cert(args, "default")

@@ -1043,6 +1043,20 @@ func createK3dCluster(logger *log.Logger, namespace string, name string, args ma
 			"--volume",
 			dir + ":/var/lib/rancher/k3s/storage@all"}...)
 	}
+
+	if ingress_type, ok := args["ingress-type"]; ok && ingress_type != "traefik" {
+		k3d_create_cmd = append(k3d_create_cmd, []string{
+			"--k3s-arg",
+			"--disable=traefik@server:0",
+		}...)
+		if ingress_port, ok := args["ingress"]; ok {
+			k3d_create_cmd = append(k3d_create_cmd, []string{
+				"-p",
+				fmt.Sprintf("%s:%s@loadbalancer", ingress_port, ingress_port),
+			}...)
+		}
+
+	}
 	if registry_cache, ok := args["registry-cache"]; ok {
 		registry_cache_config := fmt.Sprintf(`
 mirrors:
