@@ -1324,6 +1324,12 @@ def setup_operator(args):
         if args.memory:
             set_yaml('.spec.replsets[0].resources.limits.memory="{mem}" | .spec.sharding.mongos.resources.limits.memory="{mem}" '.format(mem=args.memory),
                      "set memory limit")
+        if args.db_replicas == "1":
+            set_yaml(
+                '.spec.replsets[0].size = 1 | .spec.unsafeFlags.replsetSize = true', 'single replica')
+        if args.db_shards == "0":
+            set_yaml(
+                '.spec.sharding.enabled = false', 'disable sharding')
 
     enable_pmm(args)
 
@@ -1610,6 +1616,8 @@ def main():
                         dest="archive_push_async", action='store_true')
     parser.add_argument('--cluster-tls', action='store_true')
     parser.add_argument('--db-replicas', dest="db_replicas",
+                        type=str, nargs='?')
+    parser.add_argument('--db-shards', dest="db_shards",
                         type=str, nargs='?')
     parser.add_argument('--update-strategy',
                         dest="update_strategy", type=str, nargs='?')
