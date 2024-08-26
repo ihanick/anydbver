@@ -76,6 +76,21 @@ def k8s_wait_for_ready(ns, labels, timeout=COMMAND_TIMEOUT):
     return False
 
 
+def k8s_wait_for_certificate_ready(ns, name, timeout=COMMAND_TIMEOUT):
+    logger.info(
+        "Waiting for: kubectl wait --for=condition=ready -n {} certificate {}".format(ns, name))
+    for _ in range(timeout // 2):
+        s = datetime.datetime.now()
+        if run_fatal(["kubectl", "wait", "--timeout=2s",
+                      "--for=condition=ready", "-n", ns, "certificate", name,],
+                     "Pod ready wait problem",
+                     r"timed out waiting for the condition on|no matching resources found", False) == 0:
+            return True
+        if (datetime.datetime.now() - s).total_seconds() < 1.5:
+            time.sleep(2)
+    return False
+
+
 def k8s_wait_for_job_complete(ns, jobname, timeout=COMMAND_TIMEOUT):
     logger.info(
         "Waiting for: kubectl wait --for=condition=complete -n {} {}".format(ns, jobname))
@@ -626,6 +641,7 @@ def run_minio_server(args):
     if args.cert_manager != "" and args.minio_certs == "self-signed":
         gen_self_signed_cert(args, "s3." + args.cluster_domain,
                              "default", "minio-service", "minio-certs")
+        k8s_wait_for_certificate_ready("default", "minio-service-tls")
     elif args.minio_custom_ssl:
         run_fatal(["kubectl", "create", "secret", "tls", "minio-service-tls",
                    "--key="+str(tls_key_path.resolve()),
