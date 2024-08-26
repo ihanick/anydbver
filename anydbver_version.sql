@@ -2454,7 +2454,7 @@ CREATE TABLE k8s_arguments(
   always_add INT
 );
 INSERT INTO k8s_arguments VALUES('percona-postgresql-operator','','%','TYPE','--operator','percona-postgresql-operator',1,1);
-INSERT INTO k8s_arguments VALUES('percona-postgresql-operator','version','%','VERSION','--version','2.4.0',1,1);
+INSERT INTO k8s_arguments VALUES('percona-postgresql-operator','version','%','VERSION','--version','2.4.1',1,1);
 INSERT INTO k8s_arguments VALUES('percona-postgresql-operator','cluster-name','%','CLUSTER_NAME','--cluster-name','cluster1',1,1);
 INSERT INTO k8s_arguments VALUES('percona-postgresql-operator','namespace','%','NAMESPACE','--namespace','pgo',1,1);
 INSERT INTO k8s_arguments VALUES('percona-xtradb-cluster-operator','','%','TYPE','--operator','percona-xtradb-cluster-operator',1,1);
@@ -2477,6 +2477,7 @@ INSERT INTO k8s_arguments VALUES('percona-server-mysql-operator','helm','%',NULL
 INSERT INTO k8s_arguments VALUES('k8s-minio','version','%','VERSION','--minio','2023.2.27,helm=bitnami',1,1);
 INSERT INTO k8s_arguments VALUES('k8s-minio','certs','%','','--minio-certs','self-signed',1,1);
 INSERT INTO k8s_arguments VALUES('k8s-pmm','version','%','VERSION','--pmm','2.42.0,helm=percona-helm-charts:1.3.14,certs=self-signed,namespace=monitoring',1,1);
+INSERT INTO k8s_arguments VALUES('percona-postgresql-operator','standby','%','','--standby','',1,NULL);
 CREATE TABLE keyword_aliases(keyword varchar(50), alias varchar(50));
 INSERT INTO keyword_aliases VALUES('postgresql','postgres');
 INSERT INTO keyword_aliases VALUES('postgresql','pg');

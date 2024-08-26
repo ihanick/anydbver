@@ -718,6 +718,55 @@ func handleDeploymentKeyword(logger *log.Logger, table string, keyword string) s
 	return result
 }
 
+func runOperatorTool(logger *log.Logger, namespace string, name string, run_operator_args string) {
+	if run_operator_args == "" {
+		return
+	}
+	cluster_context := ""
+	cluster_name := anydbver_common.MakeContainerHostName(logger, namespace, name)
+	clusterIp, err := getContainerIp("docker", logger, namespace, "k3d-"+cluster_name+"-"+"server-0")
+	if err != nil {
+		clusterIp = ""
+	} else {
+		cluster_context = "k3d-" + cluster_name
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		logger.Println("Error: Could not determine user's home directory")
+		return
+	}
+
+	volumes := []string{
+		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
+		"-v", filepath.Join(homeDir, ".kube", "config") + ":/vagrant/secret/.kube/config:ro",
+		"-v", filepath.Join(anydbver_common.GetCacheDirectory(logger), "data") + ":/vagrant/data",
+	}
+	fix_k3d_config := ""
+	if clusterIp != "" {
+		fix_k3d_config = "sed -i -re 's/0.0.0.0:[0-9]+/" + clusterIp + ":6443/g' /root/.kube/config ;"
+		fix_k3d_config += "kubectl config use-context " + cluster_context + ";"
+	}
+
+	ansible_output, err := anydbver_common.RunCommandInBaseContainer(
+		logger, namespace,
+		"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f /vagrant/tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); "+fix_k3d_config+"python3 tools/run_k8s_operator.py "+run_operator_args,
+		volumes,
+		"Error running kubernetes operator")
+	if err != nil {
+		logger.Println("Ansible failed with errors: ")
+		fatalPattern := regexp.MustCompile(`^fatal:.*$`)
+		scanner := bufio.NewScanner(strings.NewReader(ansible_output))
+		for scanner.Scan() {
+			line := scanner.Text()
+			if fatalPattern.MatchString(line) {
+				logger.Print(line)
+			}
+		}
+		os.Exit(runtools.ANYDBVER_ANSIBLE_PROBLEM)
+	}
+
+}
+
 func deployHost(provider string, logger *log.Logger, namespace string, name string, ansible_hosts_run_file string, args []string) {
 	if provider == "docker-image" {
 		for _, arg := range args {
@@ -727,53 +776,24 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 			}
 		}
 	} else if provider == "kubectl" {
-		cluster_context := ""
-		cluster_name := anydbver_common.MakeContainerHostName(logger, namespace, name)
-		clusterIp, err := getContainerIp("docker", logger, namespace, "k3d-"+cluster_name+"-"+"server-0")
-		if err != nil {
-			clusterIp = ""
-		} else {
-			cluster_context = "k3d-" + cluster_name
-		}
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			logger.Println("Error: Could not determine user's home directory")
-			return
-		}
-
 		run_operator_args := ""
 
 		for _, arg := range args {
-			run_operator_args = run_operator_args + " " + handleDeploymentKeyword(logger, "k8s_arguments", arg)
-			volumes := []string{
-				"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
-				"-v", filepath.Join(homeDir, ".kube", "config") + ":/vagrant/secret/.kube/config:ro",
-				"-v", filepath.Join(anydbver_common.GetCacheDirectory(logger), "data") + ":/vagrant/data",
+			deployment_keyword_args := handleDeploymentKeyword(logger, "k8s_arguments", arg)
+			if !strings.Contains(deployment_keyword_args, "--version") {
+				run_operator_args = run_operator_args + " " + deployment_keyword_args
 			}
-			fix_k3d_config := ""
-			if clusterIp != "" {
-				fix_k3d_config = "sed -i -re 's/0.0.0.0:[0-9]+/" + clusterIp + ":6443/g' /root/.kube/config ;"
-				fix_k3d_config += "kubectl config use-context " + cluster_context + ";"
+		}
+
+		runOperatorTool(logger, namespace, name, run_operator_args)
+
+		for _, arg := range args {
+			deployment_keyword_args := handleDeploymentKeyword(logger, "k8s_arguments", arg)
+			if !strings.Contains(deployment_keyword_args, "--version") {
+				continue
 			}
 
-			ansible_output, err := anydbver_common.RunCommandInBaseContainer(
-				logger, namespace,
-				"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f /vagrant/tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); "+fix_k3d_config+"python3 tools/run_k8s_operator.py "+run_operator_args,
-				volumes,
-				"Error running kubernetes operator")
-			if err != nil {
-				logger.Println("Ansible failed with errors: ")
-				fatalPattern := regexp.MustCompile(`^fatal:.*$`)
-				scanner := bufio.NewScanner(strings.NewReader(ansible_output))
-				for scanner.Scan() {
-					line := scanner.Text()
-					if fatalPattern.MatchString(line) {
-						logger.Print(line)
-					}
-				}
-				os.Exit(runtools.ANYDBVER_ANSIBLE_PROBLEM)
-			}
-
+			runOperatorTool(logger, namespace, name, run_operator_args+" "+deployment_keyword_args)
 		}
 
 	} else if provider == "docker" {
