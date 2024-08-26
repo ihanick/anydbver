@@ -1498,6 +1498,7 @@ INSERT INTO tests VALUES(34,'pgbackrest minio pgdg','anydbver deploy minio:docke
 INSERT INTO tests VALUES(35,'two kubernetes clusters','anydbver deploy node0 k3d k8s-pg:2.4.1 node1 k3d k8s-pg:2.4.1');
 INSERT INTO tests VALUES(36,'latest mariadb','anydbver deploy mariadb');
 INSERT INTO tests VALUES(37,'mariadb galera cluster','anydbver deploy mariadb:latest,galera node1 mariadb:latest,master=node0,galera node2 mariadb:latest,master=node0,galera');
+INSERT INTO tests VALUES(38,'k8s pg standby','anydbver deploy k3d k8s-minio:latest,certs=self-signed cert-manager k8s-pg:2.4.1 k8s-pg:2.4.1,namespace=pgo1,standby');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
