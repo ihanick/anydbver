@@ -1044,6 +1044,13 @@ func createK3dCluster(logger *log.Logger, namespace string, name string, args ma
 			dir + ":/var/lib/rancher/k3s/storage@all"}...)
 	}
 
+	if host_alias, ok := args["host-alias"]; ok {
+		k3d_create_cmd = append(k3d_create_cmd, []string{
+			"--host-alias",
+			strings.ReplaceAll(host_alias, "|", ","),
+		}...)
+	}
+
 	if ingress_type, ok := args["ingress-type"]; ok && ingress_type != "traefik" {
 		k3d_create_cmd = append(k3d_create_cmd, []string{
 			"--k3s-arg",

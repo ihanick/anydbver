@@ -1499,6 +1499,7 @@ INSERT INTO tests VALUES(35,'two kubernetes clusters','anydbver deploy node0 k3d
 INSERT INTO tests VALUES(36,'latest mariadb','anydbver deploy mariadb');
 INSERT INTO tests VALUES(37,'mariadb galera cluster','anydbver deploy mariadb:latest,galera node1 mariadb:latest,master=node0,galera node2 mariadb:latest,master=node0,galera');
 INSERT INTO tests VALUES(38,'k8s pg standby','anydbver deploy k3d k8s-minio:latest,certs=self-signed cert-manager k8s-pg:2.4.1 k8s-pg:2.4.1,namespace=pgo1,standby');
+INSERT INTO tests VALUES(39,'k8s psmdb multiple single node replicasets with ingress','anydbver deploy k3d:latest,ingress=443,ingress-type=nginxinc,nodes=3,host-alias="172.17.0.1:r1.percona.local|r2.percona.local|r3.percona.local" cert-manager k8s-psmdb:1.16.2,replicas=1,shards=0,namespace=db1 k8s-psmdb:1.16.2,replicas=1,shards=0,namespace=db2 k8s-psmdb:1.16.2,replicas=1,shards=0,namespace=db3');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
