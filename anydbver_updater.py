@@ -399,6 +399,9 @@ def save_mysql_server_versions_to_sqlite(osver):
                 elif osver == 'el9':
                     repo_url = 'http://repo.mysql.com/mysql80-community-release-el9.rpm'
 
+                if "80" in repo_url and ver.startswith('8.4'):
+                    repo_url = repo_url.replace("80", "84")
+
                 mysql_shell_pkg = 'https://cdn.mysql.com/archives/mysql-shell/mysql-shell'
                 if ver.startswith('8.0.33'):
                     mysql_shell_pkg = 'http://cdn.mysql.com/Downloads/MySQL-Shell/mysql-shell'
