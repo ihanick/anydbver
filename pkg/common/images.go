@@ -28,6 +28,8 @@ func GetDockerImageName(osver string, user string) string {
 		"22.04":        IMAGE_PUBLISHER + "/ubuntu:noble-sshd-systemd-" + RELEASE_VERSION + platform_tag,
 		"ubuntu-22.04": IMAGE_PUBLISHER + "/ubuntu:noble-sshd-systemd-" + RELEASE_VERSION + platform_tag,
 		"ubuntu22.04":  IMAGE_PUBLISHER + "/ubuntu:noble-sshd-systemd-" + RELEASE_VERSION + platform_tag,
+		"bookworm":     IMAGE_PUBLISHER + "/debian:bookworm-sshd-systemd-" + RELEASE_VERSION + platform_tag,
+		"debian-12":    IMAGE_PUBLISHER + "/debian:bookworm-sshd-systemd-" + RELEASE_VERSION + platform_tag,
 		"ansible":      IMAGE_PUBLISHER + "/rockylinux:8-anydbver-ansible-" + RELEASE_VERSION + platform_tag,
 	}
 
@@ -44,6 +46,8 @@ func GetDockerImageName(osver string, user string) string {
 			"22.04":        "ubuntu:noble-sshd-systemd-" + user,
 			"ubuntu-22.04": "ubuntu:noble-sshd-systemd-" + user,
 			"ubuntu22.04":  "ubuntu:noble-sshd-systemd-" + user,
+			"bookworm":     "debian:bookworm-sshd-systemd-" + user,
+			"debian-12":    "debian:bookworm-sshd-systemd-" + user,
 			"ansible":      "rockylinux:8-anydbver-ansible-" + user,
 		}
 	}
