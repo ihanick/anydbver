@@ -17,6 +17,9 @@ docker build --platform $PLATFORM -t rockylinux:8-sshd-systemd-$USER .
 cd ../rockylinux9
 cp ../../tools/node_ip.sh ../common/rc.local ../common/rc-local.service ./
 docker build --platform $PLATFORM -t rockylinux:9-sshd-systemd-$USER .
+cd ../focal
+cp ../../tools/node_ip.sh ../common/rc.local ../common/rc-local.service ./
+docker build --platform $PLATFORM -t ubuntu:focal-sshd-systemd-$USER .
 cd ../jammy
 cp ../../tools/node_ip.sh ../common/rc.local ../common/rc-local.service ./
 docker build --platform $PLATFORM -t ubuntu:jammy-sshd-systemd-$USER .
@@ -31,6 +34,6 @@ cd ../..
 git archive --format=tar HEAD | gzip -c >images-build/ansible-anydbver/anydbver.tar.gz
 cd images-build/ansible-anydbver/
 docker build -t rockylinux:8-anydbver-ansible-$USER .
-for img in centos:7-sshd-systemd-$USER rockylinux:8-sshd-systemd-$USER rockylinux:9-sshd-systemd-$USER ubuntu:jammy-sshd-systemd-$USER ubuntu:noble-sshd-systemd-$USER debian:bookworm-sshd-systemd-$USER rockylinux:8-anydbver-ansible-$USER; do
+for img in centos:7-sshd-systemd-$USER rockylinux:8-sshd-systemd-$USER rockylinux:9-sshd-systemd-$USER ubuntu:focal-sshd-systemd-$USER ubuntu:jammy-sshd-systemd-$USER ubuntu:noble-sshd-systemd-$USER debian:bookworm-sshd-systemd-$USER rockylinux:8-anydbver-ansible-$USER; do
   docker image tag $img $IMAGE_PUBLISHER/${img/$USER/$IMAGE_VERSION}$PLATFORM_TAG
 done
