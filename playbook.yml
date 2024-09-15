@@ -251,7 +251,7 @@
               - curl
         - name: install percona-release.deb
           apt:
-            deb: "{{ os[dist].repo_url }}"
+            deb: "https://repo.percona.com/apt/percona-release_latest.generic_all.deb"
           register: percona_release_deb_installed
         - name: refresh apt repo
           when: percona_release_deb_installed.changed
