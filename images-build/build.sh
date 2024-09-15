@@ -20,11 +20,14 @@ docker build --platform $PLATFORM -t rockylinux:9-sshd-systemd-$USER .
 cd ../jammy
 cp ../../tools/node_ip.sh ../common/rc.local ../common/rc-local.service ./
 docker build --platform $PLATFORM -t ubuntu:jammy-sshd-systemd-$USER .
+cd ../noble
+cp ../../tools/node_ip.sh ../common/rc.local ../common/rc-local.service ./
+docker build --platform $PLATFORM -t ubuntu:noble-sshd-systemd-$USER .
 cd ../..
 #tar --exclude=images-build --exclude=data --exclude=.git --exclude=secret --exclude=.vagrant --exclude=pkg --exclude=cmd --exclude=__pycache__  -czf images-build/ansible-anydbver/anydbver.tar.gz .
 git archive --format=tar HEAD | gzip -c >images-build/ansible-anydbver/anydbver.tar.gz
 cd images-build/ansible-anydbver/
 docker build -t rockylinux:8-anydbver-ansible-$USER .
-for img in centos:7-sshd-systemd-$USER rockylinux:8-sshd-systemd-$USER rockylinux:9-sshd-systemd-$USER ubuntu:jammy-sshd-systemd-$USER rockylinux:8-anydbver-ansible-$USER; do
+for img in centos:7-sshd-systemd-$USER rockylinux:8-sshd-systemd-$USER rockylinux:9-sshd-systemd-$USER ubuntu:jammy-sshd-systemd-$USER ubuntu:noble-sshd-systemd-$USER rockylinux:8-anydbver-ansible-$USER; do
   docker image tag $img $IMAGE_PUBLISHER/${img/$USER/$IMAGE_VERSION}$PLATFORM_TAG
 done

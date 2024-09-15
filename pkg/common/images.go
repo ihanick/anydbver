@@ -24,6 +24,10 @@ func GetDockerImageName(osver string, user string) string {
 		"20.04":        IMAGE_PUBLISHER + "/ubuntu:jammy-sshd-systemd-" + RELEASE_VERSION + platform_tag,
 		"ubuntu-20.04": IMAGE_PUBLISHER + "/ubuntu:jammy-sshd-systemd-" + RELEASE_VERSION + platform_tag,
 		"ubuntu20.04":  IMAGE_PUBLISHER + "/ubuntu:jammy-sshd-systemd-" + RELEASE_VERSION + platform_tag,
+		"noble":        IMAGE_PUBLISHER + "/ubuntu:noble-sshd-systemd-" + RELEASE_VERSION + platform_tag,
+		"22.04":        IMAGE_PUBLISHER + "/ubuntu:noble-sshd-systemd-" + RELEASE_VERSION + platform_tag,
+		"ubuntu-22.04": IMAGE_PUBLISHER + "/ubuntu:noble-sshd-systemd-" + RELEASE_VERSION + platform_tag,
+		"ubuntu22.04":  IMAGE_PUBLISHER + "/ubuntu:noble-sshd-systemd-" + RELEASE_VERSION + platform_tag,
 		"ansible":      IMAGE_PUBLISHER + "/rockylinux:8-anydbver-ansible-" + RELEASE_VERSION + platform_tag,
 	}
 
@@ -36,6 +40,10 @@ func GetDockerImageName(osver string, user string) string {
 			"20.04":        "ubuntu:jammy-sshd-systemd-" + user,
 			"ubuntu-20.04": "ubuntu:jammy-sshd-systemd-" + user,
 			"ubuntu20.04":  "ubuntu:jammy-sshd-systemd-" + user,
+			"noble":        "ubuntu:noble-sshd-systemd-" + user,
+			"22.04":        "ubuntu:noble-sshd-systemd-" + user,
+			"ubuntu-22.04": "ubuntu:noble-sshd-systemd-" + user,
+			"ubuntu22.04":  "ubuntu:noble-sshd-systemd-" + user,
 			"ansible":      "rockylinux:8-anydbver-ansible-" + user,
 		}
 	}
