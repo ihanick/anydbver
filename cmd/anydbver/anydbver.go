@@ -898,7 +898,24 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 	}
 }
 
-func fetchDeployCompletions(logger *log.Logger) []string {
+func extractLastPart(s string) string {
+	if strings.Contains(s, ":") {
+		afterColon := strings.Split(s, ":")[1]
+		parts := strings.Split(afterColon, ",")
+		return parts[len(parts)-1]
+	}
+	return ""
+}
+
+func replaceLastOccurrence(toComplete, keywordPart string) string {
+	index := strings.LastIndex(toComplete, keywordPart)
+	if index != -1 {
+		return toComplete[:index] + toComplete[index+len(keywordPart):]
+	}
+	return toComplete
+}
+
+func fetchDeployCompletions(logger *log.Logger, toComplete string) []string {
 	var keywords []string
 
 	db, err := sql.Open("sqlite", anydbver_common.GetDatabasePath(logger))
@@ -908,11 +925,29 @@ func fetchDeployCompletions(logger *log.Logger) []string {
 	}
 	defer db.Close()
 
+	f, err := os.OpenFile("/tmp/anydbver.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+	logger.SetOutput(f)
+
 	query := `select distinct keyword from (select keyword from keyword_aliases union select alias as keyword from keyword_aliases union select cmd from ansible_arguments union select cmd from k8s_arguments) a order by keyword`
+
+	if strings.HasSuffix(toComplete, ":") {
+		keyword := strings.SplitN(toComplete, ":", 2)[0]
+		query = fmt.Sprintf(
+			`select concat('%s',(case when version_filter <> '%%' THEN concat(subcmd,'=',version_filter) ELSE subcmd END)) from ansible_arguments where cmd=(select keyword from keyword_aliases where alias='%s' LIMIT 1) and subcmd like '%s%%'`,
+			replaceLastOccurrence(toComplete, extractLastPart(toComplete)), keyword, extractLastPart(toComplete),
+		)
+
+	}
+
+	logger.Println("Got a command to complete:", toComplete, " Query: ", query)
 
 	rows, err := db.Query(query)
 	if err != nil {
-		logger.Println("failed to execute select query:", err)
+		logger.Println("failed to execute select query:", err, query)
 		return keywords
 	}
 	defer rows.Close()
@@ -1392,10 +1427,16 @@ func main() {
 			}
 			deployHosts(logger, anydbver_common.GetAnsibleInventory(logger, namespace), provider, namespace, args, verbose)
 		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			return fetchDeployCompletions(logger, toComplete), cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveNoSpace
+		},
 	}
 	deployCmd.Flags().BoolP("keep", "", false, "do not remove existing containers and network")
 
-	deployCmd.ValidArgsFunction = cobra.FixedCompletions(fetchDeployCompletions(logger), cobra.ShellCompDirectiveNoSpace)
+	//deployCmd.ValidArgsFunction = cobra.FixedCompletions(fetchDeployCompletions(logger), cobra.ShellCompDirectiveNoSpace)
 	rootCmd.AddCommand(deployCmd)
 
 	var execCmd = &cobra.Command{
