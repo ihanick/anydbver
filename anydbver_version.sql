@@ -1520,6 +1520,7 @@ INSERT INTO tests VALUES(36,'latest mariadb','anydbver deploy mariadb');
 INSERT INTO tests VALUES(37,'mariadb galera cluster','anydbver deploy mariadb:latest,galera node1 mariadb:latest,master=node0,galera node2 mariadb:latest,master=node0,galera');
 INSERT INTO tests VALUES(38,'k8s pg standby','anydbver deploy k3d k8s-minio:latest,certs=self-signed cert-manager k8s-pg:2.4.1 k8s-pg:2.4.1,namespace=pgo1,standby');
 INSERT INTO tests VALUES(39,'k8s psmdb multiple single node replicasets with ingress','anydbver deploy k3d:latest,ingress=443,ingress-type=nginxinc,nodes=3,host-alias="172.17.0.1:r1.percona.local|r2.percona.local|r3.percona.local" cert-manager k8s-psmdb:1.16.2,replicas=1,shards=0,namespace=db1 k8s-psmdb:1.16.2,replicas=1,shards=0,namespace=db2 k8s-psmdb:1.16.2,replicas=1,shards=0,namespace=db3');
+INSERT INTO tests VALUES(40,'sysbench percona server for mysql','anydbver deploy ps node1 ps sysbench:latest,mysql=node0,oltprw');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
@@ -1556,6 +1557,7 @@ INSERT INTO test_cases VALUES(31,'anydbver exec node0 -- sudo -u postgres pgback
 INSERT INTO test_cases VALUES(32,'anydbver exec node3 -- /usr/local/bin/run_sysbench.sh | grep -q transactions');
 INSERT INTO test_cases VALUES(33,'anydbver exec node2 -- pmm-admin list|grep -q mysql');
 INSERT INTO test_cases VALUES(34,'echo "pgbackrest --stanza=db backup && pgbackrest info" | anydbver exec node1 | grep status | grep -q ok');
+INSERT INTO test_cases VALUES(40,'anydbver exec node1 -- sysbench   --db-driver=mysql   --table-size=100000   --tables=12 --threads=12   --mysql-host=172.18.0.3 --mysql-user=root --mysql-password=verysecretpassword1^  --mysql-db=sbtest   --time=10 --report-interval=2   /usr/share/sysbench/oltp_read_write.lua run|grep -q total:');
 CREATE TABLE mariadb_version(
   version varchar(20),
   os varchar(20),
