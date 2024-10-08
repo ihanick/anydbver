@@ -1854,6 +1854,7 @@ INSERT INTO k8s_operators_version VALUES('percona/percona-server-mysql-operator'
 INSERT INTO k8s_operators_version VALUES('percona/percona-server-mysql-operator','0.3.0');
 INSERT INTO k8s_operators_version VALUES('percona/percona-server-mysql-operator','0.2.0');
 INSERT INTO k8s_operators_version VALUES('percona/percona-server-mysql-operator','0.1.0');
+INSERT INTO k8s_operators_version VALUES('percona/percona-server-mongodb-operator','main');
 CREATE TABLE percona_xtrabackup_version(
   version varchar(20),
   os varchar(20),

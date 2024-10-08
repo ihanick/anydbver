@@ -573,6 +573,10 @@ func IsDeploymentVersion(arg string) bool {
 		arg = strings.TrimPrefix(arg, "v")
 	}
 
+	if strings.HasPrefix(arg, "main") {
+		return true
+	}
+
 	if len(arg) != 0 && unicode.IsDigit(rune(arg[0])) {
 		return true
 	}
