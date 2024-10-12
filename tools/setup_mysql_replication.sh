@@ -10,8 +10,7 @@ MYSQLD_UNIT=$7
 CLUSTER_NAME=${8:-'pxc-cluster'}
 CHANNEL=$9
 
-SERVER_ID=$(ip addr ls|grep 'inet '|grep -v '127.0.0.1'|awk '{print $2}'|cut -d/ -f 1|awk -F '\\.' '{print ($1 * 2^24) + ($2 * 2^16) + ($3 * 2^8) + $4}')
-
+SERVER_ID=$(ip addr ls | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | cut -d/ -f 1 | awk -F '\\.' '{print ($1 * 2^24) + ($2 * 2^16) + ($3 * 2^8) + $4}')
 
 create_client_my_cnf() {
   local FILE="$1"
@@ -19,7 +18,7 @@ create_client_my_cnf() {
   local USER="$3"
   local PASS="$4"
 
-  cat > /tmp/"$FILE".cnf <<EOF
+  cat >/tmp/"$FILE".cnf <<EOF
 [client]
 host="$HOST"
 user="$USER"
@@ -29,23 +28,23 @@ EOF
 
 wait_until_mysql_ready() {
   local FILE="$1"
-  until mysql --defaults-file=/tmp/"$FILE".cnf --silent --connect-timeout=30 --wait -e "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
+  until mysql --defaults-file=/tmp/"$FILE".cnf --silent --connect-timeout=30 --wait -e "SELECT 1;" >/dev/null 2>&1; do sleep 5; done
 }
 
 wait_until_wsrep_synced() {
   local FILE="$1"
-  until mysql --defaults-file=/tmp/"$FILE".cnf --silent --connect-timeout=30 --wait -e "SHOW STATUS LIKE 'wsrep_local_state_comment'" | grep -q Synced ; do sleep 5 ; done
+  until mysql --defaults-file=/tmp/"$FILE".cnf --silent --connect-timeout=30 --wait -e "SHOW STATUS LIKE 'wsrep_local_state_comment'" | grep -q Synced; do sleep 5; done
 }
 
 is_clone_allowed() {
   local DST="$1"
   local SRC="$2"
   wait_until_mysql_ready "$SRC"
-  VER1=$(mysql --defaults-file=/tmp/"$SRC".cnf -Ne 'select @@version'|cut -d- -f1)
+  VER1=$(mysql --defaults-file=/tmp/"$SRC".cnf -Ne 'select @@version' | cut -d- -f1)
   wait_until_mysql_ready "$DST"
-  VER2=$(mysql --defaults-file=/tmp/"$DST".cnf -Ne 'select @@version'|cut -d- -f1)
+  VER2=$(mysql --defaults-file=/tmp/"$DST".cnf -Ne 'select @@version' | cut -d- -f1)
 
-  if [ "$VER1" != "$VER2" ] ; then
+  if [ "$VER1" != "$VER2" ]; then
     return 1
   fi
 
@@ -53,7 +52,7 @@ is_clone_allowed() {
   MIN=$(echo "$VER1" | cut -d. -f3)
 
   # Clone available since 8.0.17
-  if [ "$MAJ" -lt 8 ] || { [ "$MAJ" = 8 ] && [ "$MIN" -le 17 ]; } ; then
+  if [ "$MAJ" -lt 8 ] || { [ "$MAJ" = 8 ] && [ "$MIN" -le 17 ]; }; then
     return 1
   fi
 
@@ -63,7 +62,7 @@ is_clone_allowed() {
 install_clone_plugin() {
   local FILE="$1"
   CLONE_INSTALLED=$(mysql --defaults-file=/tmp/"$FILE".cnf -Ne "select count(*) FROM information_schema.PLUGINS WHERE PLUGIN_NAME='clone';")
-  if [ "$CLONE_INSTALLED" -eq 0 ] ; then
+  if [ "$CLONE_INSTALLED" -eq 0 ]; then
     mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait -e "INSTALL PLUGIN clone SONAME 'mysql_clone.so';"
   fi
 }
@@ -76,12 +75,11 @@ clone_mysql_server() {
   install_clone_plugin "$SRC"
   wait_until_mysql_ready "$DST"
   install_clone_plugin "$DST"
-  if ! mysql --defaults-file=/tmp/"$DST".cnf --connect-timeout=30 --wait  2>/tmp/mysql-clone.log <<EOF
+  if ! mysql --defaults-file=/tmp/"$DST".cnf --connect-timeout=30 --wait 2>/tmp/mysql-clone.log <<EOF; then
 SET GLOBAL clone_valid_donor_list = '$SRC_HOST:3306';
 CLONE INSTANCE FROM '$SRC_USER'@'$SRC_HOST':3306
 IDENTIFIED BY '$SRC_PASS'
 EOF
-  then
     grep -q 'mysqld is not managed by supervisor process' /tmp/mysql-clone.log || cat /tmp/mysql-clone.log
   fi
 }
@@ -98,14 +96,14 @@ setup_gtid_replication() {
   local SRC_PASS="$4"
 
   wait_until_mysql_ready "$FILE"
-  if has_replica_cmd ; then
-  mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait <<EOF
+  if has_replica_cmd; then
+    mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait <<EOF
 STOP REPLICA;
 CHANGE REPLICATION SOURCE TO SOURCE_HOST='$SRC_HOST', SOURCE_USER='$SRC_USER', SOURCE_PASSWORD='$SRC_PASS', SOURCE_AUTO_POSITION=1;
 START REPLICA;
 EOF
   else
-  mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait <<EOF
+    mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait <<EOF
 STOP SLAVE;
 CHANGE MASTER TO MASTER_HOST='$SRC_HOST', MASTER_USER='$SRC_USER', MASTER_PASSWORD='$SRC_PASS', MASTER_AUTO_POSITION=1;
 START SLAVE;
@@ -118,14 +116,14 @@ is_same_gtid() {
   local DST="$1"
   local SRC="$2"
 
-  if has_replica_cmd ; then
-    SRC_GTID=$( mysql --defaults-file=/tmp/"$SRC".cnf --connect-timeout=30 --wait -e "show binary log status\G"|tr '\n' ' '|sed -e 's/^.*Executed_Gtid_Set: //' )
-    DST_GTID=$( mysql --defaults-file=/tmp/"$DST".cnf --connect-timeout=30 --wait -e "show binary log status\G"|tr '\n' ' '|sed -e 's/^.*Executed_Gtid_Set: //' )
+  if has_replica_cmd; then
+    SRC_GTID=$(mysql --defaults-file=/tmp/"$SRC".cnf --connect-timeout=30 --wait -e "show binary log status\G" | tr '\n' ' ' | sed -e 's/^.*Executed_Gtid_Set: //')
+    DST_GTID=$(mysql --defaults-file=/tmp/"$DST".cnf --connect-timeout=30 --wait -e "show binary log status\G" | tr '\n' ' ' | sed -e 's/^.*Executed_Gtid_Set: //')
   else
-    SRC_GTID=$( mysql --defaults-file=/tmp/"$SRC".cnf --connect-timeout=30 --wait -e "show master status\G"|tr '\n' ' '|sed -e 's/^.*Executed_Gtid_Set: //' )
-    DST_GTID=$( mysql --defaults-file=/tmp/"$DST".cnf --connect-timeout=30 --wait -e "show master status\G"|tr '\n' ' '|sed -e 's/^.*Executed_Gtid_Set: //' )
-   fi
-  IS_SUBSET=$( mysql --defaults-file=/tmp/"$DST".cnf --connect-timeout=30 --wait -Ne "SELECT GTID_SUBSET('$SRC_GTID', '$DST_GTID');" )
+    SRC_GTID=$(mysql --defaults-file=/tmp/"$SRC".cnf --connect-timeout=30 --wait -e "show master status\G" | tr '\n' ' ' | sed -e 's/^.*Executed_Gtid_Set: //')
+    DST_GTID=$(mysql --defaults-file=/tmp/"$DST".cnf --connect-timeout=30 --wait -e "show master status\G" | tr '\n' ' ' | sed -e 's/^.*Executed_Gtid_Set: //')
+  fi
+  IS_SUBSET=$(mysql --defaults-file=/tmp/"$DST".cnf --connect-timeout=30 --wait -Ne "SELECT GTID_SUBSET('$SRC_GTID', '$DST_GTID');")
   [ "$IS_SUBSET" = 1 ]
 }
 
@@ -133,7 +131,7 @@ is_gtid_enabled() {
   local FILE="$1"
 
   wait_until_mysql_ready "$FILE"
-  mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait -Ne 'select @@gtid_mode'|grep -q ON
+  mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait -Ne 'select @@gtid_mode' | grep -q ON
 }
 
 setup_position_replication_clone() {
@@ -146,7 +144,7 @@ setup_position_replication_clone() {
   BINLOG_FILE=$(mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait -Ne 'SELECT BINLOG_FILE FROM performance_schema.clone_status')
   BINLOG_POS=$(mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait -Ne 'SELECT BINLOG_POSITION FROM performance_schema.clone_status')
 
-  if has_replica_cmd ; then
+  if has_replica_cmd; then
     mysql --defaults-file=/tmp/"$FILE".cnf --connect-timeout=30 --wait <<EOF
 STOP SLAVE;
 CHANGE REPLICATION SOURCE TO SOURCE_HOST='$SRC_HOST', SOURCE_USER='$SRC_USER', SOURCE_PASSWORD='$SRC_PASS', SOURCE_LOG_FILE='$BINLOG_FILE', SOURCE_LOG_POS=$BINLOG_POS;
@@ -174,52 +172,50 @@ setup_replication() {
   create_client_my_cnf follower "$DST_HOST" "$DST_USER" "$DST_PASS"
 
   if is_gtid_enabled follower && is_gtid_enabled leader && is_same_gtid follower leader; then
-      setup_gtid_replication follower "$SRC_HOST" "$SRC_USER" "$SRC_PASS"
-  elif is_clone_allowed follower leader ; then
+    setup_gtid_replication follower "$SRC_HOST" "$SRC_USER" "$SRC_PASS"
+  elif is_clone_allowed follower leader; then
     clone_mysql_server follower leader
 
-    if is_gtid_enabled follower ; then
+    if is_gtid_enabled follower; then
       setup_gtid_replication follower "$SRC_HOST" "$SRC_USER" "$SRC_PASS"
     else
       setup_position_replication_clone follower "$SRC_HOST" "$SRC_USER" "$SRC_PASS"
     fi
   else
-    if is_gtid_enabled follower ; then
+    if is_gtid_enabled follower; then
       echo Use backup
     fi
   fi
 }
 
+if [ "x$SOFT" = "xmariadb_server" ]; then
+  if [[ "x$TYPE" == "xgtid" ]]; then
+    GTID=$(mysql --host $MASTER_IP -N -e "SELECT @@GLOBAL.gtid_current_pos")
+    GTID_CUR=$(mysql -N -e "SELECT @@GLOBAL.gtid_current_pos")
 
+    if mysql -Ne "show status like 'wsrep_cluster_size'" | grep -q wsrep_cluster_size; then
+      IS_GALERA=1
+      systemctl stop $MYSQLD_UNIT
+      mysqld --user=mysql --wsrep-provider=none &>/dev/null &
+      until mysqladmin --silent --connect-timeout=30 --wait=4 ping; do sleep 5; done
+    else
+      IS_GALERA=0
+    fi
 
-if [ "x$SOFT" = "xmariadb_server" ] ; then
-  if [[ "x$TYPE" == "xgtid" ]] ; then
-      GTID=$(mysql --host $MASTER_IP -N -e "SELECT @@GLOBAL.gtid_current_pos")
-      GTID_CUR=$(mysql -N -e "SELECT @@GLOBAL.gtid_current_pos")
-
-      if mysql -Ne "show status like 'wsrep_cluster_size'"|grep -q wsrep_cluster_size ; then
-        IS_GALERA=1
-        systemctl stop $MYSQLD_UNIT
-        mysqld --user=mysql --wsrep-provider=none &>/dev/null &
-        until mysqladmin --silent --connect-timeout=30 --wait=4 ping ; do sleep 5 ; done
-      else
-        IS_GALERA=0
-      fi
-
-      if [ "x$GTID" != "x" -a "x$GTID" == "x$GTID_CUR" ] ; then
-        mysql << EOF
+    if [ "x$GTID" != "x" -a "x$GTID" == "x$GTID_CUR" ]; then
+      mysql <<EOF
 STOP SLAVE;
 RESET SLAVE ALL;
 SET GLOBAL gtid_slave_pos = '${GTID}';
 CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_USE_GTID=slave_pos;
 START SLAVE;
 EOF
-      else
-	      mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;show master status\G' > "$MINF"
-	      GTID=$(mysql --host $MASTER_IP -N -e "SELECT @@GLOBAL.gtid_current_pos")
-	      GTID_CUR=$(mysql -N -e "SELECT @@GLOBAL.gtid_current_pos")
+    else
+      mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;show master status\G' >"$MINF"
+      GTID=$(mysql --host $MASTER_IP -N -e "SELECT @@GLOBAL.gtid_current_pos")
+      GTID_CUR=$(mysql -N -e "SELECT @@GLOBAL.gtid_current_pos")
 
-	      mysql << EOF
+      mysql <<EOF
 RESET MASTER;
 STOP SLAVE;
 RESET SLAVE ALL;
@@ -227,100 +223,98 @@ SET GLOBAL gtid_slave_pos = '${GTID}';
 CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_USE_GTID=slave_pos;
 START SLAVE;
 EOF
-      fi
+    fi
 
-      if [[ $IS_GALERA == 1 ]] ; then
-        mysqladmin shutdown
-        systemctl start $MYSQLD_UNIT
-        until mysqladmin --silent --connect-timeout=30 --wait=4 ping ; do sleep 5 ; done
-      fi
+    if [[ $IS_GALERA == 1 ]]; then
+      mysqladmin shutdown
+      systemctl start $MYSQLD_UNIT
+      until mysqladmin --silent --connect-timeout=30 --wait=4 ping; do sleep 5; done
+    fi
 
-
-      rm "${MINF}"
-      touch /root/replication.configured
+    rm "${MINF}"
+    touch /root/replication.configured
   fi
 else
-  if [[ "x$TYPE" == "xgtid" ]] ; then
-    if has_replica_cmd ; then
-      GTID=$(mysql --host $MASTER_IP -e 'show binary log status\G' |tr "\n" ' '|sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
+  if [[ "x$TYPE" == "xgtid" ]]; then
+    if has_replica_cmd; then
+      GTID=$(mysql --host $MASTER_IP -e 'show binary log status\G' | tr "\n" ' ' | sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
     else
-      GTID=$(mysql --host $MASTER_IP -e 'show master status\G' |tr "\n" ' '|sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
+      GTID=$(mysql --host $MASTER_IP -e 'show master status\G' | tr "\n" ' ' | sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
     fi
-      if [ "x$GTID" = "x" ] ; then
-        mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;'
-        if has_replica_cmd ; then
-          GTID=$(mysql --host $MASTER_IP -e 'show binary log status\G' |tr "\n" ' '|sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
-        else
-          GTID=$(mysql --host $MASTER_IP -e 'show master status\G' |tr "\n" ' '|sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
-        fi
+    if [ "x$GTID" = "x" ]; then
+      mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;'
+      if has_replica_cmd; then
+        GTID=$(mysql --host $MASTER_IP -e 'show binary log status\G' | tr "\n" ' ' | sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
+      else
+        GTID=$(mysql --host $MASTER_IP -e 'show master status\G' | tr "\n" ' ' | sed -e 's/^.*Executed_Gtid_Set: //' -e 's/ //g')
       fi
+    fi
 
-      if [[ "$SOFT" = pxc* ]] ; then
-        systemctl stop $MYSQLD_UNIT
-        mysqld --user=mysql --wsrep-provider=none &>/dev/null &
-        until mysqladmin --silent --connect-timeout=30 --wait=4 ping ; do sleep 5 ; done
-        mysql << EOF
+    if [[ "$SOFT" = pxc* ]]; then
+      systemctl stop $MYSQLD_UNIT
+      mysqld --user=mysql --wsrep-provider=none &>/dev/null &
+      until mysqladmin --silent --connect-timeout=30 --wait=4 ping; do sleep 5; done
+      mysql <<EOF
           RESET SLAVE ALL;
           RESET MASTER;
           SET GLOBAL GTID_PURGED='${GTID}';
 EOF
-        mysqladmin shutdown
-        systemctl start $MYSQLD_UNIT
-        until mysqladmin --silent --connect-timeout=30 --wait=4 ping ; do sleep 5 ; done
-        if has_replica_cmd ; then
-          mysql << EOF
+      mysqladmin shutdown
+      systemctl start $MYSQLD_UNIT
+      until mysqladmin --silent --connect-timeout=30 --wait=4 ping; do sleep 5; done
+      if has_replica_cmd; then
+        mysql <<EOF
           CHANGE REPLICATION SOURCE TO SOURCE_HOST='${MASTER_IP}', SOURCE_USER='${MASTER_USER}', SOURCE_PASSWORD='${MASTER_PASSWORD}', SOURCE_AUTO_POSITION=1, SOURCE_SSL=1;
           START SLAVE;
 EOF
-        else
-          mysql << EOF
+      else
+        mysql <<EOF
           CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;
           START SLAVE;
 EOF
+      fi
+    else # GTID, non-pxc
+      if [[ "x$CHANNEL" = x ]]; then
+        # dump restore if source has non-default databases
+        if [[ $(mysql --host $MASTER_IP -Ne 'show databases;' | egrep -v '^(information_schema|performance_schema|mysql|sys)$' | wc -l) -gt 0 ]]; then
+          mysqldump --host $MASTER_IP --databases $(mysql --host $MASTER_IP -Ne 'show databases;' | egrep -v '^(information_schema|performance_schema|mysql|sys)$') | mysql
         fi
-      else # GTID, non-pxc
-        if [[ "x$CHANNEL" = x ]] ; then
-          # dump restore if source has non-default databases
-          if [[ $(mysql --host $MASTER_IP -Ne 'show databases;'|egrep -v '^(information_schema|performance_schema|mysql|sys)$'|wc -l) -gt 0 ]] ; then
-            mysqldump --host $MASTER_IP --databases $(mysql --host $MASTER_IP -Ne 'show databases;'|egrep -v '^(information_schema|performance_schema|mysql|sys)$') | mysql
-          fi
-          if has_replica_cmd ; then
-            mysql << EOF
+        if has_replica_cmd; then
+          mysql <<EOF
           RESET BINARY LOGS AND GTIDS;
           SET GLOBAL GTID_PURGED='${GTID}';
           STOP REPLICA;
           CHANGE REPLICATION SOURCE TO SOURCE_HOST='${MASTER_IP}', SOURCE_USER='${MASTER_USER}', SOURCE_PASSWORD='${MASTER_PASSWORD}', SOURCE_AUTO_POSITION=1, SOURCE_SSL=1;
           START REPLICA;
 EOF
-          else
-            mysql << EOF
+        else
+          mysql <<EOF
           RESET MASTER;
           SET GLOBAL GTID_PURGED='${GTID}';
           STOP SLAVE;
           CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_AUTO_POSITION=1, MASTER_SSL=1;
           START SLAVE;
 EOF
-          fi
-        else
-          mysql << EOF
+        fi
+      else
+        mysql <<EOF
           RESET MASTER;
           SET GLOBAL GTID_PURGED=CONCAT(@@gtid_purged, ',${GTID}');
           STOP SLAVE;
           CHANGE MASTER TO MASTER_HOST='${MASTER_IP}', MASTER_USER='${MASTER_USER}', MASTER_PASSWORD='${MASTER_PASSWORD}', MASTER_AUTO_POSITION=1, MASTER_SSL=1 FOR CHANNEL '${CHANNEL}';
           START SLAVE;
 EOF
-        fi
       fi
+    fi
 
-
-      rm -f "${MINF}"
-      touch /root/replication.configured
-  elif [[ "x$TYPE" == "xnogtid" ]] ; then # non-gtid, non-mariadb
+    rm -f "${MINF}"
+    touch /root/replication.configured
+  elif [[ "x$TYPE" == "xnogtid" ]]; then # non-gtid, non-mariadb
     setup_replication "127.0.0.1" "$MASTER_USER" "$MASTER_PASSWORD" "$MASTER_IP" "$MASTER_USER" "$MASTER_PASSWORD"
   fi
 fi
 
-if [[ "x$TYPE" == "xgalera" ]] ; then
+if [[ "x$TYPE" == "xgalera" ]]; then
 
   SSH="ssh -i /vagrant/secret/id_rsa -o StrictHostKeyChecking=no -o PasswordAuthentication=no"
   MYIP=$(/vagrant/tools/node_ip.sh)
@@ -329,7 +323,7 @@ if [[ "x$TYPE" == "xgalera" ]] ; then
   # vagrant ssh default -- sudo tar cz /var/lib/mysql/ca.pem /var/lib/mysql/ca-key.pem /var/lib/mysql/client-cert.pem /var/lib/mysql/client-key.pem /var/lib/mysql/server-cert.pem /var/lib/mysql/server-key.pem |vagrant ssh node1 -- sudo tar -C / -xz
   rm -rf /var/lib/mysql/*
 
-  until echo 'set -o noclobber;{ > /root/add-galera-member ; } &> /dev/null'| $SSH root@$MASTER_IP bash ; do
+  until echo 'set -o noclobber;{ > /root/add-galera-member ; } &> /dev/null' | $SSH root@$MASTER_IP bash; do
     sleep 1
   done
 
@@ -342,23 +336,22 @@ if [[ "x$TYPE" == "xgalera" ]] ; then
   #  tar -C / -xzf /vagrant/secret/"${CLUSTER_NAME}-ssl.tar.gz"
   #fi
   #
-  cat >> "${CNF_FILE}" << EOF
+  cat >>"${CNF_FILE}" <<EOF
 [mysqld]
 wsrep_cluster_name=${CLUSTER_NAME}
 wsrep_node_name=${MYIP}
 wsrep_cluster_address="gcomm://${MASTER_IP}"
 EOF
-    mysqld --user=mysql &>/dev/null &
-    until mysqladmin --silent --connect-timeout=30 --wait=4 ping ; do sleep 5 ; done
-    mysqladmin shutdown
+  mysqld --user=mysql &>/dev/null &
+  until mysqladmin --silent --connect-timeout=30 --wait=4 ping; do sleep 5; done
+  mysqladmin shutdown
 
-    systemctl start $MYSQLD_UNIT
+  systemctl start $MYSQLD_UNIT
 
-  until mysqladmin --silent --connect-timeout=30 --wait=4 ping ; do sleep 4 ; done
+  until mysqladmin --silent --connect-timeout=30 --wait=4 ping; do sleep 4; done
 
   $SSH root@$MASTER_IP rm -f /root/add-galera-member
 fi
-
 
 # todo replace with jq
 rawurlencode() {
@@ -367,59 +360,55 @@ rawurlencode() {
   local encoded=""
   local pos c o
 
-  for (( pos=0 ; pos<strlen ; pos++ )); do
-     c=${string:$pos:1}
-     case "$c" in
-        [-_.~a-zA-Z0-9] ) o="${c}" ;;
-        * )               printf -v o '%%%02x' "'$c"
-     esac
-     encoded+="${o}"
+  for ((pos = 0; pos < strlen; pos++)); do
+    c=${string:$pos:1}
+    case "$c" in
+    [-_.~a-zA-Z0-9]) o="${c}" ;;
+    *) printf -v o '%%%02x' "'$c" ;;
+    esac
+    encoded+="${o}"
   done
-  echo "${encoded}"    # You can either set a return variable (FASTER)
-  REPLY="${encoded}"   #+or echo the result (EASIER)... or both... :p
+  echo "${encoded}"  # You can either set a return variable (FASTER)
+  REPLY="${encoded}" #+or echo the result (EASIER)... or both... :p
 }
 
-
 # Group Replication aka InnoDB Cluster
-if [[ "x$TYPE" == "xgroup" ]] ; then
-  until mysql --host="$MASTER_IP" --silent --connect-timeout=30 --wait -e "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
-  until mysql --silent --connect-timeout=30 --wait -e "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
+if [[ "x$TYPE" == "xgroup" ]]; then
+  until mysql --host="$MASTER_IP" --silent --connect-timeout=30 --wait -e "SELECT 1;" >/dev/null 2>&1; do sleep 5; done
+  until mysql --silent --connect-timeout=30 --wait -e "SELECT 1;" >/dev/null 2>&1; do sleep 5; done
 
-
-#  mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;'
-#  mysql -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;'
+  #  mysql --host $MASTER_IP -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;'
+  #  mysql -e 'DROP VIEW IF EXISTS mysql.nonexisting_23498985;'
 
   rawurlencode "$MASTER_PASSWORD"
   MASTER_PASSWORD_URIENC="$REPLY"
   MYIP=$(/vagrant/tools/node_ip.sh)
-  while ! mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
-      -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null|grep -q "$CLUSTER_NAME" ; do
+  while ! mysqlsh --js "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
+    -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null | grep -q "$CLUSTER_NAME"; do
     sleep 5
   done
 
   SSH="ssh -i /vagrant/secret/id_rsa -o StrictHostKeyChecking=no -o PasswordAuthentication=no"
 
   # allow only one active cluster.addInstance() call
-  until echo 'set -o noclobber;{ > /root/add-group-member ; } &> /dev/null'| $SSH root@$MASTER_IP bash ; do
+  until echo 'set -o noclobber;{ > /root/add-group-member ; } &> /dev/null' | $SSH root@$MASTER_IP bash; do
     sleep 1
   done
 
-  mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
-      -e "var c=dba.getCluster();c.addInstance('$MASTER_USER:$MASTER_PASSWORD_URIENC@$MYIP:3306', {recoveryMethod: 'clone', label: '$MYIP'})" || true
+  mysqlsh --js "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
+    -e "var c=dba.getCluster();c.addInstance('$MASTER_USER:$MASTER_PASSWORD_URIENC@$MYIP:3306', {recoveryMethod: 'clone', label: '$MYIP'})" || true
 
   sleep 10
-  until mysql --silent --connect-timeout=30 --wait -e "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
+  until mysql --silent --connect-timeout=30 --wait -e "SELECT 1;" >/dev/null 2>&1; do sleep 5; done
   until mysql --connect-timeout=30 --wait \
-    -e "SELECT STATE FROM performance_schema.clone_status;" 2> /dev/null | grep -q Completed
-  do sleep 6 ; done
+    -e "SELECT STATE FROM performance_schema.clone_status;" 2>/dev/null | grep -q Completed; do sleep 6; done
 
-  if mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
-      -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null|grep -q "Use cluster.rescan"
-  then
-    mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
+  if mysqlsh --js "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
+    -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null | grep -q "Use cluster.rescan"; then
+    mysqlsh --js "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
       -e "var cluster=dba.getCluster();cluster.rescan({interactive: false, addInstances: 'auto'})" || true
   fi
 
   $SSH root@$MASTER_IP rm -f /root/add-group-member
-  
+
 fi

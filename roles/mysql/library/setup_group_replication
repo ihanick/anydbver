@@ -12,16 +12,16 @@ rawurlencode() {
   local encoded=""
   local pos c o
 
-  for (( pos=0 ; pos<strlen ; pos++ )); do
-     c=${string:$pos:1}
-     case "$c" in
-        [-_.~a-zA-Z0-9] ) o="${c}" ;;
-        * )               printf -v o '%%%02x' "'$c"
-     esac
-     encoded+="${o}"
+  for ((pos = 0; pos < strlen; pos++)); do
+    c=${string:$pos:1}
+    case "$c" in
+    [-_.~a-zA-Z0-9]) o="${c}" ;;
+    *) printf -v o '%%%02x' "'$c" ;;
+    esac
+    encoded+="${o}"
   done
-  echo "${encoded}"    # You can either set a return variable (FASTER)
-  REPLY="${encoded}"   #+or echo the result (EASIER)... or both... :p
+  echo "${encoded}"  # You can either set a return variable (FASTER)
+  REPLY="${encoded}" #+or echo the result (EASIER)... or both... :p
 }
 
 MASTER_USER="$user"
@@ -29,8 +29,7 @@ MASTER_USER="$user"
 rawurlencode "$password"
 MASTER_PASSWORD_URIENC="$REPLY"
 
-
-if [[ "$cluster_name" == "" ]] ; then
+if [[ "$cluster_name" == "" ]]; then
   CLUSTER_NAME=cluster1
 else
   CLUSTER_NAME=$cluster_name
@@ -38,24 +37,23 @@ fi
 
 MASTER_IP="$MYIP"
 
-until mysql --silent --connect-timeout=30 --wait -e "SELECT 1;" > /dev/null 2>&1 ; do sleep 5 ; done
-mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MYIP" -e "dba.createCluster('$CLUSTER_NAME', {})" || true
+until mysql --silent --connect-timeout=30 --wait -e "SELECT 1;" >/dev/null 2>&1; do sleep 5; done
+mysqlsh --js "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MYIP" -e "dba.createCluster('$CLUSTER_NAME', {})" || true
 
-while ! mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
-    -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null|grep -q "$CLUSTER_NAME" ; do
+while ! mysqlsh --js "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
+  -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null | grep -q "$CLUSTER_NAME"; do
   sleep 1
 done
 
 sleep 10
 
-if mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
-    -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null|grep -q "Use cluster.rescan"
-then
-  mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" -e "var cluster=dba.getCluster();cluster.rescan({interactive: false, addInstances: 'auto'})" > /tmp/rescan.log || true
+if mysqlsh --js "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" \
+  -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null | grep -q "Use cluster.rescan"; then
+  mysqlsh --js "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MASTER_IP" -e "var cluster=dba.getCluster();cluster.rescan({interactive: false, addInstances: 'auto'})" >/tmp/rescan.log || true
 fi
 
-if mysqlsh "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MYIP" \
-    -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null|grep -q "$CLUSTER_NAME" ; then
+if mysqlsh --js "${MASTER_USER}:${MASTER_PASSWORD_URIENC}@$MYIP" \
+  -e 'var cluster=dba.getCluster();print(cluster.status())' 2>/dev/null | grep -q "$CLUSTER_NAME"; then
   changed="true"
   ok="true"
   msg="configured first node for InnoDB Cluster $CLUSTER_NAME"
@@ -64,7 +62,5 @@ else
   ok="false"
   msg="Failed to setup $CLUSTER_NAME"
 fi
-
-
 
 printf '{"changed": %s, "ok": %s, "msg": "%s"}' "$changed" "$ok" "$msg"

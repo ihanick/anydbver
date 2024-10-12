@@ -773,16 +773,29 @@ def save_percona_server_versions_to_sqlite(osver):
         for line in vers:
             ver = line.rstrip()
             project = ()
-            if ver.startswith('8.0') and osver.startswith('el'):
+            if (ver.startswith('8.0') or ver.startswith('8.4') ) and osver.startswith('el'):
                 pkgs = ['percona-server-shared',
                         'percona-server-client', 'percona-server-server']
                 if osver != 'el9' and arch == 'x86_64':
                     pkgs.insert(0, 'percona-server-shared-compat')
+                repo_file = 'percona-ps-80-release.repo'
+                repo_dist = 'ps-80'
+                if ver.startswith('8.4'):
+                    repo_file = 'percona-ps-84-lts-release.repo'
+                    repo_dist = 'ps-84-lts'
+                mysql_shell_package =  'percona-mysql-shell-{ver}-1.{osver}.{arch}'.format(
+                        ver=ver.split('-', 1)[0], osver=osver, arch=arch)
+                # https://dev.mysql.com/doc/relnotes/mysql-shell/8.0/en/news-8-0-39.html
+                # This version was skipped to align the version number with the MySQL Server 8.0.39 release.
+                if ver.startswith("8.0.39"):
+                    mysql_shell_package =  'percona-mysql-shell-{ver}-1.{osver}.{arch}'.format(
+                        ver="8.0.38", osver=osver, arch=arch)
+
                 project = (
                     ver, osver, arch,
                     'http://repo.percona.com/yum/percona-release-latest.noarch.rpm',
-                    '/etc/yum.repos.d/percona-ps-80-release.repo',
-                    'ps-80', 'mysqld', '/etc/my.cnf',
+                    '/etc/yum.repos.d/{repo_file}'.format(repo_file=repo_file),
+                    repo_dist, 'mysqld', '/etc/my.cnf',
                     '|'.join(["{}-{}.{}.{}".format(pkg, ver, osver, arch)
                               for pkg in pkgs]),
                     'gdb|percona-server-debuginfo-{ver}.{osver}.{arch}'.format(
@@ -791,8 +804,7 @@ def save_percona_server_versions_to_sqlite(osver):
                         ver=ver, osver=osver, arch=arch),
                     'percona-server-test-{ver}.{osver}.{arch}'.format(
                         ver=ver, osver=osver, arch=arch),
-                    'percona-mysql-shell-{ver}-1.{osver}.{arch}'.format(
-                        ver=ver.split('-', 1)[0], osver=osver, arch=arch),
+                    mysql_shell_package,
                     'percona-mysql-router-{ver}.{osver}.{arch}'.format(
                         ver=ver, osver=osver, arch=arch)
                 )
@@ -951,13 +963,18 @@ def update_versions():
                                {"url": "https://repo.percona.com/percona/yum/release/8/RPMS/x86_64/",
                                 "pattern": r'Percona-Server-server-\d\d-(\d[^"]*).el8.x86_64.rpm'},
                                {"url": "https://repo.percona.com/ps-80/yum/release/8/RPMS/x86_64/",
+                                "pattern": r'percona-server-server-(\d[^"]*)[.]el8.x86_64.rpm'},
+                               {"url": "https://repo.percona.com/ps-84-lts/yum/release/8/RPMS/x86_64/",
                                 "pattern": r'percona-server-server-(\d[^"]*)[.]el8.x86_64.rpm'}
+
                            ])
     generate_versions_file("percona-server.el9.txt",
                            [
                                {"url": "https://repo.percona.com/percona/yum/release/9/RPMS/x86_64/",
                                 "pattern": r'Percona-Server-server-\d\d-(\d[^"]*).el9.x86_64.rpm'},
                                {"url": "https://repo.percona.com/ps-80/yum/release/9/RPMS/x86_64/",
+                                "pattern": r'percona-server-server-(\d[^"]*)[.]el9.x86_64.rpm'},
+                               {"url": "https://repo.percona.com/ps-84-lts/yum/release/9/RPMS/x86_64/",
                                 "pattern": r'percona-server-server-(\d[^"]*)[.]el9.x86_64.rpm'}
                            ])
     generate_versions_file("percona-server.el8.aarch64.txt",
