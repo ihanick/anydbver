@@ -2492,6 +2492,7 @@ INSERT INTO ansible_arguments VALUES('mariadb','nogtid','%','','extra_db_opts_fi
 INSERT INTO ansible_arguments VALUES('pgbackrest','s3','%','','extra_minio_url','',1,NULL);
 INSERT INTO ansible_arguments VALUES('mariadb','galera','%','','extra_replication_type','galera',2,'');
 INSERT INTO ansible_arguments VALUES('mariadb','galera','%','','extra_db_opts_file','mariadb/galera.cnf',2,'');
+INSERT INTO ansible_arguments VALUES('percona-backup-mongodb','version','%','VERSION','extra_pbm_version','2.7.0',1,1);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
@@ -2547,6 +2548,7 @@ INSERT INTO keyword_aliases VALUES('pmm-server','pmm');
 INSERT INTO keyword_aliases VALUES('percona-xtradb-cluster','pxc');
 INSERT INTO keyword_aliases VALUES('percona-server-mongodb-operator','k8s-psmdb');
 INSERT INTO keyword_aliases VALUES('percona-server-mysql-operator','k8s-ps');
+INSERT INTO keyword_aliases VALUES('percona-backup-mongodb','pbm');
 CREATE TABLE subcmd_aliases(keyword TEXT,alias TEXT);
 INSERT INTO subcmd_aliases VALUES('master','primary');
 CREATE TABLE help_examples(cmd varchar(100), deploy varchar(1000));
