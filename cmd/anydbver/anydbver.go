@@ -1203,7 +1203,9 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 		deployHost(nodeProvider[nodeName], logger, namespace, nodeName, ansible_hosts_run_file, nodeDef)
 	}
 
-	for nodeName, nodeDef := range nodeDefinitions {
+	for _, k := range nodeIdxs {
+		nodeName := fmt.Sprintf("node%d", k)
+		nodeDef := nodeDefinitions[nodeName]
 		if nodeProvider[nodeName] == "docker-image" {
 			for _, arg := range nodeDef {
 				deployment_keyword := ParseDeploymentKeyword(logger, arg)
