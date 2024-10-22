@@ -68,5 +68,8 @@ func SetupContainer(logger *log.Logger, namespace string, name string, cmd strin
 	if cmd == "percona-server-mongodb" {
 		SetupPerconaServerMongoDBContainer(logger, namespace, name, cmd, args)
 	}
+	if cmd == "percona-server" || cmd == "mysql" {
+		SetupMysqlContainer(logger, namespace, name, cmd, args)
+	}
 
 }
