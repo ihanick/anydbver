@@ -35,6 +35,12 @@ func CreateMySqlContainer(logger *log.Logger, namespace string, name string, cmd
 	if ent, ok := args["entrypoint"]; ok {
 		cmd_args = append(cmd_args, "-c", anydbver_common.ReadWholeFile(logger, ent))
 	}
+
+	if entrypoint_args, ok := args["args"]; ok {
+		r := regexp.MustCompile("'.+'|\".+\"|\\S+")
+		m := r.FindAllString(entrypoint_args, -1)
+		cmd_args = append(cmd_args, m...)
+	}
 	env := map[string]string{}
 	errMsg := "Error creating container"
 	ignoreMsg := regexp.MustCompile("ignore this")
