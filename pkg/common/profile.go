@@ -192,21 +192,25 @@ func GetCacheDirectory(logger *log.Logger) string {
 
 }
 
-func GetK3dPath(logger *log.Logger) string {
+func GetK3dPath(logger *log.Logger) (string, error) {
 	k3d_path, err := exec.LookPath("k3d")
 	if err == nil {
-		return k3d_path
+		return k3d_path, nil
 	}
 	k3d_path = "tools/k3d"
 	_, err = os.Stat(k3d_path)
 	if err == nil {
-		return k3d_path
+		return k3d_path, nil
+	}
+
+	if _, err := exec.LookPath("curl"); err != nil {
+		return "", fmt.Errorf("Can't install k3d, please install curl and add it to the $PATH %w", err)
 	}
 
 	k3d_path = filepath.Join(GetCacheDirectory(logger), "k3d")
 	_, err = os.Stat(k3d_path)
 	if err == nil {
-		return k3d_path
+		return k3d_path, nil
 	}
 
 	k3d_create_cmd := []string{
@@ -223,10 +227,10 @@ func GetK3dPath(logger *log.Logger) string {
 	runtools.RunFatal(logger, k3d_create_cmd, errMsg, ignoreMsg, true, env)
 	_, err = os.Stat(k3d_path)
 	if err == nil {
-		return k3d_path
+		return k3d_path, nil
 	}
 
-	return ""
+	return "", fmt.Errorf("Can't install k3d %w", err)
 }
 
 func GetAnsibleInventory(logger *log.Logger, namespace string) string {
@@ -300,13 +304,17 @@ func GetToolsDirectory(logger *log.Logger, namespace string) string {
 
 }
 
-func RunCommandInBaseContainer(logger *log.Logger, namespace string, cmd string, volumes []string, errMsg string) (string, error) {
+func RunCommandInBaseContainer(logger *log.Logger, namespace string, cmd string, volumes []string, errMsg string, interactive bool) (string, error) {
 	user := GetUser(logger)
 
 	cmd_args := []string{
 		"docker", "run", "-i", "--rm",
 		"--name", MakeContainerHostName(logger, namespace, "ansible"),
 		"--network", MakeContainerHostName(logger, namespace, "anydbver"),
+	}
+
+	if interactive {
+		cmd_args = append(cmd_args, "-t")
 	}
 
 	cmd_args = append(cmd_args, volumes...)
@@ -317,6 +325,18 @@ func RunCommandInBaseContainer(logger *log.Logger, namespace string, cmd string,
 
 	env := map[string]string{}
 	ignoreMsg := regexp.MustCompile("ignore this")
+	if interactive {
+		cmd := exec.Command(cmd_args[0], cmd_args[1:]...)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		// Run the command
+		err := cmd.Run()
+		if err != nil {
+			os.Exit(1)
+		}
+	}
 	return runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
 }
 

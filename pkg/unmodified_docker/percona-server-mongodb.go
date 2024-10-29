@@ -68,7 +68,7 @@ func SetupMongoKeyFiles(logger *log.Logger, namespace string, hostname string, a
 			"--bind_ip", "localhost,"+hostname)
 		create_repl_set_key_cmd := fmt.Sprintf("cp /vagrant/secret/%s-keyfile /vagrant/secret/%s-keyfile;cp /vagrant/secret/%s-keyfile /vagrant/secret/%s-keyfile-docker;chown 1001 /vagrant/secret/%s-keyfile-docker;chmod 0600 /vagrant/secret/%s-keyfile-docker", args["cluster"], replSet, args["cluster"], replSet, replSet, replSet)
 		volumes := []string{"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret"}
-		anydbver_common.RunCommandInBaseContainer(logger, namespace, create_repl_set_key_cmd, volumes, "Can't copy mongodb keyfile")
+		anydbver_common.RunCommandInBaseContainer(logger, namespace, create_repl_set_key_cmd, volumes, "Can't copy mongodb keyfile", false)
 	}
 
 	return mongo_args

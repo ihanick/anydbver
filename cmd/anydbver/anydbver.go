@@ -125,8 +125,8 @@ func listNamespaces(provider string, logger *log.Logger) {
 }
 
 func findK3dClusters(logger *log.Logger, namespace string) []string {
-	k3d_path := anydbver_common.GetK3dPath(logger)
-	if k3d_path == "" {
+	k3d_path, err := anydbver_common.GetK3dPath(logger)
+	if k3d_path == "" || err != nil {
 		return []string{}
 	}
 
@@ -329,7 +329,7 @@ outer:
 
 func deleteNamespace(logger *log.Logger, provider string, namespace string) {
 	if provider == "docker" {
-		k3d_path := anydbver_common.GetK3dPath(logger)
+		k3d_path, err := anydbver_common.GetK3dPath(logger)
 		if k3d_path != "" {
 			for _, cluster_name := range findK3dClusters(logger, namespace) {
 				k3d_create_cmd := []string{k3d_path, "cluster", "delete", cluster_name}
@@ -439,6 +439,63 @@ func createContainer(logger *log.Logger, name string, osver string, privileged b
 	errMsg := "Error creating container"
 	ignoreMsg := regexp.MustCompile("ignore this")
 	runtools.RunFatal(logger, args, errMsg, ignoreMsg, true, env)
+}
+
+func shellExec(logger *log.Logger, provider, namespace string, args []string) {
+	name := "node0"
+	if len(args) > 0 {
+		name = args[0]
+	}
+	cluster_context := ""
+	cluster_name := anydbver_common.MakeContainerHostName(logger, namespace, name)
+	clusterIp, err := getContainerIp("docker", logger, namespace, "k3d-"+cluster_name+"-"+"server-0")
+	if err != nil {
+		clusterIp = ""
+	} else {
+		cluster_context = "k3d-" + cluster_name
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		logger.Println("Error: Could not determine user's home directory")
+		return
+	}
+
+	volumes := []string{
+		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
+		"-v", filepath.Join(homeDir, ".kube") + ":/vagrant/secret/.kube:ro",
+		"-v", filepath.Join(anydbver_common.GetCacheDirectory(logger), "data") + ":/vagrant/data",
+	}
+	fix_k3d_config := ""
+	if clusterIp != "" {
+		fix_k3d_config = "sed -i -re 's/0.0.0.0:[0-9]+/" + clusterIp + ":6443/g' /root/.kube/config ;"
+		fix_k3d_config += "kubectl config use-context " + cluster_context + ";"
+	}
+
+	userId := "0"
+	if user, err := user.Current(); err == nil {
+		if _, err := strconv.Atoi(user.Uid); err == nil {
+			userId = user.Uid
+		}
+	}
+
+	ansible_output, err := anydbver_common.RunCommandInBaseContainer(
+		logger, namespace,
+		"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f /vagrant/tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); useradd -m -u "+userId+" anydbver; mkdir -p /vagrant/data/k8s; git config --global --add safe.directory '*'; "+fix_k3d_config+"bash -il",
+		volumes,
+		"Error running kubernetes operator", true)
+	if err != nil {
+		logger.Println("Ansible failed with errors: ")
+		fatalPattern := regexp.MustCompile(`^fatal:.*$`)
+		scanner := bufio.NewScanner(strings.NewReader(ansible_output))
+		for scanner.Scan() {
+			line := scanner.Text()
+			if fatalPattern.MatchString(line) {
+				logger.Print(line)
+			}
+		}
+		os.Exit(runtools.ANYDBVER_ANSIBLE_PROBLEM)
+	}
+
 }
 
 func containerExec(logger *log.Logger, provider, namespace string, args []string) {
@@ -743,7 +800,7 @@ func runOperatorTool(logger *log.Logger, namespace string, name string, run_oper
 
 	volumes := []string{
 		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
-		"-v", filepath.Join(homeDir, ".kube", "config") + ":/vagrant/secret/.kube/config:ro",
+		"-v", filepath.Join(homeDir, ".kube") + ":/vagrant/secret/.kube:ro",
 		"-v", filepath.Join(anydbver_common.GetCacheDirectory(logger), "data") + ":/vagrant/data",
 	}
 	fix_k3d_config := ""
@@ -761,9 +818,9 @@ func runOperatorTool(logger *log.Logger, namespace string, name string, run_oper
 
 	ansible_output, err := anydbver_common.RunCommandInBaseContainer(
 		logger, namespace,
-		"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f /vagrant/tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); useradd -m -u "+userId+" anydbver; git config --global --add safe.directory '*'; "+fix_k3d_config+"python3 tools/run_k8s_operator.py "+run_operator_args+"; chown -R "+userId+" /vagrant/data/k8s/",
+		"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f /vagrant/tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); useradd -m -u "+userId+" anydbver; mkdir -p /vagrant/data/k8s; git config --global --add safe.directory '*'; "+fix_k3d_config+"python3 tools/run_k8s_operator.py "+run_operator_args+"; chown -R "+userId+" /vagrant/data/k8s/",
 		volumes,
-		"Error running kubernetes operator")
+		"Error running kubernetes operator", false)
 	if err != nil {
 		logger.Println("Ansible failed with errors: ")
 		fatalPattern := regexp.MustCompile(`^fatal:.*$`)
@@ -1076,7 +1133,10 @@ func createK3dCluster(logger *log.Logger, namespace string, name string, args ma
 		}
 	}
 
-	k3d_path := anydbver_common.GetK3dPath(logger)
+	k3d_path, err := anydbver_common.GetK3dPath(logger)
+	if err != nil {
+		log.Fatalf("Can't create k3d cluster: %v", err)
+	}
 
 	k3d_create_cmd := []string{
 		k3d_path, "cluster", "create",
@@ -1468,6 +1528,16 @@ func main() {
 	}
 
 	rootCmd.AddCommand(execCmd)
+
+	var shellCmd = &cobra.Command{
+		Use:   "shell",
+		Short: "Start a shell with ansible and kubectl",
+		Run: func(cmd *cobra.Command, args []string) {
+			shellExec(logger, provider, namespace, args)
+		},
+	}
+
+	rootCmd.AddCommand(shellCmd)
 
 	rootCmd.PersistentFlags().StringVarP(&provider, "provider", "p", "", "Container provider")
 	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "", "Namespace")

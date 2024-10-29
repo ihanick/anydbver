@@ -2505,6 +2505,7 @@ INSERT INTO ansible_arguments VALUES('mariadb','galera','%','','extra_replicatio
 INSERT INTO ansible_arguments VALUES('mariadb','galera','%','','extra_db_opts_file','mariadb/galera.cnf',2,'');
 INSERT INTO ansible_arguments VALUES('percona-backup-mongodb','version','%','VERSION','extra_pbm_version','2.7.0',1,1);
 INSERT INTO ansible_arguments VALUES('percona-backup-mongodb','s3','%','','extra_pbm_s3_url','',1,NULL);
+INSERT INTO ansible_arguments VALUES('ldap','password','%','','extra_db_password','secret',1,1);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
