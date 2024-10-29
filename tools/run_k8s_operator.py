@@ -1126,7 +1126,7 @@ def setup_operator_helm(args):
                  "Can't start Postgresql with helm")
         args.cluster_name = "{}-pg-db".format(args.cluster_name)
         pg_instance_labels = "name={}".format(args.cluster_name)
-        if StrictVersion(args.operator_version) > StrictVersion("2.3.99"):
+        if StrictVersion(args.operator_version) > StrictVersion("2.1.99"):
             pg_instance_labels = "app.kubernetes.io/component=pg,app.kubernetes.io/instance={}".format(
                 args.cluster_name)
         if not k8s_wait_for_ready(args.namespace, pg_instance_labels):
