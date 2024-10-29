@@ -256,7 +256,7 @@ def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, 
 
 def op_labels(op, op_ver):
     if (op in ("percona-postgresql-operator", "postgres-operator")
-            and (StrictVersion(op_ver) > StrictVersion("2.3.99"))):
+            and (StrictVersion(op_ver) > StrictVersion("2.1.99"))):
         return "app.kubernetes.io/name=pg-operator"
 
     if (op in ("percona-xtradb-cluster-operator", "pxc-operator")
