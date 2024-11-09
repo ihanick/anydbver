@@ -480,7 +480,7 @@ func shellExec(logger *log.Logger, provider, namespace string, args []string) {
 
 	ansible_output, err := anydbver_common.RunCommandInBaseContainer(
 		logger, namespace,
-		"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f /vagrant/tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); useradd -m -u "+userId+" anydbver; mkdir -p /vagrant/data/k8s; git config --global --add safe.directory '*'; "+fix_k3d_config+"bash -il",
+		"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f /vagrant/tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); useradd -m -u "+userId+" anydbver; mkdir -p /vagrant/data/k8s; git config --global http.postBuffer 524288000; git config --global --add safe.directory '*'; "+fix_k3d_config+"bash -il",
 		volumes,
 		"Error running kubernetes operator", true)
 	if err != nil {
@@ -818,7 +818,7 @@ func runOperatorTool(logger *log.Logger, namespace string, name string, run_oper
 
 	ansible_output, err := anydbver_common.RunCommandInBaseContainer(
 		logger, namespace,
-		"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f /vagrant/tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); useradd -m -u "+userId+" anydbver; mkdir -p /vagrant/data/k8s; git config --global --add safe.directory '*'; "+fix_k3d_config+"python3 tools/run_k8s_operator.py "+run_operator_args+"; chown -R "+userId+" /vagrant/data/k8s/",
+		"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f /vagrant/tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); useradd -m -u "+userId+" anydbver; mkdir -p /vagrant/data/k8s; git config --global http.postBuffer 524288000; git config --global --add safe.directory '*'; "+fix_k3d_config+"python3 tools/run_k8s_operator.py "+run_operator_args+"; chown -R "+userId+" /vagrant/data/k8s/",
 		volumes,
 		"Error running kubernetes operator", false)
 	if err != nil {
@@ -1243,6 +1243,12 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 			} else if arg == "provider:kubectl" {
 				nodeProvider[currentNode] = "kubectl"
 				osvers = re_lastosver.ReplaceAllString(osvers, "")
+			} else if nodeProvider[currentNode] != "kubectl" &&
+				strings.HasSuffix(deployment_keyword.Cmd, "-operator") {
+				nodeProvider[currentNode] = "kubectl"
+				osvers = re_lastosver.ReplaceAllString(osvers, "")
+				deployment_keyword := ParseDeploymentKeyword(logger, "k3d")
+				createK3dCluster(logger, namespace, currentNode, deployment_keyword.Args)
 			}
 		}
 	}

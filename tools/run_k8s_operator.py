@@ -171,6 +171,10 @@ def prepare_operator_repository(data_path, operator_name, operator_version):
                       "Can't checkout operator repository")
     else:
         os.chdir(data_path / operator_name)
+        for depth in range(100, 2000, 100):
+            run_fatal(["git", "fetch", "--depth={}".format(depth)],
+                    "Can't get partial repository {}".format(os.getcwd()),
+                      ignore_msg="on a complete repository does not make sense")
         run_fatal(["git", "fetch", "--unshallow"],
                   "Can't get full repository {}".format(os.getcwd()),
                   ignore_msg="on a complete repository does not make sense")

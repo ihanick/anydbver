@@ -2506,7 +2506,6 @@ INSERT INTO ansible_arguments VALUES('mariadb','galera','%','','extra_db_opts_fi
 INSERT INTO ansible_arguments VALUES('percona-backup-mongodb','version','%','VERSION','extra_pbm_version','2.7.0',1,1);
 INSERT INTO ansible_arguments VALUES('percona-backup-mongodb','s3','%','','extra_pbm_s3_url','',1,NULL);
 INSERT INTO ansible_arguments VALUES('ldap','password','%','','extra_db_password','secret',1,1);
-INSERT INTO ansible_arguments VALUES('percona-server','rocksdb','%','','extra_rocksdb_enabled','1',2,'');
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
@@ -2576,6 +2575,7 @@ INSERT INTO help_examples VALUES('sysbench','anydbver deploy node0 ps:8.0,group-
 INSERT INTO help_examples VALUES('pmm-server','anydbver deploy pmm:docker-image=perconalab/pmm-server:dev-latest,port=12443 node1 mysql:latest,docker-image node2 pmm-client:docker-image=perconalab/pmm-client:dev-latest,server=node0,mysql=node1');
 INSERT INTO help_examples VALUES('percona-server','anydbver deploy ps:latest,expose=3306');
 INSERT INTO help_examples VALUES('pgbackrest','anydbver deploy minio:docker-image,admin-port=9091:9090 node1 pg pgbackrest:s3=node0');
+INSERT INTO help_examples VALUES('pgbackrest','anydbver deploy minio:docker-image node1 pg pgbackrest:s3=node0');
 CREATE TABLE download_sites(programs varchar(100), url varchar(512), pattern varchar(100));
 CREATE INDEX test_cases_test_id_idx ON test_cases(test_id);
 COMMIT;
