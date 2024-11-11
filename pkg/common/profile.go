@@ -37,7 +37,7 @@ func CreateSshKeysForContainers(logger *log.Logger, namespace string) {
 		cmd_args := []string{
 			"docker", "run", "-i", "--rm",
 			"--name", MakeContainerHostName(logger, namespace, "keygen"),
-			"-v", secretDir + ":/vagrant/secret",
+			"-v", secretDir + ":/vagrant/secret:Z",
 			GetDockerImageName("ansible", user),
 			"bash", "-c", "cd /vagrant/secret;ssh-keygen -t rsa -f id_rsa -P ''",
 		}

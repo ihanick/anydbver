@@ -384,7 +384,7 @@ func ConvertStringToMap(input string) map[string]string {
 
 func createNamespace(logger *log.Logger, osvers map[string]string, privileged map[string]string, expose_ports map[string]string, provider string, namespace string) {
 	network := getNetworkName(logger, namespace)
-	if provider == "docker" {
+	if provider == "docker" || provider == "kubectl" {
 		args := []string{"docker", "network", "create", network}
 		env := map[string]string{}
 		errMsg := "Error creating docker network"
@@ -414,8 +414,8 @@ func createContainer(logger *log.Logger, name string, osver string, privileged b
 		"docker", "run",
 		"--name", anydbver_common.MakeContainerHostName(logger, namespace, name),
 		"--platform", "linux/" + runtime.GOARCH,
-		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
-		"-v", anydbver_common.GetCacheDirectory(logger) + "/data/nfs:/nfs",
+		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret:Z",
+		"-v", anydbver_common.GetCacheDirectory(logger) + "/data/nfs:/nfs:Z",
 		"-d", "--cgroupns=host", "--tmpfs", "/tmp",
 		"--network", getNetworkName(logger, namespace),
 		"--tmpfs", "/run", "--tmpfs", "/run/lock",
@@ -423,6 +423,7 @@ func createContainer(logger *log.Logger, name string, osver string, privileged b
 		"--hostname", name}
 	if privileged {
 		args = append(args, []string{
+			"--privileged",
 			"--cap-add", "NET_ADMIN",
 			"--cap-add", "SYS_PTRACE",
 			"--cap-add", "IPC_LOCK",
@@ -461,9 +462,10 @@ func shellExec(logger *log.Logger, provider, namespace string, args []string) {
 	}
 
 	volumes := []string{
-		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
-		"-v", filepath.Join(homeDir, ".kube") + ":/vagrant/secret/.kube:ro",
-		"-v", filepath.Join(anydbver_common.GetCacheDirectory(logger), "data") + ":/vagrant/data",
+		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret:Z",
+		"-v", filepath.Join(homeDir, ".kube") + ":/vagrant/secret/.kube:Z",
+		"-v", filepath.Join(homeDir, ".config", "gcloud") + ":/vagrant/secret/gcloud:Z",
+		"-v", filepath.Join(anydbver_common.GetCacheDirectory(logger), "data") + ":/vagrant/data:Z",
 	}
 	fix_k3d_config := ""
 	if clusterIp != "" {
@@ -480,7 +482,7 @@ func shellExec(logger *log.Logger, provider, namespace string, args []string) {
 
 	ansible_output, err := anydbver_common.RunCommandInBaseContainer(
 		logger, namespace,
-		"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f /vagrant/tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); useradd -m -u "+userId+" anydbver; mkdir -p /vagrant/data/k8s; git config --global http.postBuffer 524288000; git config --global --add safe.directory '*'; "+fix_k3d_config+"bash -il",
+		"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; mkdir -p /root/.config; cp -r /vagrant/secret/gcloud /root/.config/; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f /vagrant/tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); useradd -m -u "+userId+" anydbver; mkdir -p /vagrant/data/k8s; git config --global http.postBuffer 524288000; git config --global --add safe.directory '*'; "+fix_k3d_config+"bash -il",
 		volumes,
 		"Error running kubernetes operator", true)
 	if err != nil {
@@ -799,9 +801,10 @@ func runOperatorTool(logger *log.Logger, namespace string, name string, run_oper
 	}
 
 	volumes := []string{
-		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
-		"-v", filepath.Join(homeDir, ".kube") + ":/vagrant/secret/.kube:ro",
-		"-v", filepath.Join(anydbver_common.GetCacheDirectory(logger), "data") + ":/vagrant/data",
+		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret:Z",
+		"-v", filepath.Join(homeDir, ".kube") + ":/vagrant/secret/.kube:Z",
+		"-v", filepath.Join(homeDir, ".config", "gcloud") + ":/vagrant/secret/gcloud:Z",
+		"-v", filepath.Join(anydbver_common.GetCacheDirectory(logger), "data") + ":/vagrant/data:Z",
 	}
 	fix_k3d_config := ""
 	if clusterIp != "" {
@@ -818,7 +821,7 @@ func runOperatorTool(logger *log.Logger, namespace string, name string, run_oper
 
 	ansible_output, err := anydbver_common.RunCommandInBaseContainer(
 		logger, namespace,
-		"cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f /vagrant/tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); useradd -m -u "+userId+" anydbver; mkdir -p /vagrant/data/k8s; git config --global http.postBuffer 524288000; git config --global --add safe.directory '*'; "+fix_k3d_config+"python3 tools/run_k8s_operator.py "+run_operator_args+"; chown -R "+userId+" /vagrant/data/k8s/",
+		"source ~/.bashrc;cd /vagrant;mkdir /root/.kube ; cp /vagrant/secret/.kube/config /root/.kube/config; mkdir -p /root/.config; cp -r /vagrant/secret/gcloud /root/.config/; test -f /usr/local/bin/kubectl || (curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/"+runtime.GOARCH+"/kubectl ; chmod +x kubectl ; mv kubectl /usr/local/bin/kubectl); test -f /vagrant/tools/yq || (curl -LO  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_"+runtime.GOARCH+" ; chmod +x yq_linux_"+runtime.GOARCH+"; mv yq_linux_"+runtime.GOARCH+" tools/yq); useradd -m -u "+userId+" anydbver; mkdir -p /vagrant/data/k8s; git config --global http.postBuffer 524288000; git config --global --add safe.directory '*'; "+fix_k3d_config+"python3 tools/run_k8s_operator.py "+run_operator_args+"; chown -R "+userId+" /vagrant/data/k8s/",
 		volumes,
 		"Error running kubernetes operator", false)
 	if err != nil {
@@ -1057,9 +1060,9 @@ func runPlaybook(logger *log.Logger, namespace string, ansible_hosts_run_file st
 	}
 
 	volumes := []string{
-		"-v", ansible_hosts_run_file + ":/vagrant/ansible_hosts_run",
-		"-v", anydbver_common.GetDatabasePath(logger) + ":/vagrant/anydbver_version.db",
-		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret",
+		"-v", ansible_hosts_run_file + ":/vagrant/ansible_hosts_run:Z",
+		"-v", anydbver_common.GetDatabasePath(logger) + ":/vagrant/anydbver_version.db:Z",
+		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret:Z",
 	}
 
 	if dirInfo, err := os.Stat("roles"); err == nil && dirInfo.IsDir() {
@@ -1067,7 +1070,7 @@ func runPlaybook(logger *log.Logger, namespace string, ansible_hosts_run_file st
 		if err == nil {
 			volumes = append(volumes, []string{
 				"-v",
-				realPath + ":/vagrant/roles",
+				realPath + ":/vagrant/roles:Z",
 			}...)
 		}
 	}
@@ -1076,7 +1079,7 @@ func runPlaybook(logger *log.Logger, namespace string, ansible_hosts_run_file st
 		if err == nil {
 			volumes = append(volumes, []string{
 				"-v",
-				realPath + ":/vagrant/playbook.yml",
+				realPath + ":/vagrant/playbook.yml:Z",
 			}...)
 		}
 	}
