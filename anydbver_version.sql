@@ -1547,6 +1547,7 @@ INSERT INTO tests VALUES(38,'k8s pg standby','anydbver deploy k3d k8s-minio:late
 INSERT INTO tests VALUES(39,'k8s psmdb multiple single node replicasets with ingress','anydbver deploy k3d:latest,ingress=443,ingress-type=nginxinc,nodes=3,host-alias="172.17.0.1:r1.percona.local|r2.percona.local|r3.percona.local" cert-manager k8s-psmdb:1.16.2,replicas=1,shards=0,namespace=db1 k8s-psmdb:1.16.2,replicas=1,shards=0,namespace=db2 k8s-psmdb:1.16.2,replicas=1,shards=0,namespace=db3');
 INSERT INTO tests VALUES(40,'sysbench percona server for mysql','anydbver deploy ps node1 ps sysbench:latest,mysql=node0,oltprw');
 INSERT INTO tests VALUES(41,'psmdb replica set with pbm s3','anydbver deploy minio:docker-image node1 psmdb:latest,replica-set=rs0 pbm:latest,s3=node0/backup node2 psmdb:latest,replica-set=rs0,master=node1 pbm:latest,s3=node0/backup node3 psmdb:latest,replica-set=rs0,master=node1 pbm:latest,s3=node0/backup');
+INSERT INTO tests VALUES(42,'pg with haproxy and http check','anydbver deploy haproxy-pg:node1,node2,node3 node1 pg:clustercheck node2 pg:master=node1,clustercheck node3 pg:master=node1,clustercheck');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
@@ -2519,6 +2520,9 @@ INSERT INTO ansible_arguments VALUES('mariadb','galera','%','','extra_db_opts_fi
 INSERT INTO ansible_arguments VALUES('percona-backup-mongodb','version','%','VERSION','extra_pbm_version','2.7.0',1,1);
 INSERT INTO ansible_arguments VALUES('percona-backup-mongodb','s3','%','','extra_pbm_s3_url','',1,NULL);
 INSERT INTO ansible_arguments VALUES('ldap','password','%','','extra_db_password','secret',1,1);
+INSERT INTO ansible_arguments VALUES('haproxy-pg','version','%','NODE','extra_haproxy_pg','',1,1);
+INSERT INTO ansible_arguments VALUES('postgresql','clustercheck','%','','extra_db_features','clustercheck',1,NULL);
+INSERT INTO ansible_arguments VALUES('percona-postgresql','clustercheck','%','','extra_db_features','clustercheck',1,NULL);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
