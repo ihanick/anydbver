@@ -140,6 +140,17 @@
       copy:
         src: "{{playbook_dir}}/roles/haproxy/files/pgchk"
         dest: /etc/xinetd.d/pgchk
+    - name: Xinetd systemd override directory
+      ansible.builtin.file:
+        path: /etc/systemd/system/xinetd.service.d
+        state: directory
+    - name: Reduce nofiles for xinetd
+      copy:
+        src: "{{playbook_dir}}/roles/haproxy/files/ulimit.conf"
+        dest: /etc/systemd/system/xinetd.service.d/ulimit.conf
+    - name: refresh pg systemd service
+      systemd:
+        daemon_reload: yes
     - name: start xinetd
       systemd:
         name: xinetd
