@@ -1304,26 +1304,7 @@ func Contains(slice []string, item string) bool {
 	return false
 }
 
-func helpDeployCommands(logger *log.Logger, provider string, args []string) {
-	logger.Println("Help on deployment commands: anydbver help or anydbver help keyword")
-	all_commands := false
-	var filter_commands []string
-	if len(args) == 1 && args[0] == "help" {
-		logger.Println("Help for all deployment keywords")
-		all_commands = true
-	}
-	fmt.Println(args)
-	for _, arg := range args {
-		deployment_keyword := ParseDeploymentKeyword(logger, arg)
-		fmt.Println(deployment_keyword.Cmd)
-		filter_commands = append(filter_commands, deployment_keyword.Cmd)
-		for subcmd, _ := range deployment_keyword.Args {
-			if subcmd != "version" && subcmd != "help" {
-				fmt.Println(subcmd)
-			}
-		}
-	}
-
+func printAllDeployExamples(logger *log.Logger) {
 	db, err := sql.Open("sqlite", anydbver_common.GetDatabasePath(logger))
 	if err != nil {
 		logger.Printf("failed to open database: %v", err)
@@ -1331,7 +1312,31 @@ func helpDeployCommands(logger *log.Logger, provider string, args []string) {
 	}
 	defer db.Close()
 
-	query := `SELECT cmd, deploy FROM help_examples ORDER BY cmd`
+	query := `
+  SELECT cmd, deploy 
+  FROM (
+      SELECT DISTINCT 
+          keyword.cmd, 
+          LTRIM(LTRIM(tests.cmd, '.'), '/') AS deploy
+      FROM (
+          SELECT DISTINCT cmd, cmd AS alias 
+          FROM ansible_arguments 
+          UNION 
+          SELECT DISTINCT cmd, cmd AS alias 
+          FROM k8s_arguments 
+          UNION 
+          SELECT DISTINCT keyword AS cmd, alias 
+          FROM keyword_aliases
+      ) AS keyword
+      INNER JOIN tests 
+          ON tests.cmd LIKE '% ' || keyword.alias || ' %'
+          OR tests.cmd LIKE '% ' || keyword.alias || ':%'
+      UNION 
+      SELECT cmd, deploy 
+      FROM help_examples
+  ) AS all_help 
+  ORDER BY cmd, deploy;
+  `
 
 	rows, err := db.Query(query)
 	if err != nil {
@@ -1347,13 +1352,218 @@ func helpDeployCommands(logger *log.Logger, provider string, args []string) {
 		if err := rows.Scan(&keyword, &deploy_cmd); err != nil {
 			logger.Printf("failed to scan row: %v", err)
 		}
-		if all_commands || Contains(filter_commands, keyword) {
+		fmt.Println(deploy_cmd)
+	}
+	if err = rows.Err(); err != nil {
+		logger.Printf("failed to scan row: %v", err)
+	}
+
+}
+
+func printKeywordList(logger *log.Logger) {
+	db, err := sql.Open("sqlite", anydbver_common.GetDatabasePath(logger))
+	if err != nil {
+		logger.Printf("failed to open database: %v", err)
+		return
+	}
+	defer db.Close()
+
+	query := `
+  SELECT DISTINCT cmd, 1 ord
+  FROM ansible_arguments 
+  UNION 
+  SELECT DISTINCT cmd, 2 ord
+  FROM k8s_arguments 
+  ORDER BY ord,cmd;
+  `
+
+	rows, err := db.Query(query)
+	if err != nil {
+		logger.Printf("failed to execute select query: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	// Collect the results into a string
+	for rows.Next() {
+		var keyword string
+		var ord int
+		if err := rows.Scan(&keyword, &ord); err != nil {
+			logger.Printf("failed to scan row: %v", err)
+		}
+		fmt.Println(keyword)
+	}
+	if err = rows.Err(); err != nil {
+		logger.Printf("failed to scan row: %v", err)
+	}
+}
+
+func printKeywordAliases(logger *log.Logger, search_keyword string) {
+	fmt.Println("Aliases for command(software)", search_keyword)
+	db, err := sql.Open("sqlite", anydbver_common.GetDatabasePath(logger))
+	if err != nil {
+		logger.Printf("failed to open database: %v", err)
+		return
+	}
+	defer db.Close()
+
+	query := `SELECT alias FROM keyword_aliases WHERE keyword = ?`
+
+	rows, err := db.Query(query, search_keyword)
+	if err != nil {
+		logger.Printf("failed to execute select query: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	// Collect the results into a string
+	for rows.Next() {
+		var alias string
+		if err := rows.Scan(&alias); err != nil {
+			logger.Printf("failed to scan row: %v", err)
+		}
+		fmt.Println(alias)
+	}
+	if err = rows.Err(); err != nil {
+		logger.Printf("failed to scan row: %v", err)
+	}
+	fmt.Println("")
+}
+
+func printKeywordSubCommands(logger *log.Logger, search_keyword string) {
+	fmt.Println("Subcommands (parameters) for command", search_keyword)
+	db, err := sql.Open("sqlite", anydbver_common.GetDatabasePath(logger))
+	if err != nil {
+		logger.Printf("failed to open database: %v", err)
+		return
+	}
+	defer db.Close()
+
+	query := `select distinct subcmd from ansible_arguments where cmd = ? UNION select distinct subcmd from k8s_arguments where cmd = ?`
+
+	rows, err := db.Query(query, search_keyword, search_keyword)
+	if err != nil {
+		logger.Printf("failed to execute select query: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	// Collect the results into a string
+	for rows.Next() {
+		var alias string
+		if err := rows.Scan(&alias); err != nil {
+			logger.Printf("failed to scan row: %v", err)
+		}
+		fmt.Println(alias)
+	}
+	if err = rows.Err(); err != nil {
+		logger.Printf("failed to scan row: %v", err)
+	}
+	fmt.Println("")
+}
+
+func printOneDeployCommandExamples(logger *log.Logger, args []string) {
+	fmt.Println(args)
+	var filter_commands []string
+	search_keyword := ""
+	for _, arg := range args {
+		deployment_keyword := ParseDeploymentKeyword(logger, arg)
+		fmt.Println(deployment_keyword.Cmd)
+		filter_commands = append(filter_commands, deployment_keyword.Cmd)
+		search_keyword = deployment_keyword.Cmd
+		for subcmd, _ := range deployment_keyword.Args {
+			if subcmd != "version" && subcmd != "help" {
+				fmt.Println(subcmd)
+			}
+		}
+	}
+
+	if search_keyword == "" {
+		logger.Println("There is no keywords in ", args)
+		return
+	}
+	if search_keyword == "keywords" {
+		printKeywordList(logger)
+		return
+	}
+
+	printKeywordAliases(logger, search_keyword)
+	printKeywordSubCommands(logger, search_keyword)
+
+	db, err := sql.Open("sqlite", anydbver_common.GetDatabasePath(logger))
+	if err != nil {
+		logger.Printf("failed to open database: %v", err)
+		return
+	}
+	defer db.Close()
+
+	query := `
+  SELECT cmd, deploy 
+  FROM (
+      SELECT DISTINCT 
+          keyword.cmd, 
+          LTRIM(LTRIM(tests.cmd, '.'), '/') AS deploy
+      FROM (
+          SELECT DISTINCT cmd, cmd AS alias 
+          FROM ansible_arguments 
+          UNION 
+          SELECT DISTINCT cmd, cmd AS alias 
+          FROM k8s_arguments 
+          UNION 
+          SELECT DISTINCT keyword AS cmd, alias 
+          FROM keyword_aliases
+      ) AS keyword
+      INNER JOIN tests 
+          ON tests.cmd LIKE '% ' || keyword.alias || ' %'
+          OR tests.cmd LIKE '% ' || keyword.alias || ':%'
+      UNION 
+      SELECT cmd, deploy 
+      FROM help_examples
+  ) AS all_help
+  WHERE cmd = ?
+  ORDER BY cmd, deploy;
+  `
+
+	rows, err := db.Query(query, search_keyword)
+	if err != nil {
+		logger.Printf("failed to execute select query: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	// Collect the results into a string
+	for rows.Next() {
+		var keyword string
+		var deploy_cmd string
+		if err := rows.Scan(&keyword, &deploy_cmd); err != nil {
+			logger.Printf("failed to scan row: %v", err)
+		}
+		if Contains(filter_commands, keyword) {
 			fmt.Println(deploy_cmd)
 		}
 	}
 	if err = rows.Err(); err != nil {
 		logger.Printf("failed to scan row: %v", err)
 	}
+
+}
+
+func helpDeployCommands(logger *log.Logger, provider string, args []string) {
+	fmt.Println("Help on deployment commands:")
+	fmt.Println("anydbver help           # shows a full list of examples")
+	fmt.Println("anydbver help [keyword] # shows examples for specific keyword(software)")
+	fmt.Println("anydbver help keywords  # shows a list of keywords(software)")
+	all_commands := false
+	if len(args) == 1 && args[0] == "help" {
+		logger.Println("Help for all deployment keywords")
+		all_commands = true
+	}
+	if all_commands {
+		printAllDeployExamples(logger)
+	} else {
+		printOneDeployCommandExamples(logger, args)
+	}
+
 }
 
 func main() {
