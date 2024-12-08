@@ -417,6 +417,7 @@ func createContainer(logger *log.Logger, name string, osver string, privileged b
 		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret:Z",
 		"-v", anydbver_common.GetCacheDirectory(logger) + "/data/nfs:/nfs:Z",
 		"-d", "--cgroupns=host", "--tmpfs", "/tmp",
+		"--ulimit", "nofile=65536:65536",
 		"--network", getNetworkName(logger, namespace),
 		"--tmpfs", "/run", "--tmpfs", "/run/lock",
 		"-v", "/sys/fs/cgroup:/sys/fs/cgroup",
