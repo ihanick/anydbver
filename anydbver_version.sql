@@ -1587,6 +1587,7 @@ INSERT INTO tests VALUES(39,'k8s psmdb multiple single node replicasets with ing
 INSERT INTO tests VALUES(40,'sysbench percona server for mysql','anydbver deploy ps node1 ps sysbench:latest,mysql=node0,oltprw');
 INSERT INTO tests VALUES(41,'psmdb replica set with pbm s3','anydbver deploy minio:docker-image node1 psmdb:latest,replica-set=rs0 pbm:latest,s3=node0/backup node2 psmdb:latest,replica-set=rs0,master=node1 pbm:latest,s3=node0/backup node3 psmdb:latest,replica-set=rs0,master=node1 pbm:latest,s3=node0/backup');
 INSERT INTO tests VALUES(42,'pg with haproxy and http check','anydbver deploy haproxy-pg:node1,node2,node3 node1 pg:clustercheck node2 pg:master=node1,clustercheck node3 pg:master=node1,clustercheck');
+INSERT INTO tests VALUES(43,'barman rsync','anydbver deploy pg node1 barman:source=node0');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
@@ -1625,6 +1626,7 @@ INSERT INTO test_cases VALUES(33,'anydbver exec node2 -- pmm-admin list|grep -q 
 INSERT INTO test_cases VALUES(34,'echo "pgbackrest --stanza=db backup && pgbackrest info" | anydbver exec node1 | grep status | grep -q ok');
 INSERT INTO test_cases VALUES(40,'anydbver exec node1 -- sysbench   --db-driver=mysql   --table-size=100000   --tables=12 --threads=12   --mysql-host=172.18.0.3 --mysql-user=root --mysql-password=verysecretpassword1^  --mysql-db=sbtest   --time=10 --report-interval=2   /usr/share/sysbench/oltp_read_write.lua run|grep -q total:');
 INSERT INTO test_cases VALUES(41,'anydbver exec node1 -- bash -ilc "pbm status"|grep -q S3');
+INSERT INTO test_cases VALUES(43,'sleep 60;anydbver exec node1 -- sudo -u barman barman backup node0');
 CREATE TABLE mariadb_version(
   version varchar(20),
   os varchar(20),
@@ -2570,6 +2572,11 @@ INSERT INTO ansible_arguments VALUES('minio','version','%','VERSION','extra_mini
 INSERT INTO ansible_arguments VALUES('minio','access-key','%','','extra_minio_access_key','UIdgE4sXPBTcBB4eEawU',1,1);
 INSERT INTO ansible_arguments VALUES('minio','secret-key','%','','extra_minio_secret_key','7UdlDzBF769dbIOMVILV',1,1);
 INSERT INTO ansible_arguments VALUES('minio','bucket','%','','extra_minio_bucket','backup',1,1);
+INSERT INTO ansible_arguments VALUES('barman','version','%','VERSION','extra_barman_version','1',1,1);
+INSERT INTO ansible_arguments VALUES('barman','method','%','','extra_barman_method','rsync',1,1);
+INSERT INTO ansible_arguments VALUES('barman','source','%','NODE','extra_barman_backup_source','',1,NULL);
+INSERT INTO ansible_arguments VALUES('barman','password','%','','extra_db_password','verysecretpassword1^',1,1);
+INSERT INTO ansible_arguments VALUES('barman','user','%','','extra_db_user','postgres',1,1);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,

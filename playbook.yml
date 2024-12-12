@@ -41,6 +41,9 @@
     patroni_version: "{{ lookup('vars', 'extra_percona_patroni_version', default=lookup('env', 'PATRONI', default='') ) }}"
     repmgr_version: "{{ lookup('vars', 'extra_repmgr_version', default=lookup('env', 'REPMGR', default='') ) }}"
     pgpool_version: "{{ lookup('vars', 'extra_pgpool_version', default=lookup('env', 'PGPOOL', default='') ) }}"
+    barman_version: "{{ lookup('vars', 'extra_barman_version', default=lookup('env', 'BARMAN', default='') ) }}"
+    barman_method: "{{ lookup('vars', 'extra_barman_method', default=lookup('env', 'BARMAN_METHOD', default='') ) }}"
+    barman_backup_source: "{{ lookup('vars', 'extra_barman_backup_source', default=lookup('env', 'BARMAN_SOURCE', default='') ) }}"
     pgbackrest_version: "{{ lookup('vars', 'extra_pgbackrest_version', default=lookup('env', 'PGBACKREST', default='') ) }}"
     odyssey_version: "{{ lookup('vars', 'extra_odyssey_version', default=lookup('env', 'ODYSSEY', default='') ) }}"
     walg_version:  "{{ lookup('vars', 'extra_walg_version', default=lookup('env', 'WALG', default='') ) }}"
@@ -280,6 +283,11 @@
       when: postgresql_version != '' or percona_postgresql_version != '' or odyssey_version != '' or walg_version != '' or pgpool_version != ''
       include_role:
         name: postgresql
+
+    - name: Barman Role
+      when: barman_version != ''
+      include_role:
+        name: barman
 
     - name: Patroni Role
       when: patroni_version != ''

@@ -1,0 +1,74 @@
+---
+# tasks file for barman
+- name: Enable EPEL
+  when: >
+    (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  package:
+    name: epel-release
+    state: present
+
+- name: Enable CentOS Linux Software Collections
+  when: >
+    'development' in db_features.split(',') and
+    (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  package:
+    name: centos-release-scl
+    state: present
+
+
+- name: Enable local repo.* caching
+  include_tasks: common/tasks/repo_cache.yaml
+
+- name: Postgresql repo
+  when: postgresql_version != '' and (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
+  yum:
+    name: "{{package_info['repo_url']}}"
+    state: present
+    disable_gpg_check: yes
+
+- name: Postgresql repo on el8, disable dnf module postgresql
+  when: (postgresql_version != '' or percona_postgresql_version != '') and dist == 'el8'
+  shell:
+    cmd: dnf -qy module disable postgresql ; touch /root/dist-postgresql.disabled
+    creates: /root/dist-postgresql.disabled
+
+- name: Install gpg for apt-key
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+  package: name=gpg state=present
+
+- name: Add postgres.org Apt key
+  when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and postgresql_version != ''
+  ansible.builtin.apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+
+- name: Add postgres.org Apt repo (PGDG)
+  when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and postgresql_version != ''
+  lineinfile:
+    create: yes
+    path: /etc/apt/sources.list.d/pgdg.list
+    line: "deb https://apt-archive.postgresql.org/pub/repos/apt {{dist}}-pgdg-archive main"
+
+- name: refresh apt repo
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+  apt:
+    update_cache: yes
+
+
+- name: install Barman
+  when: barman_version != ''
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+  - "barman"
+  - "barman-cli"
+  - "cronie"
+
+- name: Setup barman with rsync
+  when: barman_version != '' and barman_backup_source != '' and barman_method != ''
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_barman.sh "{{ barman_method }}" "{{ barman_backup_source }}" "{{ db_user }}" "{{ db_password }}"
+    creates: /root/barman_configured
+
+
