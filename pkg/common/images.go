@@ -8,7 +8,7 @@ const (
 )
 
 var (
-	RELEASE_VERSION = "0.1.13"
+	RELEASE_VERSION = "0.1.14"
 )
 
 func GetDockerImageName(osver string, user string) string {
