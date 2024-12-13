@@ -1588,6 +1588,7 @@ INSERT INTO tests VALUES(40,'sysbench percona server for mysql','anydbver deploy
 INSERT INTO tests VALUES(41,'psmdb replica set with pbm s3','anydbver deploy minio:docker-image node1 psmdb:latest,replica-set=rs0 pbm:latest,s3=node0/backup node2 psmdb:latest,replica-set=rs0,master=node1 pbm:latest,s3=node0/backup node3 psmdb:latest,replica-set=rs0,master=node1 pbm:latest,s3=node0/backup');
 INSERT INTO tests VALUES(42,'pg with haproxy and http check','anydbver deploy haproxy-pg:node1,node2,node3 node1 pg:clustercheck node2 pg:master=node1,clustercheck node3 pg:master=node1,clustercheck');
 INSERT INTO tests VALUES(43,'barman rsync','anydbver deploy pg node1 barman:source=node0');
+INSERT INTO tests VALUES(44,'barman streaming-only','anydbver deploy pg node1 barman:source=node0,method=streaming-only pg');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
@@ -1627,6 +1628,7 @@ INSERT INTO test_cases VALUES(34,'echo "pgbackrest --stanza=db backup && pgbackr
 INSERT INTO test_cases VALUES(40,'anydbver exec node1 -- sysbench   --db-driver=mysql   --table-size=100000   --tables=12 --threads=12   --mysql-host=172.18.0.3 --mysql-user=root --mysql-password=verysecretpassword1^  --mysql-db=sbtest   --time=10 --report-interval=2   /usr/share/sysbench/oltp_read_write.lua run|grep -q total:');
 INSERT INTO test_cases VALUES(41,'anydbver exec node1 -- bash -ilc "pbm status"|grep -q S3');
 INSERT INTO test_cases VALUES(43,'sleep 60;anydbver exec node1 -- sudo -u barman barman backup node0');
+INSERT INTO test_cases VALUES(44,'sleep 60;anydbver exec node1 -- sudo -u barman barman backup node0');
 CREATE TABLE mariadb_version(
   version varchar(20),
   os varchar(20),

@@ -1,2 +1,10 @@
 ---
 # vars file for barman
+package_info_sql: "select * from {{'percona_' if percona_postgresql_version != '' else ''}}postgresql_version where version like '{{percona_postgresql_version if percona_postgresql_version != '' else postgresql_version}}%' and os='{{dist}}' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1"
+package_info: >
+  {{ lookup("theredgreek.sqlite.sqlite", path=playbook_dir+"/anydbver_version.db", select=package_info_sql)
+  if percona_postgresql_version != "" or postgresql_version != ""
+  else "" }}
+
+
+pg_systemd_svc: "{{ package_info['systemd_service'] if package_info != '' else pkg[dist].systemd if ('systemd' in pkg[dist]) and percona_postgresql_version !='' else os[dist][soft].systemd_service if soft else db_systemd_service }}"
