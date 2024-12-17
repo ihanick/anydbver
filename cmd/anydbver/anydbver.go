@@ -24,6 +24,7 @@ import (
 	anydbver_common "github.com/ihanick/anydbver/pkg/common"
 	"github.com/ihanick/anydbver/pkg/runtools"
 	unmodified_docker "github.com/ihanick/anydbver/pkg/unmodified_docker"
+	"github.com/ihanick/anydbver/pkg/version_fetch"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 	_ "modernc.org/sqlite"
@@ -1642,8 +1643,14 @@ func main() {
 		Short: "Deletes current version information database and downloads latest one from https://github.com/ihanick/anydbver/blob/master/anydbver_version.sql",
 		Run: func(cmd *cobra.Command, args []string) {
 			dbFile := anydbver_common.GetDatabasePath(logger)
-			os.Remove(dbFile)
-			anydbver_common.UpdateSqliteDatabase(logger, dbFile)
+			if len(args) >= 1 {
+				if err := versionfetch.VersionFetch(args[0], dbFile); err != nil {
+					logger.Println("Error fetching versions", err)
+				}
+			} else {
+				os.Remove(dbFile)
+				anydbver_common.UpdateSqliteDatabase(logger, dbFile)
+			}
 		},
 	}
 	var playbookCmd = &cobra.Command{

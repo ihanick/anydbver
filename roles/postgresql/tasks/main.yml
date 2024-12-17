@@ -87,6 +87,12 @@
     create: yes
     path: /etc/apt/sources.list.d/pgdg.list
     line: "deb https://apt-archive.postgresql.org/pub/repos/apt {{dist}}-pgdg-archive main"
+- name: Add postgres.org Apt repo (PGDG)
+  when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and postgresql_version != '' and package_info['repo_file'] != '' and package_info['repo_enable_str'] != ''
+  lineinfile:
+    create: yes
+    path: "{{ package_info['repo_file'] }}"
+    line: "{{ package_info['repo_enable_str'] }}"
 
 - name: refresh apt repo
   when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
@@ -108,6 +114,12 @@
     force: yes
   with_items: "{{pkg[dist].install_packages}}"
 
+- name: Start postgresql service
+  when: package_info['systemd_service'] != ''
+  ansible.builtin.systemd_service:
+    name: "{{ package_info['systemd_service'] }}"
+    state: started
+    enabled: true
 
 - name: install Repmgr
   when: repmgr_version != '' and postgresql_version != ''
