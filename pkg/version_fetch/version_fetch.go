@@ -17,7 +17,7 @@ func VersionFetch(program string, dbFile string) error {
 
 	for _, pu := range progUrls {
 		if strings.HasSuffix(pu.url, "/Packages") {
-			if err := VersionFetchFromDebianPackages(dbFile, pu.url, pu.pattern); err != nil {
+			if err := VersionFetchFromDebianPackages(dbFile, pu.url, pu.pattern, pu.osver, pu.arch, pu.repo_file, pu.repo_str); err != nil {
 				return fmt.Errorf("Can't get versions from debian packages file %w", err)
 			}
 		}
@@ -27,7 +27,7 @@ func VersionFetch(program string, dbFile string) error {
 	return nil
 }
 
-func VersionFetchFromDebianPackages(dbFile string, url string, packagePattern string) error {
+func VersionFetchFromDebianPackages(dbFile string, url string, packagePattern string, osver string, arch string, repo_file string, repo_str string) error {
 	db, err := sql.Open("sqlite", dbFile)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
@@ -49,10 +49,12 @@ func VersionFetchFromDebianPackages(dbFile string, url string, packagePattern st
 		fmt.Printf("Package: %s\n", pkgName)
 		for _, version := range versions {
 			fmt.Printf("  Version: %s\n", version)
-			query := fmt.Sprintf("REPLACE INTO postgresql_version VALUES('%s','jammy','x86_64','','/etc/apt/sources.d/pgdg-archive.list','deb https://apt-archive.postgresql.org/pub/repos/apt jammy-pgdg-archive main','postgresql','%s=%s','')",
-				version, pkgName, version)
-			if _, err := db.Exec(query); err != nil {
-				return err
+			// INSERT INTO postgresql_version VALUES('9.0.23-7.pgdg22.04+1','jammy','x86_64','',
+			// '/etc/apt/sources.d/pgdg-archive.list','deb https://apt-archive.postgresql.org/pub/repos/apt jammy-pgdg-archive main',
+			// 'postgresql','postgresql-9.0=9.0.23-7.pgdg22.04+1','');
+			query := "REPLACE INTO postgresql_version VALUES(?,?,?,?,?,?,?,?,?)"
+			if _, err := db.Exec(query, version, osver, arch, "", repo_file, repo_str, "postgresql", fmt.Sprintf("%s=%s", pkgName, version), ""); err != nil {
+				return fmt.Errorf("Can't insert postgresql package via '%s' %w", query, err)
 			}
 
 		}
@@ -61,8 +63,12 @@ func VersionFetchFromDebianPackages(dbFile string, url string, packagePattern st
 }
 
 type programVersionSource struct {
-	url     string
-	pattern string
+	url       string
+	pattern   string
+	osver     string
+	arch      string
+	repo_file string
+	repo_str  string
 }
 
 func getProgramUrls(program string, dbFile string) ([]programVersionSource, error) {
@@ -73,7 +79,7 @@ func getProgramUrls(program string, dbFile string) ([]programVersionSource, erro
 	}
 	defer db.Close()
 
-	query := `SELECT url, pattern FROM download_sites WHERE program = ?`
+	query := `SELECT url, pattern, osver, arch, repo_file, repo_str FROM download_sites WHERE program = ?`
 
 	rows, err := db.Query(query, program)
 	if err != nil {
@@ -84,7 +90,7 @@ func getProgramUrls(program string, dbFile string) ([]programVersionSource, erro
 	// Collect the results into a string
 	for rows.Next() {
 		var prg programVersionSource
-		if err := rows.Scan(&prg.url, &prg.pattern); err != nil {
+		if err := rows.Scan(&prg.url, &prg.pattern, &prg.osver, &prg.arch, &prg.repo_file, &prg.repo_str); err != nil {
 			return res, fmt.Errorf("failed to scan row: %v", err)
 		}
 		res = append(res, prg)
