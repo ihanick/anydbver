@@ -7,8 +7,12 @@ lxdock.yml
 secret/id_rsa
 secret/id_rsa.pub
 secret/kube.config
+secret/.kube
 secret/*kube_config
 secret/vault*-client.tar
+images-build/*/rc-local.service
+images-build/*/rc.local
+secret/*-keyfile-docker
 Docker/centos7-samba/install_samba_ad.sh
 configs/*hosts
 .anydbver
@@ -30,3 +34,5 @@ data/
 certs/
 __pycache__/
 go.sum
+tools/anydbver
+images-build/build-arm.sh

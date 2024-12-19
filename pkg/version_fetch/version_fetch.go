@@ -17,7 +17,7 @@ func VersionFetch(program string, dbFile string) error {
 
 	for _, pu := range progUrls {
 		if strings.HasSuffix(pu.url, "/Packages") {
-			if err := VersionFetchFromDebianPackages(dbFile, pu.url, pu.pattern, pu.osver, pu.arch, pu.repo_file, pu.repo_str); err != nil {
+			if err := VersionFetchFromDebianPackages(dbFile, program, pu); err != nil {
 				return fmt.Errorf("Can't get versions from debian packages file %w", err)
 			}
 		}
@@ -27,38 +27,40 @@ func VersionFetch(program string, dbFile string) error {
 	return nil
 }
 
-func VersionFetchFromDebianPackages(dbFile string, url string, packagePattern string, osver string, arch string, repo_file string, repo_str string) error {
+func VersionFetchFromDebianPackages(dbFile string, program string, pu programVersionSource) error {
 	db, err := sql.Open("sqlite", dbFile)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 	defer db.Close()
 
-	packages, err := debianpackages.ParsePackagesFromURL(url)
+	packages, err := debianpackages.ParsePackagesFromURL(pu.url)
 	if err != nil {
 		return fmt.Errorf("Error fetching or parsing Packages file: %w", err)
 	}
 
 	//
 	// Regex to match package names like postgresql-[0-9.]+
-	versionsByPackage := debianpackages.FilterPackagesByRegex(packages, packagePattern)
+	versionsByPackage := debianpackages.FilterPackagesByRegex(packages, pu.pattern)
 
 	// Output the filtered versions
-	fmt.Println("Versions for matching PostgreSQL packages:")
+	versions_cnt := 0
 	for pkgName, versions := range versionsByPackage {
-		fmt.Printf("Package: %s\n", pkgName)
 		for _, version := range versions {
-			fmt.Printf("  Version: %s\n", version)
-			// INSERT INTO postgresql_version VALUES('9.0.23-7.pgdg22.04+1','jammy','x86_64','',
-			// '/etc/apt/sources.d/pgdg-archive.list','deb https://apt-archive.postgresql.org/pub/repos/apt jammy-pgdg-archive main',
-			// 'postgresql','postgresql-9.0=9.0.23-7.pgdg22.04+1','');
-			query := "REPLACE INTO postgresql_version VALUES(?,?,?,?,?,?,?,?,?)"
-			if _, err := db.Exec(query, version, osver, arch, "", repo_file, repo_str, "postgresql", fmt.Sprintf("%s=%s", pkgName, version), ""); err != nil {
-				return fmt.Errorf("Can't insert postgresql package via '%s' %w", query, err)
+			versions_cnt += len(versions)
+			switch program {
+			case "postgresql":
+				query := "REPLACE INTO postgresql_version VALUES(?,?,?,?,?,?,?,?,?)"
+				if _, err := db.Exec(query, version, pu.osver, pu.arch, "",
+					pu.repo_file, pu.repo_str,
+					"postgresql", fmt.Sprintf("%s=%s", pkgName, version), ""); err != nil {
+					return fmt.Errorf("Can't insert postgresql package via '%s' %w", query, err)
+				}
 			}
-
 		}
 	}
+	fmt.Printf("OS: %s, Program: %s, Packages: %d, Versions: %d\n",
+		pu.osver, program, len(versionsByPackage), versions_cnt)
 	return nil
 }
 
