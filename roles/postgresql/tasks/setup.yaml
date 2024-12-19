@@ -17,11 +17,6 @@
     - name: refresh pg systemd service
       systemd:
         daemon_reload: yes
-
-    - name: change postgresql password on debian-based
-      when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
-      shell:
-        cmd: sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD '{{ db_password }}'"
     - name: Stop postgresql database if running
       command:
         cmd: systemctl stop "{{package_info['systemd_service']}}"
@@ -65,6 +60,11 @@
       when: replication_type == 'logical' or master_ip == ''
       command:
         cmd: systemctl start "{{package_info['systemd_service']}}"
+
+    - name: change postgresql password on debian-based
+      when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+      shell:
+        cmd: sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD '{{ db_password }}'"
 
     - name: Setup and start Postgresql replication
       when: master_ip != '' and ( percona_postgresql_version != '' or postgresql_version != '')

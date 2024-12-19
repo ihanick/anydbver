@@ -114,13 +114,6 @@
     force: yes
   with_items: "{{pkg[dist].install_packages}}"
 
-- name: Start postgresql service
-  when: package_info['systemd_service'] != ''
-  ansible.builtin.systemd_service:
-    name: "{{ package_info['systemd_service'] }}"
-    state: started
-    enabled: true
-
 - name: install Repmgr
   when: repmgr_version != '' and postgresql_version != ''
   package:
