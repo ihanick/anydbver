@@ -846,6 +846,9 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 			deployment_keyword := ParseDeploymentKeyword(logger, arg)
 			if _, ok := deployment_keyword.Args["docker-image"]; ok {
 				unmodified_docker.CreateContainer(logger, namespace, name, deployment_keyword.Cmd, deployment_keyword.Args)
+			} else {
+				logger.Printf("Can't mix docker-image items with non-docker. Please keep only a single docker-image command per node.\n Problem with node %s and definition %v", name, args)
+				os.Exit(runtools.ANYDBVER_DOCKER_IMAGE_MIXED_WITH_ANSIBLE)
 			}
 		}
 	} else if provider == "kubectl" {

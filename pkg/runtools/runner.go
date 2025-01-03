@@ -1,8 +1,8 @@
 package runtools
 
 import (
-	"bytes"
 	"bufio"
+	"bytes"
 	"errors"
 	"io"
 	"log"
@@ -14,17 +14,18 @@ import (
 )
 
 const (
-	COMMAND_TIMEOUT = 600
-	ANYDBVER_ERROR_NOT_CONFIGURED = 2
-	ANYDBVER_ERROR_BACKEND_PROBLEM = 3
-	ANYDBVER_ANSIBLE_PROBLEM = 4
+	COMMAND_TIMEOUT                          = 600
+	ANYDBVER_ERROR_NOT_CONFIGURED            = 2
+	ANYDBVER_ERROR_BACKEND_PROBLEM           = 3
+	ANYDBVER_ANSIBLE_PROBLEM                 = 4
+	ANYDBVER_DOCKER_IMAGE_MIXED_WITH_ANSIBLE = 5
 )
 
 func HandleDockerProblem(logger *log.Logger, err error) {
-		if strings.Contains(err.Error(), "permission denied while trying to connect") {
-			logger.Println("The user is not allowed to run docker command, https://docs.docker.com/engine/install/linux-postinstall/")
-			os.Exit(ANYDBVER_ERROR_NOT_CONFIGURED)
-		}
+	if strings.Contains(err.Error(), "permission denied while trying to connect") {
+		logger.Println("The user is not allowed to run docker command, https://docs.docker.com/engine/install/linux-postinstall/")
+		os.Exit(ANYDBVER_ERROR_NOT_CONFIGURED)
+	}
 }
 
 func RunFatal(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp.Regexp, printCmd bool, env map[string]string) int {
@@ -89,10 +90,10 @@ func RunPipe(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp
 
 	if err := cmd.Start(); err != nil {
 		logger.Println(err)
-		return "",err
+		return "", err
 	}
 
-	full_output :=  ""
+	full_output := ""
 	// Function to copy the output from the pipes to the logger
 	copyOutput := func(r io.Reader, prefix string) {
 		scanner := bufio.NewScanner(r)
@@ -120,7 +121,7 @@ func RunPipe(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp
 	case err := <-done:
 		if err != nil {
 			if ignoreMsg != nil && ignoreMsg.Match([]byte(full_output)) {
-				return full_output,nil
+				return full_output, nil
 			}
 			logger.Printf("%s '%s'", errMsg, strings.Join(args, " "))
 			return full_output, errors.New("not ignoring errors")
@@ -128,7 +129,6 @@ func RunPipe(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp
 		return full_output, nil
 	}
 }
-
 
 func RunGetOutput(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp.Regexp, printCmd bool, env map[string]string, timeout int) (string, error) {
 	envVars := make([]string, 0)
@@ -156,7 +156,7 @@ func RunGetOutput(logger *log.Logger, args []string, errMsg string, ignoreMsg *r
 	go func() { done <- cmd.Wait() }()
 
 	select {
-	case <-time.After( time.Duration(timeout) * time.Second):
+	case <-time.After(time.Duration(timeout) * time.Second):
 		cmd.Process.Kill()
 		logger.Println("Command timed out")
 		return out.String(), errors.New("timeout")
@@ -171,12 +171,10 @@ func RunGetOutput(logger *log.Logger, args []string, errMsg string, ignoreMsg *r
 	}
 }
 
-
 func ExecCommandInContainer(logger *log.Logger, full_name string, cmd string, errMsg string) (string, error) {
-	cmd_args := []string{ "docker", "exec", "-i", full_name, "sh", "-c", cmd,}
+	cmd_args := []string{"docker", "exec", "-i", full_name, "sh", "-c", cmd}
 
 	env := map[string]string{}
 	ignoreMsg := regexp.MustCompile("ignore this")
 	return RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
 }
-
