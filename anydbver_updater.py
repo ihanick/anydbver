@@ -145,9 +145,6 @@ def save_postgresql_versions_to_sqlite(osver):
 
 
 def save_percona_postgresql_versions_to_sqlite(osver):
-    if osver == 'el9':
-        return
-
     db_file = 'anydbver_version.db'
     conn = None
     try:
@@ -1141,6 +1138,23 @@ def update_versions():
                                {"url": "http://repo.percona.com/ppg-16/yum/release/8/RPMS/x86_64",
                                 "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
                                {"url": "http://repo.percona.com/ppg-17/yum/release/8/RPMS/x86_64",
+                                "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
+                           ])
+    generate_versions_file("ppg.el9.txt",
+                           [
+                               {"url": "http://repo.percona.com/ppg-11/yum/release/9/RPMS/x86_64",
+                                "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
+                               {"url": "http://repo.percona.com/ppg-12/yum/release/9/RPMS/x86_64",
+                                "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
+                               {"url": "http://repo.percona.com/ppg-13/yum/release/9/RPMS/x86_64",
+                                "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
+                               {"url": "http://repo.percona.com/ppg-14/yum/release/9/RPMS/x86_64",
+                                "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
+                               {"url": "http://repo.percona.com/ppg-15/yum/release/9/RPMS/x86_64",
+                                "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
+                               {"url": "http://repo.percona.com/ppg-16/yum/release/9/RPMS/x86_64",
+                                "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
+                               {"url": "http://repo.percona.com/ppg-17/yum/release/9/RPMS/x86_64",
                                 "pattern": r'percona-postgresql\d+-([0-9.-]+)\.el\d+.x86_64.rpm'},
                            ])
 
