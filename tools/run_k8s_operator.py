@@ -240,7 +240,7 @@ def run_pg_operator(ns, op, db_ver, cluster_name, op_ver, standby, backup_type, 
         op_env["PGO_TARGET_NAMESPACE"] = ns
         run_fatal(["kubectl", "apply", "--server-side=true", "--force-conflicts", "-n", ns,
                   "-f", "./deploy/bundle.yaml"], "Can't deploy operator", r"already exists", env=op_env)
-        if StrictVersion(op_ver) > StrictVersion("2.1.0"):
+        if op_ver == "main" or StrictVersion(op_ver) > StrictVersion("2.1.0"):
             if not k8s_wait_for_ready(ns, "pgv2.percona.com/control-plane=postgres-operator"):
                 raise Exception("Kubernetes operator is not starting")
         elif not k8s_wait_for_ready(ns, "pg.percona.com/control-plane=postgres-operator"):
