@@ -122,7 +122,7 @@
       creates: "/etc/yum.repos.d/percona-pdps-8.0-release.repo"
   - name: install db packages
     when: >
-      ( percona_server_version != "" or percona_xtradb_cluster_version != "" or mysql_version != "" or mysql_router_version != "") and
+      ( percona_server_version != "" or percona_xtradb_cluster_version != "" or mysql_version != "" or mysql_router_version != "" or mydb_version != '') and
       (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
     yum:
       name: "{{ package_info['packages'].split('|') + ( [] if debug_packages == '' else package_info['debug_packages'].split('|')) + ( [] if replication_type != 'group' or soft == 'proxysql' else package_info['mysql_shell_packages'].split('|') ) + ( [] if not ('development' in db_features.split(',') and 'development_packages' in os[dist][soft]) else os[dist][soft].development_packages) + ( [] if not ( mysql_ndb_data_version != '' ) else os[dist][soft].data_packages ) + ( [] if not ( mysql_ndb_sql_version != '' ) else os[dist][soft].sql_packages ) + ( [] if not ( mysql_ndb_management_version != '' ) else os[dist][soft].management_packages ) + ( [] if not ( tests_enabled|bool and 'tests_packages' in os[dist][soft] ) else os[dist][soft].tests_packages) + ( [] if not ( tests_enabled|bool and 'tests_packages' in os[dist][soft] ) else package_info['tests_packages'].split('|')) + ( [] if not ( rocksdb_enabled|bool and 'rocksdb_packages' in package_info ) else package_info['rocksdb_packages'].split('|'))  + ( [] if not ( mysql_router_version != '' and 'mysql_router_packages' in package_info ) else package_info['mysql_router_packages'].split('|'))  }}"
