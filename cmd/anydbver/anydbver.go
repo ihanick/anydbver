@@ -1071,10 +1071,13 @@ func runPlaybook(logger *log.Logger, namespace string, ansible_hosts_run_file st
 
 	if dirInfo, err := os.Stat("roles"); err == nil && dirInfo.IsDir() {
 		realPath, err := filepath.Abs("roles")
+		commonPath, err := filepath.Abs("common")
 		if err == nil {
 			volumes = append(volumes, []string{
 				"-v",
 				realPath + ":/vagrant/roles:Z",
+				"-v",
+				commonPath + ":/vagrant/common:Z",
 			}...)
 		}
 	}

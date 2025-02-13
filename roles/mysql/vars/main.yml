@@ -15,6 +15,8 @@ package_info_sql: >
   if percona_xtradb_cluster_version != ""
   else "select version,os,arch,repo_url,repo_file,repo_enable_str, "+("'mysqlrouter'" if mysql_router_version != "" else "systemd_service")+" as systemd_service,cnf_file,packages,debug_packages,tests_packages,mysql_shell_packages,mysql_router_packages from mysql_server_version where version like '"+ mysql_version +"%' and os='"+ dist +"' and arch='"+ansible_architecture+"' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1"
   if mysql_version != ""
+  else "select version,os,arch,repo_url,repo_file,repo_enable_str, "+("'mysqlrouter'" if mysql_router_version != "" else "systemd_service")+" as systemd_service,cnf_file,packages,debug_packages,rocksdb_packages,tests_packages,mysql_shell_packages from mydb_version where version like '"+ percona_server_version +"%' and os='"+ dist +"' and arch='"+ansible_architecture+"' ORDER BY CAST(SUBSTR(version,1,INSTR(version,'.')-1) as integer) DESC, CAST(SUBSTR(version,INSTR(version,'.')+1, INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')-1 ) AS INTEGER) DESC, CAST( SUBSTR(version, INSTR(version,'.')+1+ INSTR(SUBSTR(version,INSTR(version,'.')+1),'.')  ) AS INTEGER) DESC LIMIT 1"
+  if mydb_version != ""
   else "" }}
 
 xtrabackup_package_info_sql: >

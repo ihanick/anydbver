@@ -113,7 +113,7 @@
   include_tasks: common/tasks/install_db_packages.yml
 
 - name: Install db packages (sqlite metadata)
-  when: percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != '' or mysql_router_version != ''
+  when: percona_server_version != '' or percona_xtradb_cluster_version != '' or mysql_version != '' or mysql_router_version != '' or mydb_version != ''
   block:
   - name: enable Percona Distribution for Percona Server MySQL 8.0 repo
     when: ( percona_server_version.startswith('8.0') or percona_xtradb_cluster_version.startswith('8.0') )
@@ -130,7 +130,7 @@
       disable_gpg_check: 'yes'
   - name: install db packages (deb)
     when: >
-      ( percona_server_version != "" or percona_xtradb_cluster_version != "" or mysql_version != "") and
+      ( percona_server_version != "" or percona_xtradb_cluster_version != "" or mysql_version != "" or mydb_version != "") and
       (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') 
     apt:
       deb: "{{item}}"

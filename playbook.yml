@@ -16,6 +16,7 @@
       ansible_distribution_release
       }}
     percona_server_version: "{{ lookup('vars', 'extra_percona_server_version', default=lookup('env', 'PS', default='') ) }}"
+    mydb_version: "{{ lookup('vars', 'extra_mydb_version', default=lookup('env', 'MYDB', default='') ) }}"
     rocksdb_enabled: "{{ lookup('vars', 'extra_rocksdb_enabled', default=lookup('env', 'ROCKSDB', default='') ) }}"
     tests_enabled: "{{ lookup('vars', 'extra_tests_enabled', default=lookup('env', 'TESTS', default='') ) }}"
     percona_xtrabackup_version: "{{ lookup('vars', 'extra_percona_xtrabackup_version', default=lookup('env','PXB',default='') ) }}"
@@ -302,6 +303,7 @@
     - name: MySQL Role
       when: >
         mysql_version != '' or
+        mydb_version != '' or
         percona_server_version != "" or
         percona_xtradb_cluster_version != "" or
         percona_xtrabackup_version != "" or
