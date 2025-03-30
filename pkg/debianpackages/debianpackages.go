@@ -3,6 +3,8 @@ package debianpackages
 import (
 	"bufio"
 	"fmt"
+  "io"
+  "compress/gzip"
 	"net/http"
 	"regexp"
 	"strings"
@@ -23,9 +25,22 @@ func ParsePackagesFromURL(url string) ([]PackageEntry, error) {
 		return nil, fmt.Errorf("failed to fetch URL: %s, status: %d", url, resp.StatusCode)
 	}
 
+  var reader io.Reader = resp.Body
+
+  isGzipped := resp.Header.Get("Content-Encoding") == "gzip" || strings.HasSuffix(url, ".gz")
+
+  if isGzipped {
+    gzReader, err := gzip.NewReader(resp.Body)
+    if err != nil {
+      return nil, fmt.Errorf("failed to create gzip reader: %v", err)
+    }
+    defer gzReader.Close()
+    reader = gzReader
+  }
+
 	var packages []PackageEntry
 	currentFields := make(map[string]string)
-	scanner := bufio.NewScanner(resp.Body)
+	scanner := bufio.NewScanner(reader)
 
 	for scanner.Scan() {
 		line := scanner.Text()

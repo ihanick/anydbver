@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+  "strings"
 	"path/filepath"
 	"regexp"
 
@@ -53,7 +54,8 @@ func CreateMinIOContainer(logger *log.Logger, namespace string, name string, cmd
 	schema := "http"
 	if _, ok := args["certs"]; !ok || args["certs"] != "none" {
 		MakeSelfSignedCerts(logger, namespace, name+"-create-certs", data_dir,
-			[]string{"localhost", "minio-*.example.net", "172.17.0.1"})
+      anydbver_common.MakeContainerHostName(logger, namespace, name),
+			[]string{"localhost", "minio-*.example.net", "172.17.0.1", name, anydbver_common.MakeContainerHostName(logger, namespace, name)})
 		cmd_args = append(cmd_args, []string{"--certs-dir", "/mnt/data/certs"}...)
 		schema = "https"
 	}
@@ -72,52 +74,58 @@ func CreateMinIOContainer(logger *log.Logger, namespace string, name string, cmd
 
 }
 
-func MakeSelfSignedCerts(logger *log.Logger, namespace string, name string, destdir string, domains []string) {
+func MakeSelfSignedCerts(logger *log.Logger, namespace string, name string, destdir string, cname string, domains []string) {
+  quotedDomains := make([]string, len(domains))
+  for i, domain := range domains {
+    quotedDomains[i] = `"` + domain + `"`
+  }
+  domainsStr := strings.Join(quotedDomains, ",")
+
 	create_script := `
 [ -f /data/certs/private.key ] && exit 0
 mkdir -p /data/certs
 cd /data/certs
-cfssl print-defaults config >ca-config.json
-cfssl print-defaults csr >ca-csr.json
-cat >ca-config.json <<EOF
-{
-    "signing": {
-        "default": {
-            "expiry": "43800h"
-        },
-        "profiles": {
-            "server": {
-                "expiry": "43800h",
-                "usages": [
-                    "signing",
-                    "key encipherment",
-                    "server auth"
-                ]
-            },
-            "client": {
-                "expiry": "43800h",
-                "usages": [
-                    "signing",
-                    "key encipherment",
-                    "client auth"
-                ]
-            },
-            "peer": {
-                "expiry": "43800h",
-                "usages": [
-                    "signing",
-                    "key encipherment",
-                    "server auth",
-                    "client auth"
-                ]
-            }
-        }
+cat <<EOF | cfssl gencert -initca - | cfssljson -bare ca
+  {
+    "CN": "Root CA",
+    "names": [
+      {
+        "O": "Support"
+      }
+    ],
+    "key": {
+      "algo": "rsa",
+      "size": 2048
     }
-}
+  }
 EOF
-cfssl gencert -initca ca-csr.json | cfssljson -bare ca -
-cfssl print-defaults csr | sed -e 's/"www.example.net"/"localhost","minio-*.example.net","172.17.0.1"/' >server.json
-cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=server server.json | cfssljson -bare server
+cat <<EOF > ca-config.json
+  {
+    "signing": {
+      "default": {
+        "expiry": "87600h",
+        "usages": ["signing", "key encipherment", "server auth", "client auth"]
+      }
+    }
+  }
+EOF
+
+cat <<EOF | cfssl gencert -ca=ca.pem  -ca-key=ca-key.pem -config=./ca-config.json - | cfssljson -bare server
+  {
+    "hosts": [ `+ domainsStr +` ],
+    "CN": "` + cname + `",
+    "names": [
+      {
+        "O": "Support"
+      }
+    ],
+    "key": {
+      "algo": "rsa",
+      "size": 2048
+    }
+  }
+EOF
+cfssl bundle -ca-bundle=ca.pem -cert=server.pem | cfssljson -bare server
 cp server.pem public.crt
 cp server-key.pem private.key
   `

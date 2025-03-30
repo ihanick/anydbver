@@ -16,7 +16,7 @@ func VersionFetch(program string, dbFile string) error {
 	}
 
 	for _, pu := range progUrls {
-		if strings.HasSuffix(pu.url, "/Packages") {
+		if strings.HasSuffix(pu.url, "/Packages") || strings.HasSuffix(pu.url, "/Packages.gz")  {
 			if err := VersionFetchFromDebianPackages(dbFile, program, pu); err != nil {
 				return fmt.Errorf("Can't get versions from debian packages file %w", err)
 			}
@@ -51,6 +51,13 @@ func VersionFetchFromDebianPackages(dbFile string, program string, pu programVer
 			switch program {
 			case "postgresql":
 				query := "REPLACE INTO postgresql_version VALUES(?,?,?,?,?,?,?,?,?)"
+				if _, err := db.Exec(query, version, pu.osver, pu.arch, "",
+					pu.repo_file, pu.repo_str,
+					"postgresql", fmt.Sprintf("%s=%s", pkgName, version), ""); err != nil {
+					return fmt.Errorf("Can't insert postgresql package via '%s' %w", query, err)
+				}
+			case "mariadb":
+				query := "REPLACE INTO mariadb_version VALUES(?,?,?,?,?,?,?,?,?)"
 				if _, err := db.Exec(query, version, pu.osver, pu.arch, "",
 					pu.repo_file, pu.repo_str,
 					"postgresql", fmt.Sprintf("%s=%s", pkgName, version), ""); err != nil {

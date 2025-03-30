@@ -943,16 +943,12 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 				if len(submatches) > 3 {
 					bucket = submatches[3]
 				}
-				ip, err := getNodeIp(provider, logger, namespace, node)
-				if err != nil {
-					fmt.Println("Error getting node ip:", err)
-				}
+
 				return fmt.Sprintf("%s='https://%s:%s@%s:9000%s'",
 					kwd,
 					url.QueryEscape(anydbver_common.ANYDBVER_MINIO_USER),
 					url.QueryEscape(anydbver_common.ANYDBVER_MINIO_PASS),
-					ip, bucket)
-
+					anydbver_common.MakeContainerHostName(logger, namespace, node), bucket)
 			}
 			return match
 		})

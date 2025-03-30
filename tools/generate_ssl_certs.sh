@@ -1,8 +1,8 @@
 #!/bin/bash
 CLIENT_CN="$1"
 SERVER_CN="$2"
-IPNAME=$(echo $SERVER_CN|cut -d. -f 1).$(node_ip.sh).nip.io
-if [ ! -f /usr/local/bin/cfssl ] ; then
+IPNAME=$(echo $SERVER_CN | cut -d. -f 1).$(node_ip.sh).nip.io
+if [ ! -f /usr/local/bin/cfssl ]; then
   VERSION=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
   VNUMBER=${VERSION#"v"}
   curl -sL --output /usr/local/bin/cfssl https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssl_${VNUMBER}_linux_amd64
@@ -27,7 +27,7 @@ cat <<EOF | cfssl gencert -initca - | cfssljson -bare ca
   }
 EOF
 
-cat <<EOF > ca-config.json
+cat <<EOF >ca-config.json
   {
     "signing": {
       "default": {
@@ -39,7 +39,7 @@ cat <<EOF > ca-config.json
 EOF
 
 IP=$(node_ip.sh)
-cat <<EOF | cfssl gencert -ca=ca.pem  -ca-key=ca-key.pem -config=./ca-config.json - | cfssljson -bare server
+cat <<EOF | cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=./ca-config.json - | cfssljson -bare server
   {
     "hosts": [
       "*.percona.local",
@@ -60,8 +60,7 @@ cat <<EOF | cfssl gencert -ca=ca.pem  -ca-key=ca-key.pem -config=./ca-config.jso
 EOF
 cfssl bundle -ca-bundle=ca.pem -cert=server.pem | cfssljson -bare server
 
-
-cat <<EOF | cfssl gencert -ca=ca.pem  -ca-key=ca-key.pem -config=./ca-config.json - | cfssljson -bare client
+cat <<EOF | cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=./ca-config.json - | cfssljson -bare client
   {
     "hosts": [
       "*.percona.local",
