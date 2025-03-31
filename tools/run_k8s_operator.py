@@ -286,7 +286,10 @@ def cluster_labels(op, op_ver, cluster_name):
         return "app.kubernetes.io/instance={},app.kubernetes.io/component=mongod".format(cluster_name)
     elif op == "percona-postgresql-operator":
         if op_ver.startswith("2"):
-            return "postgres-operator.crunchydata.com/cluster={},postgres-operator.crunchydata.com/role=master".format(cluster_name)
+            if StrictVersion(op_ver) >= StrictVersion("2.6.0"):
+                return "postgres-operator.crunchydata.com/cluster={},postgres-operator.crunchydata.com/role=primary".format(cluster_name)
+            else:
+                return "postgres-operator.crunchydata.com/cluster={},postgres-operator.crunchydata.com/role=master".format(cluster_name)
         else:
             return "name={}".format(cluster_name)
 

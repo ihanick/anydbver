@@ -2684,7 +2684,7 @@ INSERT INTO general_version VALUES('1.0.17-4','el8','x86_64','sysbench');
 INSERT INTO general_version VALUES('1.0.18-6','el8','x86_64','sysbench');
 INSERT INTO general_version VALUES('1.0.19-6','el8','x86_64','sysbench');
 INSERT INTO general_version VALUES('1.0.20-6','el8','x86_64','sysbench');
-INSERT INTO general_version VALUES('0.1.19','','','anydbver');
+INSERT INTO general_version VALUES('0.1.20','','','anydbver');
 INSERT INTO general_version VALUES('3.1.4-1','el8','x86_64','percona-orchestrator');
 INSERT INTO general_version VALUES('3.2.4-1','el8','x86_64','percona-orchestrator');
 INSERT INTO general_version VALUES('3.2.5-1','el8','x86_64','percona-orchestrator');
