@@ -41,6 +41,17 @@ var (
 	date    = "unknown"
 )
 
+type ContainerConfig struct {
+    Name        string
+    OSVersion   string
+    Privileged  bool
+    ExposePort  string
+    Provider    string
+    Namespace   string
+    Memory      string
+    CPUs        string
+}
+
 func getNetworkName(logger *log.Logger, namespace string) string {
 	return anydbver_common.MakeContainerHostName(logger, namespace, "anydbver")
 }
@@ -383,31 +394,30 @@ func ConvertStringToMap(input string) map[string]string {
 	return result
 }
 
-func createNamespace(logger *log.Logger, osvers map[string]string, privileged map[string]string, expose_ports map[string]string, provider string, namespace string) {
+func createNamespace(logger *log.Logger, containers []ContainerConfig, namespace string) {
 	network := getNetworkName(logger, namespace)
-	if provider == "docker" || provider == "kubectl" {
-		args := []string{"docker", "network", "create", network}
-		env := map[string]string{}
-		errMsg := "Error creating docker network"
-		ignoreMsg := regexp.MustCompile("already exists")
-		runtools.RunFatal(logger, args, errMsg, ignoreMsg, true, env)
-	}
-	for node, value := range osvers {
-		privileged_container := true
-		if val, ok := privileged[node]; ok {
-			if priv, err := strconv.ParseBool(val); err == nil {
-				privileged_container = priv
-			}
-		}
-		expose_port := ""
-		if ep, ok := expose_ports[node]; ok {
-			expose_port = ep
-		}
-		createContainer(logger, node, value, privileged_container, expose_port, provider, namespace)
-	}
+  netCreated := false
+  for _, container := range containers {
+    if netCreated == false && (container.Provider == "docker" || container.Provider == "kubectl") {
+      args := []string{"docker", "network", "create", network}
+      env := map[string]string{}
+      errMsg := "Error creating docker network"
+      ignoreMsg := regexp.MustCompile("already exists")
+      runtools.RunFatal(logger, args, errMsg, ignoreMsg, true, env)
+      netCreated = true
+    }
+
+    createContainer(logger, container)
+  }
 }
 
-func createContainer(logger *log.Logger, name string, osver string, privileged bool, expose_port string, provider string, namespace string) {
+func createContainer(logger *log.Logger, config ContainerConfig) {
+  name := config.Name
+  osver := config.OSVersion
+  privileged := config.Privileged
+  expose_port := config.ExposePort
+  provider := config.Provider
+  namespace := config.Namespace
 	user := anydbver_common.GetUser(logger)
 	fmt.Printf("Creating container with name %s, OS %s, privileged=%t, provider=%s, namespace=%s...\n", name, osver, privileged, provider, namespace)
 
@@ -422,6 +432,12 @@ func createContainer(logger *log.Logger, name string, osver string, privileged b
 		"--tmpfs", "/run", "--tmpfs", "/run/lock",
 		"-v", "/sys/fs/cgroup:/sys/fs/cgroup",
 		"--hostname", name}
+  if config.Memory != "" {
+    args = append(args, "--memory=" + config.Memory)
+  }
+  if config.CPUs != "" {
+    args = append(args, "--cpus=" + config.CPUs)
+  }
 	if privileged {
 		args = append(args, []string{
 			"--privileged",
@@ -1211,7 +1227,7 @@ mirrors:
 	runtools.RunPipe(logger, k3d_create_cmd, errMsg, ignoreMsg, true, env)
 }
 
-func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider string, namespace string, args []string, verbose bool) {
+func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider string, namespace string, args []string, verbose bool, memory string, cpus string) {
 	privileged := ""
 	re_lastosver := regexp.MustCompile(`=[^=]+$`)
 	osvers := "node0=el8"
@@ -1263,7 +1279,23 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 		}
 	}
 	anydbver_common.CreateSshKeysForContainers(logger, namespace)
-	createNamespace(logger, ConvertStringToMap(osvers), ConvertStringToMap(privileged), expose_ports, provider, namespace)
+  containers := []ContainerConfig{}
+  priv_map := ConvertStringToMap(privileged)
+	for node, value := range ConvertStringToMap(osvers) {
+		privileged_container := true
+		if val, ok := priv_map[node]; ok {
+			if priv, err := strconv.ParseBool(val); err == nil {
+				privileged_container = priv
+			}
+		}
+		expose_port := ""
+		if ep, ok := expose_ports[node]; ok {
+			expose_port = ep
+		}
+
+    containers = append(containers, ContainerConfig{Name: node, OSVersion: value, Privileged: privileged_container, ExposePort: expose_port, Provider: provider, Namespace: namespace, Memory: memory, CPUs: cpus})
+  }
+	createNamespace(logger, containers, namespace)
 	var nodeIdxs []int
 	for k := range nodeDefinitions {
 		kStr, _ := strings.CutPrefix(k, "node")
@@ -1576,6 +1608,8 @@ func helpDeployCommands(logger *log.Logger, provider string, args []string) {
 func main() {
 	var provider string
 	var namespace string
+  var memory string
+  var cpus string
 	var verbose bool
 
 	if Version == "unknown" {
@@ -1615,11 +1649,30 @@ func main() {
 		Short: "Create a namespace with containers",
 		Args:  cobra.ExactArgs(1), // Expect exactly one positional argument (name)
 		Run: func(cmd *cobra.Command, args []string) {
-			name := args[0]
-			os, _ := cmd.Flags().GetString("os")
-			expose_ports, _ := cmd.Flags().GetString("expose")
+			namespace := args[0]
+			osvers, _ := cmd.Flags().GetString("os")
+			expose_ports_str, _ := cmd.Flags().GetString("expose")
 			privileged, _ := cmd.Flags().GetString("privileged")
-			createNamespace(logger, ConvertStringToMap(os), ConvertStringToMap(privileged), ConvertStringToMap(expose_ports), provider, name)
+
+      containers := []ContainerConfig{}
+      priv_map := ConvertStringToMap(privileged)
+      expose_ports := ConvertStringToMap(expose_ports_str)
+      provider := "docker"
+      for node, value := range ConvertStringToMap(osvers) {
+        privileged_container := true
+        if val, ok := priv_map[node]; ok {
+          if priv, err := strconv.ParseBool(val); err == nil {
+            privileged_container = priv
+          }
+        }
+        expose_port := ""
+        if ep, ok := expose_ports[node]; ok {
+          expose_port = ep
+        }
+
+        containers = append(containers, ContainerConfig{Name: node, OSVersion: value, Privileged: privileged_container, ExposePort: expose_port, Provider: provider, Namespace: namespace})
+      }
+      createNamespace(logger, containers, namespace)
 		},
 	}
 	var listNsCmd = &cobra.Command{
@@ -1716,7 +1769,7 @@ func main() {
 			os, _ := cmd.Flags().GetString("os")
 			expose_port, _ := cmd.Flags().GetString("expose")
 			privileged, _ := cmd.Flags().GetBool("privileged")
-			createContainer(logger, name, os, privileged, expose_port, provider, namespace)
+      createContainer(logger, ContainerConfig{Name: name, OSVersion: os, Privileged: privileged, ExposePort: expose_port, Provider: provider, Namespace: namespace} )
 		},
 	}
 
@@ -1737,7 +1790,7 @@ func main() {
 			if !keep {
 				deleteNamespace(logger, provider, namespace)
 			}
-			deployHosts(logger, anydbver_common.GetAnsibleInventory(logger, namespace), provider, namespace, args, verbose)
+			deployHosts(logger, anydbver_common.GetAnsibleInventory(logger, namespace), provider, namespace, args, verbose, memory, cpus)
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			if len(args) != 0 {
@@ -1773,6 +1826,8 @@ func main() {
 
 	rootCmd.PersistentFlags().StringVarP(&provider, "provider", "p", "", "Container provider")
 	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "", "Namespace")
+	rootCmd.PersistentFlags().StringVarP(&memory, "memory", "m", "", "Default memory amount per node")
+	rootCmd.PersistentFlags().StringVarP(&cpus, "cpus", "", "", "Default number of CPU core per node")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "Verbose ansible output")
 
 	rootCmd.AddCommand(listCmd)
