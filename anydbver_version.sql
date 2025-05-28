@@ -2128,6 +2128,7 @@ INSERT INTO tests VALUES(41,'psmdb replica set with pbm s3','anydbver deploy min
 INSERT INTO tests VALUES(42,'pg with haproxy and http check','anydbver deploy haproxy-pg:node1,node2,node3 node1 pg:clustercheck node2 pg:master=node1,clustercheck node3 pg:master=node1,clustercheck');
 INSERT INTO tests VALUES(43,'barman rsync','anydbver deploy pg node1 barman:source=node0');
 INSERT INTO tests VALUES(44,'barman streaming-only','anydbver deploy pg node1 barman:source=node0,method=streaming-only pg');
+INSERT INTO tests VALUES(45,'patroni standby','anydbver deploy ppg:16 patroni:cluster=cluster11 node1 ppg:16,master=node0  patroni:master=node0,cluster=cluster11 node2 ppg:16,master=node0 patroni:master=node0,cluster=cluster11   node3 ppg:16 patroni:standby=node0,cluster=cluster12  node4 ppg:16,master=node3 patroni:master=node3,cluster=cluster12');
 CREATE TABLE test_cases(
   test_id int,
   cmd varchar(1000)
@@ -2168,6 +2169,7 @@ INSERT INTO test_cases VALUES(40,'anydbver exec node1 -- sysbench   --db-driver=
 INSERT INTO test_cases VALUES(41,'anydbver exec node1 -- bash -ilc "pbm status"|grep -q S3');
 INSERT INTO test_cases VALUES(43,'sleep 60;anydbver exec node1 -- sudo -u barman barman backup node0');
 INSERT INTO test_cases VALUES(44,'sleep 60;anydbver exec node1 -- sudo -u barman barman backup node0');
+INSERT INTO test_cases VALUES(45,'echo \"patronictl list | grep -q Standby\" | anydbver exec node3');
 CREATE TABLE mariadb_version(
   version varchar(20),
   os varchar(20),
@@ -3154,6 +3156,7 @@ INSERT INTO ansible_arguments VALUES('mydb','start-db','%','','extra_start_db','
 INSERT INTO ansible_arguments VALUES('mydb','mysql-router','%','','extra_mysql_router_version','percona-server',1,NULL);
 INSERT INTO ansible_arguments VALUES('mydb','nogtid','%','','extra_replication_type','nogtid',2,NULL);
 INSERT INTO ansible_arguments VALUES('mydb','nogtid','%','','extra_db_opts_file','mysql/async-repl-nogtid.cnf',2,NULL);
+INSERT INTO ansible_arguments VALUES('patroni','standby','%','NODE','extra_patroni_standby','node0',1,NULL);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,
