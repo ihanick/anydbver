@@ -18,5 +18,5 @@
 
 - name: Setup patroni
   command:
-    cmd: /bin/bash /vagrant/tools/setup_patroni.sh "{{ cluster_name }}" "{{ db_password }}" "{{ etcd_ip }}"
+    cmd: /bin/bash /vagrant/tools/setup_patroni.sh "{{ cluster_name }}" "{{ db_password }}" "{{ etcd_ip }}" "{{ patroni_standby }}"
     creates: /root/patroni.configured

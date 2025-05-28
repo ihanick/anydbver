@@ -4,6 +4,7 @@ SECRET="$2"
 NODE_IP=$(node_ip.sh)
 LOCAL_NET=$(ip --brief addr ls|grep -F $NODE_IP|head -n 1|awk '{print $3}')
 FIRST_SERVER="$3"
+STANDBY="$4"
 source /etc/etcd/etcd.conf
 
 PATRONI_CFG=/etc/patroni/${ETCD_NAME}.yml
@@ -45,8 +46,17 @@ chmod +x /usr/local/bin/setup_cluster.sh
 
 /usr/local/bin/setup_cluster.sh
 
+if [[ ${STANDBY} != "" ]]; then
+	STANDBY_CONF="
+    standby_cluster:
+      host: ${STANDBY}
+      port: 5432"
+else
+   STANDBY_CONF=""
+fi
+
 cat > /etc/patroni/${ETCD_NAME}.yml << EOF
-scope: stampede
+scope: ${CLUSTER}
 #namespace: /service/
 name: ${ETCD_NAME}
 restapi:
@@ -57,7 +67,7 @@ etcd3:
 bootstrap:
  # this section will be written into Etcd:/<namespace>/<scope>/config after initializing new cluster
  # and all other cluster members will use it as a global configuration
- dcs:
+ dcs:${STANDBY_CONF}
     ttl: 30
     loop_wait: 10
     retry_timeout: 10
