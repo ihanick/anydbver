@@ -1,7 +1,7 @@
 #!/bin/bash
 PLATFORM=linux/amd64
 IMAGE_PUBLISHER=ihanick
-IMAGE_VERSION="0.1.20"
+IMAGE_VERSION="0.1.21"
 PLATFORM_TAG=""
 if uname -m | egrep -q 'aarch64|arm64'; then
   PLATFORM=linux/arm64
