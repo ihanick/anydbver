@@ -76,10 +76,10 @@ cert-manager                     Installs cert-manager.io TLS certificates manag
 k3d                              Using a specified node as a multi-server Kubernetes installation (Kubernetes nodes as nested Docker containers)
 k8s-minio                        Installs MinIO S3 Server inside Kubernetes
 k8s-pmm                          Installs Percona Monitoring and Management inside Kubernetes
-percona-postgresql-operator     Installs Percona Postgresql Operator and creates a postgresql cluster in Kubernetes
-percona-server-mongodb-operator Installs Percona Server for MongoDB Operator and creates a PSMDB cluster in Kubernetes
-percona-server-mysql-operator   Installs Percona Server for MySQL Operator (Group replication) and creates a MySQL cluster in Kubernetes
-percona-xtradb-cluster-operator Installs Percona XtraDB Cluster Operator and creates PXC cluster in Kubernetes
+percona-postgresql-operator      Installs Percona Postgresql Operator and creates a postgresql cluster in Kubernetes
+percona-server-mongodb-operator  Installs Percona Server for MongoDB Operator and creates a PSMDB cluster in Kubernetes
+percona-server-mysql-operator    Installs Percona Server for MySQL Operator (Group replication) and creates a MySQL cluster in Kubernetes
+percona-xtradb-cluster-operator  Installs Percona XtraDB Cluster Operator and creates PXC cluster in Kubernetes
 ```
 ## Help for specific keyword, keyword aliases
 It could be annoying to write long names like `percona-server-mongodb-operator` and you can use `k8s-psmdb`` alias instead.
