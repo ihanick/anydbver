@@ -8,6 +8,12 @@
     deb: "{{item}}"
   with_items: "{{os[dist].pmm_client.install_packages }}"
 
+
+- name: enable pmm3-client repo
+  when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux') and pmm_client_version.startswith('3.')
+  shell:
+    cmd: >-
+      percona-release enable pmm3-client
 - name: install PMM client rpm packages
   when: (ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux')
   yum:
@@ -16,7 +22,7 @@
     disable_gpg_check: yes
 
 - name: Setup pmm-admin PMM2
-  when: (pmm_client_version.startswith('2.') or pmm_client_version == '2' ) and pmm_url != ''
+  when: (pmm_client_version is regex('^[23](\..*)?$')) and (pmm_url != '')
   register: pmm_admin_config
   changed_when: "'already exists' not in pmm_admin_config.stdout"
   shell:

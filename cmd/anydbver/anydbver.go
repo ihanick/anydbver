@@ -24,7 +24,7 @@ import (
 	anydbver_common "github.com/ihanick/anydbver/pkg/common"
 	"github.com/ihanick/anydbver/pkg/runtools"
 	unmodified_docker "github.com/ihanick/anydbver/pkg/unmodified_docker"
-	"github.com/ihanick/anydbver/pkg/version_fetch"
+	versionfetch "github.com/ihanick/anydbver/pkg/version_fetch"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 	_ "modernc.org/sqlite"
@@ -42,14 +42,14 @@ var (
 )
 
 type ContainerConfig struct {
-    Name        string
-    OSVersion   string
-    Privileged  bool
-    ExposePort  string
-    Provider    string
-    Namespace   string
-    Memory      string
-    CPUs        string
+	Name       string
+	OSVersion  string
+	Privileged bool
+	ExposePort string
+	Provider   string
+	Namespace  string
+	Memory     string
+	CPUs       string
 }
 
 func getNetworkName(logger *log.Logger, namespace string) string {
@@ -65,7 +65,6 @@ func listContainers(logger *log.Logger, provider string, namespace string) {
 		ignoreMsg := regexp.MustCompile("ignore this")
 
 		containers, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env, runtools.COMMAND_TIMEOUT)
-
 		if err != nil {
 			logger.Printf("Can't list anydbver containers: %v", err)
 			runtools.HandleDockerProblem(logger, err)
@@ -112,7 +111,6 @@ func getContainerIp(provider string, logger *log.Logger, namespace string, conta
 
 func getNodeIp(provider string, logger *log.Logger, namespace string, name string) (string, error) {
 	if provider == "docker" || provider == "docker-image" {
-
 		return getContainerIp(provider, logger, namespace, anydbver_common.MakeContainerHostName(logger, namespace, name))
 	}
 	return "", errors.New("node ip is not found")
@@ -210,6 +208,7 @@ func FetchTests(logger *log.Logger, dbFile string, name string) ([]AnydbverTest,
 
 	return tests, nil
 }
+
 func FetchTestCases(logger *log.Logger, dbFile string, test_id int) ([]AnydbverTest, error) {
 	var tests []AnydbverTest
 
@@ -336,7 +335,6 @@ outer:
 
 	}
 	return nil
-
 }
 
 func deleteNamespace(logger *log.Logger, provider string, namespace string) {
@@ -396,28 +394,28 @@ func ConvertStringToMap(input string) map[string]string {
 
 func createNamespace(logger *log.Logger, containers []ContainerConfig, namespace string) {
 	network := getNetworkName(logger, namespace)
-  netCreated := false
-  for _, container := range containers {
-    if netCreated == false && (container.Provider == "docker" || container.Provider == "kubectl") {
-      args := []string{"docker", "network", "create", network}
-      env := map[string]string{}
-      errMsg := "Error creating docker network"
-      ignoreMsg := regexp.MustCompile("already exists")
-      runtools.RunFatal(logger, args, errMsg, ignoreMsg, true, env)
-      netCreated = true
-    }
+	netCreated := false
+	for _, container := range containers {
+		if netCreated == false && (container.Provider == "docker" || container.Provider == "kubectl") {
+			args := []string{"docker", "network", "create", network}
+			env := map[string]string{}
+			errMsg := "Error creating docker network"
+			ignoreMsg := regexp.MustCompile("already exists")
+			runtools.RunFatal(logger, args, errMsg, ignoreMsg, true, env)
+			netCreated = true
+		}
 
-    createContainer(logger, container)
-  }
+		createContainer(logger, container)
+	}
 }
 
 func createContainer(logger *log.Logger, config ContainerConfig) {
-  name := config.Name
-  osver := config.OSVersion
-  privileged := config.Privileged
-  expose_port := config.ExposePort
-  provider := config.Provider
-  namespace := config.Namespace
+	name := config.Name
+	osver := config.OSVersion
+	privileged := config.Privileged
+	expose_port := config.ExposePort
+	provider := config.Provider
+	namespace := config.Namespace
 	user := anydbver_common.GetUser(logger)
 	fmt.Printf("Creating container with name %s, OS %s, privileged=%t, provider=%s, namespace=%s...\n", name, osver, privileged, provider, namespace)
 
@@ -431,13 +429,14 @@ func createContainer(logger *log.Logger, config ContainerConfig) {
 		"--network", getNetworkName(logger, namespace),
 		"--tmpfs", "/run", "--tmpfs", "/run/lock",
 		"-v", "/sys/fs/cgroup:/sys/fs/cgroup",
-		"--hostname", name}
-  if config.Memory != "" {
-    args = append(args, "--memory=" + config.Memory)
-  }
-  if config.CPUs != "" {
-    args = append(args, "--cpus=" + config.CPUs)
-  }
+		"--hostname", name,
+	}
+	if config.Memory != "" {
+		args = append(args, "--memory="+config.Memory)
+	}
+	if config.CPUs != "" {
+		args = append(args, "--cpus="+config.CPUs)
+	}
 	if privileged {
 		args = append(args, []string{
 			"--privileged",
@@ -446,7 +445,8 @@ func createContainer(logger *log.Logger, config ContainerConfig) {
 			"--cap-add", "IPC_LOCK",
 			"--cap-add", "DAC_OVERRIDE",
 			"--cap-add", "AUDIT_WRITE",
-			"--security-opt", "seccomp=unconfined"}...)
+			"--security-opt", "seccomp=unconfined",
+		}...)
 	}
 	if len(expose_port) > 0 {
 		args = append(args, []string{"-p", expose_port}...)
@@ -514,7 +514,6 @@ func shellExec(logger *log.Logger, provider, namespace string, args []string) {
 		}
 		os.Exit(runtools.ANYDBVER_ANSIBLE_PROBLEM)
 	}
-
 }
 
 func containerExec(logger *log.Logger, provider, namespace string, args []string) {
@@ -560,7 +559,6 @@ func containerExec(logger *log.Logger, provider, namespace string, args []string
 		}
 
 		err := command.Wait()
-
 		if err != nil {
 			if exitErr, ok := err.(*exec.ExitError); ok {
 				os.Exit(exitErr.ExitCode())
@@ -570,7 +568,6 @@ func containerExec(logger *log.Logger, provider, namespace string, args []string
 		}
 		os.Exit(0)
 	}
-
 }
 
 func ExecuteQueries(dbFile string, table string, deployCmd string, values map[string]string) (string, error) {
@@ -613,7 +610,6 @@ func ExecuteQueries(dbFile string, table string, deployCmd string, values map[st
 	`
 
 	rows, err := db.Query(query, deployCmd, values["version"])
-
 	if err != nil {
 		return "", fmt.Errorf("failed to execute select query: %w", err)
 	}
@@ -780,7 +776,6 @@ func handleDBPreReq(logger *log.Logger, namespace string, name string, cmd strin
 	if cmd == "percona-server-mongodb" {
 		unmodified_docker.SetupMongoKeyFiles(logger, namespace, anydbver_common.MakeContainerHostName(logger, namespace, name), args)
 	} else if cmd == "percona-xtradb-cluster" {
-
 	}
 }
 
@@ -790,7 +785,6 @@ func handleDeploymentKeyword(logger *log.Logger, table string, keyword string) s
 		delete(deployment_keyword.Args, "version")
 	}
 	result, err := ExecuteQueries(anydbver_common.GetDatabasePath(logger), table, deployment_keyword.Cmd, deployment_keyword.Args)
-
 	if err != nil {
 		logger.Fatalf("Error: %v", err)
 		return ""
@@ -853,7 +847,6 @@ func runOperatorTool(logger *log.Logger, namespace string, name string, run_oper
 		}
 		os.Exit(runtools.ANYDBVER_ANSIBLE_PROBLEM)
 	}
-
 }
 
 func deployHost(provider string, logger *log.Logger, namespace string, name string, ansible_hosts_run_file string, args []string) {
@@ -934,7 +927,7 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 			content = content_with_ip
 		}
 
-		re_pmm_server := regexp.MustCompile(`(extra_pmm_url)='(node[0-9]+)'`)
+		re_pmm_server := regexp.MustCompile(`(extra_pmm_url)='(node[0-9]+)([:][0-9]+)?'`)
 		content = re_pmm_server.ReplaceAllStringFunc(content, func(match string) string {
 			submatches := re_pmm_server.FindStringSubmatch(match)
 			if len(submatches) > 2 {
@@ -944,7 +937,7 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 					fmt.Println("Error getting node ip:", err)
 				}
 
-				return fmt.Sprintf("%s='https://admin:%s@%s'", submatches[1], url.QueryEscape(anydbver_common.ANYDBVER_DEFAULT_PASSWORD), ip)
+				return fmt.Sprintf("%s='https://admin:%s@%s%s'", submatches[1], url.QueryEscape(anydbver_common.ANYDBVER_DEFAULT_PASSWORD), ip, submatches[3])
 			}
 			return match
 		})
@@ -1140,7 +1133,6 @@ func runPlaybook(logger *log.Logger, namespace string, ansible_hosts_run_file st
 		}
 		os.Exit(runtools.ANYDBVER_ANSIBLE_PROBLEM)
 	}
-
 }
 
 func createK3dCluster(logger *log.Logger, namespace string, name string, args map[string]string) {
@@ -1165,23 +1157,27 @@ func createK3dCluster(logger *log.Logger, namespace string, name string, args ma
 		cluster_name,
 		"-i", "rancher/k3s:" + args["version"],
 		"--network", getNetworkName(logger, namespace),
-		"-a", strconv.Itoa(k3d_agents)}
+		"-a", strconv.Itoa(k3d_agents),
+	}
 
 	k3d_create_cmd = append(k3d_create_cmd, []string{
 		"--k3s-arg", "--kubelet-arg=eviction-hard=imagefs.available<1%,nodefs.available<1%@server:*",
 		"--k3s-arg", "--kubelet-arg=eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%@server:*",
 		"--k3s-arg", "--kubelet-arg=eviction-hard=imagefs.available<1%,nodefs.available<1%@agent:*",
-		"--k3s-arg", "--kubelet-arg=eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%@agent:*"}...)
+		"--k3s-arg", "--kubelet-arg=eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%@agent:*",
+	}...)
 
 	if dir, ok := args["storage-path"]; ok {
 		k3d_create_cmd = append(k3d_create_cmd, []string{
 			"--volume",
-			dir + ":/var/lib/rancher/k3s/storage@all"}...)
+			dir + ":/var/lib/rancher/k3s/storage@all",
+		}...)
 	}
 
-  k3d_create_cmd = append(k3d_create_cmd, []string{
-    "--volume",
-    "/sys/kernel/debug:/sys/kernel/debug@all"}...)
+	k3d_create_cmd = append(k3d_create_cmd, []string{
+		"--volume",
+		"/sys/kernel/debug:/sys/kernel/debug@all",
+	}...)
 
 	if host_alias, ok := args["host-alias"]; ok {
 		k3d_create_cmd = append(k3d_create_cmd, []string{
@@ -1279,8 +1275,8 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 		}
 	}
 	anydbver_common.CreateSshKeysForContainers(logger, namespace)
-  containers := []ContainerConfig{}
-  priv_map := ConvertStringToMap(privileged)
+	containers := []ContainerConfig{}
+	priv_map := ConvertStringToMap(privileged)
 	for node, value := range ConvertStringToMap(osvers) {
 		privileged_container := true
 		if val, ok := priv_map[node]; ok {
@@ -1293,8 +1289,8 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 			expose_port = ep
 		}
 
-    containers = append(containers, ContainerConfig{Name: node, OSVersion: value, Privileged: privileged_container, ExposePort: expose_port, Provider: provider, Namespace: namespace, Memory: memory, CPUs: cpus})
-  }
+		containers = append(containers, ContainerConfig{Name: node, OSVersion: value, Privileged: privileged_container, ExposePort: expose_port, Provider: provider, Namespace: namespace, Memory: memory, CPUs: cpus})
+	}
 	createNamespace(logger, containers, namespace)
 	var nodeIdxs []int
 	for k := range nodeDefinitions {
@@ -1396,7 +1392,6 @@ func printAllDeployExamples(logger *log.Logger) {
 	if err = rows.Err(); err != nil {
 		logger.Printf("failed to scan row: %v", err)
 	}
-
 }
 
 func printKeywordList(logger *log.Logger) {
@@ -1510,7 +1505,7 @@ func printOneDeployCommandExamples(logger *log.Logger, args []string) {
 		fmt.Println(deployment_keyword.Cmd)
 		filter_commands = append(filter_commands, deployment_keyword.Cmd)
 		search_keyword = deployment_keyword.Cmd
-		for subcmd, _ := range deployment_keyword.Args {
+		for subcmd := range deployment_keyword.Args {
 			if subcmd != "version" && subcmd != "help" {
 				fmt.Println(subcmd)
 			}
@@ -1584,7 +1579,6 @@ func printOneDeployCommandExamples(logger *log.Logger, args []string) {
 	if err = rows.Err(); err != nil {
 		logger.Printf("failed to scan row: %v", err)
 	}
-
 }
 
 func helpDeployCommands(logger *log.Logger, provider string, args []string) {
@@ -1602,14 +1596,13 @@ func helpDeployCommands(logger *log.Logger, provider string, args []string) {
 	} else {
 		printOneDeployCommandExamples(logger, args)
 	}
-
 }
 
 func main() {
 	var provider string
 	var namespace string
-  var memory string
-  var cpus string
+	var memory string
+	var cpus string
 	var verbose bool
 
 	if Version == "unknown" {
@@ -1624,7 +1617,7 @@ func main() {
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	var rootCmd = &cobra.Command{
+	rootCmd := &cobra.Command{
 		Use:   "anydbver",
 		Short: "A tool for database environments automation",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
@@ -1635,16 +1628,15 @@ func main() {
 			dbFile := anydbver_common.GetDatabasePath(logger)
 			if ver, _ := ReadDatabaseVersion(dbFile); ver != strings.TrimPrefix(Version, "v") {
 				logger.Println("Version database update is available for", dbFile, ". Run anydbver update to see latest versions")
-
 			}
 		},
 		Version: fmt.Sprintf("\nVersion: %s\nBuild: %s using %s\nCommit: %s", Version, Build, GoVersion, Commit),
 	}
-	var namespaceCmd = &cobra.Command{
+	namespaceCmd := &cobra.Command{
 		Use:   "namespace",
 		Short: "Manage namespaces",
 	}
-	var nsCreateCmd = &cobra.Command{
+	nsCreateCmd := &cobra.Command{
 		Use:   "create [name]",
 		Short: "Create a namespace with containers",
 		Args:  cobra.ExactArgs(1), // Expect exactly one positional argument (name)
@@ -1654,35 +1646,35 @@ func main() {
 			expose_ports_str, _ := cmd.Flags().GetString("expose")
 			privileged, _ := cmd.Flags().GetString("privileged")
 
-      containers := []ContainerConfig{}
-      priv_map := ConvertStringToMap(privileged)
-      expose_ports := ConvertStringToMap(expose_ports_str)
-      provider := "docker"
-      for node, value := range ConvertStringToMap(osvers) {
-        privileged_container := true
-        if val, ok := priv_map[node]; ok {
-          if priv, err := strconv.ParseBool(val); err == nil {
-            privileged_container = priv
-          }
-        }
-        expose_port := ""
-        if ep, ok := expose_ports[node]; ok {
-          expose_port = ep
-        }
+			containers := []ContainerConfig{}
+			priv_map := ConvertStringToMap(privileged)
+			expose_ports := ConvertStringToMap(expose_ports_str)
+			provider := "docker"
+			for node, value := range ConvertStringToMap(osvers) {
+				privileged_container := true
+				if val, ok := priv_map[node]; ok {
+					if priv, err := strconv.ParseBool(val); err == nil {
+						privileged_container = priv
+					}
+				}
+				expose_port := ""
+				if ep, ok := expose_ports[node]; ok {
+					expose_port = ep
+				}
 
-        containers = append(containers, ContainerConfig{Name: node, OSVersion: value, Privileged: privileged_container, ExposePort: expose_port, Provider: provider, Namespace: namespace})
-      }
-      createNamespace(logger, containers, namespace)
+				containers = append(containers, ContainerConfig{Name: node, OSVersion: value, Privileged: privileged_container, ExposePort: expose_port, Provider: provider, Namespace: namespace})
+			}
+			createNamespace(logger, containers, namespace)
 		},
 	}
-	var listNsCmd = &cobra.Command{
+	listNsCmd := &cobra.Command{
 		Use:   "list",
 		Short: "List namespaces",
 		Run: func(cmd *cobra.Command, args []string) {
 			listNamespaces(provider, logger)
 		},
 	}
-	var deleteNsCmd = &cobra.Command{
+	deleteNsCmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete namespace",
 		Args:  cobra.ExactArgs(1), // Expect exactly one positional argument (name)
@@ -1690,14 +1682,14 @@ func main() {
 			deleteNamespace(logger, provider, args[0])
 		},
 	}
-	var destroyCmd = &cobra.Command{
+	destroyCmd := &cobra.Command{
 		Use:   "destroy",
 		Short: "Delete containers and clusters for current namespace",
 		Run: func(cmd *cobra.Command, args []string) {
 			deleteNamespace(logger, provider, namespace)
 		},
 	}
-	var updateCmd = &cobra.Command{
+	updateCmd := &cobra.Command{
 		Use:   "update",
 		Short: "Deletes current version information database and downloads latest one from https://github.com/ihanick/anydbver/blob/master/anydbver_version.sql",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -1712,7 +1704,7 @@ func main() {
 			}
 		},
 	}
-	var playbookCmd = &cobra.Command{
+	playbookCmd := &cobra.Command{
 		Use:   "playbook",
 		Short: "Run ansible playbook",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -1720,7 +1712,7 @@ func main() {
 		},
 	}
 
-	var testCmd = &cobra.Command{
+	testCmd := &cobra.Command{
 		Use:   "test",
 		Short: "Run tests",
 		Args:  cobra.ExactArgs(1), // Expect exactly one positional argument (name)
@@ -1749,18 +1741,18 @@ func main() {
 	rootCmd.AddCommand(testCmd)
 	rootCmd.AddCommand(playbookCmd)
 
-	var containerCmd = &cobra.Command{
+	containerCmd := &cobra.Command{
 		Use:   "container",
 		Short: "Manage containers",
 	}
-	var listCmd = &cobra.Command{
+	listCmd := &cobra.Command{
 		Use:   "list",
 		Short: "List containers",
 		Run: func(cmd *cobra.Command, args []string) {
 			listContainers(logger, provider, namespace)
 		},
 	}
-	var createCmd = &cobra.Command{
+	createCmd := &cobra.Command{
 		Use:   "create [name]",
 		Short: "Create a container",
 		Args:  cobra.ExactArgs(1), // Expect exactly one positional argument (name)
@@ -1769,7 +1761,7 @@ func main() {
 			os, _ := cmd.Flags().GetString("os")
 			expose_port, _ := cmd.Flags().GetString("expose")
 			privileged, _ := cmd.Flags().GetBool("privileged")
-      createContainer(logger, ContainerConfig{Name: name, OSVersion: os, Privileged: privileged, ExposePort: expose_port, Provider: provider, Namespace: namespace} )
+			createContainer(logger, ContainerConfig{Name: name, OSVersion: os, Privileged: privileged, ExposePort: expose_port, Provider: provider, Namespace: namespace})
 		},
 	}
 
@@ -1777,7 +1769,7 @@ func main() {
 	createCmd.Flags().StringP("expose", "p", "", "Expose port, docker -p")
 	createCmd.Flags().BoolP("privileged", "", true, "Whether the container should be privileged")
 
-	var deployCmd = &cobra.Command{
+	deployCmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "deploy hosts",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -1801,10 +1793,10 @@ func main() {
 	}
 	deployCmd.Flags().BoolP("keep", "", false, "do not remove existing containers and network")
 
-	//deployCmd.ValidArgsFunction = cobra.FixedCompletions(fetchDeployCompletions(logger), cobra.ShellCompDirectiveNoSpace)
+	// deployCmd.ValidArgsFunction = cobra.FixedCompletions(fetchDeployCompletions(logger), cobra.ShellCompDirectiveNoSpace)
 	rootCmd.AddCommand(deployCmd)
 
-	var execCmd = &cobra.Command{
+	execCmd := &cobra.Command{
 		Use:   "exec",
 		Short: "exec command in the container",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -1814,7 +1806,7 @@ func main() {
 
 	rootCmd.AddCommand(execCmd)
 
-	var shellCmd = &cobra.Command{
+	shellCmd := &cobra.Command{
 		Use:   "shell",
 		Short: "Start a shell with ansible and kubectl",
 		Run: func(cmd *cobra.Command, args []string) {

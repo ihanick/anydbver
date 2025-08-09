@@ -236,7 +236,7 @@
       block:
         - name: install percona yum repo
           yum:
-            name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+            name: http://repo.percona.com/yum/percona-release-latest.noarch.rpm
             state: present
             disable_gpg_check: True
         - name: Enable aarch64

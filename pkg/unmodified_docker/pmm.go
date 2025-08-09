@@ -3,6 +3,7 @@ package unmodifieddocker
 import (
 	"log"
 	"regexp"
+	"strings"
 
 	anydbver_common "github.com/ihanick/anydbver/pkg/common"
 	"github.com/ihanick/anydbver/pkg/runtools"
@@ -14,17 +15,23 @@ func CreatePMMContainer(logger *log.Logger, namespace string, name string, cmd s
 		"--name", anydbver_common.MakeContainerHostName(logger, namespace, name),
 		"-d",
 		"--network", anydbver_common.MakeContainerHostName(logger, namespace, "anydbver"),
-		"--hostname", anydbver_common.MakeContainerHostName(logger, namespace, name)}
+		"--hostname", anydbver_common.MakeContainerHostName(logger, namespace, name),
+	}
 	if mem, ok := args["memory"]; ok {
 		cmd_args = append(cmd_args, "--memory="+mem)
+	}
+
+	pmmPort := "8443"
+	if strings.HasPrefix(args["version"], "1.") || strings.HasPrefix(args["version"], "2.") {
+		pmmPort = "443"
 	}
 
 	if _, ok := args["expose"]; ok {
 		cmd_args = anydbver_common.AppendExposeParams(cmd_args, args)
 	} else if port, ok := args["port"]; ok {
-		cmd_args = append(cmd_args, "-p", port+":443")
+		cmd_args = append(cmd_args, "-p", port+":"+pmmPort)
 	} else {
-		cmd_args = append(cmd_args, "-p", ":443")
+		cmd_args = append(cmd_args, "-p", ":"+pmmPort)
 	}
 
 	cmd_args = append(cmd_args, args["docker-image"]+":"+args["version"])
