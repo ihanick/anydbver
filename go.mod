@@ -3,6 +3,7 @@ module github.com/ihanick/anydbver
 go 1.22
 
 require (
+	github.com/klauspost/compress v1.18.0
 	github.com/spf13/cobra v1.8.1
 	golang.org/x/term v0.21.0
 	modernc.org/sqlite v1.30.1
