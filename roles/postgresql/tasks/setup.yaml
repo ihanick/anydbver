@@ -62,7 +62,7 @@
         cmd: systemctl start "{{package_info['systemd_service']}}"
 
     - name: change postgresql password on debian-based
-      when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu')
+      when: (ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu') and replication_type == 'logical' or master_ip == ''
       shell:
         cmd: sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD '{{ db_password }}'"
 

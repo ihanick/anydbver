@@ -4,7 +4,10 @@ package main
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
@@ -50,6 +53,7 @@ type ContainerConfig struct {
 	Namespace  string
 	Memory     string
 	CPUs       string
+	DeployArgs []string // All deployment keywords (e.g., ["postgresql:14"]) for cache image
 }
 
 func getNetworkName(logger *log.Logger, namespace string) string {
@@ -337,6 +341,47 @@ outer:
 	return nil
 }
 
+func removeCacheImages(logger *log.Logger) {
+	user := anydbver_common.GetUser(logger)
+	cacheImagePattern := fmt.Sprintf("%s/anydbver-cache:*", user)
+
+	// List all cache images
+	args := []string{"docker", "images", "--format", "{{.Repository}}:{{.Tag}}", cacheImagePattern}
+	env := map[string]string{}
+	errMsg := "Error listing cache images"
+	ignoreMsg := regexp.MustCompile("ignore this")
+
+	output, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env, runtools.COMMAND_TIMEOUT)
+	if err != nil {
+		logger.Printf("Warning: Could not list cache images: %v\n", err)
+		return
+	}
+
+	images := slices.DeleteFunc(strings.Split(output, "\n"), func(e string) bool {
+		return strings.TrimSpace(e) == ""
+	})
+
+	if len(images) == 0 {
+		logger.Printf("No cache images found to remove\n")
+		return
+	}
+
+	logger.Printf("Removing %d cache image(s)...\n", len(images))
+
+	// Delete each cache image
+	for _, image := range images {
+		image = strings.TrimSpace(image)
+		if image == "" {
+			continue
+		}
+		deleteArgs := []string{"docker", "rmi", "-f", image}
+		errMsg := fmt.Sprintf("Error removing cache image %s", image)
+		ignoreMsg := regexp.MustCompile("No such image|image is being used|image is referenced")
+		runtools.RunFatal(logger, deleteArgs, errMsg, ignoreMsg, true, env)
+		logger.Printf("Removed cache image: %s\n", image)
+	}
+}
+
 func deleteNamespace(logger *log.Logger, provider string, namespace string) {
 	if provider == "docker" {
 		k3d_path, err := anydbver_common.GetK3dPath(logger)
@@ -409,6 +454,144 @@ func createNamespace(logger *log.Logger, containers []ContainerConfig, namespace
 	}
 }
 
+func computeSHA256(input string) string {
+	hash := sha256.Sum256([]byte(input))
+	return hex.EncodeToString(hash[:])
+}
+
+func getBaseImageForOS(osver string) string {
+	// Map OS versions to their base Docker images
+	baseImageMap := map[string]string{
+		"el7":          "centos:centos7",
+		"el8":          "rockylinux:8",
+		"el9":          "rockylinux:9",
+		"focal":        "ubuntu:focal",
+		"20.04":        "ubuntu:focal",
+		"ubuntu-20.04": "ubuntu:focal",
+		"ubuntu20.04":  "ubuntu:focal",
+		"jammy":        "ubuntu:jammy",
+		"22.04":        "ubuntu:jammy",
+		"ubuntu-22.04": "ubuntu:jammy",
+		"ubuntu22.04":  "ubuntu:jammy",
+		"noble":        "ubuntu:noble",
+		"24.04":        "ubuntu:noble",
+		"ubuntu-24.04": "ubuntu:noble",
+		"ubuntu24.04":  "ubuntu:noble",
+		"bookworm":     "debian:bookworm",
+		"debian-12":    "debian:bookworm",
+	}
+
+	if baseImage, ok := baseImageMap[osver]; ok {
+		return baseImage
+	}
+	// Default to rockylinux:8
+	return "rockylinux:8"
+}
+
+func buildCacheImage(logger *log.Logger, deployArgs []string, osver string, user string) string {
+	if len(deployArgs) == 0 {
+		return ""
+	}
+
+	// Generate ansible deployment arguments from deployment keywords
+	ansible_deployment_args := ""
+	for _, arg := range deployArgs {
+		deployment_keyword := ParseDeploymentKeyword(logger, arg)
+		// Skip master references that point to the same node (not applicable for cache)
+		if mstr, ok := deployment_keyword.Args["master"]; ok && mstr != "" {
+			// For cache, we can keep master but it won't be used during build
+		}
+		ansible_deployment_args = ansible_deployment_args + " " + handleDeploymentKeyword(logger, "ansible_arguments", arg)
+	}
+
+	// Add cache-specific extra vars
+	ansible_deployment_args = ansible_deployment_args + " extra_sync_is_required='0' extra_install_only='1'"
+
+	// Generate inventory line (similar to deployHost but for local connection)
+	inventoryLine := fmt.Sprintf("localhost ansible_connection=local ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no ' %s", strings.TrimSpace(ansible_deployment_args))
+
+	// Create a sanitized copy of the inventory line for hashing (ignore volatile keys)
+	sanitizedInventoryLine := inventoryLine
+	excludedKeys := []string{
+		"extra_cluster_name",
+		"extra_db_password",
+		"extra_db_user",
+		"extra_master_ip",
+		"extra_postgresql_version",
+		"extra_start_db",
+		"extra_mongo_replicaset",
+		"extra_mongo_shardsrv",
+		"extra_mongo_configsrv",
+		"extra_mongos_shard",
+		"extra_mongos_cfg",
+	}
+	for _, key := range excludedKeys {
+		re := regexp.MustCompile(`\s*` + regexp.QuoteMeta(key) + `='[^']*'`)
+		sanitizedInventoryLine = re.ReplaceAllString(sanitizedInventoryLine, "")
+	}
+
+	// Create a hash from the sanitized inventory line and OS version (so cache is insensitive to excluded keys)
+	hashInput := fmt.Sprintf("%s:%s", osver, strings.TrimSpace(sanitizedInventoryLine))
+	hash := computeSHA256(hashInput)
+	cacheImageName := fmt.Sprintf("%s/anydbver-cache:%s", user, hash)
+
+	// Check if image already exists
+	args := []string{"docker", "images", "-q", cacheImageName}
+	env := map[string]string{}
+	errMsg := "Error checking cache image"
+	ignoreMsg := regexp.MustCompile("ignore this")
+
+	output, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env, runtools.COMMAND_TIMEOUT)
+	if err == nil && strings.TrimSpace(output) != "" {
+		logger.Printf("Cache image %s already exists, skipping build\n", cacheImageName)
+		return cacheImageName
+	}
+
+	// Build the cache image
+	logger.Printf("Building cache image %s for deployment %v\n", cacheImageName, deployArgs)
+
+	// Base64 encode the inventory line to safely pass it as a build argument
+	inventoryLineEncoded := base64.StdEncoding.EncodeToString([]byte(inventoryLine))
+
+	// Find Dockerfile.anydbver.cache - check in current working directory first
+	cwd, err := os.Getwd()
+	if err != nil {
+		logger.Printf("Warning: Could not get current working directory, using basic OS image\n")
+		return ""
+	}
+
+	dockerfilePath := filepath.Join(cwd, "Dockerfile.anydbver.cache")
+	if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
+		// Try in the config directory
+		configDir := filepath.Dir(anydbver_common.GetConfigPath(logger))
+		dockerfilePath = filepath.Join(configDir, "Dockerfile.anydbver.cache")
+		if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
+			logger.Printf("Warning: Dockerfile.anydbver.cache not found in %s or %s, using basic OS image\n", cwd, configDir)
+			return ""
+		}
+		// Use config directory as build context if Dockerfile is there
+		cwd = configDir
+	}
+
+	// Get base image for the OS version
+	baseImage := getBaseImageForOS(osver)
+
+	// Pass the base64-encoded inventory line and base image as build arguments
+	buildArgs := []string{
+		"docker", "build",
+		"-t", cacheImageName,
+		"--build-arg", "BASE_IMAGE=" + baseImage,
+		"--build-arg", "ANSIBLE_INVENTORY_B64=" + inventoryLineEncoded,
+		"-f", dockerfilePath,
+		cwd,
+	}
+
+	errMsg = "Error building cache image"
+	runtools.RunFatal(logger, buildArgs, errMsg, ignoreMsg, true, env)
+
+	return cacheImageName
+}
+
 func createContainer(logger *log.Logger, config ContainerConfig) {
 	name := config.Name
 	osver := config.OSVersion
@@ -452,7 +635,17 @@ func createContainer(logger *log.Logger, config ContainerConfig) {
 		args = append(args, []string{"-p", expose_port}...)
 	}
 
-	args = append(args, anydbver_common.GetDockerImageName(osver, user))
+	// Use cache image if DeployArgs is provided, otherwise use basic OS image
+	imageName := anydbver_common.GetDockerImageName(osver, user)
+	if len(config.DeployArgs) > 0 {
+		cacheImageName := buildCacheImage(logger, config.DeployArgs, osver, user)
+		if cacheImageName != "" {
+			imageName = cacheImageName
+			logger.Printf("Using cache image %s for deployment %v\n", cacheImageName, config.DeployArgs)
+		}
+	}
+
+	args = append(args, imageName)
 	env := map[string]string{}
 	errMsg := "Error creating container"
 	ignoreMsg := regexp.MustCompile("ignore this")
@@ -1289,7 +1482,23 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 			expose_port = ep
 		}
 
-		containers = append(containers, ContainerConfig{Name: node, OSVersion: value, Privileged: privileged_container, ExposePort: expose_port, Provider: provider, Namespace: namespace, Memory: memory, CPUs: cpus})
+		// Extract all deployment keywords for cache image (skip os, docker-image, k3d, and operator commands)
+		deployArgs := []string{}
+		if nodeDef, ok := nodeDefinitions[node]; ok {
+			for _, arg := range nodeDef {
+				deployment_keyword := ParseDeploymentKeyword(logger, arg)
+				// Skip special commands that don't need cache images
+				if deployment_keyword.Cmd != "os" &&
+					deployment_keyword.Cmd != "k3d" &&
+					!strings.HasSuffix(deployment_keyword.Cmd, "-operator") {
+					if _, isDockerImage := deployment_keyword.Args["docker-image"]; !isDockerImage {
+						deployArgs = append(deployArgs, arg)
+					}
+				}
+			}
+		}
+
+		containers = append(containers, ContainerConfig{Name: node, OSVersion: value, Privileged: privileged_container, ExposePort: expose_port, Provider: provider, Namespace: namespace, Memory: memory, CPUs: cpus, DeployArgs: deployArgs})
 	}
 	createNamespace(logger, containers, namespace)
 	var nodeIdxs []int
@@ -1687,8 +1896,13 @@ func main() {
 		Short: "Delete containers and clusters for current namespace",
 		Run: func(cmd *cobra.Command, args []string) {
 			deleteNamespace(logger, provider, namespace)
+			removeCache, _ := cmd.Flags().GetBool("remove-cache")
+			if removeCache {
+				removeCacheImages(logger)
+			}
 		},
 	}
+	destroyCmd.Flags().BoolP("remove-cache", "", false, "Also remove anydbver-cache images")
 	updateCmd := &cobra.Command{
 		Use:   "update",
 		Short: "Deletes current version information database and downloads latest one from https://github.com/ihanick/anydbver/blob/master/anydbver_version.sql",
@@ -1761,7 +1975,7 @@ func main() {
 			os, _ := cmd.Flags().GetString("os")
 			expose_port, _ := cmd.Flags().GetString("expose")
 			privileged, _ := cmd.Flags().GetBool("privileged")
-			createContainer(logger, ContainerConfig{Name: name, OSVersion: os, Privileged: privileged, ExposePort: expose_port, Provider: provider, Namespace: namespace})
+			createContainer(logger, ContainerConfig{Name: name, OSVersion: os, Privileged: privileged, ExposePort: expose_port, Provider: provider, Namespace: namespace, DeployArgs: []string{}})
 		},
 	}
 

@@ -210,6 +210,12 @@ func VersionFetchFromRpmPackages(dbFile string, program string, pu programVersio
 				systemdService, packagesStr, ""); err != nil {
 				return fmt.Errorf("can't insert mariadb package via '%s' %w", query, err)
 			}
+		case "pmm-client":
+			// Save to general_version table for pmm-client
+			query := "REPLACE INTO general_version (version, os, arch, program) VALUES(?,?,?,?)"
+			if _, err := db.Exec(query, baseVersion, pu.osver, pu.arch, "pmm-client"); err != nil {
+				return fmt.Errorf("can't insert pmm-client package via '%s' %w", query, err)
+			}
 		}
 	}
 	fmt.Printf("OS: %s, Program: %s, Packages: %d, Versions: %d\n",

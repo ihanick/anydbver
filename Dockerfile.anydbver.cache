@@ -1,0 +1,132 @@
+ARG BASE_IMAGE=rockylinux:8
+FROM ${BASE_IMAGE}
+
+# Install ansible and dependencies - different commands for CentOS7, RedHat8/9, and Debian
+RUN if [ -f /etc/redhat-release ] && grep -q "release 7" /etc/redhat-release; then \
+        sed -i -e 's/mirror.centos.org/vault.centos.org/g' -e 's/^#.*baseurl=http/baseurl=http/g' -e 's/^mirrorlist=http/#mirrorlist=http/g' /etc/yum.repos.d/CentOS-*.repo; \
+        yum install -y epel-release; \
+        yum -y install rsync python3 ansible openssh-clients which; \
+        ansible-galaxy collection install theredgreek.sqlite; \
+    elif [ -f /etc/redhat-release ]; then \
+        dnf install -y epel-release; \
+        dnf -y install rsync python3 ansible openssh-clients which; \
+        ansible-galaxy collection install theredgreek.sqlite; \
+    else \
+        apt-get update && apt-get install -y python3-full python3-pip rsync && pip3 install --break-system-packages ansible; ansible-galaxy collection install theredgreek.sqlite; \
+    fi
+
+COPY roles /vagrant/roles
+COPY common /vagrant/common
+COPY configs /vagrant/configs
+COPY tools /vagrant/tools
+COPY library /vagrant/library
+COPY playbook.yml /vagrant/playbook.yml
+COPY anydbver_version.db /vagrant/anydbver_version.db
+
+ARG ANSIBLE_INVENTORY_B64
+RUN echo "$ANSIBLE_INVENTORY_B64" | base64 -d > /vagrant/inventory && cd /vagrant && cat inventory && ansible-playbook -i /vagrant/inventory /vagrant/playbook.yml
+
+ENV container=docker
+
+# Install system packages and tools - different for CentOS7, RedHat8/9, and Debian
+RUN if [ -f /etc/redhat-release ] && grep -q "release 7" /etc/redhat-release; then \
+        yum -y install openssh-server rsync python3 iproute procps-ng openssh-clients; \
+        if uname -m | grep x86_64 ; then \
+            curl -LO https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 ; \
+            chmod +x yq_linux_amd64; mv yq_linux_amd64 /usr/local/bin/yq ; \
+        else \
+            curl -LO https://github.com/mikefarah/yq/releases/latest/download/yq_linux_arm64 ; \
+            chmod +x yq_linux_arm64; mv yq_linux_arm64 /usr/local/bin/yq ; \
+        fi; \
+        yum clean all; \
+        systemctl enable sshd; \
+    elif [ -f /etc/redhat-release ]; then \
+        dnf -y install openssh-server rsync python3 iproute procps-ng openssh-clients; \
+        if grep -q "release 8" /etc/redhat-release; then \
+            dnf -y install epel-release; \
+        fi; \
+        dnf -y install kitty-terminfo.noarch vim less man; \
+        if uname -m | grep x86_64 ; then \
+            curl -LO https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 ; \
+            chmod +x yq_linux_amd64; mv yq_linux_amd64 /usr/local/bin/yq ; \
+        else \
+            curl -LO https://github.com/mikefarah/yq/releases/latest/download/yq_linux_arm64 ; \
+            chmod +x yq_linux_arm64; mv yq_linux_arm64 /usr/local/bin/yq ; \
+        fi; \
+        dnf clean all; \
+        systemctl enable sshd; \
+    else \
+        apt update; \
+        apt -y install openssh-server rsync python3-full iproute2 openssh-client gawk; \
+        if uname -m | grep x86_64 ; then \
+            curl -LO https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 ; \
+            chmod +x yq_linux_amd64; mv yq_linux_amd64 /usr/local/bin/yq ; \
+        else \
+            curl -LO https://github.com/mikefarah/yq/releases/latest/download/yq_linux_arm64 ; \
+            chmod +x yq_linux_arm64; mv yq_linux_arm64 /usr/local/bin/yq ; \
+        fi; \
+        apt clean; \
+        systemctl enable ssh; \
+    fi
+
+STOPSIGNAL SIGRTMIN+3
+EXPOSE 22
+
+# Mask services - different services for CentOS7, RedHat8/9, and Debian
+RUN if [ -f /etc/redhat-release ] && grep -q "release 7" /etc/redhat-release; then \
+        for service in \
+            console-getty.service \
+            dbus.service \
+            dbus.socket \
+            dev-hugepages.mount \
+            getty.target \
+            sys-fs-fuse-connections.mount \
+            systemd-logind.service \
+            systemd-remount-fs.service \
+            systemd-udevd \
+            systemd-vconsole-setup.service; \
+        do systemctl mask $service; done; \
+        rm -f /usr/lib/tmpfiles.d/systemd-nologin.conf; \
+    elif [ -f /etc/redhat-release ]; then \
+        for service in \
+            console-getty.service \
+            dbus.service \
+            dbus.socket \
+            dev-hugepages.mount \
+            getty.target \
+            sys-fs-fuse-connections.mount \
+            systemd-logind.service \
+            systemd-remount-fs.service \
+            systemd-udevd \
+            systemd-vconsole-setup.service \
+            dnf-makecache.timer; \
+        do systemctl mask $service; done; \
+    else \
+        for service in \
+            console-getty.service \
+            dbus.service \
+            dbus.socket \
+            dev-hugepages.mount \
+            getty.target \
+            sys-fs-fuse-connections.mount \
+            systemd-logind.service \
+            systemd-remount-fs.service \
+            systemd-udevd \
+            systemd-vconsole-setup.service \
+            systemd-networkd.socket \
+            systemd-networkd \
+            networkd-dispatcher \
+            systemd-networkd-wait-online; \
+        do systemctl mask $service; done; \
+    fi; \
+    mkdir -p /root/.ssh
+
+COPY tools/node_ip.sh /usr/bin/node_ip.sh
+COPY images-build/common/rc.local /etc/rc.local
+COPY images-build/common/rc-local.service /etc/systemd/system/rc-local.service
+RUN chown root:root /etc/rc.local; chmod 0755 /etc/rc.local ; systemctl enable rc-local
+VOLUME [ "/sys/fs/cgroup" ]
+#RUN chattr +C /var/log/journal
+#ADD install/journald.conf /etc/systemd/journald.conf
+#ADD install/system.conf   /etc/systemd/system.conf
+CMD [ "/usr/lib/systemd/systemd", "--system", "--unit=multi-user.target", "--log-target=console", "--log-level=debug", "--show-status=true" ]
