@@ -18,6 +18,9 @@ docker build --platform $PLATFORM -t rockylinux:8-sshd-systemd-$USER .
 cd ../rockylinux9
 cp ../../tools/node_ip.sh ../common/rc.local ../common/rc-local.service ./
 docker build --platform $PLATFORM -t rockylinux:9-sshd-systemd-$USER .
+cd ../rockylinux10
+cp ../../tools/node_ip.sh ../common/rc.local ../common/rc-local.service ./
+docker build --platform $PLATFORM -t rockylinux:10-sshd-systemd-$USER .
 cd ../focal
 cp ../../tools/node_ip.sh ../common/rc.local ../common/rc-local.service ./
 docker build --platform $PLATFORM -t ubuntu:focal-sshd-systemd-$USER .
