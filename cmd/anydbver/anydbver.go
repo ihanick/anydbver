@@ -572,27 +572,7 @@ func buildCacheImage(logger *log.Logger, deployArgs []string, osver string, user
 		configDir := filepath.Dir(anydbver_common.GetConfigPath(logger))
 		dockerfilePath = filepath.Join(configDir, "Dockerfile.anydbver.cache")
 		if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
-			// File not found in current directory or config directory, use embedded version
-			logger.Printf("Dockerfile.anydbver.cache not found in %s or %s, using embedded version\n", cwd, configDir)
-			// Create a temporary file in the build context directory with the embedded Dockerfile content
-			tmpFile, err := os.CreateTemp(cwd, "Dockerfile.anydbver.cache.*")
-			if err != nil {
-				logger.Printf("Error creating temporary Dockerfile: %v\n", err)
-				return ""
-			}
-			tmpDockerfile = tmpFile
-			if _, err := tmpFile.WriteString(embeddedDockerfileCache); err != nil {
-				logger.Printf("Error writing embedded Dockerfile to temp file: %v\n", err)
-				tmpFile.Close()
-				os.Remove(tmpFile.Name())
-				return ""
-			}
-			if err := tmpFile.Close(); err != nil {
-				logger.Printf("Error closing temp Dockerfile: %v\n", err)
-				os.Remove(tmpFile.Name())
-				return ""
-			}
-			dockerfilePath = tmpFile.Name()
+			return ""
 		} else {
 			// Use config directory as build context if Dockerfile is there
 			cwd = configDir
