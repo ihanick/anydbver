@@ -149,6 +149,8 @@ def get_docker_os_image(os_name):
     return ("rockylinux:8-sshd-systemd", "/usr/bin/python3")
   if os_name in ("el9", "rocky9", "rockylinux9", "centos9"):
     return ("rockylinux:9-sshd-systemd", "/usr/bin/python3")
+  if os_name in ("el10", "rocky10", "rockylinux10", "centos10"):
+    return ("rockylinux:10-sshd-systemd", "/usr/bin/python3")
   if os_name in ("el7", "centos7"):
     return ("centos:7-sshd-systemd", "/usr/bin/python")
   if os_name in ("jammy", "20.04", "ubuntu-20.04", "ubuntu20.04"):

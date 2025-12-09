@@ -7,6 +7,10 @@ RUN if [ -f /etc/redhat-release ] && grep -q "release 7" /etc/redhat-release; th
         yum install -y epel-release; \
         yum -y install rsync python3 ansible openssh-clients which; \
         ansible-galaxy collection install theredgreek.sqlite; \
+    elif [ -f /etc/redhat-release ] && grep -q "release 10" /etc/redhat-release; then \
+        dnf install -y epel-release; \
+        dnf -y install rsync python3 ansible-core openssh-clients which; \
+        ansible-galaxy collection install theredgreek.sqlite; \
     elif [ -f /etc/redhat-release ]; then \
         dnf install -y epel-release; \
         dnf -y install rsync python3 ansible openssh-clients which; \

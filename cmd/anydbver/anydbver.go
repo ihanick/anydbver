@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"database/sql"
+	_ "embed"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -32,6 +33,9 @@ import (
 	"golang.org/x/term"
 	_ "modernc.org/sqlite"
 )
+
+//go:embed Dockerfile.anydbver.cache
+var embeddedDockerfileCache string
 
 var (
 	Build     = "unknown"
@@ -465,6 +469,7 @@ func getBaseImageForOS(osver string) string {
 		"el7":          "centos:centos7",
 		"el8":          "rockylinux:8",
 		"el9":          "rockylinux:9",
+		"el10":         "rockylinux/rockylinux:10",
 		"focal":        "ubuntu:focal",
 		"20.04":        "ubuntu:focal",
 		"ubuntu-20.04": "ubuntu:focal",
@@ -561,16 +566,37 @@ func buildCacheImage(logger *log.Logger, deployArgs []string, osver string, user
 	}
 
 	dockerfilePath := filepath.Join(cwd, "Dockerfile.anydbver.cache")
+	var tmpDockerfile *os.File
 	if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
 		// Try in the config directory
 		configDir := filepath.Dir(anydbver_common.GetConfigPath(logger))
 		dockerfilePath = filepath.Join(configDir, "Dockerfile.anydbver.cache")
 		if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
-			logger.Printf("Warning: Dockerfile.anydbver.cache not found in %s or %s, using basic OS image\n", cwd, configDir)
-			return ""
+			// File not found in current directory or config directory, use embedded version
+			logger.Printf("Dockerfile.anydbver.cache not found in %s or %s, using embedded version\n", cwd, configDir)
+			// Create a temporary file in the build context directory with the embedded Dockerfile content
+			tmpFile, err := os.CreateTemp(cwd, "Dockerfile.anydbver.cache.*")
+			if err != nil {
+				logger.Printf("Error creating temporary Dockerfile: %v\n", err)
+				return ""
+			}
+			tmpDockerfile = tmpFile
+			if _, err := tmpFile.WriteString(embeddedDockerfileCache); err != nil {
+				logger.Printf("Error writing embedded Dockerfile to temp file: %v\n", err)
+				tmpFile.Close()
+				os.Remove(tmpFile.Name())
+				return ""
+			}
+			if err := tmpFile.Close(); err != nil {
+				logger.Printf("Error closing temp Dockerfile: %v\n", err)
+				os.Remove(tmpFile.Name())
+				return ""
+			}
+			dockerfilePath = tmpFile.Name()
+		} else {
+			// Use config directory as build context if Dockerfile is there
+			cwd = configDir
 		}
-		// Use config directory as build context if Dockerfile is there
-		cwd = configDir
 	}
 
 	// Get base image for the OS version
@@ -588,6 +614,13 @@ func buildCacheImage(logger *log.Logger, deployArgs []string, osver string, user
 
 	errMsg = "Error building cache image"
 	runtools.RunFatal(logger, buildArgs, errMsg, ignoreMsg, true, env)
+
+	// Clean up temporary Dockerfile if we created one
+	if tmpDockerfile != nil {
+		if err := os.Remove(tmpDockerfile.Name()); err != nil {
+			logger.Printf("Warning: Could not remove temporary Dockerfile %s: %v\n", tmpDockerfile.Name(), err)
+		}
+	}
 
 	return cacheImageName
 }

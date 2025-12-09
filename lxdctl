@@ -40,6 +40,11 @@ setupOS() {
     PACKAGES="$PACKAGES python3 tar"
     PYTHON_INT=/usr/bin/python3
     OS_TYPE=rpm
+  elif [ "x$1" == "xel10" ] ; then
+    IMG="images:rockylinux/10/$ARCH"
+    PACKAGES="$PACKAGES python3 tar"
+    PYTHON_INT=/usr/bin/python3
+    OS_TYPE=rpm
   elif [ "x$1" == "xrocky8" ] ; then
     IMG="images:rockylinux/8"
     PACKAGES="$PACKAGES python3 tar"

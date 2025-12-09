@@ -1,8 +1,8 @@
 #!/bin/bash
-# docker images --format "{{.Repository}}:{{.Tag}}" | grep -w "0.1.22"|xargs -n 1 docker push
+# docker images --format "{{.Repository}}:{{.Tag}}" | grep -w "0.1.23"|xargs -n 1 docker push
 PLATFORM=linux/amd64
 IMAGE_PUBLISHER=ihanick
-IMAGE_VERSION="0.1.22"
+IMAGE_VERSION="0.1.23"
 PLATFORM_TAG=""
 if uname -m | egrep -q 'aarch64|arm64'; then
   PLATFORM=linux/arm64
@@ -38,6 +38,6 @@ cd ../..
 git archive --format=tar HEAD | gzip -c >images-build/ansible-anydbver/anydbver.tar.gz
 cd images-build/ansible-anydbver/
 docker build -t rockylinux:8-anydbver-ansible-$USER .
-for img in centos:7-sshd-systemd-$USER rockylinux:8-sshd-systemd-$USER rockylinux:9-sshd-systemd-$USER ubuntu:focal-sshd-systemd-$USER ubuntu:jammy-sshd-systemd-$USER ubuntu:noble-sshd-systemd-$USER debian:bookworm-sshd-systemd-$USER rockylinux:8-anydbver-ansible-$USER; do
+for img in centos:7-sshd-systemd-$USER rockylinux:8-sshd-systemd-$USER rockylinux:9-sshd-systemd-$USER rockylinux:10-sshd-systemd-$USER ubuntu:focal-sshd-systemd-$USER ubuntu:jammy-sshd-systemd-$USER ubuntu:noble-sshd-systemd-$USER debian:bookworm-sshd-systemd-$USER rockylinux:8-anydbver-ansible-$USER; do
   docker image tag $img $IMAGE_PUBLISHER/${img/$USER/$IMAGE_VERSION}$PLATFORM_TAG
 done

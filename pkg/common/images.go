@@ -7,7 +7,7 @@ const (
 	IMAGE_PUBLISHER  = "ihanick"
 )
 
-var RELEASE_VERSION = "0.1.22"
+var RELEASE_VERSION = "0.1.23"
 
 func GetDockerImageName(osver string, user string) string {
 	platform_tag := ""
@@ -18,6 +18,7 @@ func GetDockerImageName(osver string, user string) string {
 		"el7":          IMAGE_PUBLISHER + "/centos:7-sshd-systemd-" + RELEASE_VERSION + platform_tag,
 		"el8":          IMAGE_PUBLISHER + "/rockylinux:8-sshd-systemd-" + RELEASE_VERSION + platform_tag,
 		"el9":          IMAGE_PUBLISHER + "/rockylinux:9-sshd-systemd-" + RELEASE_VERSION + platform_tag,
+		"el10":         IMAGE_PUBLISHER + "/rockylinux:10-sshd-systemd-" + RELEASE_VERSION + platform_tag,
 		"focal":        IMAGE_PUBLISHER + "/ubuntu:focal-sshd-systemd-" + RELEASE_VERSION + platform_tag,
 		"20.04":        IMAGE_PUBLISHER + "/ubuntu:focal-sshd-systemd-" + RELEASE_VERSION + platform_tag,
 		"ubuntu-20.04": IMAGE_PUBLISHER + "/ubuntu:focal-sshd-systemd-" + RELEASE_VERSION + platform_tag,
@@ -40,6 +41,7 @@ func GetDockerImageName(osver string, user string) string {
 			"el7":          "centos:7-sshd-systemd-" + user,
 			"el8":          "rockylinux:8-sshd-systemd-" + user,
 			"el9":          "rockylinux:9-sshd-systemd-" + user,
+			"el10":         "rockylinux:10-sshd-systemd-" + user,
 			"focal":        "ubuntu:focal-sshd-systemd-" + user,
 			"20.04":        "ubuntu:focal-sshd-systemd-" + user,
 			"ubuntu-20.04": "ubuntu:focal-sshd-systemd-" + user,
