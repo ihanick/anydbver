@@ -9,12 +9,12 @@ Running multi-node replication clusters in Docker and Kubernetes.
 ```
 mkdir -p ~/.local/bin
 cd ~/.local/bin
-wget -O - https://github.com/ihanick/anydbver/releases/download/v0.1.6/anydbver_Linux_x86_64.tar.gz | tar xz anydbver
+wget -O - https://github.com/ihanick/anydbver/releases/latest/download/anydbver_Linux_x86_64.tar.gz | tar xz anydbver
 ```
 3. Usually Linux distributions adding ~/.local/bin to the path and it's enough to login/logout. If not, please put anydbver program to the path
 
 # Upgrades
-1. Download a new version from [releases page](https://github.com/ihanick/anydbver/releases)
+1. Download the latest version from [releases page](https://github.com/ihanick/anydbver/releases) as mentioned in the Installation section above
 2. Execute `anydbver update` to update the version database using the sql file from the head
 
 # Getting examples
