@@ -661,12 +661,16 @@ def run_minio_server(args):
              "bitnami"], "helm repo update problem")
     helm_cmd = ["helm", "install", "minio-service", "bitnami/minio",
                 "--set", "fullnameOverride=minio-service",
+                "--set", "image.registry=docker.io",
+                "--set", "image.repository=bitnamilegacy/minio",
+                "--set", "console.image.registry=docker.io",
+                "--set", "console.image.repository=bitnamilegacy/minio-object-browser",
                 "--set", "auth.rootUser=REPLACE-WITH-AWS-ACCESS-KEY",
                 "--set", "auth.rootPassword=REPLACE-WITH-AWS-SECRET-KEY",
                 "--set", "service.type=ClusterIP",
                 "--set", "persistence.size=2G", "--set", "defaultBuckets=operator-testing"
                 ]
-
+                
     if args.ingress != "" and "dns" in params:
         helm_cmd = helm_cmd + [
             "--set", "ingress.enabled=true",
