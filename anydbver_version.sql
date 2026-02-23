@@ -3722,6 +3722,15 @@ INSERT INTO general_version VALUES('3.4.0-7','el10','aarch64','pmm-client');
 INSERT INTO general_version VALUES('3.4.1-7','el10','aarch64','pmm-client');
 INSERT INTO general_version VALUES('3.5.0-7','el10','aarch64','pmm-client');
 INSERT INTO general_version VALUES('3.6.0-7','el10','aarch64','pmm-client');
+INSERT INTO general_version VALUES('3.0.0-7','el8','aarch64','pmm-client');
+INSERT INTO general_version VALUES('3.1.0-7','el8','aarch64','pmm-client');
+INSERT INTO general_version VALUES('3.2.0-7','el8','aarch64','pmm-client');
+INSERT INTO general_version VALUES('3.3.0-7','el8','aarch64','pmm-client');
+INSERT INTO general_version VALUES('3.3.1-7','el8','aarch64','pmm-client');
+INSERT INTO general_version VALUES('3.4.0-7','el8','aarch64','pmm-client');
+INSERT INTO general_version VALUES('3.4.1-7','el8','aarch64','pmm-client');
+INSERT INTO general_version VALUES('3.5.0-7','el8','aarch64','pmm-client');
+INSERT INTO general_version VALUES('3.6.0-7','el8','aarch64','pmm-client');
 CREATE TABLE percona_backup_mongodb_version(
   version varchar(20),
   os varchar(20),
@@ -3791,6 +3800,16 @@ INSERT INTO percona_backup_mongodb_version VALUES('2.8.0-1','el8','x86_64','http
 INSERT INTO percona_backup_mongodb_version VALUES('2.9.0-1','el8','x86_64','https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-2.9.0/binary/redhat/8/x86_64/percona-backup-mongodb-2.9.0-1.el8.x86_64.rpm');
 INSERT INTO percona_backup_mongodb_version VALUES('2.9.1-1','el8','x86_64','https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-2.9.1/binary/redhat/8/x86_64/percona-backup-mongodb-2.9.1-1.el8.x86_64.rpm');
 INSERT INTO percona_backup_mongodb_version VALUES('2.10.0-1','el8','x86_64','https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-2.10.0/binary/redhat/8/x86_64/percona-backup-mongodb-2.10.0-1.el8.x86_64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.3.1-1','el8','aarch64','https://repo.percona.com/pbm/yum/release/8/RPMS/aarch64/percona-backup-mongodb-2.3.1-1.el8.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.4.0-1','el8','aarch64','https://repo.percona.com/pbm/yum/release/8/RPMS/aarch64/percona-backup-mongodb-2.4.0-1.el8.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.4.1-1','el8','aarch64','https://repo.percona.com/pbm/yum/release/8/RPMS/aarch64/percona-backup-mongodb-2.4.1-1.el8.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.5.0-1','el8','aarch64','https://repo.percona.com/pbm/yum/release/8/RPMS/aarch64/percona-backup-mongodb-2.5.0-1.el8.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.6.0-1','el8','aarch64','https://repo.percona.com/pbm/yum/release/8/RPMS/aarch64/percona-backup-mongodb-2.6.0-1.el8.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.7.0-1','el8','aarch64','https://repo.percona.com/pbm/yum/release/8/RPMS/aarch64/percona-backup-mongodb-2.7.0-1.el8.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.8.0-1','el8','aarch64','https://repo.percona.com/pbm/yum/release/8/RPMS/aarch64/percona-backup-mongodb-2.8.0-1.el8.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.9.0-1','el8','aarch64','https://repo.percona.com/pbm/yum/release/8/RPMS/aarch64/percona-backup-mongodb-2.9.0-1.el8.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.9.1-1','el8','aarch64','https://repo.percona.com/pbm/yum/release/8/RPMS/aarch64/percona-backup-mongodb-2.9.1-1.el8.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.10.0-1','el8','aarch64','https://repo.percona.com/pbm/yum/release/8/RPMS/aarch64/percona-backup-mongodb-2.10.0-1.el8.aarch64.rpm');
 INSERT INTO percona_backup_mongodb_version VALUES('2.0.3-1','el9','x86_64','https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-2.0.3/binary/redhat/9/x86_64/percona-backup-mongodb-2.0.3-1.el9.x86_64.rpm');
 INSERT INTO percona_backup_mongodb_version VALUES('2.0.4-1','el9','x86_64','https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-2.0.4/binary/redhat/9/x86_64/percona-backup-mongodb-2.0.4-1.el9.x86_64.rpm');
 INSERT INTO percona_backup_mongodb_version VALUES('2.0.5-1','el9','x86_64','https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-2.0.5/binary/redhat/9/x86_64/percona-backup-mongodb-2.0.5-1.el9.x86_64.rpm');
@@ -3808,6 +3827,16 @@ INSERT INTO percona_backup_mongodb_version VALUES('2.8.0-1','el9','x86_64','http
 INSERT INTO percona_backup_mongodb_version VALUES('2.9.0-1','el9','x86_64','https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-2.9.0/binary/redhat/9/x86_64/percona-backup-mongodb-2.9.0-1.el9.x86_64.rpm');
 INSERT INTO percona_backup_mongodb_version VALUES('2.9.1-1','el9','x86_64','https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-2.9.1/binary/redhat/9/x86_64/percona-backup-mongodb-2.9.1-1.el9.x86_64.rpm');
 INSERT INTO percona_backup_mongodb_version VALUES('2.10.0-1','el9','x86_64','https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-2.10.0/binary/redhat/9/x86_64/percona-backup-mongodb-2.10.0-1.el9.x86_64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.3.1-1','el9','aarch64','https://repo.percona.com/pbm/yum/release/9/RPMS/aarch64/percona-backup-mongodb-2.3.1-1.el9.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.4.0-1','el9','aarch64','https://repo.percona.com/pbm/yum/release/9/RPMS/aarch64/percona-backup-mongodb-2.4.0-1.el9.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.4.1-1','el9','aarch64','https://repo.percona.com/pbm/yum/release/9/RPMS/aarch64/percona-backup-mongodb-2.4.1-1.el9.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.5.0-1','el9','aarch64','https://repo.percona.com/pbm/yum/release/9/RPMS/aarch64/percona-backup-mongodb-2.5.0-1.el9.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.6.0-1','el9','aarch64','https://repo.percona.com/pbm/yum/release/9/RPMS/aarch64/percona-backup-mongodb-2.6.0-1.el9.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.7.0-1','el9','aarch64','https://repo.percona.com/pbm/yum/release/9/RPMS/aarch64/percona-backup-mongodb-2.7.0-1.el9.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.8.0-1','el9','aarch64','https://repo.percona.com/pbm/yum/release/9/RPMS/aarch64/percona-backup-mongodb-2.8.0-1.el9.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.9.0-1','el9','aarch64','https://repo.percona.com/pbm/yum/release/9/RPMS/aarch64/percona-backup-mongodb-2.9.0-1.el9.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.9.1-1','el9','aarch64','https://repo.percona.com/pbm/yum/release/9/RPMS/aarch64/percona-backup-mongodb-2.9.1-1.el9.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.10.0-1','el9','aarch64','https://repo.percona.com/pbm/yum/release/9/RPMS/aarch64/percona-backup-mongodb-2.10.0-1.el9.aarch64.rpm');
 CREATE TABLE ansible_arguments(cmd TEXT, subcmd TEXT, version_filter TEXT, arg_type TEXT CHECK(arg_type IN('VERSION', 'NODE', 'URL','CONST', '')), arg TEXT, arg_default TEXT, orderno int, always_add int);
 INSERT INTO ansible_arguments VALUES('percona-server','version','%','VERSION','extra_percona_server_version','8.4',1,1);
 INSERT INTO ansible_arguments VALUES('percona-server','user','%','','extra_db_user','root',1,1);
@@ -3971,7 +4000,7 @@ INSERT INTO k8s_arguments VALUES('percona-postgresql-operator','helm','%',NULL,'
 INSERT INTO k8s_arguments VALUES('percona-xtradb-cluster-operator','helm','%',NULL,'--helm','',1,NULL);
 INSERT INTO k8s_arguments VALUES('percona-server-mongodb-operator','helm','%',NULL,'--helm','',1,NULL);
 INSERT INTO k8s_arguments VALUES('percona-server-mysql-operator','helm','%',NULL,'--helm','',1,NULL);
-INSERT INTO k8s_arguments VALUES('k8s-minio','version','%','VERSION','--minio','2023.2.27,helm=bitnami',1,1);
+INSERT INTO k8s_arguments VALUES('k8s-minio','version','%','VERSION','--minio','latest,helm=minio',1,1);
 INSERT INTO k8s_arguments VALUES('k8s-minio','certs','%','','--minio-certs','self-signed',1,1);
 INSERT INTO k8s_arguments VALUES('k8s-pmm','version','%','VERSION','--pmm','2.42.0,helm=percona-helm-charts:1.3.14,certs=self-signed,namespace=monitoring',1,1);
 INSERT INTO k8s_arguments VALUES('percona-postgresql-operator','standby','%','','--standby','',1,NULL);
@@ -4032,6 +4061,7 @@ INSERT INTO download_sites VALUES('postgresql','https://download.postgresql.org/
 INSERT INTO download_sites VALUES('postgresql','https://download.postgresql.org/pub/repos/yum/13/redhat/rhel-8-aarch64/','postgresql13-server.*','el8','aarch64','/etc/yum.repos.d/pgdg-redhat-all.repo','');
 INSERT INTO download_sites VALUES('postgresql','https://download.postgresql.org/pub/repos/yum/13/redhat/rhel-8-x86_64/','postgresql13-server.*','el8','x86_64','/etc/yum.repos.d/pgdg-redhat-all.repo','');
 INSERT INTO download_sites VALUES('pmm-client','https://repo.percona.com/pmm3-client/yum/release/8/RPMS/x86_64/','pmm-client','el8','x86_64','','');
+INSERT INTO download_sites VALUES('pmm-client','https://repo.percona.com/pmm3-client/yum/release/8/RPMS/aarch64/','pmm-client','el8','aarch64','','');
 INSERT INTO download_sites VALUES('postgresql','https://download.postgresql.org/pub/repos/yum/17/redhat/rhel-9-aarch64/','postgresql17-server.*','el9','aarch64','/etc/yum.repos.d/pgdg-redhat-all.repo','');
 INSERT INTO download_sites VALUES('postgresql','https://download.postgresql.org/pub/repos/yum/17/redhat/rhel-9-x86_64/','postgresql17-server.*','el9','x86_64','/etc/yum.repos.d/pgdg-redhat-all.repo','');
 INSERT INTO download_sites VALUES('postgresql','https://download.postgresql.org/pub/repos/yum/16/redhat/rhel-9-aarch64/','postgresql16-server.*','el9','aarch64','/etc/yum.repos.d/pgdg-redhat-all.repo','');
@@ -4129,6 +4159,10 @@ INSERT INTO percona_server_mongodb_version VALUES('7.0.28-15','el8','x86_64','ht
 INSERT INTO percona_server_mongodb_version VALUES('7.0.28-15','el8','aarch64','http://repo.percona.com/yum/percona-release-latest.noarch.rpm','/etc/yum.repos.d/percona-psmdb-70-release.repo','psmdb-70','mongod','/etc/mongod.conf','percona-server-mongodb-tools-7.0.28-15.el8.aarch64|percona-mongodb-mongosh|percona-server-mongodb-server-7.0.28-15.el8.aarch64|percona-server-mongodb-mongos-7.0.28-15.el8.aarch64|percona-server-mongodb-7.0.28-15.el8.aarch64','gdb|percona-server-mongodb-debuginfo-7.0.28-15.el8.aarch64');
 INSERT INTO percona_server_mongodb_version VALUES('7.0.28-15','el9','x86_64','http://repo.percona.com/yum/percona-release-latest.noarch.rpm','/etc/yum.repos.d/percona-psmdb-70-release.repo','psmdb-70','mongod','/etc/mongod.conf','percona-server-mongodb-tools-7.0.28-15.el9.x86_64|percona-mongodb-mongosh|percona-server-mongodb-server-7.0.28-15.el9.x86_64|percona-server-mongodb-mongos-7.0.28-15.el9.x86_64|percona-server-mongodb-7.0.28-15.el9.x86_64','gdb|percona-server-mongodb-debuginfo-7.0.28-15.el9.x86_64');
 INSERT INTO percona_server_mongodb_version VALUES('7.0.28-15','el9','aarch64','http://repo.percona.com/yum/percona-release-latest.noarch.rpm','/etc/yum.repos.d/percona-psmdb-70-release.repo','psmdb-70','mongod','/etc/mongod.conf','percona-server-mongodb-tools-7.0.28-15.el9.aarch64|percona-mongodb-mongosh|percona-server-mongodb-server-7.0.28-15.el9.aarch64|percona-server-mongodb-mongos-7.0.28-15.el9.aarch64|percona-server-mongodb-7.0.28-15.el9.aarch64','gdb|percona-server-mongodb-debuginfo-7.0.28-15.el9.aarch64');
+INSERT INTO percona_server_mongodb_version VALUES('7.0.30-16','el8','x86_64','http://repo.percona.com/yum/percona-release-latest.noarch.rpm','/etc/yum.repos.d/percona-psmdb-70-release.repo','psmdb-70','mongod','/etc/mongod.conf','percona-server-mongodb-tools-7.0.30-16.el8.x86_64|percona-mongodb-mongosh|percona-server-mongodb-server-7.0.30-16.el8.x86_64|percona-server-mongodb-mongos-7.0.30-16.el8.x86_64|percona-server-mongodb-7.0.30-16.el8.x86_64','gdb|percona-server-mongodb-debuginfo-7.0.30-16.el8.x86_64');
+INSERT INTO percona_server_mongodb_version VALUES('7.0.30-16','el8','aarch64','http://repo.percona.com/yum/percona-release-latest.noarch.rpm','/etc/yum.repos.d/percona-psmdb-70-release.repo','psmdb-70','mongod','/etc/mongod.conf','percona-server-mongodb-tools-7.0.30-16.el8.aarch64|percona-mongodb-mongosh|percona-server-mongodb-server-7.0.30-16.el8.aarch64|percona-server-mongodb-mongos-7.0.30-16.el8.aarch64|percona-server-mongodb-7.0.30-16.el8.aarch64','gdb|percona-server-mongodb-debuginfo-7.0.30-16.el8.aarch64');
+INSERT INTO percona_server_mongodb_version VALUES('7.0.30-16','el9','x86_64','http://repo.percona.com/yum/percona-release-latest.noarch.rpm','/etc/yum.repos.d/percona-psmdb-70-release.repo','psmdb-70','mongod','/etc/mongod.conf','percona-server-mongodb-tools-7.0.30-16.el9.x86_64|percona-mongodb-mongosh|percona-server-mongodb-server-7.0.30-16.el9.x86_64|percona-server-mongodb-mongos-7.0.30-16.el9.x86_64|percona-server-mongodb-7.0.30-16.el9.x86_64','gdb|percona-server-mongodb-debuginfo-7.0.30-16.el9.x86_64');
+INSERT INTO percona_server_mongodb_version VALUES('7.0.30-16','el9','aarch64','http://repo.percona.com/yum/percona-release-latest.noarch.rpm','/etc/yum.repos.d/percona-psmdb-70-release.repo','psmdb-70','mongod','/etc/mongod.conf','percona-server-mongodb-tools-7.0.30-16.el9.aarch64|percona-mongodb-mongosh|percona-server-mongodb-server-7.0.30-16.el9.aarch64|percona-server-mongodb-mongos-7.0.30-16.el9.aarch64|percona-server-mongodb-7.0.30-16.el9.aarch64','gdb|percona-server-mongodb-debuginfo-7.0.30-16.el9.aarch64');
 
 -- PSMDB 6.0 new version
 INSERT INTO percona_server_mongodb_version VALUES('6.0.27-21','el8','x86_64','http://repo.percona.com/yum/percona-release-latest.noarch.rpm','/etc/yum.repos.d/percona-psmdb-60-release.repo','psmdb-60','mongod','/etc/mongod.conf','percona-server-mongodb-tools-6.0.27-21.el8.x86_64|percona-mongodb-mongosh-1.6.0-1.el8.x86_64|percona-server-mongodb-server-6.0.27-21.el8.x86_64|percona-server-mongodb-mongos-6.0.27-21.el8.x86_64|percona-server-mongodb-6.0.27-21.el8.x86_64','gdb|percona-server-mongodb-debuginfo-6.0.27-21.el8.x86_64');
@@ -4139,8 +4173,12 @@ INSERT INTO percona_server_mongodb_version VALUES('6.0.27-21','el9','aarch64','h
 -- PBM new versions
 INSERT INTO percona_backup_mongodb_version VALUES('2.11.0-1','el8','x86_64','https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-2.11.0/binary/redhat/8/x86_64/percona-backup-mongodb-2.11.0-1.el8.x86_64.rpm');
 INSERT INTO percona_backup_mongodb_version VALUES('2.11.0-1','el9','x86_64','https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-2.11.0/binary/redhat/9/x86_64/percona-backup-mongodb-2.11.0-1.el9.x86_64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.11.0-1','el8','aarch64','https://repo.percona.com/pbm/yum/release/8/RPMS/aarch64/percona-backup-mongodb-2.11.0-1.el8.aarch64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.11.0-1','el9','aarch64','https://repo.percona.com/pbm/yum/release/9/RPMS/aarch64/percona-backup-mongodb-2.11.0-1.el9.aarch64.rpm');
 INSERT INTO percona_backup_mongodb_version VALUES('2.12.0-1','el8','x86_64','https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-2.12.0/binary/redhat/8/x86_64/percona-backup-mongodb-2.12.0-1.el8.x86_64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.12.0-1','el8','aarch64','https://repo.percona.com/pbm/yum/release/8/RPMS/aarch64/percona-backup-mongodb-2.12.0-1.el8.aarch64.rpm');
 INSERT INTO percona_backup_mongodb_version VALUES('2.12.0-1','el9','x86_64','https://www.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-2.12.0/binary/redhat/9/x86_64/percona-backup-mongodb-2.12.0-1.el9.x86_64.rpm');
+INSERT INTO percona_backup_mongodb_version VALUES('2.12.0-1','el9','aarch64','https://repo.percona.com/pbm/yum/release/9/RPMS/aarch64/percona-backup-mongodb-2.12.0-1.el9.aarch64.rpm');
 
 -- PMM2 client new versions
 INSERT INTO general_version VALUES('2.43.0-6','el7','x86_64','pmm-client');
