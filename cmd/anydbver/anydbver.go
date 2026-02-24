@@ -617,7 +617,10 @@ func buildCacheImage(logger *log.Logger, deployArgs []string, osver string, user
 	}
 
 	errMsg = "Error building cache image"
-	runtools.RunFatal(logger, buildArgs, errMsg, ignoreMsg, true, env)
+	if rc := runtools.RunFatal(logger, buildArgs, errMsg, ignoreMsg, true, env); rc != 0 {
+		logger.Printf("Cache image build failed or timed out, falling back to base image\n")
+		return ""
+	}
 
 	// Clean up temporary Dockerfile if we created one
 	if tmpDockerfile != nil {
@@ -673,8 +676,9 @@ func createContainer(logger *log.Logger, config ContainerConfig) {
 	}
 
 	// Use cache image if DeployArgs is provided, otherwise use basic OS image
+	// Cache images only apply to ansible (docker) provider, not kubectl/k3d
 	imageName := anydbver_common.GetDockerImageName(osver, user)
-	if len(config.DeployArgs) > 0 {
+	if len(config.DeployArgs) > 0 && config.Provider != "kubectl" {
 		cacheImageName := buildCacheImage(logger, config.DeployArgs, osver, user)
 		if cacheImageName != "" {
 			imageName = cacheImageName
@@ -1011,6 +1015,10 @@ func handleDBPreReq(logger *log.Logger, namespace string, name string, cmd strin
 
 func handleDeploymentKeyword(logger *log.Logger, table string, keyword string) string {
 	deployment_keyword := ParseDeploymentKeyword(logger, keyword)
+	return handleDeploymentKeywordParsed(logger, table, deployment_keyword)
+}
+
+func handleDeploymentKeywordParsed(logger *log.Logger, table string, deployment_keyword DeploymentKeywordData) string {
 	if (table == "ansible_arguments" || table == "k8s_arguments") && deployment_keyword.Args["version"] == "latest" {
 		delete(deployment_keyword.Args, "version")
 	}
@@ -1131,7 +1139,7 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 				delete(deployment_keyword.Args, "master")
 			}
 			handleDBPreReq(logger, namespace, name, deployment_keyword.Cmd, deployment_keyword.Args)
-			ansible_deployment_args = ansible_deployment_args + " " + handleDeploymentKeyword(logger, "ansible_arguments", arg)
+			ansible_deployment_args = ansible_deployment_args + " " + handleDeploymentKeywordParsed(logger, "ansible_arguments", deployment_keyword)
 		}
 
 		content := anydbver_common.MakeContainerHostName(logger, namespace, name) + " ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=" + ip + " ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no ' " + ansible_deployment_args + "\n"
