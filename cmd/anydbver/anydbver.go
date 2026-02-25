@@ -368,7 +368,7 @@ outer:
 }
 
 func removeCacheImages(logger *log.Logger) {
-	user := anydbver_common.GetUser(logger)
+	user := strings.ReplaceAll(anydbver_common.GetUser(logger), ".", "-")
 	cacheImagePattern := fmt.Sprintf("%s/anydbver-cache:*", user)
 
 	// List all cache images
@@ -562,7 +562,8 @@ func buildCacheImage(logger *log.Logger, deployArgs []string, osver string, user
 	// Create a hash from the sanitized inventory line and OS version (so cache is insensitive to excluded keys)
 	hashInput := fmt.Sprintf("%s:%s", osver, strings.TrimSpace(sanitizedInventoryLine))
 	hash := computeSHA256(hashInput)
-	cacheImageName := fmt.Sprintf("%s/anydbver-cache:%s", user, hash)
+	safeUser := strings.ReplaceAll(user, ".", "-")
+	cacheImageName := fmt.Sprintf("%s/anydbver-cache:%s", safeUser, hash)
 
 	// Check if image already exists
 	args := []string{"docker", "images", "-q", cacheImageName}
