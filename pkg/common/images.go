@@ -4,10 +4,11 @@ import "runtime"
 
 const (
 	USE_LOCAL_IMAGES = false
-	IMAGE_PUBLISHER  = "ihanick"
+	IMAGE_PUBLISHER  = "zelmar"
 )
 
 var RELEASE_VERSION = "0.1.23"
+var ANSIBLE_VERSION = "0.1.30"
 
 func GetDockerImageName(osver string, user string) string {
 	platform_tag := ""
@@ -33,7 +34,7 @@ func GetDockerImageName(osver string, user string) string {
 		"ubuntu24.04":  IMAGE_PUBLISHER + "/ubuntu:noble-sshd-systemd-" + RELEASE_VERSION + platform_tag,
 		"bookworm":     IMAGE_PUBLISHER + "/debian:bookworm-sshd-systemd-" + RELEASE_VERSION + platform_tag,
 		"debian-12":    IMAGE_PUBLISHER + "/debian:bookworm-sshd-systemd-" + RELEASE_VERSION + platform_tag,
-		"ansible":      IMAGE_PUBLISHER + "/rockylinux:8-anydbver-ansible-" + RELEASE_VERSION + platform_tag,
+		"ansible":      IMAGE_PUBLISHER + "/rockylinux:8-anydbver-ansible-" + ANSIBLE_VERSION + platform_tag,
 	}
 
 	if USE_LOCAL_IMAGES {

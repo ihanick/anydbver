@@ -12,7 +12,7 @@ apt install -y docker-ce
 gpasswd -a vagrant lxd
 gpasswd -a vagrant docker
 cd /home/vagrant/
-git clone https://github.com/ihanick/anydbver.git
+git clone https://github.com/zelmario/anydbver.git
 ln -s /home/vagrant/anydbver/anydbver /usr/local/bin/anydbver
 cat >/home/vagrant/anydbver/.anydbver <<EOF
 PROVIDER=docker

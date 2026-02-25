@@ -9,7 +9,7 @@ The replication/clusters setup is configured with sidecar/init containers.
 * Install Docker or Podman or setup kubectl with desired default namespace
 * Clone anydbver repository
 ```
-git clone https://github.com/ihanick/anydbver.git anydbver
+git clone https://github.com/zelmario/anydbver.git anydbver
 cd ./anydbver/Docker
 ```
 

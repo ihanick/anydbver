@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/ihanick/anydbver/pkg/runtools"
+	"github.com/zelmario/anydbver/pkg/runtools"
 	"io"
 	"log"
 	_ "modernc.org/sqlite"
@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	ANYDBVER_VERSION_DATABASE_SQL_URL = "https://github.com/ihanick/anydbver/raw/master/anydbver_version.sql"
+	ANYDBVER_VERSION_DATABASE_SQL_URL = "https://github.com/zelmario/anydbver/raw/master/anydbver_version.sql"
 	ANYDBVER_DEFAULT_PASSWORD         = "verysecretpassword1^"
 	ANYDBVER_MINIO_USER               = "UIdgE4sXPBTcBB4eEawU"
 	ANYDBVER_MINIO_PASS               = "7UdlDzBF769dbIOMVILV"
@@ -45,7 +45,7 @@ func CreateSshKeysForContainers(logger *log.Logger, namespace string) {
 		env := map[string]string{}
 		errMsg := "Error creating container"
 		ignoreMsg := regexp.MustCompile("ignore this")
-		runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+		runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env, runtools.COMMAND_TIMEOUT)
 	}
 }
 
@@ -290,7 +290,7 @@ func GetToolsDirectory(logger *log.Logger, namespace string) string {
 		env := map[string]string{}
 		errMsg := "Error creating container"
 		ignoreMsg := regexp.MustCompile("ignore this")
-		runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+		runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env, runtools.COMMAND_TIMEOUT)
 	}
 
 	abs_path, err := filepath.Abs(tools_directory)
@@ -337,7 +337,7 @@ func RunCommandInBaseContainer(logger *log.Logger, namespace string, cmd string,
 			os.Exit(1)
 		}
 	}
-	return runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+	return runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env, runtools.COMMAND_TIMEOUT)
 }
 
 func MakeContainerHostName(logger *log.Logger, namespace string, name string) string {

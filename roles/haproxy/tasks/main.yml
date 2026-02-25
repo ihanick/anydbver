@@ -7,7 +7,7 @@
 
 - name: create haproxy config from template
   template:
-    src: "{{playbook_dir}}/roles/haproxy/templates/haproxy.{{ 'galera' if haproxy_galera !='' else 'postgres' if haproxy_pg !='' else '' }}.cfg.j2"
+    src: "{{playbook_dir}}/roles/haproxy/templates/haproxy.{{ 'galera' if haproxy_galera !='' else 'patroni' if haproxy_patroni !='' else 'postgres' if haproxy_pg !='' else '' }}.cfg.j2"
     dest: "/etc/haproxy/haproxy.cfg"
 
 - name: start haproxy

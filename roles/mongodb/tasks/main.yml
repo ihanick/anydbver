@@ -42,11 +42,11 @@
     name: "{{ item }}"
     state: present
   with_items:
-    - "http://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-tools-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
-    - "http://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-shell-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
-    - "http://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-server-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
-    - "http://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-mongos-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
-    - "http://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
+    - "https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-tools-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
+    - "https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-shell-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
+    - "https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-server-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
+    - "https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-mongos-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
+    - "https://repo.percona.com/percona/yum/release/7/RPMS/x86_64/{{ psmdb_name }}{{ psmdb_major_ver }}-{{ psmdb_version }}.{{ dist }}.x86_64.rpm"
 
 - name: install MongoDB Community
   when: mongo_org_version != ''
@@ -60,6 +60,7 @@
   yum:
     name: "{{percona_backup_mongodb_pkg}}"
     state: present
+    disable_gpg_check: yes
 
 - name: MongoDB Setup tasks
   when: install_only == ''

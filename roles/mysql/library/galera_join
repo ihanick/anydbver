@@ -2,8 +2,13 @@
 myip=$(/vagrant/tools/node_ip.sh)
 changed="false"
 ok="false"
+LOG="/var/log/galera_join.log"
 
 source $1
+
+log() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG"
+}
 
 is_galera_ready() {
   donor_escaped=${donor_ip//./\\.}
@@ -14,37 +19,65 @@ is_galera_ready() {
 }
 
 wait_for_donor() {
-  until test $( mysql --host $donor_ip -Nse 'SHOW STATUS LIKE "wsrep_%"' 2>/dev/null|egrep -c "Primary|Synced") -eq 2 ; do sleep 1 ; done
+  local max_wait=120
+  local elapsed=0
+  log "Waiting for donor $donor_ip to be Primary/Synced (timeout: ${max_wait}s)"
+  while [ $elapsed -lt $max_wait ]; do
+    local result
+    result=$(mysql --host "$donor_ip" -Nse 'SHOW STATUS LIKE "wsrep_%"' 2>&1)
+    local rc=$?
+    local count=$(echo "$result" | egrep -c "Primary|Synced")
+    if [ "$rc" -eq 0 ] && [ "$count" -eq 2 ]; then
+      log "Donor $donor_ip is ready (Primary+Synced)"
+      return 0
+    fi
+    if [ $((elapsed % 10)) -eq 0 ]; then
+      log "Donor not ready yet (rc=$rc, matches=$count): $(echo "$result" | head -3)"
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  log "TIMEOUT waiting for donor $donor_ip after ${max_wait}s"
+  return 1
 }
 
-wait_for_donor
+log "Starting galera_join: cluster=$cluster_name donor=$donor_ip myip=$myip"
+
+if ! wait_for_donor ; then
+  msg="Timeout waiting for donor $donor_ip"
+  log "FAILED: $msg"
+  printf '{"changed": false, "ok": false, "msg": "%s", "failed": true}' "$msg"
+  exit 1
+fi
 
 if is_galera_ready ; then
   changed="false"
   ok="true"
   msg="Already joined"
+  log "$msg"
 else
   ssl_cert_archive="/vagrant/secret/${cluster_name}-ssl.tar.gz"
-  msg="Joininig to $cluster_name via $donor_ip"
+  msg="Joining to $cluster_name via $donor_ip"
+  log "$msg"
   SSH="ssh -i /vagrant/secret/id_rsa -o StrictHostKeyChecking=no -o PasswordAuthentication=no"
 
-  #if test ! -f $ssl_cert_archive -o -z $ssl_cert_archive  ; then
-    if $SSH root@$donor_ip true &>/dev/null ; then
-      $SSH root@$donor_ip tar cz \
-        /var/lib/mysql/ca.pem \
-        /var/lib/mysql/ca-key.pem \
-        /var/lib/mysql/client-cert.pem \
-        /var/lib/mysql/client-key.pem \
-        /var/lib/mysql/server-cert.pem \
-        /var/lib/mysql/server-key.pem > "$ssl_cert_archive" 2>/dev/null
-    fi
-  #fi
+  if $SSH root@$donor_ip true &>/dev/null ; then
+    log "Copying SSL certs from donor"
+    $SSH root@$donor_ip tar cz \
+      /var/lib/mysql/ca.pem \
+      /var/lib/mysql/ca-key.pem \
+      /var/lib/mysql/client-cert.pem \
+      /var/lib/mysql/client-key.pem \
+      /var/lib/mysql/server-cert.pem \
+      /var/lib/mysql/server-key.pem > "$ssl_cert_archive" 2>/dev/null
+  else
+    log "WARNING: Cannot SSH to donor, skipping SSL cert copy"
+  fi
 
   systemctl stop "$systemd_unit"
   while pgrep -x mysqld ; do sleep 5; done
   rm -rf /var/lib/mysql/grastate.dat
-  tar -C / --overwrite -xaf "$ssl_cert_archive"
-
+  tar -C / --overwrite -xaf "$ssl_cert_archive" 2>/dev/null
 
   cat >> "${cnf_file}" << EOF
 [mysqld]
@@ -52,29 +85,44 @@ wsrep_cluster_name=${cluster_name}
 wsrep_node_name=${myip}
 wsrep_cluster_address="gcomm://${donor_ip}"
 EOF
+  log "Config appended to ${cnf_file}, starting mysqld for SST join"
 
-#  until mysqladmin --silent --connect-timeout=6 --wait=4 ping &>/dev/null ; do
-#    pgrep -x mysqld || mysqld --user=mysql --skip-log-error &>/var/log/mysqld-init.log &
-#    sleep 5
-#  done
-#  mysqladmin shutdown &>/dev/null
-        
-  until mysqladmin --silent --connect-timeout=5 --wait=4 ping &>/dev/null ; do
+  local_max_wait=300
+  local_elapsed=0
+  while [ $local_elapsed -lt $local_max_wait ]; do
+    if mysqladmin --silent --connect-timeout=5 --wait=4 ping &>/dev/null ; then
+      log "mysqld is responding to ping after ${local_elapsed}s"
+      break
+    fi
+    if [ $((local_elapsed % 15)) -eq 0 ]; then
+      log "Waiting for mysqld to start (${local_elapsed}/${local_max_wait}s)..."
+    fi
     sleep 5
+    local_elapsed=$((local_elapsed + 5))
     pgrep -x mysqld || systemctl start "$systemd_unit"
   done
+
+  if [ $local_elapsed -ge $local_max_wait ]; then
+    msg="Timeout waiting for mysqld to start after SST (${local_max_wait}s)"
+    log "FAILED: $msg"
+    printf '{"changed": true, "ok": false, "msg": "%s", "failed": true}' "$msg"
+    exit 1
+  fi
 
   if is_galera_ready ; then
     changed="true"
     ok="true"
     msg="Joined to $cluster_name"
+    log "SUCCESS: $msg"
   else
     changed="true"
-    ok="true"
+    ok="false"
     msg="Failed to join to $cluster_name via $donor_ip"
+    log "FAILED: $msg"
+    printf '{"changed": true, "ok": false, "msg": "%s", "failed": true}' "$msg"
+    exit 1
   fi
 fi
-
 
 cat $1 > /tmp/joined.msg.txt
 printf '{"changed": %s, "ok": %s, "msg": "%s"}' "$changed" "$ok" "$msg"

@@ -99,6 +99,8 @@
     server_hostname: "{{ lookup('vars', 'extra_server_hostname', default=lookup('env','HOSTNAME',default='') ) }}"
     haproxy_pg: "{{ lookup('vars', 'extra_haproxy_pg', default=lookup('env','HAPROXY_PG',default='') ) }}"
     haproxy_galera: "{{ lookup('vars', 'extra_haproxy_galera', default=lookup('env','HAPROXY_GALERA',default='') ) }}"
+    haproxy_patroni: "{{ lookup('vars', 'extra_haproxy_patroni', default=lookup('env','HAPROXY_PATRONI',default='') ) }}"
+    pgbouncer: "{{ lookup('vars', 'extra_pgbouncer', default=lookup('env','PGBOUNCER',default='') ) }}"
     mariadb_version: "{{ lookup('vars', 'extra_mariadb_version', default=lookup('env','MARIADB',default='') ) }}"
     mariabackup: "{{ lookup('vars', 'extra_mariabackup', default=lookup('env','MARIABACKUP',default='') ) }}"
     galera:  "{{ lookup('vars', 'extra_galera', default=lookup('env','GALERA',default='') ) }}"
@@ -175,6 +177,7 @@
     soft: >-
       {{
       'ps80' if percona_server_version.startswith('8.0') else
+      'pxc84' if percona_xtradb_cluster_version.startswith('8.4') else
       'pxc80' if percona_xtradb_cluster_version.startswith('8.0') else
       'ps57' if percona_server_version.startswith('5.7') else
       'pxc57' if percona_xtradb_cluster_version.startswith('5.7') else
@@ -237,7 +240,7 @@
       block:
         - name: install percona yum repo
           yum:
-            name: http://repo.percona.com/yum/percona-release-latest.noarch.rpm
+            name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
             state: present
             disable_gpg_check: True
         - name: Enable aarch64
@@ -278,9 +281,14 @@
         name: user_security
 
     - name: HAProxy
-      when: haproxy_pg != '' or haproxy_galera != ''
+      when: haproxy_pg != '' or haproxy_galera != '' or haproxy_patroni != ''
       include_role:
         name: haproxy
+
+    - name: PgBouncer
+      when: pgbouncer != ''
+      include_role:
+        name: pgbouncer
 
     - name: Postgresql Role
       when: postgresql_version != '' or percona_postgresql_version != '' or odyssey_version != '' or walg_version != '' or pgpool_version != ''

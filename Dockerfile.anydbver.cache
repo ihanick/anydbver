@@ -34,7 +34,7 @@ ENV container=docker
 
 # Install system packages and tools - different for CentOS7, RedHat8/9, and Debian
 RUN if [ -f /etc/redhat-release ] && grep -q "release 7" /etc/redhat-release; then \
-        yum -y install openssh-server rsync python3 iproute procps-ng openssh-clients; \
+        yum -y install openssh-server rsync python3 iproute procps-ng openssh-clients less nano; \
         if uname -m | grep x86_64 ; then \
             curl -LO https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 ; \
             chmod +x yq_linux_amd64; mv yq_linux_amd64 /usr/local/bin/yq ; \
@@ -49,7 +49,7 @@ RUN if [ -f /etc/redhat-release ] && grep -q "release 7" /etc/redhat-release; th
         if grep -q "release 8" /etc/redhat-release; then \
             dnf -y install epel-release; \
         fi; \
-        dnf -y install kitty-terminfo.noarch vim less man; \
+        dnf -y install kitty-terminfo.noarch vim less nano man; \
         if uname -m | grep x86_64 ; then \
             curl -LO https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 ; \
             chmod +x yq_linux_amd64; mv yq_linux_amd64 /usr/local/bin/yq ; \
@@ -61,7 +61,7 @@ RUN if [ -f /etc/redhat-release ] && grep -q "release 7" /etc/redhat-release; th
         systemctl enable sshd; \
     else \
         apt update; \
-        apt -y install openssh-server rsync python3-full iproute2 openssh-client gawk; \
+        apt -y install openssh-server rsync python3-full iproute2 openssh-client gawk less nano; \
         if uname -m | grep x86_64 ; then \
             curl -LO https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 ; \
             chmod +x yq_linux_amd64; mv yq_linux_amd64 /usr/local/bin/yq ; \

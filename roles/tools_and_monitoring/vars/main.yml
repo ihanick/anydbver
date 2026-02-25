@@ -13,5 +13,5 @@ general_package_info: >
   else "" }}
 
 
-pmm_client_version_full: "{{ general_package_info['version'] if general_package_info != '' and pmm_client_version != '' else '' }}"
-pmm_client_packages: "pmm{{'2' if pmm_client_version_full.startswith('2') else ''}}-client-{{pmm_client_version_full}}.{{dist}}.{{ansible_architecture}}"
+pmm_client_version_full: "{{ general_package_info['version'] if general_package_info and pmm_client_version != '' else '' }}"
+pmm_client_packages: "pmm{{'2' if pmm_client_version_full.startswith('2') else ''}}-client-{{pmm_client_version_full}}.{{dist}}"

@@ -25,10 +25,10 @@ import (
 	"strings"
 	"unicode"
 
-	anydbver_common "github.com/ihanick/anydbver/pkg/common"
-	"github.com/ihanick/anydbver/pkg/runtools"
-	unmodified_docker "github.com/ihanick/anydbver/pkg/unmodified_docker"
-	versionfetch "github.com/ihanick/anydbver/pkg/version_fetch"
+	anydbver_common "github.com/zelmario/anydbver/pkg/common"
+	"github.com/zelmario/anydbver/pkg/runtools"
+	unmodified_docker "github.com/zelmario/anydbver/pkg/unmodified_docker"
+	versionfetch "github.com/zelmario/anydbver/pkg/version_fetch"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 	_ "modernc.org/sqlite"
@@ -115,6 +115,28 @@ func getContainerIp(provider string, logger *log.Logger, namespace string, conta
 		return strings.TrimSuffix(ip, "\n"), err
 	}
 	return "", errors.New("node ip is not found")
+}
+
+func getContainerPort(logger *log.Logger, namespace string, name string) string {
+	containerName := anydbver_common.MakeContainerHostName(logger, namespace, name)
+	args := []string{"docker", "inspect", containerName, "--format", `{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} {{end}}`}
+
+	env := map[string]string{}
+	errMsg := "Error getting docker container port"
+	ignoreMsg := regexp.MustCompile("ignore this")
+
+	output, err := runtools.RunGetOutput(logger, args, errMsg, ignoreMsg, false, env, runtools.COMMAND_TIMEOUT)
+	if err != nil {
+		return ""
+	}
+	output = strings.TrimSpace(output)
+	if strings.Contains(output, "8443") {
+		return ":8443"
+	}
+	if strings.Contains(output, "443") {
+		return ":443"
+	}
+	return ""
 }
 
 func getNodeIp(provider string, logger *log.Logger, namespace string, name string) (string, error) {
@@ -346,7 +368,7 @@ outer:
 }
 
 func removeCacheImages(logger *log.Logger) {
-	user := anydbver_common.GetUser(logger)
+	user := strings.ReplaceAll(anydbver_common.GetUser(logger), ".", "-")
 	cacheImagePattern := fmt.Sprintf("%s/anydbver-cache:*", user)
 
 	// List all cache images
@@ -445,7 +467,7 @@ func createNamespace(logger *log.Logger, containers []ContainerConfig, namespace
 	network := getNetworkName(logger, namespace)
 	netCreated := false
 	for _, container := range containers {
-		if netCreated == false && (container.Provider == "docker" || container.Provider == "kubectl") {
+		if netCreated == false && (container.Provider == "docker" || container.Provider == "docker-image" || container.Provider == "kubectl") {
 			args := []string{"docker", "network", "create", network}
 			env := map[string]string{}
 			errMsg := "Error creating docker network"
@@ -454,7 +476,9 @@ func createNamespace(logger *log.Logger, containers []ContainerConfig, namespace
 			netCreated = true
 		}
 
-		createContainer(logger, container)
+		if container.Provider != "docker-image" {
+			createContainer(logger, container)
+		}
 	}
 }
 
@@ -538,7 +562,8 @@ func buildCacheImage(logger *log.Logger, deployArgs []string, osver string, user
 	// Create a hash from the sanitized inventory line and OS version (so cache is insensitive to excluded keys)
 	hashInput := fmt.Sprintf("%s:%s", osver, strings.TrimSpace(sanitizedInventoryLine))
 	hash := computeSHA256(hashInput)
-	cacheImageName := fmt.Sprintf("%s/anydbver-cache:%s", user, hash)
+	safeUser := strings.ReplaceAll(user, ".", "-")
+	cacheImageName := fmt.Sprintf("%s/anydbver-cache:%s", safeUser, hash)
 
 	// Check if image already exists
 	args := []string{"docker", "images", "-q", cacheImageName}
@@ -593,7 +618,10 @@ func buildCacheImage(logger *log.Logger, deployArgs []string, osver string, user
 	}
 
 	errMsg = "Error building cache image"
-	runtools.RunFatal(logger, buildArgs, errMsg, ignoreMsg, true, env)
+	if rc := runtools.RunFatal(logger, buildArgs, errMsg, ignoreMsg, true, env); rc != 0 {
+		logger.Printf("Cache image build failed or timed out, falling back to base image\n")
+		return ""
+	}
 
 	// Clean up temporary Dockerfile if we created one
 	if tmpDockerfile != nil {
@@ -649,8 +677,9 @@ func createContainer(logger *log.Logger, config ContainerConfig) {
 	}
 
 	// Use cache image if DeployArgs is provided, otherwise use basic OS image
+	// Cache images only apply to ansible (docker) provider, not kubectl/k3d
 	imageName := anydbver_common.GetDockerImageName(osver, user)
-	if len(config.DeployArgs) > 0 {
+	if len(config.DeployArgs) > 0 && config.Provider != "kubectl" {
 		cacheImageName := buildCacheImage(logger, config.DeployArgs, osver, user)
 		if cacheImageName != "" {
 			imageName = cacheImageName
@@ -939,7 +968,7 @@ func ParseDeploymentKeyword(logger *log.Logger, keyword string) DeploymentKeywor
 		deployCmd = alias
 	}
 
-	if deployCmd == "mongos-shard" || deployCmd == "mongos-cfg" || deployCmd == "haproxy-pg" {
+	if deployCmd == "mongos-shard" || deployCmd == "mongos-cfg" || deployCmd == "haproxy-pg" || deployCmd == "haproxy-patroni" || deployCmd == "pgbouncer" {
 		args["version"] = keyword
 		return DeploymentKeywordData{
 			Cmd:  deployCmd,
@@ -987,6 +1016,10 @@ func handleDBPreReq(logger *log.Logger, namespace string, name string, cmd strin
 
 func handleDeploymentKeyword(logger *log.Logger, table string, keyword string) string {
 	deployment_keyword := ParseDeploymentKeyword(logger, keyword)
+	return handleDeploymentKeywordParsed(logger, table, deployment_keyword)
+}
+
+func handleDeploymentKeywordParsed(logger *log.Logger, table string, deployment_keyword DeploymentKeywordData) string {
 	if (table == "ansible_arguments" || table == "k8s_arguments") && deployment_keyword.Args["version"] == "latest" {
 		delete(deployment_keyword.Args, "version")
 	}
@@ -1107,13 +1140,13 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 				delete(deployment_keyword.Args, "master")
 			}
 			handleDBPreReq(logger, namespace, name, deployment_keyword.Cmd, deployment_keyword.Args)
-			ansible_deployment_args = ansible_deployment_args + " " + handleDeploymentKeyword(logger, "ansible_arguments", arg)
+			ansible_deployment_args = ansible_deployment_args + " " + handleDeploymentKeywordParsed(logger, "ansible_arguments", deployment_keyword)
 		}
 
 		content := anydbver_common.MakeContainerHostName(logger, namespace, name) + " ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=secret/id_rsa ansible_host=" + ip + " ansible_python_interpreter=/usr/bin/python3 ansible_ssh_common_args='-o StrictHostKeyChecking=no ' " + ansible_deployment_args + "\n"
 
 		for {
-			re_mongo_shard_hosts := regexp.MustCompile(`(extra_mongos_shard|extra_mongos_cfg|extra_haproxy_pg|extra_patroni_standby)='([^']*)(node[0-9]+)([^']*)'`)
+			re_mongo_shard_hosts := regexp.MustCompile(`(extra_mongos_shard|extra_mongos_cfg|extra_haproxy_pg|extra_haproxy_patroni|extra_pgbouncer|extra_patroni_standby)='([^']*)(node[0-9]+)([^']*)'`)
 			content_with_ip := re_mongo_shard_hosts.ReplaceAllStringFunc(content, func(match string) string {
 				submatches := re_mongo_shard_hosts.FindStringSubmatch(match)
 				if len(submatches) > 4 {
@@ -1143,7 +1176,12 @@ func deployHost(provider string, logger *log.Logger, namespace string, name stri
 					fmt.Println("Error getting node ip:", err)
 				}
 
-				return fmt.Sprintf("%s='https://admin:%s@%s%s'", submatches[1], url.QueryEscape(anydbver_common.ANYDBVER_DEFAULT_PASSWORD), ip, submatches[3])
+				port := submatches[3]
+				if port == "" {
+					port = getContainerPort(logger, namespace, node)
+				}
+
+				return fmt.Sprintf("%s='https://admin:%s@%s%s'", submatches[1], url.QueryEscape(anydbver_common.ANYDBVER_DEFAULT_PASSWORD), ip, port)
 			}
 			return match
 		})
@@ -1280,25 +1318,37 @@ func runPlaybook(logger *log.Logger, namespace string, ansible_hosts_run_file st
 		"-v", filepath.Dir(anydbver_common.GetConfigPath(logger)) + "/secret:/vagrant/secret:Z",
 	}
 
+	// Try current directory first, then parent directory (for when binary is in tools/),
+	// then fall back to the directory of the binary itself
+	projectRoot := ""
 	if dirInfo, err := os.Stat("roles"); err == nil && dirInfo.IsDir() {
-		realPath, err := filepath.Abs("roles")
-		commonPath, err := filepath.Abs("common")
-		if err == nil {
-			volumes = append(volumes, []string{
-				"-v",
-				realPath + ":/vagrant/roles:Z",
-				"-v",
-				commonPath + ":/vagrant/common:Z",
-			}...)
+		projectRoot, _ = filepath.Abs(".")
+	} else if dirInfo, err := os.Stat("../roles"); err == nil && dirInfo.IsDir() {
+		projectRoot, _ = filepath.Abs("..")
+	} else if exePath, err := os.Executable(); err == nil {
+		exeDir := filepath.Dir(exePath)
+		if dirInfo, err := os.Stat(filepath.Join(exeDir, "roles")); err == nil && dirInfo.IsDir() {
+			projectRoot = exeDir
+		} else if dirInfo, err := os.Stat(filepath.Join(filepath.Dir(exeDir), "roles")); err == nil && dirInfo.IsDir() {
+			projectRoot = filepath.Dir(exeDir)
 		}
 	}
-	if fileInfo, err := os.Stat("playbook.yml"); err == nil && !fileInfo.IsDir() {
-		realPath, err := filepath.Abs("playbook.yml")
-		if err == nil {
-			volumes = append(volumes, []string{
-				"-v",
-				realPath + ":/vagrant/playbook.yml:Z",
-			}...)
+	if projectRoot != "" {
+		for _, dir := range []struct{ src, dest string }{
+			{"roles", "/vagrant/roles"},
+			{"common", "/vagrant/common"},
+			{"tools", "/vagrant/tools"},
+			{"library", "/vagrant/library"},
+			{"configs", "/vagrant/configs"},
+		} {
+			fullPath := filepath.Join(projectRoot, dir.src)
+			if di, err := os.Stat(fullPath); err == nil && di.IsDir() {
+				volumes = append(volumes, "-v", fullPath+":"+dir.dest+":Z")
+			}
+		}
+		playbookPath := filepath.Join(projectRoot, "playbook.yml")
+		if fi, err := os.Stat(playbookPath); err == nil && !fi.IsDir() {
+			volumes = append(volumes, "-v", playbookPath+":/vagrant/playbook.yml:Z")
 		}
 	}
 
@@ -1326,16 +1376,24 @@ func runPlaybook(logger *log.Logger, namespace string, ansible_hosts_run_file st
 	env := map[string]string{}
 	errMsg := "Error running Ansible"
 	ignoreMsg := regexp.MustCompile("ignore this")
-	ansible_output, err := runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+	ansible_output, err := runtools.RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env, 600)
 	if err != nil {
 		logger.Println("Ansible failed with errors: ")
 		fatalPattern := regexp.MustCompile(`FAILED[!]|failed=`)
+		taskPattern := regexp.MustCompile(`^TASK \[.*\]`)
+		lastTask := ""
 		scanner := bufio.NewScanner(strings.NewReader(ansible_output))
 		for scanner.Scan() {
 			line := scanner.Text()
+			if taskPattern.MatchString(line) {
+				lastTask = line
+			}
 			if fatalPattern.MatchString(line) {
 				logger.Print(line)
 			}
+		}
+		if strings.Contains(err.Error(), "timed out") && lastTask != "" {
+			logger.Printf("Timed out during: %s", lastTask)
 		}
 		os.Exit(runtools.ANYDBVER_ANSIBLE_PROBLEM)
 	}
@@ -1426,7 +1484,118 @@ mirrors:
 	env := map[string]string{}
 	errMsg := "Error creating k3d cluster"
 	ignoreMsg := regexp.MustCompile("ignore this")
-	runtools.RunPipe(logger, k3d_create_cmd, errMsg, ignoreMsg, true, env)
+	runtools.RunPipe(logger, k3d_create_cmd, errMsg, ignoreMsg, true, env, 600)
+}
+
+func checkEverestPrerequisites(logger *log.Logger) {
+	missing := []string{}
+
+	// Check docker
+	if _, err := exec.LookPath("docker"); err != nil {
+		missing = append(missing, "docker")
+	} else {
+		// Check docker daemon is running
+		cmd := exec.Command("docker", "info")
+		cmd.Stdout = nil
+		cmd.Stderr = nil
+		if err := cmd.Run(); err != nil {
+			logger.Fatal("Docker is installed but the daemon is not running. Please start Docker first.")
+		}
+	}
+
+	// Check kubectl
+	if _, err := exec.LookPath("kubectl"); err != nil {
+		missing = append(missing, "kubectl")
+	}
+
+	// Check k3d
+	if _, err := anydbver_common.GetK3dPath(logger); err != nil {
+		missing = append(missing, "k3d")
+	}
+
+	if len(missing) > 0 {
+		logger.Fatalf("Missing required tools: %s. Please install them before deploying Everest.", strings.Join(missing, ", "))
+	}
+
+	logger.Printf("All prerequisites found: docker, kubectl, k3d")
+}
+
+func deployEverest(logger *log.Logger, namespace string, nodes int, everestVersion string) {
+	checkEverestPrerequisites(logger)
+
+	cluster_name := anydbver_common.MakeContainerHostName(logger, namespace, "cluster1")
+
+	// Create k3d cluster
+	logger.Printf("Creating k3d cluster with %d nodes...", nodes)
+	k3dArgs := map[string]string{
+		"version": "latest",
+		"nodes":   strconv.Itoa(nodes),
+	}
+	createK3dCluster(logger, namespace, "cluster1", k3dArgs)
+
+	// Wait for cluster to be ready
+	logger.Printf("Waiting for k3d cluster to be ready...")
+	env := map[string]string{}
+	errMsg := "Error waiting for k3d cluster"
+	ignoreMsg := regexp.MustCompile("ignore this")
+
+	// Get kubeconfig
+	homeDir, _ := os.UserHomeDir()
+	kubeconfig_path := filepath.Join(homeDir, ".kube", "config")
+	os.MkdirAll(filepath.Dir(kubeconfig_path), 0755)
+	k3d_path, _ := anydbver_common.GetK3dPath(logger)
+	runtools.RunFatal(logger, []string{k3d_path, "kubeconfig", "get", cluster_name}, errMsg, ignoreMsg, true, env)
+
+	// Export kubeconfig
+	kubeconfig_cmd := []string{k3d_path, "kubeconfig", "write", cluster_name, "--output", kubeconfig_path}
+	runtools.RunFatal(logger, kubeconfig_cmd, errMsg, ignoreMsg, true, env)
+
+	// Get cluster IP for kubeconfig fix
+	clusterIp, _ := getContainerIp("docker", logger, namespace, "k3d-"+cluster_name+"-server-0")
+
+	// Install Percona Everest
+	logger.Printf("Installing Percona Everest %s...", everestVersion)
+	helm_install_everest := []string{
+		"docker", "run", "--rm",
+		"--network", getNetworkName(logger, namespace),
+		"-v", kubeconfig_path + ":/root/.kube/config",
+		"alpine/helm:latest",
+		"upgrade", "--install", "everest-core", "everest",
+		"--repo", "https://percona.github.io/percona-helm-charts/",
+		"--namespace", "everest-system",
+		"--create-namespace",
+		"--kubeconfig", "/root/.kube/config",
+		"--kube-apiserver", "https://" + clusterIp + ":6443",
+		"--wait", "--timeout", "10m",
+	}
+	if everestVersion != "latest" && everestVersion != "" {
+		helm_install_everest = append(helm_install_everest, "--version", everestVersion)
+	}
+	runtools.RunPipe(logger, helm_install_everest, "Error installing Percona Everest", ignoreMsg, true, env, 600)
+
+	// Start port-forward in background
+	logger.Printf("Starting port-forward to Everest UI...")
+	kubectl_portforward := exec.Command("kubectl", "port-forward", "svc/everest", "8080:8080",
+		"-n", "everest-system", "--address", "0.0.0.0",
+		"--kubeconfig", kubeconfig_path)
+	kubectl_portforward.Start()
+
+	// Print access instructions
+	fmt.Println("")
+	fmt.Println("===============================================")
+	fmt.Println("Percona Everest deployed successfully!")
+	fmt.Println("===============================================")
+	fmt.Println("")
+	fmt.Println("Everest UI: http://localhost:8080")
+	fmt.Println("Username:   admin")
+	fmt.Println("Password:   kubectl get secret everest-accounts -n everest-system -o jsonpath='{.data.users\\.yaml}' | base64 -d")
+	fmt.Println("")
+	fmt.Println("Port-forward is running in background (PID:", kubectl_portforward.Process.Pid, ")")
+	fmt.Println("To stop: kill", kubectl_portforward.Process.Pid)
+	fmt.Println("")
+	fmt.Println("To restart port-forward manually:")
+	fmt.Println("  kubectl port-forward svc/everest 8080:8080 -n everest-system --address 0.0.0.0")
+	fmt.Println("")
 }
 
 func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider string, namespace string, args []string, verbose bool, memory string, cpus string) {
@@ -1511,7 +1680,14 @@ func deployHosts(logger *log.Logger, ansible_hosts_run_file string, provider str
 			}
 		}
 
-		containers = append(containers, ContainerConfig{Name: node, OSVersion: value, Privileged: privileged_container, ExposePort: expose_port, Provider: provider, Namespace: namespace, Memory: memory, CPUs: cpus, DeployArgs: deployArgs})
+		containers = append(containers, ContainerConfig{Name: node, OSVersion: value, Privileged: privileged_container, ExposePort: expose_port, Provider: nodeProvider[node], Namespace: namespace, Memory: memory, CPUs: cpus, DeployArgs: deployArgs})
+	}
+	// Add docker-image nodes to containers list for network creation
+	// (docker-image nodes are stripped from osvers so ConvertStringToMap skips them)
+	for node, prov := range nodeProvider {
+		if prov == "docker-image" {
+			containers = append(containers, ContainerConfig{Name: node, Provider: "docker-image", Namespace: namespace})
+		}
 	}
 	createNamespace(logger, containers, namespace)
 	var nodeIdxs []int
@@ -1833,9 +2009,7 @@ func main() {
 		Build = date
 	}
 
-	if Version != "unknown" {
-		anydbver_common.RELEASE_VERSION = strings.TrimPrefix(Version, "v")
-	}
+
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
@@ -1918,7 +2092,7 @@ func main() {
 	destroyCmd.Flags().BoolP("remove-cache", "", false, "Also remove anydbver-cache images")
 	updateCmd := &cobra.Command{
 		Use:   "update",
-		Short: "Deletes current version information database and downloads latest one from https://github.com/ihanick/anydbver/blob/master/anydbver_version.sql",
+		Short: "Deletes current version information database and downloads latest one from https://github.com/zelmario/anydbver/blob/master/anydbver_version.sql",
 		Run: func(cmd *cobra.Command, args []string) {
 			dbFile := anydbver_common.GetDatabasePath(logger)
 			if len(args) >= 1 {
@@ -2042,6 +2216,24 @@ func main() {
 	}
 
 	rootCmd.AddCommand(shellCmd)
+
+	everestCmd := &cobra.Command{
+		Use:   "everest",
+		Short: "Deploy Percona Everest on k3d cluster",
+		Long: `Deploy a k3d Kubernetes cluster with Percona Everest installed.
+This provides a local Database-as-a-Service platform for MySQL, PostgreSQL, and MongoDB.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			nodes, _ := cmd.Flags().GetInt("nodes")
+			everestVersion, _ := cmd.Flags().GetString("version")
+
+			deleteNamespace(logger, provider, namespace)
+			deployEverest(logger, namespace, nodes, everestVersion)
+		},
+	}
+	everestCmd.Flags().Int("nodes", 3, "Number of k3d nodes")
+	everestCmd.Flags().String("version", "latest", "Percona Everest version")
+
+	rootCmd.AddCommand(everestCmd)
 
 	rootCmd.PersistentFlags().StringVarP(&provider, "provider", "p", "", "Container provider")
 	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "", "Namespace")

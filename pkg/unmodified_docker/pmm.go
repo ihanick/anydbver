@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"strings"
 
-	anydbver_common "github.com/ihanick/anydbver/pkg/common"
-	"github.com/ihanick/anydbver/pkg/runtools"
+	anydbver_common "github.com/zelmario/anydbver/pkg/common"
+	"github.com/zelmario/anydbver/pkg/runtools"
 )
 
 func CreatePMMContainer(logger *log.Logger, namespace string, name string, cmd string, args map[string]string) {

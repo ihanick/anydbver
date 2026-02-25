@@ -148,8 +148,8 @@
   command:
     cmd: /bin/bash /vagrant/tools/setup_pbm_agent.sh "{{mongo_replicaset}}" "{{pbm_s3}}"
 
-- name: Setup pmm-2 client mongo
-  when: (pmm_client_version.startswith('2.') or pmm_client_version == '2') and pmm_url != '' and psmdb_version != ''
+- name: Setup pmm client mongo
+  when: (pmm_client_version.startswith('2') or pmm_client_version.startswith('3')) and pmm_url != '' and psmdb_version != ''
   register: pmm_admin_mongo_config
   changed_when: "'already exists' not in pmm_admin_mongo_config.stdout"
   shell:

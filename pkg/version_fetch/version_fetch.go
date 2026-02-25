@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ihanick/anydbver/pkg/debianpackages"
-	"github.com/ihanick/anydbver/pkg/rpmpackages"
+	"github.com/zelmario/anydbver/pkg/debianpackages"
+	"github.com/zelmario/anydbver/pkg/rpmpackages"
 	_ "modernc.org/sqlite"
 )
 

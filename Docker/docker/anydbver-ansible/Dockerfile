@@ -29,7 +29,7 @@ systemctl enable sshd; \
 yum install -y epel-release; \
 yum install -y openssh-clients git ansible; \
 cd /root; \
-git clone https://github.com/ihanick/anydbver.git; \
+git clone https://github.com/zelmario/anydbver.git; \
 cd anydbver/; \
 ./anydbver configure provider:lxd; \
 ./anydbver update; \

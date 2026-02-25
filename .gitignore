@@ -37,3 +37,4 @@ go.sum
 tools/anydbver
 images-build/build-arm.sh
 cmd/anydbver/Dockerfile.anydbver.cache
+.dev-notes.md

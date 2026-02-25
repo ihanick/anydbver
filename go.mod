@@ -1,4 +1,4 @@
-module github.com/ihanick/anydbver
+module github.com/zelmario/anydbver
 
 go 1.22
 

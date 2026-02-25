@@ -27,7 +27,7 @@ else
   $EATMYDATA mysqld --pid-file=/var/lib/mysql/mysqld.pid $S --user=mysql --loose-wsrep-provider='none' --skip-networking --loose-mysql_native_password=ON --loose-log-error=/var/lib/mysql/default.err --loose-log-error-verbosity=3 &>/dev/null &
   mysqladmin $S --silent --connect-timeout=30 --wait=4 ping
 
-  mysql --skip-password $S -e "ALTER USER root@localhost IDENTIFIED BY '$PASS';CREATE USER root@'%' IDENTIFIED WITH mysql_native_password BY '$PASS';GRANT ALL PRIVILEGES ON *.* TO root@'%' WITH GRANT OPTION;"
+  mysql --skip-password $S -e "ALTER USER root@localhost IDENTIFIED BY '$PASS';CREATE USER root@'%' IDENTIFIED BY '$PASS';GRANT ALL PRIVILEGES ON *.* TO root@'%' WITH GRANT OPTION;"
 fi
 cat >/root/.my.cnf <<EOF
 [client]

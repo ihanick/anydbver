@@ -1,0 +1,43 @@
+global
+    maxconn 100
+
+defaults
+    log global
+    mode tcp
+    retries 2
+    timeout client 30m
+    timeout connect 4s
+    timeout server 30m
+    timeout check 5s
+
+frontend stats
+    mode  http
+    bind  *:8404
+    stats enable
+    stats uri /stats
+    stats refresh 10s
+    stats admin if LOCALHOST
+
+frontend pgReadWrite
+    bind *:5432
+    default_backend pgReadWrite_backend
+
+backend pgReadWrite_backend
+    option httpchk GET /primary
+    http-check expect status 200
+    default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
+{% for host in upstream_servers %}
+     server pg{{ loop.index }} {{host}}:5432 maxconn 100 check port 8008
+{% endfor %}
+
+frontend pgReadOnly
+    bind *:5433
+    default_backend pgReadOnly_backend
+
+backend pgReadOnly_backend
+    option httpchk GET /replica
+    http-check expect status 200
+    default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
+{% for host in upstream_servers %}
+     server pg{{ loop.index }} {{host}}:5432 maxconn 100 check port 8008
+{% endfor %}

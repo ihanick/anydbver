@@ -1,0 +1,31 @@
+---
+# tasks file for pgbouncer
+- name: Install PGDG repo
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Rocky' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'OracleLinux'
+  yum:
+    name: "https://download.postgresql.org/pub/repos/yum/reporpms/EL-{{ansible_distribution_major_version}}-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
+    state: present
+    disable_gpg_check: yes
+
+- name: Install PgBouncer
+  package:
+    name:
+      - pgbouncer
+      - postgresql
+    state: present
+
+- name: create pgbouncer config from template
+  template:
+    src: "{{playbook_dir}}/roles/pgbouncer/templates/pgbouncer.ini.j2"
+    dest: "/etc/pgbouncer/pgbouncer.ini"
+
+- name: create pgbouncer userlist
+  template:
+    src: "{{playbook_dir}}/roles/pgbouncer/templates/userlist.txt.j2"
+    dest: "/etc/pgbouncer/userlist.txt"
+
+- name: start pgbouncer
+  systemd:
+    name: pgbouncer
+    state: restarted
+    enabled: True

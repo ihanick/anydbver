@@ -144,7 +144,7 @@ pxc-encrypt-cluster-traffic=OFF""")
 
       if node.k3d:
         if not Path("tools/k3d").is_file():
-          run_fatal(["bash", "-c", "curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | PATH=$PATH:/home/ihanick/anydbver/Docker/tools K3D_INSTALL_DIR=$PWD/tools USE_SUDO=false bash"], "Can't download k3d")
+          run_fatal(["bash", "-c", "curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | PATH=$PATH:/home/zelmar/anydbver/Docker/tools K3D_INSTALL_DIR=$PWD/tools USE_SUDO=false bash"], "Can't download k3d")
         k3d_agents = "3"
         if node.k3d == 'True':
           node.k3d = 'latest'

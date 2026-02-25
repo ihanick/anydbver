@@ -10,11 +10,12 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
 const (
-	COMMAND_TIMEOUT                          = 600
+	COMMAND_TIMEOUT                          = 300
 	ANYDBVER_ERROR_NOT_CONFIGURED            = 2
 	ANYDBVER_ERROR_BACKEND_PROBLEM           = 3
 	ANYDBVER_ANSIBLE_PROBLEM                 = 4
@@ -71,7 +72,7 @@ func RunFatal(logger *log.Logger, args []string, errMsg string, ignoreMsg *regex
 	}
 }
 
-func RunPipe(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp.Regexp, printCmd bool, env map[string]string) (string, error) {
+func RunPipe(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp.Regexp, printCmd bool, env map[string]string, timeout int) (string, error) {
 	envVars := make([]string, 0)
 	for k, v := range env {
 		envVars = append(envVars, k+"="+v)
@@ -94,19 +95,19 @@ func RunPipe(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp
 	}
 
 	full_output := ""
+	var wg sync.WaitGroup
 	// Function to copy the output from the pipes to the logger
 	copyOutput := func(r io.Reader, prefix string) {
+		defer wg.Done()
 		scanner := bufio.NewScanner(r)
 		for scanner.Scan() {
 			output_chunk := scanner.Text()
 			full_output = full_output + "\n" + output_chunk
 			logger.Println(prefix, output_chunk)
 		}
-		if err := scanner.Err(); err != nil {
-			logger.Println("Error reading from pipe:", err)
-		}
 	}
 
+	wg.Add(2)
 	go copyOutput(stdoutPipe, "")
 	go copyOutput(stderrPipe, "")
 
@@ -114,11 +115,13 @@ func RunPipe(logger *log.Logger, args []string, errMsg string, ignoreMsg *regexp
 	go func() { done <- cmd.Wait() }()
 
 	select {
-	case <-time.After(COMMAND_TIMEOUT * time.Second):
+	case <-time.After(time.Duration(timeout) * time.Second):
 		cmd.Process.Kill()
+		wg.Wait()
 		logger.Println("Command timed out")
 		return full_output, errors.New("Command timed out")
 	case err := <-done:
+		wg.Wait()
 		if err != nil {
 			if ignoreMsg != nil && ignoreMsg.Match([]byte(full_output)) {
 				return full_output, nil
@@ -176,5 +179,5 @@ func ExecCommandInContainer(logger *log.Logger, full_name string, cmd string, er
 
 	env := map[string]string{}
 	ignoreMsg := regexp.MustCompile("ignore this")
-	return RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env)
+	return RunPipe(logger, cmd_args, errMsg, ignoreMsg, true, env, COMMAND_TIMEOUT)
 }

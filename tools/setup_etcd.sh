@@ -71,4 +71,14 @@ EOF
 fi
 
 systemctl daemon-reload
-systemctl start etcd
+
+# Start etcd with retry logic
+for i in {1..5}; do
+  systemctl start etcd && break
+  echo "etcd start attempt $i failed, retrying in 5s..."
+  sleep 5
+done
+
+# Wait for this node to be part of a healthy cluster
+echo "Waiting for etcd to stabilize..."
+sleep 3

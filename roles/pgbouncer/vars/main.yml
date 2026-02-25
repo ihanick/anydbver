@@ -1,0 +1,4 @@
+---
+# vars file for pgbouncer
+upstream_servers: "{{pgbouncer.split(',')}}"
+backend_host: "{{upstream_servers[0]}}"

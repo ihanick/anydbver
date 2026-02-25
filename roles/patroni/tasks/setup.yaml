@@ -20,3 +20,31 @@
   command:
     cmd: /bin/bash /vagrant/tools/setup_patroni.sh "{{ cluster_name }}" "{{ db_password }}" "{{ etcd_ip }}" "{{ patroni_standby }}"
     creates: /root/patroni.configured
+
+- name: Wait for Patroni PostgreSQL to be ready for pgbackrest stanza
+  when: pgbackrest_version != '' and master_ip == ''
+  shell:
+    cmd: |
+      for i in $(seq 1 120); do
+        STATE=$(curl -s http://localhost:8008/health 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('state',''))" 2>/dev/null)
+        if [ "$STATE" = "running" ] && sudo -u postgres psql -h localhost -c "SELECT 1" &>/dev/null; then
+          exit 0
+        fi
+        sleep 2
+      done
+      exit 1
+    creates: /root/pgbackrest-stanza.created
+
+- name: Create pgbackrest stanza after Patroni bootstrap
+  when: pgbackrest_version != '' and master_ip == ''
+  shell:
+    cmd: |
+      sudo -u postgres pgbackrest stanza-create --stanza=db --log-level-console=info
+      touch /root/pgbackrest-stanza.created
+    creates: /root/pgbackrest-stanza.created
+
+- name: Setup PMM client with Patroni PostgreSQL
+  when: pmm_url != ''
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_pmm_patroni.sh "{{ db_password }}"
+    creates: /root/pmm-patroni.applied

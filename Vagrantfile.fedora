@@ -16,7 +16,7 @@ systemctl start snapd
 snap install lxd
 gpasswd -a vagrant lxd
 cd /home/vagrant/
-git clone https://github.com/ihanick/anydbver.git
+git clone https://github.com/zelmario/anydbver.git
 cat >/home/vagrant/anydbver/.anydbver <<EOF
 PROVIDER=lxd
 LXD_PROFILE=vagrant

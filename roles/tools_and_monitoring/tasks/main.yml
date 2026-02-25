@@ -37,7 +37,7 @@
         state: present
     - name: fetch anydbver
       command:
-        cmd: git clone -b docker-podman-k8s https://github.com/ihanick/anydbver.git /root/anydbver
+        cmd: git clone -b docker-podman-k8s https://github.com/zelmario/anydbver.git /root/anydbver
         creates: /root/anydbver
 
 - name: install and setup minio
