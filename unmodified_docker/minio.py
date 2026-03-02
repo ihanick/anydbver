@@ -48,7 +48,7 @@ MINIO_VOLUMES="/mnt/data"
               "-v", "{}:/etc/config.env".format(minio_config_path),
               "-v", "{}/data/minio:/mnt/data".format(ANYDBVER_DIR),
               "-e", "MINIO_CONFIG_ENV_FILE=/etc/config.env",
-              "minio/minio:{}".format(params["version"]), "server", "--console-address", ":9090",
+              "pgsty/minio:{}".format(params["version"]), "server", "--console-address", ":9090",
               ]
 
   url_schema="http"

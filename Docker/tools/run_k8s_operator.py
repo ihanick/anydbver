@@ -417,7 +417,7 @@ def run_minio_server(args):
   run_helm(args.helm_path, ["helm", "repo", "add", "minio", "https://helm.min.io/"], "helm repo add problem")
   run_helm(args.helm_path, ["helm", "repo", "update"], "helm repo update problem")
   if (args.cert_manager != "" and args.minio_certs == "self-signed") or args.minio_custom_ssl:
-    run_helm(args.helm_path, ["helm", "install", "minio-service", "minio/minio",
+    run_helm(args.helm_path, ["helm", "install", "minio-service", "pgsty/minio",
       "--set", "accessKey=REPLACE-WITH-AWS-ACCESS-KEY", "--set", "secretKey=REPLACE-WITH-AWS-SECRET-KEY",
       "--set", "service.type=ClusterIP", "--set", "configPath=/tmp/.minio/",
       "--set", "persistence.size=2G", "--set", "buckets[0].name=operator-testing",
@@ -427,7 +427,7 @@ def run_minio_server(args):
       "--set", "tls.enabled=true,tls.certSecret=minio-service-tls,tls.publicCrt=tls.crt,tls.privateKey=tls.key"
       ], "helm minio+certs install problem")
   else:
-    run_helm(args.helm_path, ["helm", "install", "minio-service", "minio/minio",
+    run_helm(args.helm_path, ["helm", "install", "minio-service", "pgsty/minio",
       "--set", "accessKey=REPLACE-WITH-AWS-ACCESS-KEY", "--set", "secretKey=REPLACE-WITH-AWS-SECRET-KEY",
       "--set", "service.type=ClusterIP", "--set", "configPath=/tmp/.minio/",
       "--set", "persistence.size=2G", "--set", "buckets[0].name=operator-testing",

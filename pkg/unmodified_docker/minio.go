@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-  "strings"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	anydbver_common "github.com/ihanick/anydbver/pkg/common"
 	"github.com/ihanick/anydbver/pkg/runtools"
@@ -54,7 +54,7 @@ func CreateMinIOContainer(logger *log.Logger, namespace string, name string, cmd
 	schema := "http"
 	if _, ok := args["certs"]; !ok || args["certs"] != "none" {
 		MakeSelfSignedCerts(logger, namespace, name+"-create-certs", data_dir,
-      anydbver_common.MakeContainerHostName(logger, namespace, name),
+			anydbver_common.MakeContainerHostName(logger, namespace, name),
 			[]string{"localhost", "minio-*.example.net", "172.17.0.1", name, anydbver_common.MakeContainerHostName(logger, namespace, name)})
 		cmd_args = append(cmd_args, []string{"--certs-dir", "/mnt/data/certs"}...)
 		schema = "https"
@@ -65,21 +65,51 @@ func CreateMinIOContainer(logger *log.Logger, namespace string, name string, cmd
 	ignoreMsg := regexp.MustCompile("ignore this")
 	runtools.RunFatal(logger, cmd_args, errMsg, ignoreMsg, true, env)
 
-	create_bucket := fmt.Sprintf(`until mc --insecure alias set local %s://127.0.0.1:9000 "%s" "%s" ; do sleep 1; done;mc --insecure rb --force local/%s;mc --insecure mb local/%s`,
-		schema, access_key, secret_key, bucket_name, bucket_name)
+	minioHostname := anydbver_common.MakeContainerHostName(logger, namespace, name)
+	endpoint := fmt.Sprintf("%s://%s:9000", schema, minioHostname)
+	insecureFlag := ""
+	if schema == "https" {
+		insecureFlag = "--no-check-certificate"
+	}
 
-	runtools.RunFatal(logger, []string{
-		"docker", "exec", anydbver_common.MakeContainerHostName(logger, namespace, name), "bash", "-c", create_bucket,
-	}, "Error creating bucket", ignoreMsg, true, env)
+	script := fmt.Sprintf(`
+FLAG="%s"
+until rclone lsd myminio: $FLAG 2>/dev/null; do
+  sleep 1
+done
+rclone mkdir myminio:%s $FLAG 2>/dev/null || true
+ `, insecureFlag, bucket_name)
+
+	ignoreAnyMsg := regexp.MustCompile(".*")
+	removeArgs := []string{"docker", "rm", "-f", anydbver_common.MakeContainerHostName(logger, namespace, name+"-create-bucket")}
+	runtools.RunPipe(logger, removeArgs, "Error removing existing container", ignoreAnyMsg, true, env)
+
+	rclone_cmd_args := []string{
+		"docker", "run",
+		"--name", anydbver_common.MakeContainerHostName(logger, namespace, name+"-create-bucket"),
+		"--rm",
+		"--network", anydbver_common.MakeContainerHostName(logger, namespace, "anydbver"),
+		"--hostname", anydbver_common.MakeContainerHostName(logger, namespace, name+"-create-bucket"),
+		"-e", "RCLONE_CONFIG_MYMINIO_TYPE=s3",
+		"-e", "RCLONE_CONFIG_MYMINIO_PROVIDER=Minio",
+		"-e", fmt.Sprintf("RCLONE_CONFIG_MYMINIO_ACCESS_KEY_ID=%s", access_key),
+		"-e", fmt.Sprintf("RCLONE_CONFIG_MYMINIO_SECRET_ACCESS_KEY=%s", secret_key),
+		"-e", fmt.Sprintf("RCLONE_CONFIG_MYMINIO_ENDPOINT=%s", endpoint),
+		"--entrypoint", "/bin/sh",
+		"rclone/rclone:latest",
+		"-c", script,
+	}
+
+	runtools.RunFatal(logger, rclone_cmd_args, "Error creating bucket", ignoreMsg, true, env)
 
 }
 
 func MakeSelfSignedCerts(logger *log.Logger, namespace string, name string, destdir string, cname string, domains []string) {
-  quotedDomains := make([]string, len(domains))
-  for i, domain := range domains {
-    quotedDomains[i] = `"` + domain + `"`
-  }
-  domainsStr := strings.Join(quotedDomains, ",")
+	quotedDomains := make([]string, len(domains))
+	for i, domain := range domains {
+		quotedDomains[i] = `"` + domain + `"`
+	}
+	domainsStr := strings.Join(quotedDomains, ",")
 
 	create_script := `
 [ -f /data/certs/private.key ] && exit 0
@@ -112,7 +142,7 @@ EOF
 
 cat <<EOF | cfssl gencert -ca=ca.pem  -ca-key=ca-key.pem -config=./ca-config.json - | cfssljson -bare server
   {
-    "hosts": [ `+ domainsStr +` ],
+    "hosts": [ ` + domainsStr + ` ],
     "CN": "` + cname + `",
     "names": [
       {

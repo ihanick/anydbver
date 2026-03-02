@@ -58,7 +58,7 @@ func CreateContainer(logger *log.Logger, namespace string, name string, cmd stri
 		CreateValKeyContainer(logger, namespace, name, cmd, args)
 	} else if cmd == "minio" {
 		if args["docker-image"] == "" {
-			args["docker-image"] = "minio/minio"
+			args["docker-image"] = "pgsty/minio"
 		}
 		CreateMinIOContainer(logger, namespace, name, cmd, args)
 	}
