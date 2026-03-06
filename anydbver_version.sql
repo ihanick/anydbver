@@ -3969,6 +3969,12 @@ INSERT INTO ansible_arguments VALUES('mydb','mysql-router','%','','extra_mysql_r
 INSERT INTO ansible_arguments VALUES('mydb','nogtid','%','','extra_replication_type','nogtid',2,NULL);
 INSERT INTO ansible_arguments VALUES('mydb','nogtid','%','','extra_db_opts_file','mysql/async-repl-nogtid.cnf',2,NULL);
 INSERT INTO ansible_arguments VALUES('patroni','standby','%','NODE','extra_patroni_standby','node0',1,NULL);
+INSERT INTO ansible_arguments VALUES('kerberos','version','%','VERSION','extra_kerberos_samba','1',1,1);
+INSERT INTO ansible_arguments VALUES('kerberos','password','%','','extra_db_password','MyPassword2026',1,1);
+INSERT INTO ansible_arguments VALUES('percona-server','kerberos-server','%','NODE','extra_kerberos_samba_ip','',1,NULL);
+INSERT INTO ansible_arguments VALUES('percona-server-mongodb','kerberos-server','%','NODE','extra_kerberos_samba_ip','',1,NULL);
+INSERT INTO ansible_arguments VALUES('percona-postgresql','kerberos-server','%','NODE','extra_kerberos_samba_ip','',1,NULL);
+INSERT INTO ansible_arguments VALUES('postgresql','kerberos-server','%','NODE','extra_kerberos_samba_ip','',1,NULL);
 CREATE TABLE k8s_arguments(
   cmd TEXT,
   subcmd TEXT,

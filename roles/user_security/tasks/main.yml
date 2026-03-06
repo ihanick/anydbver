@@ -30,6 +30,22 @@
     cmd: /bin/bash /vagrant/tools/install_samba_ad.sh
     creates: /opt/samba/sbin/samba
 
+- name: Install Samba Kerberos packages (Ubuntu/Debian)
+  when: kerberos_samba != '' and (ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian')
+  apt:
+    name:
+      - samba
+      - winbind
+      - bind9-dnsutils
+      - ldap-utils
+      - krb5-user
+      - net-tools
+      - iputils-ping
+    state: present
+    update_cache: yes
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
 - name: User security Setup tasks
   when: install_only == ''
   include_tasks: setup.yaml

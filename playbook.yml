@@ -134,6 +134,8 @@
     samba_kerberos: "{{ lookup('vars', 'extra_samba_kerberos', default=lookup('env','SAMBA_KERBEROS',default='') ) }}"
     kerberos_server: "{{ lookup('vars', 'extra_kerberos_server', default=lookup('env','KERBEROS',default='') ) }}"
     kerberos_client: "{{ lookup('vars', 'extra_kerberos_client', default=lookup('env','KERBEROS_CLIENT',default='') ) }}"
+    kerberos_samba: "{{ lookup('vars', 'extra_kerberos_samba', default='') }}"
+    kerberos_samba_ip: "{{ lookup('vars', 'extra_kerberos_samba_ip', default='') }}"
     mydumper_version: "{{ lookup('vars', 'extra_mydumper_version', default=lookup('env','MYDUMPER',default='') ) }}"
     postgresql_version: "{{ lookup('vars', 'extra_postgresql_version', default=lookup('env','PG',default='') ) | string }}"
     postgresql_version2: "{{ lookup('vars', 'extra_postgresql_version2', default=lookup('env','PG2',default='') ) }}"
@@ -195,6 +197,7 @@
       'orchestrator' if orchestrator_version != '' else
       'percona_orchestrator' if percona_orchestrator_version != '' else
       'ldap_server' if ldap_server != '' else
+      'kerberos_samba' if kerberos_samba != '' else
       'kerberos_server' if kerberos_server != '' else
       'postgresql' if postgresql_version != '' else
       ''
@@ -276,7 +279,7 @@
       include_tasks: roles/tools_and_monitoring/tasks/minio-client.yaml
 
     - name: User Security LDAP, PAM, Active Directory, Vault, Kerberos
-      when: vault_version != '' or samba_ad != '' or ldap_server != '' or ldap_server_ip != '' or kerberos_server != '' or kerberos_client != '' or kmip_server != ''
+      when: vault_version != '' or samba_ad != '' or ldap_server != '' or ldap_server_ip != '' or kerberos_server != '' or kerberos_client != '' or kerberos_samba != '' or kmip_server != ''
       include_role:
         name: user_security
 

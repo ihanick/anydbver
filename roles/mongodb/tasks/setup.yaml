@@ -88,6 +88,12 @@
     cmd: /bin/bash /vagrant/tools/setup_mongo_ldap.sh nihalainen "{{db_password}}" "{{samba_ip}}" yes "verysecretpassword1^"
     creates: /etc/sasl2/mongodb.conf
 
+- name: Setup MongoDB for Kerberos (Samba)
+  when: kerberos_samba_ip != '' and (psmdb_version != '' or mongo_org_version != '')
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_mongodb_kerberos.sh "{{kerberos_samba_ip}}" "{{db_password}}"
+    creates: /root/kerberos-mongodb.configured
+
 - name: Start database with systemd
   when:  start_db == '1' and (db_systemd_service != '' or (soft != '' and os[dist][soft].systemd_service)  )
   shell:

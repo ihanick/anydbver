@@ -28,6 +28,12 @@
     cmd: /bin/bash /vagrant/tools/setup_ldap_client_ubuntu.sh "{{ldap_server_ip}}" ldapadm "{{db_password}}"
     creates: /root/ldap-client.configured
 
+- name: Setup Samba Kerberos server
+  when: kerberos_samba != ''
+  command:
+    cmd: /bin/bash /vagrant/tools/setup_samba_kerberos.sh "{{db_password}}"
+    creates: /root/kerberos-samba.configured
+
 - name: Setup Kerberos server
   when: kerberos_server != ''
   command:

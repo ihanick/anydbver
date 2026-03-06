@@ -56,6 +56,12 @@
         cmd: /bin/bash /vagrant/tools/setup_pg_kerberos.sh "{{db_user}}" "{{db_password}}"
         creates: /etc/sysconfig/pgsql/krb5.keytab
 
+    - name: Setup Kerberos for PG (Samba)
+      when: kerberos_samba_ip != '' and (postgresql_version != '' or percona_postgresql_version != '')
+      command:
+        cmd: /bin/bash /vagrant/tools/setup_pg_kerberos_samba.sh "{{kerberos_samba_ip}}" "{{db_password}}" "{{maj}}"
+        creates: /root/kerberos-pg.configured
+
     - name: Start database with systemd (logical replication or master)
       when: (replication_type == 'logical' or master_ip == '') and patroni_version == ''
       command:
