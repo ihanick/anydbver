@@ -62,11 +62,41 @@ func VersionFetchFromDebianPackages(dbFile string, program string, pu programVer
 					return fmt.Errorf("can't insert postgresql package via '%s' %w", query, err)
 				}
 			case "mariadb":
-				query := "REPLACE INTO mariadb_version VALUES(?,?,?,?,?,?,?,?,?)"
+				/*
+				CREATE TABLE mariadb_version(
+  version varchar(20),
+  os varchar(20),
+  arch varchar(20),
+  repo_url varchar(1000),
+  repo_file varchar(1000),
+  repo_enable_str varchar(20),
+  systemd_service varchar(20),
+  cnf_file varchar(100),
+  packages varchar(1000),
+  debug_packages varchar(1000),
+  rocksdb_packages varchar(1000),
+  tests_packages varchar(1000),
+  mysql_shell_packages varchar(1000),
+  constraint pk PRIMARY KEY(version, os, arch)
+);
+*/
+				query := "REPLACE INTO mariadb_version VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)"
 				if _, err := db.Exec(query, version, pu.osver, pu.arch, "",
 					pu.repo_file, pu.repo_str,
-					"mariadb", fmt.Sprintf("%s=%s", pkgName, version), ""); err != nil {
+					"mariadb", fmt.Sprintf("%s=%s", pkgName, version), "","","","",""); err != nil {
 					return fmt.Errorf("can't insert mariadb package via '%s' %w", query, err)
+				}
+			case "percona-postgresql":
+				majorVersion := extractMajorVersion(version)
+				systemdService := "postgresql"
+				if majorVersion != "" {
+					systemdService = "postgresql-" + majorVersion
+				}
+				query := "REPLACE INTO percona_postgresql_version VALUES(?,?,?,?,?,?,?,?,?)"
+				if _, err := db.Exec(query, version, pu.osver, pu.arch, "",
+					pu.repo_file, pu.repo_str,
+					systemdService, fmt.Sprintf("%s=%s", pkgName, version), ""); err != nil {
+					return fmt.Errorf("can't insert percona-postgresql package via '%s' %w", query, err)
 				}
 			}
 		}
@@ -94,6 +124,9 @@ func extractBaseVersion(version string) string {
 
 // getPostgreSQLRepoURL returns the appropriate PostgreSQL repository URL based on OS and architecture
 func getPostgreSQLRepoURL(program, osver, arch string) string {
+	if program == "percona-postgresql" {
+		return "http://repo.percona.com/yum/percona-release-latest.noarch.rpm"
+	}
 	if program != "postgresql" {
 		return ""
 	}
@@ -132,7 +165,7 @@ func getPostgreSQLRepoURL(program, osver, arch string) string {
 
 // getPostgreSQLSystemdService returns the appropriate systemd service name for PostgreSQL
 func getPostgreSQLSystemdService(program, baseVersion string) string {
-	if program != "postgresql" {
+	if program != "postgresql" && program != "percona-postgresql" {
 		return "mariadb"
 	}
 
@@ -209,6 +242,13 @@ func VersionFetchFromRpmPackages(dbFile string, program string, pu programVersio
 				pu.repo_file, pu.repo_str,
 				systemdService, packagesStr, ""); err != nil {
 				return fmt.Errorf("can't insert mariadb package via '%s' %w", query, err)
+			}
+		case "percona-postgresql":
+			query := "REPLACE INTO percona_postgresql_version VALUES(?,?,?,?,?,?,?,?,?)"
+			if _, err := db.Exec(query, baseVersion, pu.osver, pu.arch, repoURL,
+				pu.repo_file, pu.repo_str,
+				systemdService, packagesStr, ""); err != nil {
+				return fmt.Errorf("can't insert percona-postgresql package via '%s' %w", query, err)
 			}
 		case "pmm-client":
 			// Save to general_version table for pmm-client

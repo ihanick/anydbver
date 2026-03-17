@@ -1,9 +1,9 @@
 package common
 
 import (
-	"os"
 	"io"
 	"log"
+	"os"
 )
 
 func ReadWholeFile(logger *log.Logger, filename string) string {

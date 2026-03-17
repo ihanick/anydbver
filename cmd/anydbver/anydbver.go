@@ -249,6 +249,42 @@ func FetchTestCases(logger *log.Logger, dbFile string, test_id int) ([]AnydbverT
 	return tests, nil
 }
 
+func updateAllPrograms(logger *log.Logger, dbFile string) error {
+	db, err := sql.Open("sqlite", dbFile)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+	defer db.Close()
+
+	query := "SELECT DISTINCT program FROM download_sites"
+	rows, err := db.Query(query)
+	if err != nil {
+		return fmt.Errorf("failed to execute select query: %w", err)
+	}
+	defer rows.Close()
+
+	var programs []string
+	for rows.Next() {
+		var program string
+		if err := rows.Scan(&program); err != nil {
+			return fmt.Errorf("failed to scan row: %w", err)
+		}
+		programs = append(programs, program)
+	}
+	if err = rows.Err(); err != nil {
+		return fmt.Errorf("error iterating over rows: %w", err)
+	}
+
+	for _, program := range programs {
+		logger.Printf("Updating versions for %s", program)
+		if err := versionfetch.VersionFetch(program, dbFile); err != nil {
+			logger.Printf("Error fetching versions for %s: %v", program, err)
+			// Continue with other programs
+		}
+	}
+	return nil
+}
+
 func writeTestOutput(logger *log.Logger, test_id int, test_name string, test_output string) {
 	test_results_path := filepath.Join(anydbver_common.GetCacheDirectory(logger), "test_results")
 	err := os.MkdirAll(test_results_path, os.ModePerm)
@@ -1922,8 +1958,14 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			dbFile := anydbver_common.GetDatabasePath(logger)
 			if len(args) >= 1 {
-				if err := versionfetch.VersionFetch(args[0], dbFile); err != nil {
-					logger.Println("Error fetching versions", err)
+				if args[0] == "all" {
+					if err := updateAllPrograms(logger, dbFile); err != nil {
+						logger.Println("Error updating all programs:", err)
+					}
+				} else {
+					if err := versionfetch.VersionFetch(args[0], dbFile); err != nil {
+						logger.Println("Error fetching versions", err)
+					}
 				}
 			} else {
 				os.Remove(dbFile)

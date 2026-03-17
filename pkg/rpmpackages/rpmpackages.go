@@ -110,9 +110,11 @@ func ParsePackagesFromURL(url string) ([]PackageEntry, error) {
 		if pkg.Version.Release != "" {
 			fullVersion += "-" + pkg.Version.Release
 		}
+		/*
 		if pkg.Version.Epoch != "" && pkg.Version.Epoch != "0" {
 			fullVersion = pkg.Version.Epoch + ":" + fullVersion
 		}
+		*/
 		fields["FullVersion"] = fullVersion
 
 		packages = append(packages, PackageEntry{Fields: fields})
