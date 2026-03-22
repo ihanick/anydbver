@@ -26,7 +26,6 @@ func VersionFetch(program string, dbFile string) error {
 				return fmt.Errorf("can't get versions from RPM packages file %w", err)
 			}
 		}
-
 	}
 
 	return nil
@@ -63,27 +62,27 @@ func VersionFetchFromDebianPackages(dbFile string, program string, pu programVer
 				}
 			case "mariadb":
 				/*
-				CREATE TABLE mariadb_version(
-  version varchar(20),
-  os varchar(20),
-  arch varchar(20),
-  repo_url varchar(1000),
-  repo_file varchar(1000),
-  repo_enable_str varchar(20),
-  systemd_service varchar(20),
-  cnf_file varchar(100),
-  packages varchar(1000),
-  debug_packages varchar(1000),
-  rocksdb_packages varchar(1000),
-  tests_packages varchar(1000),
-  mysql_shell_packages varchar(1000),
-  constraint pk PRIMARY KEY(version, os, arch)
-);
-*/
+									CREATE TABLE mariadb_version(
+					  version varchar(20),
+					  os varchar(20),
+					  arch varchar(20),
+					  repo_url varchar(1000),
+					  repo_file varchar(1000),
+					  repo_enable_str varchar(20),
+					  systemd_service varchar(20),
+					  cnf_file varchar(100),
+					  packages varchar(1000),
+					  debug_packages varchar(1000),
+					  rocksdb_packages varchar(1000),
+					  tests_packages varchar(1000),
+					  mysql_shell_packages varchar(1000),
+					  constraint pk PRIMARY KEY(version, os, arch)
+					);
+				*/
 				query := "REPLACE INTO mariadb_version VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)"
 				if _, err := db.Exec(query, version, pu.osver, pu.arch, "",
 					pu.repo_file, pu.repo_str,
-					"mariadb", fmt.Sprintf("%s=%s", pkgName, version), "","","","",""); err != nil {
+					"mariadb", fmt.Sprintf("%s=%s", pkgName, version), "", "", "", "", ""); err != nil {
 					return fmt.Errorf("can't insert mariadb package via '%s' %w", query, err)
 				}
 			case "percona-postgresql":
@@ -125,7 +124,7 @@ func extractBaseVersion(version string) string {
 // getPostgreSQLRepoURL returns the appropriate PostgreSQL repository URL based on OS and architecture
 func getPostgreSQLRepoURL(program, osver, arch string) string {
 	if program == "percona-postgresql" {
-		return "http://repo.percona.com/yum/percona-release-latest.noarch.rpm"
+		return "https://repo.percona.com/yum/percona-release-latest.noarch.rpm"
 	}
 	if program != "postgresql" {
 		return ""
