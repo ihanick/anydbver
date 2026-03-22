@@ -6,5 +6,5 @@ GO_VERSION = $(shell go version | cut -d " " -f3)\ -X\ main.Commit=$(git rev-lis
 cmd/anydbver/Dockerfile.anydbver.cache: Dockerfile.anydbver.cache
 	cp Dockerfile.anydbver.cache cmd/anydbver/Dockerfile.anydbver.cache
 tools/anydbver: $(wildcard cmd/**/*.go) $(wildcard pkg/**/*.go) cmd/anydbver/Dockerfile.anydbver.cache Makefile
-	go build -ldflags=-X\ main.Version=v0.1.23\ -X\ main.GoVersion=$(GO_VERSION)\ -X\ main.Build=$(BUILD) -o tools/anydbver cmd/anydbver/anydbver.go
+	go build -ldflags=-X\ main.Version=v0.1.24\ -X\ main.GoVersion=$(GO_VERSION)\ -X\ main.Build=$(BUILD) -o tools/anydbver cmd/anydbver/anydbver.go
 

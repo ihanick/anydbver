@@ -7,7 +7,7 @@ const (
 	IMAGE_PUBLISHER  = "ihanick"
 )
 
-var RELEASE_VERSION = "0.1.23"
+var RELEASE_VERSION = "0.1.24"
 
 func GetDockerImageName(osver string, user string) string {
 	platform_tag := ""
