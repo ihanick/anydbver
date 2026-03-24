@@ -1,9 +1,15 @@
 package versionfetch
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/ihanick/anydbver/pkg/debianpackages"
 	"github.com/ihanick/anydbver/pkg/rpmpackages"
@@ -17,7 +23,11 @@ func VersionFetch(program string, dbFile string) error {
 	}
 
 	for _, pu := range progUrls {
-		if strings.HasSuffix(pu.url, "/Packages") || strings.HasSuffix(pu.url, "/Packages.gz") {
+		if strings.Contains(pu.url, "hub.docker.com") || strings.Contains(pu.url, "docker.io") {
+			if err := VersionFetchFromDockerTags(dbFile, program, pu); err != nil {
+				return fmt.Errorf("can't get versions from docker tags %w", err)
+			}
+		} else if strings.HasSuffix(pu.url, "/Packages") || strings.HasSuffix(pu.url, "/Packages.gz") {
 			if err := VersionFetchFromDebianPackages(dbFile, program, pu); err != nil {
 				return fmt.Errorf("can't get versions from debian packages file %w", err)
 			}
@@ -259,6 +269,76 @@ func VersionFetchFromRpmPackages(dbFile string, program string, pu programVersio
 	}
 	fmt.Printf("OS: %s, Program: %s, Packages: %d, Versions: %d\n",
 		pu.osver, program, len(versionsByPackage), versions_cnt)
+	return nil
+}
+
+func VersionFetchFromDockerTags(dbFile string, program string, pu programVersionSource) error {
+	db, err := sql.Open("sqlite", dbFile)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+	defer db.Close()
+
+	// Compile regex pattern for filtering tags
+	re, err := regexp.Compile(pu.pattern)
+	if err != nil {
+		return fmt.Errorf("invalid regex pattern %s: %w", pu.pattern, err)
+	}
+
+	// Fetch tags from Docker Hub API
+	ctx := context.Background()
+	client := &http.Client{Timeout: 30 * time.Second}
+	url := pu.url
+	if !strings.Contains(url, "?") {
+		url += "?page_size=100"
+	}
+	var tags []string
+	for {
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create request: %w", err)
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed to fetch tags: %w", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			return fmt.Errorf("unexpected status code %d", resp.StatusCode)
+		}
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return fmt.Errorf("failed to read response body: %w", err)
+		}
+		var result struct {
+			Results []struct {
+				Name string `json:"name"`
+			} `json:"results"`
+			Next string `json:"next"`
+		}
+		if err := json.Unmarshal(body, &result); err != nil {
+			return fmt.Errorf("failed to parse JSON: %w", err)
+		}
+		for _, r := range result.Results {
+			if re.MatchString(r.Name) {
+				tags = append(tags, r.Name)
+			}
+		}
+		if result.Next == "" {
+			break
+		}
+		url = result.Next
+	}
+
+	// Insert tags into general_version table
+	for _, tag := range tags {
+		query := "REPLACE INTO general_version (version, os, arch, program) VALUES(?,?,?,?)"
+		if _, err := db.Exec(query, tag, pu.osver, pu.arch, program); err != nil {
+			return fmt.Errorf("can't insert tag via '%s' %w", query, err)
+		}
+	}
+	fmt.Printf("OS: %s, Program: %s, Tags: %d\n", pu.osver, program, len(tags))
 	return nil
 }
 
