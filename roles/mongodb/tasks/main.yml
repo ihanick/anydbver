@@ -3,7 +3,7 @@
 - name: enable repo Percona Server for MongoDB
   when: psmdb_version != ''
   command:
-    cmd: /usr/bin/percona-release enable "{{package_info['repo_enable_str']}}"
+    cmd: /usr/bin/percona-release enable "{{package_info['repo_enable_str']}}" --scheme https
     creates: "/etc/yum.repos.d/percona-psmdb-{{pkg_major_no_dot}}-release.repo"
 
 - name: Enable MongoDB Community repository
